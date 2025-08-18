@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { 
   Users,
@@ -49,7 +49,13 @@ type Member = User & {
 };
 
 export default function MembersPage() {
-  const t = useTranslations('members');
+  // const t = useTranslations('members');
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      'title': 'メンバー状況',
+    };
+    return translations[key] || key;
+  };
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');

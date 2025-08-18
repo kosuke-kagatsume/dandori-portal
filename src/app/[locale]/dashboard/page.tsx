@@ -1,6 +1,7 @@
 'use client';
 
 // import { useTranslations } from 'next-intl'; // 一時的に無効化
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -260,22 +261,30 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <Button className="h-16 flex flex-col space-y-1">
-              <Clock className="h-5 w-5" />
-              <span className="text-sm">出勤する</span>
-            </Button>
-            <Button variant="outline" className="h-16 flex flex-col space-y-1">
-              <Calendar className="h-5 w-5" />
-              <span className="text-sm">有給申請</span>
-            </Button>
-            <Button variant="outline" className="h-16 flex flex-col space-y-1">
-              <Users className="h-5 w-5" />
-              <span className="text-sm">メンバー確認</span>
-            </Button>
-            <Button variant="outline" className="h-16 flex flex-col space-y-1">
-              <AlertCircle className="h-5 w-5" />
-              <span className="text-sm">承認待ち</span>
-            </Button>
+            <Link href="/ja/attendance">
+              <Button className="h-16 w-full flex flex-col space-y-1">
+                <Clock className="h-5 w-5" />
+                <span className="text-sm">出勤する</span>
+              </Button>
+            </Link>
+            <Link href="/ja/leave">
+              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                <Calendar className="h-5 w-5" />
+                <span className="text-sm">有給申請</span>
+              </Button>
+            </Link>
+            <Link href="/ja/members">
+              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                <Users className="h-5 w-5" />
+                <span className="text-sm">メンバー確認</span>
+              </Button>
+            </Link>
+            <Link href="/ja/leave">
+              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                <AlertCircle className="h-5 w-5" />
+                <span className="text-sm">承認待ち</span>
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { 
   Calendar,
@@ -52,7 +52,20 @@ interface LeaveRequest {
 }
 
 export default function LeavePage() {
-  const t = useTranslations('leave');
+  // const t = useTranslations('leave');
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      'title': '休暇管理',
+      'remainingDays': '残り日数',
+      'usedDays': '使用日数',
+      'pendingRequests': '承認待ち',
+      'expiringDays': '失効予定',
+      'requestList': '申請一覧',
+      'balanceManagement': '残日数管理',
+      'pendingApprovals': '承認待ち申請',
+    };
+    return translations[key] || key;
+  };
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);

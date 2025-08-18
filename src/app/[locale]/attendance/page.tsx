@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { 
   Clock,
@@ -51,7 +51,21 @@ interface AttendanceRecord {
 }
 
 export default function AttendancePage() {
-  const t = useTranslations('attendance');
+  // const t = useTranslations('attendance');
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      'title': '勤怠管理',
+      'monthlyWorkHours': '月間実働時間',
+      'overtimeHours': '残業時間',
+      'leaveUsed': '休暇取得',
+      'remoteDays': '在宅勤務',
+      'attendanceList': '勤怠一覧',
+      'teamAttendance': 'チーム勤怠',
+      'calendar': 'カレンダー',
+      'statistics': '統計',
+    };
+    return translations[key] || key;
+  };
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCheckedIn, setIsCheckedIn] = useState(false);

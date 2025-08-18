@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { 
   MoreHorizontal, 
@@ -32,7 +32,13 @@ import { toast } from 'sonner';
 import type { User } from '@/types';
 
 export default function UsersPage() {
-  const t = useTranslations('users');
+  // const t = useTranslations('users');
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      'title': 'ユーザー管理',
+    };
+    return translations[key] || key;
+  };
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
