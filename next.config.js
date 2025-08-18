@@ -7,6 +7,9 @@ const nextConfig = {
   experimental: {
     typedRoutes: true,
   },
+  // Vercelデプロイメント時の静的生成問題を回避
+  output: 'standalone',
+  trailingSlash: false,
 };
 
 module.exports = withNextIntl(nextConfig);
