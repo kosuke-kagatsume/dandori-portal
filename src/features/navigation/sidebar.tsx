@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl'; // 一時的に無効化
 import { 
   LayoutDashboard,
   Users,

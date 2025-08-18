@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl'; // 一時的に無効化
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,26 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const t = useTranslations('dashboard');
+  // const t = useTranslations('dashboard'); // 一時的に無効化
+  
+  // 固定の日本語翻訳関数
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      'title': 'ダッシュボード',
+      'totalEmployees': '総従業員数',
+      'todayAttendance': '本日の出勤率',
+      'pendingApprovals': '承認待ち',
+      'monthlyUtilization': '月間稼働率',
+      'leaveBalance': '有給残日数',
+      'remainingDays': '残日数',
+      'usedLeave': '使用済み',
+      'pendingLeave': '申請中',
+      'expiringLeave': '失効予定',
+      'recentActivity': '最近のアクティビティ',
+      'systemConnection': 'システム接続状況'
+    };
+    return translations[key] || key;
+  };
 
   // Mock data - in real app this would come from API
   const kpiData = {

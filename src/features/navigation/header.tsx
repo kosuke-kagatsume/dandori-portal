@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+// import { useTranslations } from 'next-intl'; // 一時的に無効化
 import { 
   Search,
   Bell,
@@ -39,7 +39,20 @@ import { NotificationCenter } from './notification-center';
 import { CommandPalette } from './command-palette';
 
 export function Header() {
-  const t = useTranslations('common');
+  // const t = useTranslations('common'); // 一時的に無効化
+  
+  // 固定の日本語翻訳関数
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      'search': '検索',
+      'settings': '設定',
+      'theme': 'テーマ',
+      'language': '言語',
+      'profile': 'プロフィール',
+      'logout': 'ログアウト'
+    };
+    return translations[key] || key;
+  };
   const { 
     theme, 
     setTheme, 
