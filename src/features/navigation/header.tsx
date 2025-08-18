@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 // import { useTranslations } from 'next-intl'; // 一時的に無効化
 import { 
   Search,
@@ -39,6 +40,7 @@ import { NotificationCenter } from './notification-center';
 import { CommandPalette } from './command-palette';
 
 export function Header() {
+  const router = useRouter();
   // const t = useTranslations('common'); // 一時的に無効化
   
   // 固定の日本語翻訳関数
@@ -62,9 +64,28 @@ export function Header() {
     setCommandPaletteOpen 
   } = useUIStore();
   const { currentTenant } = useTenantStore();
-  const { currentUser } = useUserStore();
+  const { currentUser, setCurrentUser } = useUserStore();
   const { unreadCount } = useNotificationStore();
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  // デフォルトユーザーを設定
+  useEffect(() => {
+    if (!currentUser) {
+      setCurrentUser({
+        id: '1',
+        name: '山田太郎',
+        email: 'yamada@example.com',
+        department: '開発部',
+        position: 'エンジニア',
+        avatar: '',
+        roles: ['user'],
+        hireDate: '2020-04-01',
+        unitId: 'unit-1',
+        status: 'active',
+        timezone: 'Asia/Tokyo'
+      });
+    }
+  }, [currentUser, setCurrentUser]);
 
   // Auto-refresh timestamp
   useEffect(() => {
@@ -196,20 +217,38 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  // プロフィールページへ遷移（未実装のため、アラートで代替）
+                  alert('プロフィール機能は現在開発中です');
+                }}>
                   <User className="mr-2 h-4 w-4" />
                   <span>プロフィール</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  // 組織管理ページへ遷移（未実装のため、アラートで代替）
+                  alert('組織管理機能は現在開発中です');
+                }}>
                   <Building2 className="mr-2 h-4 w-4" />
                   <span>組織管理</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  // 設定ページへ遷移（未実装のため、アラートで代替）
+                  alert('設定機能は現在開発中です');
+                }}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>設定</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600">
+                <DropdownMenuItem 
+                  className="text-red-600"
+                  onClick={() => {
+                    // ログアウト処理
+                    if (confirm('ログアウトしますか？')) {
+                      setCurrentUser(null);
+                      router.push('/ja/dashboard');
+                    }
+                  }}
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>ログアウト</span>
                 </DropdownMenuItem>
