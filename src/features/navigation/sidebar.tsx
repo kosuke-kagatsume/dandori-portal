@@ -37,9 +37,26 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const t = useTranslations('navigation');
+  // const t = useTranslations('navigation'); // 一時的に無効化
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const { currentUser } = useUserStore();
+  
+  // 固定の日本語翻訳関数
+  const t = (key: string) => {
+    const translations: Record<string, string> = {
+      'dashboard': 'ダッシュボード',
+      'users': 'ユーザー管理',
+      'members': 'メンバー管理',
+      'attendance': '勤怠管理',
+      'leave': '休暇管理',
+      'workflows': 'ワークフロー',
+      'organization': '組織管理',
+      'sites': '拠点管理',
+      'settings': '設定',
+      'audit': '監査ログ',
+    };
+    return translations[key] || key;
+  };
 
   const isAdmin = currentUser?.roles?.includes('admin');
 
