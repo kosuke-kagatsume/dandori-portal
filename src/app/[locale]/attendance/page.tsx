@@ -39,6 +39,8 @@ import { toast } from 'sonner';
 
 interface AttendanceRecord {
   id: string;
+  userId: string;
+  userName: string;
   date: string;
   dayOfWeek: string;
   checkIn?: string;
@@ -80,13 +82,17 @@ export default function AttendancePage() {
         const data = await response.json();
         
         // Mock attendance records
+        const mockUsers = generateAttendanceData();
         const mockRecords: AttendanceRecord[] = Array.from({ length: 30 }, (_, i) => {
           const date = new Date();
           date.setDate(date.getDate() - i);
           const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+          const randomUser = mockUsers[Math.floor(Math.random() * mockUsers.length)];
           
           return {
             id: `${i}`,
+            userId: randomUser.userId,
+            userName: randomUser.userName,
             date: date.toISOString().split('T')[0],
             dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][date.getDay()],
             checkIn: isWeekend ? undefined : `${8 + Math.floor(Math.random() * 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
@@ -167,6 +173,17 @@ export default function AttendancePage() {
             <div className="text-sm text-muted-foreground">
               ({record.dayOfWeek})
             </div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'userName',
+      header: 'ユーザー',
+      cell: ({ row }) => {
+        return (
+          <div className="font-medium">
+            {row.original.userName}
           </div>
         );
       },

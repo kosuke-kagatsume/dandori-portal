@@ -15,7 +15,12 @@ import {
   Plus,
   Edit,
   Trash2,
-  MoreVertical
+  MoreVertical,
+  Mail,
+  Phone,
+  Calendar,
+  Briefcase,
+  MapPin
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -37,6 +42,7 @@ interface OrgUnit {
 
 export default function OrganizationPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState<OrgUnit | null>(null);
   const [orgData, setOrgData] = useState<OrgUnit[]>([
     {
       id: '1',
@@ -225,8 +231,9 @@ export default function OrganizationPage() {
     return nodes.map(node => (
       <div key={node.id}>
         <div 
-          className={`flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer ${level > 0 ? `ml-${level * 8}` : ''}`}
+          className={`flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer ${selectedUnit?.id === node.id ? 'bg-blue-50 border-blue-200 border' : ''} ${level > 0 ? `ml-${level * 8}` : ''}`}
           style={{ marginLeft: `${level * 2}rem` }}
+          onClick={() => setSelectedUnit(node)}
         >
           <div className="flex items-center space-x-3">
             <button
@@ -352,9 +359,10 @@ export default function OrganizationPage() {
         </Card>
       </div>
 
-      {/* 組織ツリー */}
-      <Card>
-        <CardHeader>
+      {/* 組織ツリーと詳細パネル */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>組織構造</CardTitle>
@@ -385,6 +393,118 @@ export default function OrganizationPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 右側の詳細パネル */}
+      {selectedUnit && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle>{selectedUnit.name}</CardTitle>
+                  <Badge className={getTypeColor(selectedUnit.type)} variant="secondary">
+                    {getTypeLabel(selectedUnit.type)}
+                  </Badge>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon">
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* 概要 */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">メンバー数</span>
+                <span className="font-medium">{selectedUnit.memberCount}名</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">レベル</span>
+                <span className="font-medium">レベル 2 • ID: {selectedUnit.id}</span>
+              </div>
+            </div>
+
+            {/* 責任者情報 */}
+            {selectedUnit.headUserName && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">責任者情報</h4>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="h-10 w-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-medium">
+                    {selectedUnit.headUserName.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium">{selectedUnit.headUserName}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {selectedUnit.type === 'division' ? '本部長' : 
+                       selectedUnit.type === 'department' ? '部長' : 
+                       selectedUnit.type === 'team' ? 'チームリーダー' : '責任者'}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <span>{selectedUnit.headUserName.replace(/[\s　]+/g, '.').toLowerCase()}@dandori.co.jp</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-4 w-4" />
+                    <span>090-{Math.floor(Math.random() * 9000 + 1000)}-{Math.floor(Math.random() * 9000 + 1000)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>入社日: 2017-04-27</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 下位組織 */}
+            {selectedUnit.children && selectedUnit.children.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">下位組織</h4>
+                <div className="space-y-2">
+                  {selectedUnit.children.map(child => (
+                    <div key={child.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm font-medium">{child.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          <Users className="h-3 w-3 mr-1" />
+                          {child.memberCount}名
+                        </Badge>
+                        {child.headUserName && (
+                          <span className="text-xs text-muted-foreground">
+                            責任者: {child.headUserName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* アクション */}
+            <div className="pt-4 space-y-2">
+              <Button className="w-full" variant="outline">
+                <UserPlus className="h-4 w-4 mr-2" />
+                メンバーを追加
+              </Button>
+              <Button className="w-full" variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                下位組織を追加
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      </div>
     </div>
   );
 }
