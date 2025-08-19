@@ -26,6 +26,7 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.75rem;
+    --animation-duration: 200ms;
   }
 
   .dark {
@@ -58,4 +59,72 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* コンパクトモード */
+.compact {
+  --spacing-unit: 0.75;
+}
+
+.compact .p-2 {
+  padding: calc(0.5rem * var(--spacing-unit));
+}
+
+.compact .p-3 {
+  padding: calc(0.75rem * var(--spacing-unit));
+}
+
+.compact .p-4 {
+  padding: calc(1rem * var(--spacing-unit));
+}
+
+.compact .p-6 {
+  padding: calc(1.5rem * var(--spacing-unit));
+}
+
+.compact .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: calc(0.5rem * var(--spacing-unit));
+}
+
+.compact .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: calc(1rem * var(--spacing-unit));
+}
+
+.compact .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: calc(1.5rem * var(--spacing-unit));
+}
+
+.compact .gap-2 {
+  gap: calc(0.5rem * var(--spacing-unit));
+}
+
+.compact .gap-4 {
+  gap: calc(1rem * var(--spacing-unit));
+}
+
+.compact .gap-6 {
+  gap: calc(1.5rem * var(--spacing-unit));
+}
+
+/* アニメーション制御 */
+* {
+  transition-duration: var(--animation-duration) !important;
+}
+
+/* スクロールバーのスタイリング */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-md;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,7 +60,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react';
-import { useUIStore, useUserStore } from '@/lib/store';
+import { useUserStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -72,78 +72,56 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useSettings } from '@/hooks/use-settings';
 
 export default function SettingsPage() {
-  const { theme, setTheme, locale, setLocale } = useUIStore();
   const { currentUser } = useUserStore();
+  const {
+    settings,
+    isLoading,
+    isSaving,
+    updateGeneralSettings,
+    updateAppearanceSettings,
+    updateNotificationSettings,
+    updateSecuritySettings,
+    updateDataSettings,
+    exportSettings: handleExportSettings,
+    importSettings: handleImportSettings,
+    resetSettings: handleResetSettings,
+  } = useSettings();
   
-  // 一般設定
-  const [phoneNumber, setPhoneNumber] = useState('090-1234-5678');
-  const [timezone, setTimezone] = useState('asia-tokyo');
-  const [language, setLanguage] = useState('ja');
-  const [dateFormat, setDateFormat] = useState('yyyy-mm-dd');
-  const [weekStart, setWeekStart] = useState('monday');
-  
-  // 通知設定
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(false);
-  const [desktopNotifications, setDesktopNotifications] = useState(true);
-  const [notificationSound, setNotificationSound] = useState(true);
-  const [leaveRequestNotif, setLeaveRequestNotif] = useState(true);
-  const [attendanceReminder, setAttendanceReminder] = useState(true);
-  const [overtimeAlert, setOvertimeAlert] = useState(true);
-  const [announcements, setAnnouncements] = useState(true);
-  const [weeklyReport, setWeeklyReport] = useState(false);
-  const [monthlyReport, setMonthlyReport] = useState(true);
-  
-  // セキュリティ設定
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [sessionTimeout, setSessionTimeout] = useState([30]);
-  const [passwordExpiry, setPasswordExpiry] = useState('90');
-  const [loginAlerts, setLoginAlerts] = useState(true);
-  const [ipRestriction, setIpRestriction] = useState(false);
-  const [allowedIPs, setAllowedIPs] = useState('');
-  
-  // データ管理設定
-  const [autoBackup, setAutoBackup] = useState(true);
-  const [backupFrequency, setBackupFrequency] = useState('daily');
-  const [dataRetention, setDataRetention] = useState('365');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [storageUsed] = useState(65);
-  const [syncEnabled, setSyncEnabled] = useState(true);
   
-  // 外観設定
-  const [fontSize, setFontSize] = useState([14]);
-  const [compactMode, setCompactMode] = useState(false);
-  const [sidebarPosition, setSidebarPosition] = useState('left');
-  const [accentColor, setAccentColor] = useState('blue');
-  const [animations, setAnimations] = useState(true);
-  
-  const [saved, setSaved] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
-  const handleSave = () => {
-    toast.success('設定を保存しました');
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImportSettings(file);
+    }
   };
 
   const handleReset = () => {
     setResetDialogOpen(false);
-    toast.info('設定をリセットしました');
-  };
-
-  const handleExportData = () => {
-    toast.success('データのエクスポートを開始しました');
-  };
-
-  const handleImportData = () => {
-    toast.info('データのインポート機能は準備中です');
+    handleResetSettings();
   };
 
   const handleClearCache = () => {
-    toast.success('キャッシュをクリアしました');
+    if (typeof window !== 'undefined') {
+      localStorage.clear();
+      sessionStorage.clear();
+      toast.success('キャッシュをクリアしました');
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -160,10 +138,20 @@ export default function SettingsPage() {
             <RefreshCw className="w-4 h-4 mr-2" />
             キャッシュクリア
           </Button>
-          <Button onClick={handleSave}>
-            <Save className="w-4 h-4 mr-2" />
-            設定を保存
-            {saved && <Check className="w-4 h-4 ml-2" />}
+          <Button onClick={handleExportSettings}>
+            <Download className="w-4 h-4 mr-2" />
+            設定をエクスポート
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-2" />
+            設定をインポート
           </Button>
         </div>
       </div>
@@ -207,8 +195,8 @@ export default function SettingsPage() {
                   <Input 
                     id="phone" 
                     type="tel" 
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    value={settings.general.phoneNumber}
+                    onChange={(e) => updateGeneralSettings({ phoneNumber: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
@@ -230,7 +218,7 @@ export default function SettingsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="timezone">タイムゾーン</Label>
-                  <Select value={timezone} onValueChange={setTimezone}>
+                  <Select value={settings.general.timezone} onValueChange={(value) => updateGeneralSettings({ timezone: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -245,7 +233,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="language">言語</Label>
-                  <Select value={language} onValueChange={setLanguage}>
+                  <Select value={settings.general.language} onValueChange={(value) => updateGeneralSettings({ language: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -259,7 +247,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="dateFormat">日付形式</Label>
-                  <Select value={dateFormat} onValueChange={setDateFormat}>
+                  <Select value={settings.general.dateFormat} onValueChange={(value) => updateGeneralSettings({ dateFormat: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -273,7 +261,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="weekStart">週の開始日</Label>
-                  <Select value={weekStart} onValueChange={setWeekStart}>
+                  <Select value={settings.general.weekStart} onValueChange={(value: 'sunday' | 'monday') => updateGeneralSettings({ weekStart: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -303,25 +291,25 @@ export default function SettingsPage() {
                   <Label>テーマ</Label>
                   <div className="grid grid-cols-3 gap-4">
                     <Button
-                      variant={theme === 'light' ? 'default' : 'outline'}
+                      variant={settings.appearance.theme === 'light' ? 'default' : 'outline'}
                       className="justify-start"
-                      onClick={() => setTheme('light')}
+                      onClick={() => updateAppearanceSettings({ theme: 'light' })}
                     >
                       <Sun className="w-4 h-4 mr-2" />
                       ライト
                     </Button>
                     <Button
-                      variant={theme === 'dark' ? 'default' : 'outline'}
+                      variant={settings.appearance.theme === 'dark' ? 'default' : 'outline'}
                       className="justify-start"
-                      onClick={() => setTheme('dark')}
+                      onClick={() => updateAppearanceSettings({ theme: 'dark' })}
                     >
                       <Moon className="w-4 h-4 mr-2" />
                       ダーク
                     </Button>
                     <Button
-                      variant={theme === 'system' ? 'default' : 'outline'}
+                      variant={settings.appearance.theme === 'system' ? 'default' : 'outline'}
                       className="justify-start"
-                      onClick={() => setTheme('system')}
+                      onClick={() => updateAppearanceSettings({ theme: 'system' })}
                     >
                       <Monitor className="w-4 h-4 mr-2" />
                       システム
@@ -333,7 +321,7 @@ export default function SettingsPage() {
 
                 <div className="space-y-2">
                   <Label>アクセントカラー</Label>
-                  <RadioGroup value={accentColor} onValueChange={setAccentColor}>
+                  <RadioGroup value={settings.appearance.accentColor} onValueChange={(value: 'blue' | 'green' | 'purple' | 'red') => updateAppearanceSettings({ accentColor: value })}>
                     <div className="grid grid-cols-4 gap-4">
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="blue" id="blue" />
@@ -374,15 +362,15 @@ export default function SettingsPage() {
                   <div className="flex items-center space-x-4">
                     <span className="text-sm">小</span>
                     <Slider
-                      value={fontSize}
-                      onValueChange={setFontSize}
+                      value={[settings.appearance.fontSize]}
+                      onValueChange={(value) => updateAppearanceSettings({ fontSize: value[0] })}
                       min={12}
                       max={18}
                       step={1}
                       className="flex-1"
                     />
                     <span className="text-sm">大</span>
-                    <span className="text-sm font-medium w-12">{fontSize}px</span>
+                    <span className="text-sm font-medium w-12">{settings.appearance.fontSize}px</span>
                   </div>
                 </div>
 
@@ -394,8 +382,8 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <Switch
-                    checked={compactMode}
-                    onCheckedChange={setCompactMode}
+                    checked={settings.appearance.compactMode}
+                    onCheckedChange={(checked) => updateAppearanceSettings({ compactMode: checked })}
                   />
                 </div>
 
@@ -407,14 +395,14 @@ export default function SettingsPage() {
                     </p>
                   </div>
                   <Switch
-                    checked={animations}
-                    onCheckedChange={setAnimations}
+                    checked={settings.appearance.animations}
+                    onCheckedChange={(checked) => updateAppearanceSettings({ animations: checked })}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>サイドバー位置</Label>
-                  <RadioGroup value={sidebarPosition} onValueChange={setSidebarPosition}>
+                  <RadioGroup value={settings.appearance.sidebarPosition} onValueChange={(value: 'left' | 'right') => updateAppearanceSettings({ sidebarPosition: value })}>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="left" id="left" />
                       <Label htmlFor="left">左側</Label>
@@ -451,8 +439,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={emailNotifications}
-                  onCheckedChange={setEmailNotifications}
+                  checked={settings.notifications.email}
+                  onCheckedChange={(checked) => updateNotificationSettings({ email: checked })}
                 />
               </div>
 
@@ -467,8 +455,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={pushNotifications}
-                  onCheckedChange={setPushNotifications}
+                  checked={settings.notifications.push}
+                  onCheckedChange={(checked) => updateNotificationSettings({ push: checked })}
                 />
               </div>
 
@@ -483,15 +471,15 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={desktopNotifications}
-                  onCheckedChange={setDesktopNotifications}
+                  checked={settings.notifications.desktop}
+                  onCheckedChange={(checked) => updateNotificationSettings({ desktop: checked })}
                 />
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="flex items-center gap-2">
-                    {notificationSound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                    {settings.notifications.sound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
                     通知音
                   </Label>
                   <p className="text-sm text-muted-foreground">
@@ -499,8 +487,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={notificationSound}
-                  onCheckedChange={setNotificationSound}
+                  checked={settings.notifications.sound}
+                  onCheckedChange={(checked) => updateNotificationSettings({ sound: checked })}
                 />
               </div>
             </CardContent>
@@ -525,8 +513,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={leaveRequestNotif}
-                  onCheckedChange={setLeaveRequestNotif}
+                  checked={settings.notifications.categories.leaveRequest}
+                  onCheckedChange={(checked) => updateNotificationSettings({ categories: { ...settings.notifications.categories, leaveRequest: checked } })}
                 />
               </div>
 
@@ -541,8 +529,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={attendanceReminder}
-                  onCheckedChange={setAttendanceReminder}
+                  checked={settings.notifications.categories.attendanceReminder}
+                  onCheckedChange={(checked) => updateNotificationSettings({ categories: { ...settings.notifications.categories, attendanceReminder: checked } })}
                 />
               </div>
 
@@ -557,8 +545,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={overtimeAlert}
-                  onCheckedChange={setOvertimeAlert}
+                  checked={settings.notifications.categories.overtimeAlert}
+                  onCheckedChange={(checked) => updateNotificationSettings({ categories: { ...settings.notifications.categories, overtimeAlert: checked } })}
                 />
               </div>
 
@@ -573,8 +561,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={announcements}
-                  onCheckedChange={setAnnouncements}
+                  checked={settings.notifications.categories.announcements}
+                  onCheckedChange={(checked) => updateNotificationSettings({ categories: { ...settings.notifications.categories, announcements: checked } })}
                 />
               </div>
 
@@ -589,8 +577,8 @@ export default function SettingsPage() {
                     </Label>
                     <Switch
                       id="weekly"
-                      checked={weeklyReport}
-                      onCheckedChange={setWeeklyReport}
+                      checked={settings.notifications.reports.weekly}
+                      onCheckedChange={(checked) => updateNotificationSettings({ reports: { ...settings.notifications.reports, weekly: checked } })}
                     />
                   </div>
                   <div className="flex items-center justify-between">
@@ -599,8 +587,8 @@ export default function SettingsPage() {
                     </Label>
                     <Switch
                       id="monthly"
-                      checked={monthlyReport}
-                      onCheckedChange={setMonthlyReport}
+                      checked={settings.notifications.reports.monthly}
+                      onCheckedChange={(checked) => updateNotificationSettings({ reports: { ...settings.notifications.reports, monthly: checked } })}
                     />
                   </div>
                 </div>
@@ -630,15 +618,15 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {twoFactorEnabled && (
+                  {settings.security.twoFactor && (
                     <Badge variant="default" className="bg-green-500">
                       <ShieldCheck className="w-3 h-3 mr-1" />
                       有効
                     </Badge>
                   )}
                   <Switch
-                    checked={twoFactorEnabled}
-                    onCheckedChange={setTwoFactorEnabled}
+                    checked={settings.security.twoFactor}
+                    onCheckedChange={(checked) => updateSecuritySettings({ twoFactor: checked })}
                   />
                 </div>
               </div>
@@ -654,8 +642,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={biometricEnabled}
-                  onCheckedChange={setBiometricEnabled}
+                  checked={settings.security.biometric}
+                  onCheckedChange={(checked) => updateSecuritySettings({ biometric: checked })}
                 />
               </div>
 
@@ -671,20 +659,20 @@ export default function SettingsPage() {
                 </p>
                 <div className="flex items-center space-x-4">
                   <Slider
-                    value={sessionTimeout}
-                    onValueChange={setSessionTimeout}
+                    value={[settings.security.sessionTimeout]}
+                    onValueChange={(value) => updateSecuritySettings({ sessionTimeout: value[0] })}
                     min={5}
                     max={120}
                     step={5}
                     className="flex-1"
                   />
-                  <span className="text-sm font-medium w-12">{sessionTimeout}分</span>
+                  <span className="text-sm font-medium w-12">{settings.security.sessionTimeout}分</span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label>パスワード有効期限</Label>
-                <Select value={passwordExpiry} onValueChange={setPasswordExpiry}>
+                <Select value={settings.security.passwordExpiry} onValueChange={(value) => updateSecuritySettings({ passwordExpiry: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -719,8 +707,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={loginAlerts}
-                  onCheckedChange={setLoginAlerts}
+                  checked={settings.security.loginAlerts}
+                  onCheckedChange={(checked) => updateSecuritySettings({ loginAlerts: checked })}
                 />
               </div>
 
@@ -735,18 +723,18 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={ipRestriction}
-                  onCheckedChange={setIpRestriction}
+                  checked={settings.security.ipRestriction}
+                  onCheckedChange={(checked) => updateSecuritySettings({ ipRestriction: checked })}
                 />
               </div>
 
-              {ipRestriction && (
+              {settings.security.ipRestriction && (
                 <div className="space-y-2">
                   <Label>許可するIPアドレス</Label>
                   <Textarea
                     placeholder="IPアドレスを改行で区切って入力&#10;例:&#10;192.168.1.1&#10;10.0.0.0/24"
-                    value={allowedIPs}
-                    onChange={(e) => setAllowedIPs(e.target.value)}
+                    value={settings.security.allowedIPs}
+                    onChange={(e) => updateSecuritySettings({ allowedIPs: e.target.value })}
                     rows={4}
                   />
                 </div>
@@ -791,15 +779,15 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={autoBackup}
-                  onCheckedChange={setAutoBackup}
+                  checked={settings.data.autoBackup}
+                  onCheckedChange={(checked) => updateDataSettings({ autoBackup: checked })}
                 />
               </div>
 
-              {autoBackup && (
+              {settings.data.autoBackup && (
                 <div className="space-y-2">
                   <Label>バックアップ頻度</Label>
-                  <Select value={backupFrequency} onValueChange={setBackupFrequency}>
+                  <Select value={settings.data.backupFrequency} onValueChange={(value: 'hourly' | 'daily' | 'weekly' | 'monthly') => updateDataSettings({ backupFrequency: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -824,8 +812,8 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Switch
-                  checked={syncEnabled}
-                  onCheckedChange={setSyncEnabled}
+                  checked={settings.data.syncEnabled}
+                  onCheckedChange={(checked) => updateDataSettings({ syncEnabled: checked })}
                 />
               </div>
 
@@ -881,7 +869,7 @@ export default function SettingsPage() {
 
               <div className="space-y-2">
                 <Label>データ保存期間</Label>
-                <Select value={dataRetention} onValueChange={setDataRetention}>
+                <Select value={settings.data.dataRetention} onValueChange={(value) => updateDataSettings({ dataRetention: value })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -900,28 +888,7 @@ export default function SettingsPage() {
 
               <Separator />
 
-              <div className="space-y-2">
-                <Label>データエクスポート</Label>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={handleExportData} className="flex-1">
-                    <FileDown className="w-4 h-4 mr-2" />
-                    データをエクスポート
-                  </Button>
-                  <Button variant="outline" onClick={handleImportData} className="flex-1">
-                    <Upload className="w-4 h-4 mr-2" />
-                    データをインポート
-                  </Button>
-                </div>
-              </div>
 
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  データのエクスポートには個人情報が含まれます。取り扱いにはご注意ください。
-                </AlertDescription>
-              </Alert>
-
-              <Separator />
 
               <div className="space-y-2">
                 <Label className="text-red-600">危険な操作</Label>
