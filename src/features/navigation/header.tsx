@@ -217,14 +217,6 @@ export function Header() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [setCommandPaletteOpen]);
 
-  const handleLanguageToggle = () => {
-    setLocale(locale === 'ja' ? 'en' : 'ja');
-  };
-
-  const handleThemeToggle = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
-  };
-
   const handleMarkAsRead = (id: string) => {
     setNotifications(prev => 
       prev.map(n => n.id === id ? { ...n, isRead: true } : n)
@@ -282,21 +274,6 @@ export function Header() {
             </div>
 
             <Separator orientation="vertical" className="h-6" />
-
-            {/* Language Toggle */}
-            <Button variant="ghost" size="sm" onClick={handleLanguageToggle}>
-              <Globe className="w-4 h-4 mr-1" />
-              {locale === 'ja' ? 'EN' : 'JP'}
-            </Button>
-
-            {/* Theme Toggle */}
-            <Button variant="ghost" size="sm" onClick={handleThemeToggle}>
-              {theme === 'light' ? (
-                <Moon className="w-4 h-4" />
-              ) : (
-                <Sun className="w-4 h-4" />
-              )}
-            </Button>
 
             {/* Notifications */}
             <NotificationPanel
