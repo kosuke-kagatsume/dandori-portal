@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
+import { generateLeaveData } from '@/lib/mock-data';
 import { 
   Calendar,
   Plus,

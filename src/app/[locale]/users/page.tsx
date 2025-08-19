@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
+import { generateMockUsers } from '@/lib/mock-data';
 import { 
   MoreHorizontal, 
   Plus, 
@@ -48,9 +49,9 @@ export default function UsersPage() {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const response = await fetch('/api/users');
-        const data = await response.json();
-        setUsers(data.users || []);
+        // モックデータを使用（50人分）
+        const mockUsers = generateMockUsers();
+        setUsers(mockUsers);
       } catch (error) {
         toast.error('Failed to load users');
       } finally {

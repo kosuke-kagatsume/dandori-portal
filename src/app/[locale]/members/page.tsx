@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
+import { generateMockUsers } from '@/lib/mock-data';
 import { 
   Users,
   MapPin,
@@ -81,11 +82,11 @@ export default function MembersPage() {
   useEffect(() => {
     const loadMembers = async () => {
       try {
-        const response = await fetch('/api/users');
-        const data = await response.json();
+        // モックデータを使用（50人分）
+        const users = generateMockUsers();
         
         // Transform users to members with status
-        const mockMembers: Member[] = (data.users || []).map((user: User) => ({
+        const mockMembers: Member[] = users.map((user: User) => ({
           ...user,
           currentStatus: (['present', 'remote', 'business_trip', 'training', 'absent', 'not_checked_in'] as const)[
             Math.floor(Math.random() * 6)

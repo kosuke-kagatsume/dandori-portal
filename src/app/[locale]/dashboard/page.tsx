@@ -2,7 +2,9 @@
 
 // import { useTranslations } from 'next-intl'; // 一時的に無効化
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getDashboardStats, generateAttendanceData } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -40,13 +42,23 @@ export default function DashboardPage() {
     return translations[key] || key;
   };
 
-  // Mock data - in real app this would come from API
-  const kpiData = {
-    totalEmployees: 247,
-    todayAttendance: 186,
-    pendingApprovals: 12,
+  // データを取得
+  const [kpiData, setKpiData] = useState({
+    totalEmployees: 50,
+    todayAttendance: 42,
+    pendingApprovals: 8,
     monthlyUtilization: 87.5,
-  };
+  });
+
+  useEffect(() => {
+    const stats = getDashboardStats();
+    setKpiData({
+      totalEmployees: stats.totalEmployees,
+      todayAttendance: stats.todayAttendance,
+      pendingApprovals: stats.pendingApprovals,
+      monthlyUtilization: stats.monthlyUtilization,
+    });
+  }, []);
 
   const leaveBalance = {
     remaining: 12,

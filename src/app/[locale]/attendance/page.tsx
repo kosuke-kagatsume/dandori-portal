@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
+import { generateAttendanceData } from '@/lib/mock-data';
 import { 
   Clock,
   Calendar as CalendarIcon,

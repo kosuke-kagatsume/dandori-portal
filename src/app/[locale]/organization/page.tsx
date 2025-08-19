@@ -44,7 +44,7 @@ export default function OrganizationPage() {
       type: 'company',
       headUserId: '1',
       headUserName: '山田太郎',
-      memberCount: 150,
+      memberCount: 50,
       expanded: true,
       children: [
         {
@@ -53,7 +53,7 @@ export default function OrganizationPage() {
           type: 'division',
           headUserId: '2',
           headUserName: '佐藤花子',
-          memberCount: 8,
+          memberCount: 3,
           expanded: false
         },
         {
@@ -62,7 +62,7 @@ export default function OrganizationPage() {
           type: 'division',
           headUserId: '3',
           headUserName: '鈴木一郎',
-          memberCount: 45,
+          memberCount: 15,
           expanded: true,
           children: [
             {
@@ -71,7 +71,7 @@ export default function OrganizationPage() {
               type: 'department',
               headUserId: '4',
               headUserName: '田中次郎',
-              memberCount: 20
+              memberCount: 8
             },
             {
               id: '5',
@@ -79,7 +79,7 @@ export default function OrganizationPage() {
               type: 'department',
               headUserId: '5',
               headUserName: '高橋美香',
-              memberCount: 25
+              memberCount: 7
             }
           ]
         },
@@ -89,7 +89,7 @@ export default function OrganizationPage() {
           type: 'division',
           headUserId: '6',
           headUserName: '渡辺健太',
-          memberCount: 60,
+          memberCount: 20,
           expanded: true,
           children: [
             {
@@ -98,7 +98,7 @@ export default function OrganizationPage() {
               type: 'department',
               headUserId: '7',
               headUserName: '伊藤真一',
-              memberCount: 35,
+              memberCount: 15,
               expanded: false,
               children: [
                 {
@@ -107,7 +107,7 @@ export default function OrganizationPage() {
                   type: 'team',
                   headUserId: '8',
                   headUserName: '山口恵子',
-                  memberCount: 12
+                  memberCount: 6
                 },
                 {
                   id: '9',
@@ -115,7 +115,7 @@ export default function OrganizationPage() {
                   type: 'team',
                   headUserId: '9',
                   headUserName: '小林大輔',
-                  memberCount: 15
+                  memberCount: 5
                 },
                 {
                   id: '10',
@@ -123,7 +123,7 @@ export default function OrganizationPage() {
                   type: 'team',
                   headUserId: '10',
                   headUserName: '松本雄太',
-                  memberCount: 8
+                  memberCount: 4
                 }
               ]
             },
@@ -133,7 +133,7 @@ export default function OrganizationPage() {
               type: 'department',
               headUserId: '11',
               headUserName: '加藤美咲',
-              memberCount: 25
+              memberCount: 5
             }
           ]
         },
@@ -143,7 +143,7 @@ export default function OrganizationPage() {
           type: 'division',
           headUserId: '12',
           headUserName: '中村裕子',
-          memberCount: 37,
+          memberCount: 12,
           expanded: false,
           children: [
             {
@@ -152,7 +152,7 @@ export default function OrganizationPage() {
               type: 'department',
               headUserId: '13',
               headUserName: '青木健二',
-              memberCount: 12
+              memberCount: 5
             },
             {
               id: '14',
@@ -160,7 +160,7 @@ export default function OrganizationPage() {
               type: 'department',
               headUserId: '14',
               headUserName: '森田香織',
-              memberCount: 15
+              memberCount: 4
             },
             {
               id: '15',
@@ -168,7 +168,7 @@ export default function OrganizationPage() {
               type: 'department',
               headUserId: '15',
               headUserName: '石井孝明',
-              memberCount: 10
+              memberCount: 3
             }
           ]
         }
@@ -291,7 +291,7 @@ export default function OrganizationPage() {
 
   // 統計データ
   const stats = {
-    totalEmployees: 150,
+    totalEmployees: 50,
     divisions: 4,
     departments: 8,
     teams: 3
