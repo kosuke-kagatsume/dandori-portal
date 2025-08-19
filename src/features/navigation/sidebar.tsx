@@ -17,6 +17,8 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Receipt,
+  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -29,7 +31,8 @@ const navigation = [
   { key: 'members', href: '/ja/members', icon: UserCheck },
   { key: 'attendance', href: '/ja/attendance', icon: Clock },
   { key: 'leave', href: '/ja/leave', icon: Calendar },
-  // { key: 'workflows', href: '/ja/workflows', icon: GitBranch }, // 未実装
+  { key: 'expenses', href: '/ja/expenses', icon: Receipt },
+  { key: 'workflow', href: '/ja/workflow', icon: GitBranch },
   { key: 'organization', href: '/ja/organization', icon: Building2 },
   // { key: 'sites', href: '/ja/sites', icon: MapPin }, // 未実装
   { key: 'settings', href: '/ja/settings', icon: Settings },
@@ -51,7 +54,8 @@ export function Sidebar() {
       'members': 'メンバー管理',
       'attendance': '勤怠管理',
       'leave': '休暇管理',
-      'workflows': 'ワークフロー',
+      'expenses': '経費精算',
+      'workflow': 'ワークフロー',
       'organization': '組織管理',
       'sites': '拠点管理',
       'settings': '設定',
