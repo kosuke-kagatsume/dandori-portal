@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
+  User,
   Clock,
   Calendar,
   GitBranch,
@@ -29,9 +30,10 @@ const navigation = [
   { key: 'attendance', href: '/ja/attendance', icon: Clock },
   { key: 'leave', href: '/ja/leave', icon: Calendar },
   // { key: 'workflows', href: '/ja/workflows', icon: GitBranch }, // 未実装
-  // { key: 'organization', href: '/ja/org', icon: Building2 }, // 未実装
+  { key: 'organization', href: '/ja/organization', icon: Building2 },
   // { key: 'sites', href: '/ja/sites', icon: MapPin }, // 未実装
-  // { key: 'settings', href: '/ja/settings', icon: Settings }, // 未実装
+  { key: 'settings', href: '/ja/settings', icon: Settings },
+  { key: 'profile', href: '/ja/profile', icon: User },
   // { key: 'audit', href: '/ja/admin/audit-logs', icon: FileText, adminOnly: true }, // 未実装
 ];
 
@@ -53,6 +55,7 @@ export function Sidebar() {
       'organization': '組織管理',
       'sites': '拠点管理',
       'settings': '設定',
+      'profile': 'プロフィール',
       'audit': '監査ログ',
     };
     return translations[key] || key;

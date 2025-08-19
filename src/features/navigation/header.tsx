@@ -217,24 +217,15 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => {
-                  // プロフィールページへ遷移（未実装のため、アラートで代替）
-                  alert('プロフィール機能は現在開発中です');
-                }}>
+                <DropdownMenuItem onClick={() => router.push('/ja/profile')}>
                   <User className="mr-2 h-4 w-4" />
                   <span>プロフィール</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  // 組織管理ページへ遷移（未実装のため、アラートで代替）
-                  alert('組織管理機能は現在開発中です');
-                }}>
+                <DropdownMenuItem onClick={() => router.push('/ja/organization')}>
                   <Building2 className="mr-2 h-4 w-4" />
                   <span>組織管理</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  // 設定ページへ遷移（未実装のため、アラートで代替）
-                  alert('設定機能は現在開発中です');
-                }}>
+                <DropdownMenuItem onClick={() => router.push('/ja/settings')}>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>設定</span>
                 </DropdownMenuItem>
