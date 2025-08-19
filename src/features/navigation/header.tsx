@@ -39,6 +39,7 @@ import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenter } from './notification-center';
 import { CommandPalette } from './command-palette';
 import { NotificationPanel, type Notification } from '@/features/notifications/notification-panel';
+import { DANDORI_LOGO } from '@/lib/logo';
 
 export function Header() {
   const router = useRouter();
@@ -247,7 +248,7 @@ export function Header() {
             {/* Dandori Logo */}
             <div className="flex items-center space-x-2">
               <img
-                src="/dandori-logo.jpg"
+                src={DANDORI_LOGO}
                 alt="ダンドリワーク"
                 width={32}
                 height={32}
