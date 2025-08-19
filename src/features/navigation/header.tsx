@@ -38,6 +38,7 @@ import {
 import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenter } from './notification-center';
 import { CommandPalette } from './command-palette';
+import { NotificationPanel, type Notification } from '@/features/notifications/notification-panel';
 
 export function Header() {
   const router = useRouter();
@@ -67,8 +68,9 @@ export function Header() {
   const { currentUser, setCurrentUser } = useUserStore();
   const { unreadCount } = useNotificationStore();
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  // デフォルトユーザーを設定
+  // デフォルトユーザーと通知を設定
   useEffect(() => {
     if (!currentUser) {
       setCurrentUser({
@@ -85,6 +87,111 @@ export function Header() {
         timezone: 'Asia/Tokyo'
       });
     }
+
+    // モック通知データを生成
+    const mockNotifications: Notification[] = [
+      {
+        id: '1',
+        type: 'leave_request',
+        title: '有給休暇申請',
+        message: '田中太郎さんから有給休暇申請が届いています',
+        timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5分前
+        isRead: false,
+        priority: 'high',
+        actionUrl: '/ja/leave',
+        actionLabel: '申請を確認',
+        metadata: {
+          userName: '田中太郎',
+          days: 3,
+          department: '営業部'
+        }
+      },
+      {
+        id: '2',
+        type: 'overtime_alert',
+        title: '残業時間警告',
+        message: '今月の残業時間が36協定の上限に近づいています',
+        timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30分前
+        isRead: false,
+        priority: 'high',
+        actionUrl: '/ja/attendance',
+        actionLabel: '詳細を確認',
+        metadata: {
+          hours: 38.5
+        }
+      },
+      {
+        id: '3',
+        type: 'leave_approved',
+        title: '休暇申請承認',
+        message: 'あなたの有給休暇申請が承認されました',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2時間前
+        isRead: true,
+        priority: 'medium',
+        actionUrl: '/ja/leave',
+        metadata: {
+          days: 2
+        }
+      },
+      {
+        id: '4',
+        type: 'attendance_reminder',
+        title: '出勤打刻リマインド',
+        message: '本日の出勤打刻がまだ完了していません',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3時間前
+        isRead: false,
+        priority: 'medium',
+        actionUrl: '/ja/attendance',
+        actionLabel: '打刻する'
+      },
+      {
+        id: '5',
+        type: 'announcement',
+        title: '全社会議のお知らせ',
+        message: '来週月曜日の全社会議の詳細が更新されました',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1日前
+        isRead: true,
+        priority: 'low',
+        metadata: {
+          department: '経営企画室'
+        }
+      },
+      {
+        id: '6',
+        type: 'achievement',
+        title: '目標達成',
+        message: '営業部が月間目標を達成しました！',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2日前
+        isRead: true,
+        priority: 'low',
+        metadata: {
+          department: '営業部'
+        }
+      },
+      {
+        id: '7',
+        type: 'system',
+        title: 'システムメンテナンス',
+        message: '来週水曜日の深夜にシステムメンテナンスを実施します',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3日前
+        isRead: true,
+        priority: 'medium'
+      },
+      {
+        id: '8',
+        type: 'comment',
+        title: 'コメントが追加されました',
+        message: '佐藤花子さんがあなたの勤怠記録にコメントを追加しました',
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4), // 4日前
+        isRead: false,
+        priority: 'low',
+        metadata: {
+          userName: '佐藤花子'
+        }
+      }
+    ];
+
+    setNotifications(mockNotifications);
   }, [currentUser, setCurrentUser]);
 
   // Auto-refresh timestamp
@@ -116,6 +223,27 @@ export function Header() {
 
   const handleThemeToggle = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
+  };
+
+  const handleMarkAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+    );
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(prev => 
+      prev.map(n => ({ ...n, isRead: true }))
+    );
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  const handleArchiveNotification = (id: string) => {
+    // アーカイブ処理（実装省略）
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   return (
@@ -171,19 +299,13 @@ export function Header() {
             </Button>
 
             {/* Notifications */}
-            <NotificationCenter>
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="w-4 h-4" />
-                {unreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Badge>
-                )}
-              </Button>
-            </NotificationCenter>
+            <NotificationPanel
+              notifications={notifications}
+              onMarkAsRead={handleMarkAsRead}
+              onMarkAllAsRead={handleMarkAllAsRead}
+              onDelete={handleDeleteNotification}
+              onArchive={handleArchiveNotification}
+            />
 
             <Separator orientation="vertical" className="h-6" />
 
