@@ -39,6 +39,7 @@ import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenter } from './notification-center';
 import { CommandPalette } from './command-palette';
 import { NotificationPanel, type Notification } from '@/features/notifications/notification-panel';
+import Image from 'next/image';
 
 export function Header() {
   const router = useRouter();
@@ -242,8 +243,25 @@ export function Header() {
     <>
       <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex h-16 items-center px-6">
-          {/* Left Section - Tenant Switcher & Search */}
+          {/* Left Section - Logo, Tenant Switcher & Search */}
           <div className="flex items-center space-x-4 flex-1">
+            {/* Dandori Logo */}
+            <div className="flex items-center space-x-2">
+              <Image
+                src="/dandori-logo.jpg"
+                alt="ダンドリワーク"
+                width={32}
+                height={32}
+                className="rounded-md"
+                priority
+              />
+              <span className="text-lg font-bold bg-gradient-to-r from-orange-500 via-pink-500 to-blue-500 bg-clip-text text-transparent hidden sm:inline">
+                ダンドリワーク
+              </span>
+            </div>
+            
+            <Separator orientation="vertical" className="h-6" />
+            
             <TenantSwitcher />
             
             <Separator orientation="vertical" className="h-6" />
