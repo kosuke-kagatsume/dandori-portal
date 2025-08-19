@@ -39,6 +39,7 @@ import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenter } from './notification-center';
 import { CommandPalette } from './command-palette';
 import { NotificationPanel, type Notification } from '@/features/notifications/notification-panel';
+import Logo from '@/components/Logo';
 
 export function Header() {
   const router = useRouter();
@@ -244,24 +245,8 @@ export function Header() {
         <div className="flex h-16 items-center px-6">
           {/* Left Section - Logo, Tenant Switcher & Search */}
           <div className="flex items-center space-x-4 flex-1">
-            {/* Dandori Logo */}
-            <div className="flex items-center space-x-3">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="flex-shrink-0">
-                <rect width="32" height="32" rx="6" fill="url(#dandori-gradient)"/>
-                <path d="M10 8h6c4.4 0 8 3.6 8 8s-3.6 8-8 8h-6V8z" fill="white" fillOpacity="0.9"/>
-                <path d="M13 11v10h3c2.8 0 5-2.2 5-5s-2.2-5-5-5h-3z" fill="url(#dandori-gradient)"/>
-                <defs>
-                  <linearGradient id="dandori-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FF6B35"/>
-                    <stop offset="50%" stopColor="#E91E63"/>
-                    <stop offset="100%" stopColor="#03A9F4"/>
-                  </linearGradient>
-                </defs>
-              </svg>
-              <span className="text-lg font-bold bg-gradient-to-r from-orange-500 via-pink-500 to-blue-500 bg-clip-text text-transparent hidden sm:inline">
-                ダンドリワーク
-              </span>
-            </div>
+            {/* Dandori Logo - 最小限のコンポーネント */}
+            <Logo />
             
             <Separator orientation="vertical" className="h-6" />
             

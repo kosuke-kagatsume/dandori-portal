@@ -14,11 +14,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // 画像の最適化設定
-  images: {
-    domains: ['localhost', 'dandori-portal.vercel.app'],
-    unoptimized: true, // Vercelでの画像最適化を一時的に無効化
-  },
 };
 
 // next-intl無効化時の設定
