@@ -17,48 +17,25 @@ export function AppShell({ children }: AppShellProps) {
   const { setCurrentUser } = useUserStore();
   const { setNotifications } = useNotificationStore();
 
-  // Initialize MSW and mock data
+  // Initialize mock data (MSW disabled for production builds)
   useEffect(() => {
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      const initMocks = async () => {
-        const { worker } = await import('@/mocks/browser');
-        await worker.start({
-          onUnhandledRequest: 'bypass',
-        });
-
-        // Load initial mock data
-        try {
-          const tenantsResponse = await fetch('/api/tenants');
-          const tenants = await tenantsResponse.json();
-          setTenants(tenants);
-
-          const notificationsResponse = await fetch('/api/notifications');
-          const notifications = await notificationsResponse.json();
-          setNotifications(notifications);
-
-          // Set mock current user
-          setCurrentUser({
-            id: '1',
-            name: '田中太郎',
-            email: 'tanaka@example.com',
-            phone: '090-1234-5678',
-            hireDate: '2020-04-01',
-            unitId: '1',
-            roles: ['employee'],
-            status: 'active',
-            timezone: 'Asia/Tokyo',
-            avatar: '/avatars/default.png',
-            position: 'エンジニア',
-            department: '開発部',
-          });
-        } catch (error) {
-          console.error('Failed to initialize mock data:', error);
-        }
-      };
-
-      initMocks();
-    }
-  }, [setTenants, setCurrentUser, setNotifications]);
+    // Temporarily disable MSW for production builds
+    // Set mock current user directly
+    setCurrentUser({
+      id: '1',
+      name: '田中太郎',
+      email: 'tanaka@example.com',
+      phone: '090-1234-5678',
+      hireDate: '2020-04-01',
+      unitId: '1',
+      roles: ['employee'],
+      status: 'active',
+      timezone: 'Asia/Tokyo',
+      avatar: '/avatars/default.png',
+      position: 'エンジニア',
+      department: '開発部',
+    });
+  }, [setCurrentUser]);
 
   // Apply theme to document
   useEffect(() => {
