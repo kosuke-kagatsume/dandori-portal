@@ -194,8 +194,8 @@ export function NotificationPanel({
               )}
               {notification.actionUrl && (
                 <Button 
-                  variant="link" 
-                  className="h-auto p-0 text-xs"
+                  size="sm"
+                  className="h-8 text-xs bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-sm mt-2"
                   onClick={(e) => {
                     e.stopPropagation();
                     // Handle action
@@ -259,21 +259,25 @@ export function NotificationPanel({
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[500px] sm:w-[540px] p-0">
-        <SheetHeader className="p-6 pb-4 border-b">
+      <SheetContent className="w-[500px] sm:w-[540px] p-0 overflow-hidden">
+        <SheetHeader className="p-6 pb-4 bg-gradient-to-r from-orange-500 via-pink-500 to-blue-500 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <SheetTitle>通知</SheetTitle>
-              <SheetDescription>
+              <SheetTitle className="text-white text-2xl font-bold flex items-center gap-2">
+                <Bell className="h-6 w-6" />
+                通知
+              </SheetTitle>
+              <SheetDescription className="text-white/90 mt-1">
                 {unreadCount > 0 ? `${unreadCount}件の未読通知があります` : 'すべての通知を確認しました'}
               </SheetDescription>
             </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <Button 
-                  variant="outline" 
+                  variant="secondary" 
                   size="sm"
                   onClick={onMarkAllAsRead}
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
                 >
                   <CheckCheck className="h-4 w-4 mr-1" />
                   すべて既読
@@ -281,7 +285,7 @@ export function NotificationPanel({
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
+                  <Button variant="secondary" size="icon" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
                     <Filter className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -310,22 +314,22 @@ export function NotificationPanel({
         </SheetHeader>
 
         <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="h-full">
-          <TabsList className="w-full rounded-none border-b">
-            <TabsTrigger value="all" className="flex-1">
+          <TabsList className="w-full rounded-none bg-gray-100 dark:bg-gray-800 p-1">
+            <TabsTrigger value="all" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               すべて
-              <Badge variant="secondary" className="ml-2">
+              <Badge className="ml-2 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                 {notifications.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="unread" className="flex-1">
+            <TabsTrigger value="unread" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               未読
               {unreadCount > 0 && (
-                <Badge variant="destructive" className="ml-2">
+                <Badge className="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white border-0">
                   {unreadCount}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="archived" className="flex-1">
+            <TabsTrigger value="archived" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               アーカイブ
             </TabsTrigger>
           </TabsList>
