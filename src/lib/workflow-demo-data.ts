@@ -620,6 +620,175 @@ export const generateDemoWorkflowData = (): Partial<WorkflowRequest>[] => {
         escalationPath: ['finance_manager', 'general_manager'],
       },
     },
+
+    // 9. 田中太郎が承認者の営業部経費申請（承認待ち）
+    {
+      type: 'expense_claim',
+      title: '顧客訪問経費申請（11月分）',
+      description: '新規顧客開拓のための営業活動費用',
+      requesterId: '8',
+      requesterName: '中村優子',
+      department: '営業部',
+      status: 'pending',
+      priority: 'normal',
+      details: {
+        totalAmount: 18500,
+        items: [
+          { name: '交通費（電車代）', amount: 3200 },
+          { name: '顧客との昼食代', amount: 6800 },
+          { name: 'プレゼント資料印刷費', amount: 1500 },
+          { name: 'タクシー代', amount: 7000 },
+        ],
+        purpose: '新規顧客開拓',
+        date: getDateBefore(2),
+      },
+      approvalSteps: [
+        {
+          id: 'step-9-1',
+          order: 1,
+          approverRole: 'direct_manager',
+          approverId: '1', // 田中太郎
+          approverName: '田中太郎',
+          status: 'pending',
+        },
+      ],
+      currentStep: 0,
+      attachments: [],
+      timeline: [
+        {
+          id: 'tl-9-1',
+          action: '経費申請を作成しました',
+          userId: '8',
+          userName: '中村優子',
+          timestamp: getDateBefore(2),
+        },
+        {
+          id: 'tl-9-2',
+          action: '申請を提出しました',
+          userId: '8',
+          userName: '中村優子',
+          timestamp: getDateBefore(2, 1),
+        },
+      ],
+      createdAt: getDateBefore(2),
+      updatedAt: getDateBefore(2, 1),
+      submittedAt: getDateBefore(2, 1),
+      escalation: {
+        enabled: true,
+        daysUntilEscalation: 3,
+        escalationPath: ['direct_manager', 'finance_manager'],
+      },
+    },
+
+    // 10. 田中太郎が承認者の営業部休暇申請（承認待ち）
+    {
+      type: 'leave_request',
+      title: '子供の学校行事のための特別休暇',
+      description: '子供の運動会参加のため特別休暇を申請します',
+      requesterId: '2',
+      requesterName: '山田花子',
+      department: '営業部',
+      status: 'pending',
+      priority: 'normal',
+      details: {
+        leaveType: 'special_leave',
+        startDate: getDateBefore(-5), // 5日後
+        endDate: getDateBefore(-5), // 1日のみ
+        days: 1,
+        reason: '子供の運動会参加',
+        handover: '当日の業務は前日までに完了予定',
+      },
+      approvalSteps: [
+        {
+          id: 'step-10-1',
+          order: 1,
+          approverRole: 'direct_manager',
+          approverId: '1', // 田中太郎
+          approverName: '田中太郎',
+          status: 'pending',
+        },
+      ],
+      currentStep: 0,
+      attachments: [],
+      timeline: [
+        {
+          id: 'tl-10-1',
+          action: '特別休暇申請を作成しました',
+          userId: '2',
+          userName: '山田花子',
+          timestamp: getDateBefore(1),
+        },
+        {
+          id: 'tl-10-2',
+          action: '申請を提出しました',
+          userId: '2',
+          userName: '山田花子',
+          timestamp: getDateBefore(1, 2),
+        },
+      ],
+      createdAt: getDateBefore(1),
+      updatedAt: getDateBefore(1, 2),
+      submittedAt: getDateBefore(1, 2),
+      escalation: {
+        enabled: true,
+        daysUntilEscalation: 2,
+        escalationPath: ['direct_manager', 'hr_manager'],
+      },
+    },
+
+    // 11. 田中太郎が承認者の営業部残業申請（承認待ち）
+    {
+      type: 'overtime_request',
+      title: '年末商戦対応のための12月残業申請',
+      description: '年末商戦の売上目標達成のための残業申請',
+      requesterId: '8',
+      requesterName: '中村優子',
+      department: '営業部',
+      status: 'pending',
+      priority: 'high',
+      details: {
+        month: '2024-12',
+        estimatedHours: 25,
+        reason: '年末商戦対応、新規顧客フォローアップ',
+        project: '年末商戦キャンペーン',
+      },
+      approvalSteps: [
+        {
+          id: 'step-11-1',
+          order: 1,
+          approverRole: 'direct_manager',
+          approverId: '1', // 田中太郎
+          approverName: '田中太郎',
+          status: 'pending',
+        },
+      ],
+      currentStep: 0,
+      attachments: [],
+      timeline: [
+        {
+          id: 'tl-11-1',
+          action: '残業申請を作成しました',
+          userId: '8',
+          userName: '中村優子',
+          timestamp: getDateBefore(1),
+        },
+        {
+          id: 'tl-11-2',
+          action: '申請を提出しました',
+          userId: '8',
+          userName: '中村優子',
+          timestamp: getDateBefore(1, 1),
+        },
+      ],
+      createdAt: getDateBefore(1),
+      updatedAt: getDateBefore(1, 1),
+      submittedAt: getDateBefore(1, 1),
+      escalation: {
+        enabled: true,
+        daysUntilEscalation: 3,
+        escalationPath: ['direct_manager', 'department_head'],
+      },
+    },
   ];
 };
 
