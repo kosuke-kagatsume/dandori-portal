@@ -86,63 +86,87 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="dandori-card border-l-4 border-l-orange-500 hover:shadow-md transition-shadow">
+        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-transparent rounded-full -mr-16 -mt-16" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">
               {t('totalEmployees')}
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+              <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData.totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">
-              +12 先月比
-            </p>
+            <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">{kpiData.totalEmployees}</div>
+            <div className="flex items-center gap-1 mt-1">
+              <TrendingUp className="h-3 w-3 text-green-600" />
+              <p className="text-xs text-orange-700 dark:text-orange-300">
+                +12 先月比
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
               {t('todayAttendance')}
             </CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+              <UserCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData.todayAttendance}</div>
-            <p className="text-xs text-muted-foreground">
-              出勤率 {Math.round((kpiData.todayAttendance / kpiData.totalEmployees) * 100)}%
-            </p>
+            <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{kpiData.todayAttendance}</div>
+            <div className="flex items-center gap-1 mt-1">
+              <Activity className="h-3 w-3 text-blue-600" />
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                出勤率 {Math.round((kpiData.todayAttendance / kpiData.totalEmployees) * 100)}%
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -mr-16 -mt-16" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">
               {t('pendingApprovals')}
             </CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData.pendingApprovals}</div>
-            <p className="text-xs text-muted-foreground">
-              3件は緊急
-            </p>
+            <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">{kpiData.pendingApprovals}</div>
+            <div className="flex items-center gap-1 mt-1">
+              <Clock className="h-3 w-3 text-amber-600" />
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                3件は緊急
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
               {t('monthlyUtilization')}
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+              <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpiData.monthlyUtilization}%</div>
-            <p className="text-xs text-muted-foreground">
-              +2.1% 先月比
-            </p>
+            <div className="text-3xl font-bold text-green-900 dark:text-green-100">{kpiData.monthlyUtilization}%</div>
+            <div className="flex items-center gap-1 mt-1">
+              <TrendingUp className="h-3 w-3 text-green-600" />
+              <p className="text-xs text-green-700 dark:text-green-300">
+                +2.1% 先月比
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
