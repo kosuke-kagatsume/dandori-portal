@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { generateAttendanceData } from '@/lib/mock-data';
+import { generateRealisticAttendanceData, employees } from '@/lib/realistic-mock-data';
 import { 
   Clock,
   Calendar as CalendarIcon,
@@ -82,32 +83,35 @@ export default function AttendancePage() {
         const response = await fetch('/api/attendance');
         const data = await response.json();
         
-        // Mock attendance records
-        const mockUsers = generateAttendanceData();
-        const mockRecords: AttendanceRecord[] = Array.from({ length: 30 }, (_, i) => {
-          const date = new Date();
-          date.setDate(date.getDate() - i);
-          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-          const randomUser = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-          
-          return {
-            id: `${i}`,
-            userId: randomUser.userId,
-            userName: randomUser.userName,
-            date: date.toISOString().split('T')[0],
-            dayOfWeek: ['日', '月', '火', '水', '木', '金', '土'][date.getDay()],
-            checkIn: isWeekend ? undefined : `${8 + Math.floor(Math.random() * 2)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
-            checkOut: isWeekend ? undefined : `${17 + Math.floor(Math.random() * 3)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
-            breakTime: isWeekend ? '0:00' : '1:00',
-            workHours: isWeekend ? 0 : 7 + Math.random() * 2,
-            overtime: Math.random() > 0.7 ? Math.random() * 3 : 0,
-            status: isWeekend ? 'absent' : (['present', 'remote', 'late'] as const)[Math.floor(Math.random() * 3)],
-            workType: (['office', 'remote', 'hybrid'] as const)[Math.floor(Math.random() * 3)],
-            note: Math.random() > 0.8 ? 'クライアント打ち合わせのため外出' : undefined,
-          };
-        });
+        // リアルな勤怠データを取得
+        const realisticData = generateRealisticAttendanceData();
         
-        setRecords(mockRecords);
+        // 現在のユーザー（田中太郎）のデータをマッピング
+        const mappedRecords: AttendanceRecord[] = realisticData
+          .filter(record => record.userId === '1') // 田中太郎のデータのみ
+          .map(record => ({
+            id: record.id,
+            userId: record.userId,
+            userName: record.userName,
+            date: `2024-01-${record.date.split('/')[1]}`, // 日付形式を調整
+            dayOfWeek: record.dayOfWeek,
+            checkIn: record.checkIn,
+            checkOut: record.checkOut,
+            breakTime: record.breakTime,
+            workHours: record.workHours,
+            overtime: record.overtime,
+            status: record.status === 'normal' || record.status === 'remote' ? 'present' as const :
+                   record.status === 'late' ? 'late' as const :
+                   record.status === 'early_leave' ? 'early_leave' as const :
+                   'absent' as const,
+            workType: record.workLocation === 'home' ? 'remote' as const :
+                     record.workLocation === 'office' ? 'office' as const :
+                     'hybrid' as const,
+            note: record.memo,
+          }))
+          .reverse(); // 新しい日付を上に
+        
+        setRecords(mappedRecords);
         
         // Check if user is currently checked in (mock)
         const mockCheckedIn = Math.random() > 0.5;

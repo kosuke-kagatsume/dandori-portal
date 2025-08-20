@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { generateLeaveData } from '@/lib/mock-data';
+import { generateRealisticLeaveRequests, getLeaveBalances } from '@/lib/realistic-mock-data';
 import { 
   Calendar,
   Plus,
@@ -79,34 +80,33 @@ export default function LeavePage() {
         const response = await fetch('/api/leave-requests');
         const data = await response.json();
         
-        // Mock leave request data
-        const mockRequests: LeaveRequest[] = Array.from({ length: 20 }, (_, i) => {
-          const startDate = new Date();
-          startDate.setDate(startDate.getDate() + Math.floor(Math.random() * 365) - 180);
-          const endDate = new Date(startDate);
-          endDate.setDate(startDate.getDate() + Math.floor(Math.random() * 7) + 1);
-          
-          return {
-            id: `${i + 1}`,
-            type: (['annual', 'sick', 'personal', 'maternity'] as const)[Math.floor(Math.random() * 4)],
-            startDate: startDate.toISOString().split('T')[0],
-            endDate: endDate.toISOString().split('T')[0],
-            days: Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1,
-            reason: [
-              '家族旅行のため',
-              '体調不良のため',
-              '私用のため',
-              '通院のため',
-              '子どもの行事参加のため',
-            ][Math.floor(Math.random() * 5)],
-            status: (['pending', 'approved', 'rejected'] as const)[Math.floor(Math.random() * 3)],
-            submittedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-            approvedAt: Math.random() > 0.5 ? new Date().toISOString() : undefined,
-            approver: Math.random() > 0.5 ? '山田部長' : undefined,
-          };
-        });
+        // リアルな休暇申請データを取得
+        const realisticRequests = generateRealisticLeaveRequests();
         
-        setRequests(mockRequests);
+        // データをマッピング
+        const mappedRequests: LeaveRequest[] = realisticRequests.map(req => ({
+          id: req.id,
+          type: req.leaveType === 'paid' ? 'annual' as const :
+                req.leaveType === 'sick' ? 'sick' as const :
+                req.leaveType === 'marriage' || req.leaveType === 'mourning' ? 'personal' as const :
+                req.leaveType === 'maternity' ? 'maternity' as const :
+                req.leaveType === 'childcare' ? 'paternity' as const :
+                'personal' as const,
+          startDate: req.startDate,
+          endDate: req.endDate,
+          days: req.days,
+          reason: req.reason,
+          status: req.status === 'draft' ? 'pending' as const :
+                 req.status === 'pending' ? 'pending' as const :
+                 req.status === 'approved' ? 'approved' as const :
+                 req.status === 'rejected' ? 'rejected' as const :
+                 'cancelled' as const,
+          submittedAt: req.requestDate,
+          approvedAt: req.approvalDate,
+          approver: req.approver,
+        }));
+        
+        setRequests(mappedRequests);
       } catch (error) {
         toast.error('Failed to load leave requests');
       } finally {
@@ -275,12 +275,15 @@ export default function LeavePage() {
     },
   ];
 
-  // Calculate statistics
+  // Calculate statistics from real data
+  const leaveBalances = getLeaveBalances();
+  const currentUserBalance = leaveBalances.find(b => b.userId === '1'); // 田中太郎のデータ
+  
   const stats = {
-    remaining: 12,
-    used: 8,
+    remaining: currentUserBalance?.paidLeave.remaining || 12,
+    used: currentUserBalance?.paidLeave.used || 8,
     pending: requests.filter(r => r.status === 'pending').length,
-    expiring: 3,
+    expiring: currentUserBalance?.paidLeave.expiring || 3,
     thisYearUsed: requests.filter(r => {
       const year = new Date().getFullYear();
       return new Date(r.startDate).getFullYear() === year && r.status === 'approved';
