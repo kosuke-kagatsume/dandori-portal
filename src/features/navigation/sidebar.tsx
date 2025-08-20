@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 // import { useTranslations } from 'next-intl'; // 一時的に無効化
-import Logo from '@/components/Logo';
+import LogoCompact from '@/components/LogoCompact';
 import { 
   LayoutDashboard,
   Users,
@@ -70,17 +70,12 @@ export function Sidebar() {
       )}>
         {/* Logo/Brand */}
         <div className="flex h-16 items-center px-4 border-b border-border">
-          {!sidebarCollapsed ? (
-            <Link href="/ja/dashboard">
-              <Logo />
-            </Link>
-          ) : (
-            <Link href="/ja/dashboard" className="flex items-center justify-center w-full">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <LayoutDashboard className="w-5 h-5 text-primary-foreground" />
-              </div>
-            </Link>
-          )}
+          <Link href="/ja/dashboard" className={cn(
+            "flex items-center",
+            sidebarCollapsed ? "justify-center w-full" : ""
+          )}>
+            <LogoCompact compact={sidebarCollapsed} />
+          </Link>
         </div>
 
         {/* Navigation */}
