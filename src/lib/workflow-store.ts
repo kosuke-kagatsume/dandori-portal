@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { generateDemoWorkflowData } from './workflow-demo-data';
 
 export type WorkflowType = 
   | 'leave_request'      // 休暇申請
@@ -105,6 +106,10 @@ export interface WorkflowRequest {
 
 interface WorkflowStore {
   requests: WorkflowRequest[];
+  initialized: boolean;
+  
+  // 初期化
+  initializeDemoData: () => void;
   
   // 申請の作成・更新
   createRequest: (request: Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -140,6 +145,20 @@ export const useWorkflowStore = create<WorkflowStore>()(
   persist(
     (set, get) => ({
       requests: [],
+      initialized: false,
+      
+      initializeDemoData: () => {
+        const state = get();
+        if (state.initialized && state.requests.length > 0) return;
+        
+        const demoData = generateDemoWorkflowData();
+        const workflowRequests: WorkflowRequest[] = demoData.map((demo, index) => ({
+          id: `WF-DEMO-${Date.now()}-${index}`,
+          ...demo as Omit<WorkflowRequest, 'id'>,
+        }));
+        
+        set({ requests: workflowRequests, initialized: true });
+      },
       
       createRequest: (request) => {
         const id = `WF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

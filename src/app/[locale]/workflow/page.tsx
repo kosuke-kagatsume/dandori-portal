@@ -92,10 +92,12 @@ export default function WorkflowPage() {
   
   const { currentUser } = useUserStore();
   const { addNotification } = useNotificationStore();
+  // デモデータに合わせてユーザーIDを設定（田中太郎: 営業部マネージャー）
   const currentUserId = currentUser?.id || '1';
   
   const { 
     requests,
+    initializeDemoData,
     getMyRequests,
     getPendingApprovals,
     getDelegatedApprovals,
@@ -105,6 +107,11 @@ export default function WorkflowPage() {
     submitRequest,
     getStatistics,
   } = useWorkflowStore();
+
+  // デモデータの初期化
+  useEffect(() => {
+    initializeDemoData();
+  }, [initializeDemoData]);
 
   // 承認待ちのリクエスト
   const pendingApprovals = useMemo(() => 
@@ -239,42 +246,162 @@ export default function WorkflowPage() {
   };
 
   const handleNewRequest = (type: WorkflowType) => {
-    // サンプルデータで新規申請を作成
+    // より具体的なデモデータで新規申請を作成
+    const getRequestDetails = (type: WorkflowType) => {
+      const now = new Date();
+      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      
+      switch (type) {
+        case 'leave_request':
+          return {
+            title: '有給休暇申請',
+            description: '家族旅行のため有給休暇を取得します',
+            details: {
+              leaveType: 'paid_leave',
+              startDate: nextWeek.toISOString().split('T')[0],
+              endDate: new Date(nextWeek.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              days: 2,
+              reason: '家族旅行',
+              handover: '業務は完了済み、緊急時は携帯電話で対応可能',
+            },
+          };
+        case 'expense_claim':
+          return {
+            title: '営業活動経費申請',
+            description: '顧客訪問にかかった交通費と会食費の精算',
+            details: {
+              totalAmount: 25000,
+              items: [
+                { name: '電車代（往復）', amount: 2800 },
+                { name: '顧客との昼食代', amount: 8500 },
+                { name: 'タクシー代', amount: 3200 },
+                { name: '資料印刷費', amount: 500 },
+              ],
+              purpose: '新規顧客開拓',
+              date: now.toISOString().split('T')[0],
+            },
+          };
+        case 'overtime_request':
+          return {
+            title: '月末残業申請',
+            description: '月末処理のため残業が必要です',
+            details: {
+              month: now.toISOString().substring(0, 7),
+              estimatedHours: 15,
+              reason: '月次レポート作成と顧客対応',
+              project: '営業活動',
+            },
+          };
+        case 'business_trip':
+          return {
+            title: '関西支社出張申請',
+            description: '関西支社での会議参加のための出張申請',
+            details: {
+              destination: '大阪',
+              purpose: '四半期業績会議',
+              startDate: nextWeek.toISOString().split('T')[0],
+              endDate: new Date(nextWeek.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              estimatedCost: 45000,
+            },
+          };
+        case 'remote_work':
+          return {
+            title: 'リモートワーク申請',
+            description: '作業集中のため在宅勤務を希望します',
+            details: {
+              startDate: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              reason: '資料作成に集中するため',
+              workLocation: '自宅',
+              tasks: ['月次資料作成', 'プレゼン準備', 'メール対応'],
+            },
+          };
+        default:
+          return {
+            title: getWorkflowTypeLabel(type),
+            description: `${getWorkflowTypeLabel(type)}の申請`,
+            details: {},
+          };
+      }
+    };
+
+    const requestDetails = getRequestDetails(type);
+    
+    // 承認ステップを動的に設定
+    const getApprovalSteps = (type: WorkflowType) => {
+      switch (type) {
+        case 'leave_request':
+          return [
+            {
+              id: `step-${Date.now()}-1`,
+              order: 1,
+              approverRole: 'direct_manager' as ApproverRole,
+              approverId: '2',
+              approverName: '山田花子（部長）',
+              status: 'pending' as const,
+            },
+            {
+              id: `step-${Date.now()}-2`,
+              order: 2,
+              approverRole: 'hr_manager' as ApproverRole,
+              approverId: '5',
+              approverName: '高橋美咲（人事部長）',
+              status: 'pending' as const,
+            },
+          ];
+        case 'expense_claim':
+          return [
+            {
+              id: `step-${Date.now()}-1`,
+              order: 1,
+              approverRole: 'direct_manager' as ApproverRole,
+              approverId: '2',
+              approverName: '山田花子（部長）',
+              status: 'pending' as const,
+            },
+            {
+              id: `step-${Date.now()}-2`,
+              order: 2,
+              approverRole: 'finance_manager' as ApproverRole,
+              approverId: '6',
+              approverName: '渡辺健太（経理部長）',
+              status: 'pending' as const,
+            },
+          ];
+        default:
+          return [
+            {
+              id: `step-${Date.now()}-1`,
+              order: 1,
+              approverRole: 'direct_manager' as ApproverRole,
+              approverId: '2',
+              approverName: '山田花子（部長）',
+              status: 'pending' as const,
+            },
+          ];
+      }
+    };
+
     const newRequest = useWorkflowStore.getState().createRequest({
       type,
-      title: getWorkflowTypeLabel(type),
-      description: `${getWorkflowTypeLabel(type)}の申請`,
+      title: requestDetails.title,
+      description: requestDetails.description,
       requesterId: currentUserId,
-      requesterName: currentUser?.name || '申請者',
+      requesterName: currentUser?.name || '田中太郎',
       department: currentUser?.department || '営業部',
       status: 'draft',
-      priority: 'normal',
-      details: {},
-      approvalSteps: [
-        {
-          id: `step-1`,
-          order: 1,
-          approverRole: 'direct_manager',
-          approverId: '2',
-          approverName: '山田太郎',
-          status: 'pending',
-        },
-        {
-          id: `step-2`,
-          order: 2,
-          approverRole: 'department_head',
-          approverId: '3',
-          approverName: '鈴木部長',
-          status: 'pending',
-        },
-      ],
+      priority: type === 'business_trip' ? 'high' : 'normal',
+      details: requestDetails.details,
+      approvalSteps: getApprovalSteps(type),
       currentStep: 0,
       attachments: [],
       timeline: [],
       escalation: {
         enabled: true,
-        daysUntilEscalation: 3,
-        escalationPath: ['direct_manager', 'department_head', 'general_manager'],
+        daysUntilEscalation: type === 'expense_claim' ? 5 : 3,
+        escalationPath: type === 'expense_claim' 
+          ? ['direct_manager', 'finance_manager', 'general_manager']
+          : ['direct_manager', 'department_head', 'general_manager'],
       },
     });
 
