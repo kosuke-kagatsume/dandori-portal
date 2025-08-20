@@ -1,18 +1,8 @@
-import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  
-  // 静的ファイルとAPIルートはスキップ
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.includes('.') || // 拡張子があるファイル（.jpg, .png, .js, .css など）
-    pathname.startsWith('/favicon.ico')
-  ) {
-    return NextResponse.next();
-  }
   
   // ルートパスへのアクセスは /ja/dashboard にリダイレクト
   if (pathname === '/') {
@@ -20,23 +10,17 @@ export function middleware(request: NextRequest) {
   }
   
   // /ja が付いていないパスは /ja を付けてリダイレクト
-  if (!pathname.startsWith('/ja')) {
+  if (!pathname.startsWith('/ja') && !pathname.startsWith('/en')) {
     return NextResponse.redirect(new URL(`/ja${pathname}`, request.url));
   }
   
   return NextResponse.next();
 }
 
+// ★静的ファイル/内部パスを "完全除外"
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder files
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    // api / _next / favicon / robots / sitemap / そして "拡張子あり(.*\..*)" を除外
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)',
   ],
 };
