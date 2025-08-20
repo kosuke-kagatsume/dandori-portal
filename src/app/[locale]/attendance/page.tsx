@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DataTable } from '@/components/ui/common/data-table';
 import { CheckInButton } from '@/features/attendance/check-in-button';
+import { AdvancedCheckIn } from '@/features/attendance/advanced-check-in';
 import { AttendanceCalendar } from '@/features/attendance/attendance-calendar';
 import { toast } from 'sonner';
 
@@ -397,12 +398,7 @@ export default function AttendancePage() {
 
       {/* Check-in Section */}
       <div className="flex justify-center">
-        <CheckInButton
-          isCheckedIn={isCheckedIn}
-          checkedInAt={checkedInAt}
-          onCheckIn={handleCheckIn}
-          onCheckOut={handleCheckOut}
-        />
+        <AdvancedCheckIn />
       </div>
 
       {/* Tabs Content */}
