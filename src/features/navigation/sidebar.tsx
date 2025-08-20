@@ -8,18 +8,13 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
-  User,
   Clock,
   Calendar,
   GitBranch,
-  Building2,
   MapPin,
-  Settings,
   FileText,
   ChevronLeft,
   ChevronRight,
-  Receipt,
-  DollarSign,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -33,10 +28,7 @@ const navigation = [
   { key: 'attendance', href: '/ja/attendance', icon: Clock },
   { key: 'leave', href: '/ja/leave', icon: Calendar },
   { key: 'workflow', href: '/ja/workflow', icon: GitBranch },
-  { key: 'organization', href: '/ja/organization', icon: Building2 },
   // { key: 'sites', href: '/ja/sites', icon: MapPin }, // 未実装
-  { key: 'settings', href: '/ja/settings', icon: Settings },
-  { key: 'profile', href: '/ja/profile', icon: User },
   // { key: 'audit', href: '/ja/admin/audit-logs', icon: FileText, adminOnly: true }, // 未実装
 ];
 
