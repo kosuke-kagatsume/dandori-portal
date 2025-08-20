@@ -15,6 +15,7 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -27,6 +28,7 @@ const navigation = [
   { key: 'members', href: '/ja/members', icon: UserCheck },
   { key: 'attendance', href: '/ja/attendance', icon: Clock },
   { key: 'leave', href: '/ja/leave', icon: Calendar },
+  { key: 'approval', href: '/ja/approval', icon: ClipboardCheck },
   { key: 'workflow', href: '/ja/workflow', icon: GitBranch },
   // { key: 'sites', href: '/ja/sites', icon: MapPin }, // 未実装
   // { key: 'audit', href: '/ja/admin/audit-logs', icon: FileText, adminOnly: true }, // 未実装
@@ -46,6 +48,7 @@ export function Sidebar() {
       'members': 'メンバー管理',
       'attendance': '勤怠管理',
       'leave': '休暇管理',
+      'approval': '承認管理',
       'workflow': 'ワークフロー',
       'organization': '組織管理',
       'sites': '拠点管理',

@@ -33,7 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DataTable } from '@/components/ui/common/data-table';
+import { OptimizedDataTable } from '@/components/ui/common/optimized-data-table';
 import { LeaveRequestDialog } from '@/features/leave/leave-request-dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -78,7 +78,8 @@ export default function LeavePage() {
     const loadRequests = async () => {
       try {
         // APIを使わず直接モックデータを使用
-        await new Promise(resolve => setTimeout(resolve, 500)); // ローディングのシミュレーション
+        // キャッシュされている場合は即座に返す
+        await new Promise(resolve => setTimeout(resolve, 100)); // 最小限のローディング
         
         // リアルな休暇申請データを取得
         const realisticRequests = generateRealisticLeaveRequests();
@@ -429,11 +430,12 @@ export default function LeavePage() {
         <TabsContent value="requests" className="space-y-4">
           <Card>
             <CardContent className="p-6">
-              <DataTable
+              <OptimizedDataTable
                 columns={columns}
                 data={requests}
                 searchKey="reason"
                 searchPlaceholder="理由で検索..."
+                pageSize={15}
               />
             </CardContent>
           </Card>

@@ -44,6 +44,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { useApprovalStore } from '@/lib/approval-store';
 
 export type NotificationType = 
   | 'leave_request' 
@@ -54,7 +55,10 @@ export type NotificationType =
   | 'announcement'
   | 'system'
   | 'achievement'
-  | 'comment';
+  | 'comment'
+  | 'approval_request'  // 新しい承認依頼
+  | 'approval_completed' // 承認完了
+  | 'approval_rejected'; // 承認却下
 
 export interface Notification {
   id: string;
@@ -91,8 +95,12 @@ export function NotificationPanel({
 }: NotificationPanelProps) {
   const [filter, setFilter] = useState<'all' | 'unread' | 'archived'>('all');
   const [selectedType, setSelectedType] = useState<NotificationType | 'all'>('all');
+  
+  const { getNotificationCount } = useApprovalStore();
+  const currentUserId = '1'; // 現在のユーザー（田中太郎）
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
+  const approvalCount = getNotificationCount(currentUserId);
 
   const filteredNotifications = notifications.filter(n => {
     if (filter === 'unread' && n.isRead) return false;
@@ -118,6 +126,12 @@ export function NotificationPanel({
         return Award;
       case 'comment':
         return MessageSquare;
+      case 'approval_request':
+        return UserCheck;
+      case 'approval_completed':
+        return CheckCheck;
+      case 'approval_rejected':
+        return X;
       default:
         return Bell;
     }
@@ -133,6 +147,12 @@ export function NotificationPanel({
         return 'text-orange-600';
       case 'achievement':
         return 'text-purple-600';
+      case 'approval_request':
+        return 'text-purple-600';
+      case 'approval_completed':
+        return 'text-green-600';
+      case 'approval_rejected':
+        return 'text-red-600';
       default:
         return 'text-blue-600';
     }

@@ -32,6 +32,129 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useApprovalStore } from '@/lib/approval-store';
+import { getUserDepartmentInfo, createApprovalFlow } from '@/lib/approval-system';
+import { CheckCircle, Clock, User, ArrowRight, ArrowLeft } from 'lucide-react';
+
+// 承認フロープレビューコンポーネント
+const ApprovalFlowPreview = ({ formData, leaveDays, currentUserId, onBack }: {
+  formData: LeaveRequestData;
+  leaveDays: number;
+  currentUserId: string;
+  onBack: () => void;
+}) => {
+  const urgency = leaveDays >= 5 ? 'high' : 'normal';
+  
+  // 仮の承認フローを生成（プレビュー用）
+  const previewFlow = createApprovalFlow(
+    'preview-request',
+    'leave',
+    currentUserId,
+    '田中太郎',
+    urgency
+  );
+
+  return (
+    <>
+      {/* 申請内容サマリー */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">申請内容</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm text-muted-foreground">休暇種別</Label>
+              <p className="font-medium">
+                {leaveTypes.find(t => t.value === formData.type)?.label}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">取得日数</Label>
+              <p className="font-medium">{leaveDays}日</p>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">開始日</Label>
+              <p className="font-medium">
+                {format(formData.startDate, 'yyyy/MM/dd (E)', { locale: ja })}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">終了日</Label>
+              <p className="font-medium">
+                {format(formData.endDate, 'yyyy/MM/dd (E)', { locale: ja })}
+              </p>
+            </div>
+          </div>
+          <div>
+            <Label className="text-sm text-muted-foreground">理由</Label>
+            <p className="font-medium">{formData.reason}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 承認フロー */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            承認フロー
+          </CardTitle>
+          <CardDescription>
+            この申請は以下の順序で承認されます
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {previewFlow.steps.map((step, index) => (
+              <div key={step.id} className="flex items-center gap-4">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      {step.stepNumber}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{step.approverName}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {step.approverRole === 'manager' ? '直属上司' : 
+                       step.approverRole === 'hr' ? '人事部' : '管理者'}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {step.approverRole === 'manager' ? '業務調整の観点で承認' :
+                     step.approverRole === 'hr' ? '勤怠制度の観点で最終承認' :
+                     '管理者として承認'}
+                  </p>
+                </div>
+                
+                {index < previewFlow.steps.length - 1 && (
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            ))}
+          </div>
+          
+          {leaveDays >= 5 && (
+            <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-950 rounded-lg">
+              <div className="flex items-center gap-2 text-orange-600">
+                <Clock className="h-4 w-4" />
+                <span className="font-medium text-sm">長期休暇のため人事承認が必要です</span>
+              </div>
+              <p className="text-xs text-orange-600 mt-1">
+                5日以上の休暇は人事部での最終確認が必要となります
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+};
 
 const leaveRequestSchema = z.object({
   type: z.enum(['annual', 'sick', 'personal', 'maternity', 'paternity', 'bereavement']),
@@ -60,6 +183,9 @@ const leaveTypes = [
 
 export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveRequestDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showApprovalFlow, setShowApprovalFlow] = useState(false);
+  const { createFlow, submitRequest } = useApprovalStore();
+  const currentUserId = '1'; // 現在のユーザー（田中太郎）
   const [selectedType, setSelectedType] = useState<string>('annual');
 
   const {
@@ -99,11 +225,48 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
   const remainingDays = 12;
 
   const handleFormSubmit = async (data: LeaveRequestData) => {
+    if (!showApprovalFlow) {
+      // 承認フロー確認画面を表示
+      setShowApprovalFlow(true);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await onSubmit(data);
-      toast.success('有給申請を提出しました');
+      // 休暇申請データの作成
+      const requestId = `leave-${Date.now()}`;
+      const days = calculateDays(data.startDate, data.endDate);
+      
+      // 緊急度の判定（5日以上は高緊急度）
+      const urgency = days >= 5 ? 'high' : 'normal';
+      
+      // 承認フローの作成
+      const flow = createFlow(
+        requestId,
+        'leave',
+        currentUserId,
+        '田中太郎',
+        urgency
+      );
+      
+      // 申請データと承認フローを連携
+      const requestData = {
+        ...data,
+        id: requestId,
+        days,
+        approvalFlowId: flow.id,
+      };
+      
+      await onSubmit(requestData);
+      
+      // 申請を提出状態に変更
+      submitRequest(flow.id);
+      
+      toast.success('休暇申請を提出しました', {
+        description: '承認者に通知が送信されました'
+      });
       reset();
+      setShowApprovalFlow(false);
       onOpenChange(false);
     } catch (error) {
       toast.error('申請の提出に失敗しました');
@@ -117,13 +280,29 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <DialogHeader>
-            <DialogTitle>有給申請</DialogTitle>
+            <DialogTitle>
+              {showApprovalFlow ? '申請内容確認・承認フロー' : '有給申請'}
+            </DialogTitle>
             <DialogDescription>
-              新しい有給申請を作成します
+              {showApprovalFlow 
+                ? '申請内容と承認フローを確認してください'
+                : '新しい有給申請を作成します'
+              }
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
+            {showApprovalFlow ? (
+              /* 承認フロー確認画面 */
+              <ApprovalFlowPreview 
+                formData={getValues()}
+                leaveDays={leaveDays}
+                currentUserId={currentUserId}
+                onBack={() => setShowApprovalFlow(false)}
+              />
+            ) : (
+              /* 通常の申請フォーム */
+              <div className="space-y-6">
             {/* Current Leave Balance */}
             <Card>
               <CardHeader className="pb-3">
@@ -310,18 +489,38 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
                 </CardContent>
               </Card>
             )}
+            </div>
+            )}
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              キャンセル
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting || (leaveDays > remainingDays && selectedLeaveType?.daysRequired)}
-            >
-              {isSubmitting ? '申請中...' : '申請する'}
-            </Button>
+            {showApprovalFlow ? (
+              <>
+                <Button type="button" variant="outline" onClick={() => setShowApprovalFlow(false)}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  戻る
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isSubmitting ? '申請中...' : '申請を提出'}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  キャンセル
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={leaveDays > remainingDays && selectedLeaveType?.daysRequired}
+                >
+                  承認フロー確認
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAttendanceStore } from '@/lib/attendance-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,75 +47,59 @@ interface TimeRecord {
 
 export function AdvancedCheckIn() {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [status, setStatus] = useState<'notStarted' | 'working' | 'onBreak' | 'finished'>('notStarted');
-  const [todayRecord, setTodayRecord] = useState<TimeRecord>({
-    totalBreakTime: 0,
-    workLocation: 'office'
-  });
   const [showMemoDialog, setShowMemoDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [memo, setMemo] = useState('');
   const [workLocation, setWorkLocation] = useState<TimeRecord['workLocation']>('office');
   const [workingHours, setWorkingHours] = useState(0);
+  
+  // Zustand store の使用
+  const { 
+    todayStatus, 
+    checkIn, 
+    startBreak, 
+    endBreak, 
+    checkOut 
+  } = useAttendanceStore();
 
   // 1秒ごとに時刻を更新
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
       // 勤務時間を計算
-      if (todayRecord.checkIn && !todayRecord.checkOut) {
-        const checkInTime = new Date(`2024-01-01 ${todayRecord.checkIn}`);
+      if (todayStatus.checkIn && !todayStatus.checkOut) {
+        const checkInTime = new Date(`2024-01-01 ${todayStatus.checkIn}`);
         const now = new Date(`2024-01-01 ${currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`);
         const diff = (now.getTime() - checkInTime.getTime()) / 1000 / 60 / 60; // hours
-        setWorkingHours(Math.max(0, diff - todayRecord.totalBreakTime / 60));
+        setWorkingHours(Math.max(0, diff - todayStatus.totalBreakTime / 60));
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [todayRecord, currentTime]);
+  }, [todayStatus, currentTime]);
 
   const handleCheckIn = () => {
     setShowLocationDialog(true);
   };
 
-  const confirmCheckIn = () => {
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    setTodayRecord({
-      ...todayRecord,
-      checkIn: time,
-      workLocation: workLocation
-    });
-    setStatus('working');
+  const confirmCheckIn = async () => {
+    await checkIn(workLocation);
     setShowLocationDialog(false);
+    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`出勤打刻完了: ${time}`, {
       description: `勤務場所: ${getLocationLabel(workLocation)}`
     });
   };
 
-  const handleBreakStart = () => {
+  const handleBreakStart = async () => {
+    await startBreak();
     const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    setTodayRecord({
-      ...todayRecord,
-      breakStart: time
-    });
-    setStatus('onBreak');
     toast.success(`休憩開始: ${time}`);
   };
 
-  const handleBreakEnd = () => {
+  const handleBreakEnd = async () => {
+    await endBreak();
     const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    if (todayRecord.breakStart) {
-      const start = new Date(`2024-01-01 ${todayRecord.breakStart}`);
-      const end = new Date(`2024-01-01 ${time}`);
-      const breakTime = (end.getTime() - start.getTime()) / 1000 / 60; // minutes
-      
-      setTodayRecord({
-        ...todayRecord,
-        breakEnd: time,
-        totalBreakTime: todayRecord.totalBreakTime + breakTime
-      });
-    }
-    setStatus('working');
     toast.success(`休憩終了: ${time}`);
   };
 
@@ -122,15 +107,10 @@ export function AdvancedCheckIn() {
     setShowMemoDialog(true);
   };
 
-  const confirmCheckOut = () => {
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    setTodayRecord({
-      ...todayRecord,
-      checkOut: time,
-      memo: memo
-    });
-    setStatus('finished');
+  const confirmCheckOut = async () => {
+    await checkOut(memo);
     setShowMemoDialog(false);
+    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`退勤打刻完了: ${time}`, {
       description: '今日もお疲れ様でした！'
     });
@@ -200,26 +180,26 @@ export function AdvancedCheckIn() {
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">出勤時刻</span>
-                {todayRecord.checkIn && <Badge variant="outline">{getLocationIcon(todayRecord.workLocation)}</Badge>}
+                {todayStatus.checkIn && <Badge variant="outline">{getLocationIcon(todayStatus.workLocation)}</Badge>}
               </div>
               <div className="text-2xl font-bold">
-                {todayRecord.checkIn || '--:--'}
+                {todayStatus.checkIn || '--:--'}
               </div>
             </div>
             
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">退勤時刻</span>
-                {todayRecord.checkOut && <CheckCircle className="h-4 w-4 text-green-500" />}
+                {todayStatus.checkOut && <CheckCircle className="h-4 w-4 text-green-500" />}
               </div>
               <div className="text-2xl font-bold">
-                {todayRecord.checkOut || '--:--'}
+                {todayStatus.checkOut || '--:--'}
               </div>
             </div>
           </div>
 
           {/* 勤務時間プログレス */}
-          {status === 'working' && (
+          {todayStatus.status === 'working' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">勤務時間</span>
@@ -236,16 +216,16 @@ export function AdvancedCheckIn() {
           )}
 
           {/* 休憩情報 */}
-          {(status === 'working' || status === 'onBreak' || status === 'finished') && (
+          {(todayStatus.status === 'working' || todayStatus.status === 'onBreak' || todayStatus.status === 'finished') && (
             <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950">
               <div className="flex items-center gap-2">
                 <Coffee className="h-4 w-4 text-yellow-600" />
                 <span className="text-sm">休憩時間</span>
               </div>
-              <Badge variant={status === 'onBreak' ? 'default' : 'secondary'}>
-                {Math.floor(todayRecord.totalBreakTime)}分
-                {status === 'onBreak' && todayRecord.breakStart && (
-                  <span className="ml-1">(休憩中: {todayRecord.breakStart}〜)</span>
+              <Badge variant={todayStatus.status === 'onBreak' ? 'default' : 'secondary'}>
+                {Math.floor(todayStatus.totalBreakTime)}分
+                {todayStatus.status === 'onBreak' && todayStatus.breakStart && (
+                  <span className="ml-1">(休憩中: {todayStatus.breakStart}〜)</span>
                 )}
               </Badge>
             </div>
@@ -253,7 +233,7 @@ export function AdvancedCheckIn() {
 
           {/* アクションボタン */}
           <div className="space-y-3">
-            {status === 'notStarted' && (
+            {todayStatus.status === 'notStarted' && (
               <Button
                 onClick={handleCheckIn}
                 size="lg"
@@ -264,7 +244,7 @@ export function AdvancedCheckIn() {
               </Button>
             )}
 
-            {status === 'working' && (
+            {todayStatus.status === 'working' && (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <Button
@@ -288,7 +268,7 @@ export function AdvancedCheckIn() {
               </>
             )}
 
-            {status === 'onBreak' && (
+            {todayStatus.status === 'onBreak' && (
               <Button
                 onClick={handleBreakEnd}
                 size="lg"
@@ -299,7 +279,7 @@ export function AdvancedCheckIn() {
               </Button>
             )}
 
-            {status === 'finished' && (
+            {todayStatus.status === 'finished' && (
               <div className="text-center p-6 rounded-lg bg-green-50 dark:bg-green-950">
                 <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
                 <p className="text-lg font-medium">本日の勤務終了</p>
@@ -403,7 +383,7 @@ export function AdvancedCheckIn() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">休憩時間:</span>
-                  <span className="font-medium">{Math.floor(todayRecord.totalBreakTime)}分</span>
+                  <span className="font-medium">{Math.floor(todayStatus.totalBreakTime)}分</span>
                 </div>
                 {workingHours > 8 && (
                   <div className="flex justify-between text-orange-500">

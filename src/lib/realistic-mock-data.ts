@@ -1,4 +1,5 @@
 // リアルな勤怠・休暇管理のモックデータ
+import { performanceCache, CACHE_KEYS } from './performance-cache';
 
 export interface DetailedAttendanceRecord {
   id: string;
@@ -59,8 +60,14 @@ export const employees = [
   { id: '10', name: '吉田真一', department: '開発部', position: 'エンジニア', email: 'yoshida@example.com' },
 ];
 
-// 今月の勤怠データを生成（リアルなパターンを含む）
+// 今月の勤怠データを生成（リアルなパターンを含む） - キャッシュ対応
 export function generateRealisticAttendanceData(): DetailedAttendanceRecord[] {
+  // キャッシュから取得を試行
+  const cached = performanceCache.get(CACHE_KEYS.ATTENDANCE_DATA);
+  if (cached) {
+    return cached;
+  }
+
   const records: DetailedAttendanceRecord[] = [];
   const today = new Date();
   const currentMonth = today.getMonth();
@@ -148,6 +155,9 @@ export function generateRealisticAttendanceData(): DetailedAttendanceRecord[] {
       }
     }
   });
+  
+  // キャッシュに保存（30分間有効）
+  performanceCache.set(CACHE_KEYS.ATTENDANCE_DATA, records, 30);
   
   return records;
 }
@@ -247,8 +257,14 @@ function createWorkdayRecord(
   };
 }
 
-// 休暇申請データを生成
+// 休暇申請データを生成 - キャッシュ対応
 export function generateRealisticLeaveRequests(): LeaveRequest[] {
+  // キャッシュから取得を試行
+  const cached = performanceCache.get(CACHE_KEYS.LEAVE_REQUESTS);
+  if (cached) {
+    return cached;
+  }
+
   const requests: LeaveRequest[] = [];
   const today = new Date();
   
@@ -435,12 +451,21 @@ export function generateRealisticLeaveRequests(): LeaveRequest[] {
     requestDate: '2024-01-20',
   });
   
+  // キャッシュに保存（30分間有効）
+  performanceCache.set(CACHE_KEYS.LEAVE_REQUESTS, requests, 30);
+  
   return requests;
 }
 
-// 休暇残数データ
+// 休暇残数データ - キャッシュ対応
 export function getLeaveBalances() {
-  return employees.map(emp => ({
+  // キャッシュから取得を試行
+  const cached = performanceCache.get(CACHE_KEYS.LEAVE_BALANCES);
+  if (cached) {
+    return cached;
+  }
+
+  const balances = employees.map(emp => ({
     userId: emp.id,
     userName: emp.name,
     department: emp.department,
@@ -473,4 +498,9 @@ export function getLeaveBalances() {
       remaining: balance.paidLeave.total - balance.paidLeave.used - balance.paidLeave.planned,
     }
   }));
+
+  // キャッシュに保存（30分間有効）
+  performanceCache.set(CACHE_KEYS.LEAVE_BALANCES, balances, 30);
+  
+  return balances;
 }

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy, memo, useMemo } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { generateAttendanceData } from '@/lib/mock-data';
 import { generateRealisticAttendanceData, employees } from '@/lib/realistic-mock-data';
+import { useAttendanceStore } from '@/lib/attendance-store';
 import { 
   Clock,
   Calendar as CalendarIcon,
@@ -33,11 +34,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DataTable } from '@/components/ui/common/data-table';
+import { OptimizedDataTable } from '@/components/ui/common/optimized-data-table';
 import { CheckInButton } from '@/features/attendance/check-in-button';
 import { AdvancedCheckIn } from '@/features/attendance/advanced-check-in';
 import { AttendanceCalendar } from '@/features/attendance/attendance-calendar';
+import { StatCardsLoadingSkeleton, TableLoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { toast } from 'sonner';
+
+// 重いコンポーネントをlazyロード
+const LazyAdvancedCheckIn = lazy(() => 
+  import('@/features/attendance/advanced-check-in').then(module => ({ 
+    default: module.AdvancedCheckIn 
+  }))
+);
+
+const LazyAttendanceCalendar = lazy(() => 
+  import('@/features/attendance/attendance-calendar').then(module => ({ 
+    default: module.AttendanceCalendar 
+  }))
+);
 
 interface AttendanceRecord {
   id: string;
@@ -54,6 +69,71 @@ interface AttendanceRecord {
   workType: 'office' | 'remote' | 'hybrid';
   note?: string;
 }
+
+// メモ化された統計カードコンポーネント
+const StatsCards = memo(({ loading }: { loading: boolean }) => {
+  if (loading) return <StatCardsLoadingSkeleton />;
+  
+  return (
+    <div className="grid gap-4 md:grid-cols-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">月間実働時間</CardTitle>
+          <Timer className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">162.5h</div>
+          <p className="text-xs text-muted-foreground">
+            標準: 160h
+          </p>
+          <Progress value={101.5} className="mt-2" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">残業時間</CardTitle>
+          <AlertTriangle className="h-4 w-4 text-orange-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-orange-600">28.5h</div>
+          <p className="text-xs text-muted-foreground">
+            36協定上限: 45h
+          </p>
+          <Progress value={63.3} className="mt-2" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">休暇取得</CardTitle>
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">2日</div>
+          <p className="text-xs text-muted-foreground">
+            今月取得
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">在宅勤務</CardTitle>
+          <Home className="h-4 w-4 text-blue-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-blue-600">8日</div>
+          <p className="text-xs text-muted-foreground">
+            今月在宅勤務
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+});
+
+StatsCards.displayName = 'StatsCards';
 
 export default function AttendancePage() {
   // const t = useTranslations('attendance');
@@ -73,15 +153,17 @@ export default function AttendancePage() {
   };
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [checkedInAt, setCheckedInAt] = useState<string | undefined>();
+  
+  // Attendance store integration
+  const { getTodayRecord, setOnAttendanceUpdate } = useAttendanceStore();
 
-  // Load attendance data
+  // Load attendance data and update when attendance changes
   useEffect(() => {
     const loadAttendance = async () => {
       try {
         // APIを使わず直接モックデータを使用
-        await new Promise(resolve => setTimeout(resolve, 500)); // ローディングのシミュレーション
+        // キャッシュされている場合は即座に返す
+        await new Promise(resolve => setTimeout(resolve, 100)); // 最小限のローディング
         
         // リアルな勤怠データを取得
         const realisticData = generateRealisticAttendanceData();
@@ -111,14 +193,11 @@ export default function AttendancePage() {
           }))
           .reverse(); // 新しい日付を上に
         
-        setRecords(mappedRecords);
+        // 今日の打刻データがあれば一覧に追加
+        const todayRecord = getTodayRecord();
+        const finalRecords = todayRecord ? [todayRecord, ...mappedRecords] : mappedRecords;
         
-        // Check if user is currently checked in (mock)
-        const mockCheckedIn = Math.random() > 0.5;
-        setIsCheckedIn(mockCheckedIn);
-        if (mockCheckedIn) {
-          setCheckedInAt('09:15');
-        }
+        setRecords(finalRecords);
       } catch (error) {
         console.error('Error loading attendance data:', error);
         // エラーメッセージを表示しない（モックデータなので）
@@ -128,23 +207,51 @@ export default function AttendancePage() {
     };
 
     loadAttendance();
-  }, []);
+  }, [getTodayRecord]);
 
-  const handleCheckIn = async () => {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('ja-JP', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+  // Set up callback for attendance updates
+  useEffect(() => {
+    const updateAttendanceList = () => {
+      setLoading(true);
+      // リアルな勤怠データを取得
+      const realisticData = generateRealisticAttendanceData();
+      
+      // 現在のユーザー（田中太郎）のデータをマッピング
+      const mappedRecords: AttendanceRecord[] = realisticData
+        .filter(record => record.userId === '1') // 田中太郎のデータのみ
+        .map(record => ({
+          id: record.id,
+          userId: record.userId,
+          userName: record.userName,
+          date: `2024-01-${record.date.split('/')[1]}`, // 日付形式を調整
+          dayOfWeek: record.dayOfWeek,
+          checkIn: record.checkIn,
+          checkOut: record.checkOut,
+          breakTime: record.breakTime,
+          workHours: record.workHours,
+          overtime: record.overtime,
+          status: record.status === 'normal' || record.status === 'remote' ? 'present' as const :
+                 record.status === 'late' ? 'late' as const :
+                 record.status === 'early_leave' ? 'early_leave' as const :
+                 'absent' as const,
+          workType: record.workLocation === 'home' ? 'remote' as const :
+                   record.workLocation === 'office' ? 'office' as const :
+                   'hybrid' as const,
+          note: record.memo,
+        }))
+        .reverse(); // 新しい日付を上に
+      
+      // 今日の打刻データがあれば一覧に追加
+      const todayRecord = getTodayRecord();
+      const finalRecords = todayRecord ? [todayRecord, ...mappedRecords] : mappedRecords;
+      
+      setRecords(finalRecords);
+      setLoading(false);
+    };
     
-    setIsCheckedIn(true);
-    setCheckedInAt(timeString);
-  };
+    setOnAttendanceUpdate(updateAttendanceList);
+  }, [getTodayRecord, setOnAttendanceUpdate]);
 
-  const handleCheckOut = async () => {
-    setIsCheckedIn(false);
-    setCheckedInAt(undefined);
-  };
 
   const getStatusBadge = (status: AttendanceRecord['status']) => {
     const config = {
@@ -164,7 +271,8 @@ export default function AttendancePage() {
     );
   };
 
-  const columns: ColumnDef<AttendanceRecord>[] = [
+  // メモ化された列定義
+  const columns: ColumnDef<AttendanceRecord>[] = useMemo(() => [
     {
       accessorKey: 'date',
       header: '日付',
@@ -309,9 +417,10 @@ export default function AttendancePage() {
         </DropdownMenu>
       ),
     },
-  ];
+  ], []);
 
-  const calendarRecords = records.map(record => ({
+  // メモ化されたカレンダーレコード
+  const calendarRecords = useMemo(() => records.map(record => ({
     date: new Date(record.date),
     status: record.status === 'present' || record.status === 'late' ? 'present' as const :
             record.status === 'remote' ? 'remote' as const :
@@ -322,7 +431,7 @@ export default function AttendancePage() {
     overtime: record.overtime,
     workType: record.workType,
     note: record.note,
-  }));
+  })), [records]);
 
   if (loading) {
     return (
@@ -345,65 +454,22 @@ export default function AttendancePage() {
       </div>
 
       {/* Monthly Status Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('monthlyWorkHours')}</CardTitle>
-            <Timer className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">162.5h</div>
-            <p className="text-xs text-muted-foreground">
-              標準: 160h
-            </p>
-            <Progress value={101.5} className="mt-2" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('overtimeHours')}</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">28.5h</div>
-            <p className="text-xs text-muted-foreground">
-              36協定上限: 45h
-            </p>
-            <Progress value={63.3} className="mt-2" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('leaveUsed')}</CardTitle>
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2日</div>
-            <p className="text-xs text-muted-foreground">
-              今月取得
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('remoteDays')}</CardTitle>
-            <Home className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">8日</div>
-            <p className="text-xs text-muted-foreground">
-              今月在宅勤務
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <StatsCards loading={loading} />
 
       {/* Check-in Section */}
       <div className="flex justify-center">
-        <AdvancedCheckIn />
+        <Suspense fallback={
+          <Card className="w-full max-w-2xl">
+            <CardContent className="p-6">
+              <div className="animate-pulse space-y-4">
+                <div className="h-8 bg-gray-200 rounded"></div>
+                <div className="h-32 bg-gray-200 rounded"></div>
+              </div>
+            </CardContent>
+          </Card>
+        }>
+          <LazyAdvancedCheckIn />
+        </Suspense>
       </div>
 
       {/* Tabs Content */}
@@ -430,11 +496,12 @@ export default function AttendancePage() {
         <TabsContent value="list" className="space-y-4">
           <Card>
             <CardContent className="p-6">
-              <DataTable
+              <OptimizedDataTable
                 columns={columns}
                 data={records}
                 searchKey="date"
                 searchPlaceholder="日付で検索..."
+                pageSize={20}
               />
             </CardContent>
           </Card>
@@ -457,7 +524,9 @@ export default function AttendancePage() {
         </TabsContent>
 
         <TabsContent value="calendar" className="space-y-4">
-          <AttendanceCalendar records={calendarRecords} />
+          <Suspense fallback={<TableLoadingSkeleton />}>
+            <LazyAttendanceCalendar records={calendarRecords} />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
