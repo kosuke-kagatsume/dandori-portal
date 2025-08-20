@@ -28,7 +28,6 @@ const navigation = [
   { key: 'members', href: '/ja/members', icon: UserCheck },
   { key: 'attendance', href: '/ja/attendance', icon: Clock },
   { key: 'leave', href: '/ja/leave', icon: Calendar },
-  { key: 'approval', href: '/ja/approval', icon: ClipboardCheck },
   { key: 'workflow', href: '/ja/workflow', icon: GitBranch },
   // { key: 'sites', href: '/ja/sites', icon: MapPin }, // 未実装
   // { key: 'audit', href: '/ja/admin/audit-logs', icon: FileText, adminOnly: true }, // 未実装
