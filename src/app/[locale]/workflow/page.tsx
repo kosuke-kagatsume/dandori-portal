@@ -98,6 +98,7 @@ export default function WorkflowPage() {
   const { 
     requests,
     initializeDemoData,
+    resetDemoData,
     getMyRequests,
     getPendingApprovals,
     getDelegatedApprovals,
@@ -110,6 +111,7 @@ export default function WorkflowPage() {
 
   // デモデータの初期化
   useEffect(() => {
+    console.log('Component mounted, initializing demo data...');
     initializeDemoData();
   }, [initializeDemoData]);
 
@@ -132,10 +134,21 @@ export default function WorkflowPage() {
   );
 
   // 統計情報
-  const stats = useMemo(() => 
-    getStatistics(currentUserId),
-    [getStatistics, currentUserId, requests]
-  );
+  const stats = useMemo(() => {
+    const result = getStatistics(currentUserId);
+    console.log('Statistics calculated:', result);
+    return result;
+  }, [getStatistics, currentUserId, requests]);
+
+  // デバッグ用ログ
+  useEffect(() => {
+    console.log('Workflow data updated:', {
+      totalRequests: requests.length,
+      pendingApprovals: pendingApprovals.length,
+      myRequests: myRequests.length,
+      delegatedApprovals: delegatedApprovals.length,
+    });
+  }, [requests, pendingApprovals, myRequests, delegatedApprovals]);
 
   // エスカレーション監視（1分ごと）
   useEffect(() => {
@@ -457,10 +470,15 @@ export default function WorkflowPage() {
             申請の作成・承認・進捗管理を行います
           </p>
         </div>
-        <Button onClick={() => setShowNewRequestDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          新規申請
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={resetDemoData}>
+            デモデータリセット
+          </Button>
+          <Button onClick={() => setShowNewRequestDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            新規申請
+          </Button>
+        </div>
       </div>
 
       {/* 統計カード */}

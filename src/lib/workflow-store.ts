@@ -110,6 +110,7 @@ interface WorkflowStore {
   
   // 初期化
   initializeDemoData: () => void;
+  resetDemoData: () => void;
   
   // 申請の作成・更新
   createRequest: (request: Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>) => string;
@@ -149,15 +150,37 @@ export const useWorkflowStore = create<WorkflowStore>()(
       
       initializeDemoData: () => {
         const state = get();
-        if (state.initialized && state.requests.length > 0) return;
+        console.log('Initializing demo data...', { initialized: state.initialized, requestsCount: state.requests.length });
+        
+        // 初期化済みの場合はスキップ
+        if (state.initialized && state.requests.length > 0) {
+          console.log('Demo data already initialized, skipping...');
+          return;
+        }
         
         const demoData = generateDemoWorkflowData();
-        const workflowRequests: WorkflowRequest[] = demoData.map((demo, index) => ({
-          id: `WF-DEMO-${Date.now()}-${index}`,
-          ...demo as Omit<WorkflowRequest, 'id'>,
-        }));
+        console.log('Generated demo data count:', demoData.length);
         
+        const workflowRequests: WorkflowRequest[] = demoData.map((demo, index) => {
+          const request = {
+            id: `WF-DEMO-${Date.now()}-${index}`,
+            ...demo,
+          } as WorkflowRequest;
+          console.log(`Created demo request ${index + 1}:`, request.title, request.status);
+          return request;
+        });
+        
+        console.log('Final requests count:', workflowRequests.length);
         set({ requests: workflowRequests, initialized: true });
+      },
+      
+      resetDemoData: () => {
+        console.log('Resetting demo data...');
+        set({ requests: [], initialized: false });
+        // 少し待ってから再初期化
+        setTimeout(() => {
+          get().initializeDemoData();
+        }, 100);
       },
       
       createRequest: (request) => {
@@ -507,6 +530,13 @@ export const useWorkflowStore = create<WorkflowStore>()(
     }),
     {
       name: 'workflow-store',
+      // 初期化時にデモデータを強制リセット（開発用）
+      onRehydrateStorage: () => (state) => {
+        if (state && (!state.initialized || state.requests.length === 0)) {
+          console.log('Rehydrating and initializing demo data...');
+          state.initializeDemoData();
+        }
+      },
     }
   )
 );
