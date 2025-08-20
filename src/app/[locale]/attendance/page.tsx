@@ -80,8 +80,8 @@ export default function AttendancePage() {
   useEffect(() => {
     const loadAttendance = async () => {
       try {
-        const response = await fetch('/api/attendance');
-        const data = await response.json();
+        // APIを使わず直接モックデータを使用
+        await new Promise(resolve => setTimeout(resolve, 500)); // ローディングのシミュレーション
         
         // リアルな勤怠データを取得
         const realisticData = generateRealisticAttendanceData();
@@ -120,7 +120,8 @@ export default function AttendancePage() {
           setCheckedInAt('09:15');
         }
       } catch (error) {
-        toast.error('Failed to load attendance data');
+        console.error('Error loading attendance data:', error);
+        // エラーメッセージを表示しない（モックデータなので）
       } finally {
         setLoading(false);
       }

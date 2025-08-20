@@ -77,8 +77,8 @@ export default function LeavePage() {
   useEffect(() => {
     const loadRequests = async () => {
       try {
-        const response = await fetch('/api/leave-requests');
-        const data = await response.json();
+        // APIを使わず直接モックデータを使用
+        await new Promise(resolve => setTimeout(resolve, 500)); // ローディングのシミュレーション
         
         // リアルな休暇申請データを取得
         const realisticRequests = generateRealisticLeaveRequests();
@@ -108,7 +108,8 @@ export default function LeavePage() {
         
         setRequests(mappedRequests);
       } catch (error) {
-        toast.error('Failed to load leave requests');
+        console.error('Error loading leave requests:', error);
+        // エラーメッセージを表示しない（モックデータなので）
       } finally {
         setLoading(false);
       }
