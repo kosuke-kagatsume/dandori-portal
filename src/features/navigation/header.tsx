@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 // import { useTranslations } from 'next-intl'; // 一時的に無効化
+import { useAuth } from '@/hooks/use-auth';
 import { 
   Search,
   Bell,
@@ -42,6 +43,7 @@ import { NotificationPanel, type Notification } from '@/features/notifications/n
 
 export function Header() {
   const router = useRouter();
+  const { signOut } = useAuth();
   // const t = useTranslations('common'); // 一時的に無効化
   
   // 固定の日本語翻訳関数
@@ -331,11 +333,10 @@ export function Header() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   className="text-red-600"
-                  onClick={() => {
+                  onClick={async () => {
                     // ログアウト処理
                     if (confirm('ログアウトしますか？')) {
-                      setCurrentUser(null);
-                      router.push('/ja/dashboard');
+                      await signOut();
                     }
                   }}
                 >

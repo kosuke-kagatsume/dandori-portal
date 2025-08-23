@@ -1,8 +1,74 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  
+  // 認証ページは国際化をスキップ
+  if (pathname.startsWith('/auth')) {
+    // Supabase認証チェック
+    let response = NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            });
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          },
+          remove(name: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value: '',
+              ...options,
+            });
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            });
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+            });
+          },
+        },
+      }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // 既にログイン済みの場合はダッシュボードへ
+    if (pathname === '/auth/login' && user) {
+      return NextResponse.redirect(new URL('/ja/dashboard', request.url));
+    }
+    
+    return response;
+  }
   
   // ルートパスへのアクセスは /ja/dashboard にリダイレクト
   if (pathname === '/') {
@@ -10,8 +76,91 @@ export function middleware(request: NextRequest) {
   }
   
   // /ja が付いていないパスは /ja を付けてリダイレクト
-  if (!pathname.startsWith('/ja') && !pathname.startsWith('/en')) {
+  if (!pathname.startsWith('/ja') && !pathname.startsWith('/en') && !pathname.startsWith('/auth')) {
     return NextResponse.redirect(new URL(`/ja${pathname}`, request.url));
+  }
+  
+  // 保護されたパスの認証チェック（国際化パス対応）
+  const protectedPaths = [
+    '/dashboard',
+    '/workflow',
+    '/attendance',
+    '/approval',
+    '/leave',
+    '/expenses',
+    '/members',
+    '/users',
+    '/organization',
+    '/settings',
+    '/profile',
+  ];
+
+  // /ja/dashboard のような国際化パスから実際のパスを抽出
+  const actualPath = pathname.replace(/^\/(ja|en)/, '');
+  const isProtectedPath = protectedPaths.some(path => actualPath.startsWith(path));
+
+  if (isProtectedPath) {
+    // Supabase認証チェック
+    let response = NextResponse.next({
+      request: {
+        headers: request.headers,
+      },
+    });
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            });
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            });
+          },
+          remove(name: string, options: CookieOptions) {
+            request.cookies.set({
+              name,
+              value: '',
+              ...options,
+            });
+            response = NextResponse.next({
+              request: {
+                headers: request.headers,
+              },
+            });
+            response.cookies.set({
+              name,
+              value: '',
+              ...options,
+            });
+          },
+        },
+      }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    // 未認証の場合はログインページへ
+    if (!user) {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+    
+    return response;
   }
   
   return NextResponse.next();
