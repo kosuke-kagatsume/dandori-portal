@@ -44,7 +44,7 @@ export default function LoginPage() {
       if (error) throw error;
 
       toast.success('ログインしました');
-      router.push('/dashboard');
+      router.push('/ja/dashboard');
     } catch (error: any) {
       setError(error.message || 'ログインに失敗しました');
     } finally {
@@ -90,7 +90,7 @@ export default function LoginPage() {
       }
 
       toast.success('アカウントを作成しました');
-      router.push('/dashboard');
+      router.push('/ja/dashboard');
     } catch (error: any) {
       setError(error.message || 'アカウント作成に失敗しました');
     } finally {
