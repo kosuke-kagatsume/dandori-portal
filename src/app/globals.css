@@ -1,5 +1,6 @@
 @import '../styles/tokens.css';
 @import '../styles/brand-colors.css';
+@import '../styles/calendar-fix.css';
 
 @tailwind base;
 @tailwind components;

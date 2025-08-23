@@ -258,7 +258,7 @@ export function NewRequestForm({
     
     onSubmit(request);
     onOpenChange(false);
-    toast.success('申請を作成しました');
+    // 通知はonSubmit側で処理するため削除
   };
 
   const getRequestTitle = (type: WorkflowType, data: any): string => {
