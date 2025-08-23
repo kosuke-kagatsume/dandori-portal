@@ -224,48 +224,103 @@ export function NewRequestForm({
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (data: any) => {
-    const request: Partial<WorkflowRequest> = {
-      type: requestType!,
-      title: getRequestTitle(requestType!, data),
-      description: data.reason || data.purpose || '',
-      requesterId: currentUserId,
-      requesterName: currentUserName,
-      department: '営業部',
-      status: 'draft',
-      priority: getPriority(requestType!, data),
-      details: data,
-      approvalSteps: approvalFlow.map((step, index) => ({
-        id: `step-${index}`,
-        order: index,
-        approverRole: step.role,
-        approverId: `user-${step.role}`,
-        approverName: step.name,
-        status: 'pending',
-        isOptional: !step.required,
-      })),
-      currentStep: 0,
-      attachments: attachments.map((file, index) => ({
-        id: `att-${index}`,
-        name: file.name,
-        url: URL.createObjectURL(file),
-        size: file.size,
-        uploadedAt: new Date().toISOString(),
-      })),
-      timeline: [],
-    };
-    
-    onSubmit(request);
-    
-    // 申請作成完了後に通知を表示
-    setTimeout(() => {
-      toast.success('申請を作成しました', {
-        description: '承認者に通知が送信されました'
+  const const handleSubmit = async (data: any) => {
+    try {
+      // Supabaseに保存するためのデータを準備
+      const workflowService = (await import('@/lib/supabase/workflow-service')).workflowService;
+      
+      // 仮のユーザーIDと組織ID（本番では認証から取得）
+      const userId = currentUserId || 'demo-user-id';
+      const organizationId = 'demo-org-id';
+      
+      // 申請データを作成
+      const requestData = {
+        organization_id: organizationId,
+        type: requestType!,
+        title: getRequestTitle(requestType!, data),
+        description: data.reason || data.purpose || '',
+        requester_id: userId,
+        department: '営業部',
+        status: 'draft',
+        priority: getPriority(requestType!, data),
+        details: data,
+      };
+      
+      // Supabaseに保存
+      const result = await workflowService.createRequest(requestData);
+      
+      if (!result.success) {
+        throw new Error('申請の作成に失敗しました');
+      }
+      
+      // 承認ステップを作成
+      if (result.data && approvalFlow.length > 0) {
+        const steps = approvalFlow.map((step, index) => ({
+          approverRole: step.role,
+          approverId: `user-${step.role}`,
+          approverName: step.name,
+          isOptional: !step.required,
+        }));
+        
+        await workflowService.createApprovalSteps(result.data.id, steps);
+        
+        // タイムラインイベントを追加
+        await workflowService.addTimelineEvent(
+          result.data.id,
+          '申請書を作成しました',
+          userId
+        );
+      }
+      
+      // ローカルのWorkflowStoreにも追加（互換性のため）
+      const request: Partial<WorkflowRequest> = {
+        id: result.data?.id,
+        type: requestType!,
+        title: getRequestTitle(requestType!, data),
+        description: data.reason || data.purpose || '',
+        requesterId: userId,
+        requesterName: currentUserName,
+        department: '営業部',
+        status: 'draft',
+        priority: getPriority(requestType!, data),
+        details: data,
+        approvalSteps: approvalFlow.map((step, index) => ({
+          id: `step-${index}`,
+          order: index,
+          approverRole: step.role,
+          approverId: `user-${step.role}`,
+          approverName: step.name,
+          status: 'pending',
+          isOptional: !step.required,
+        })),
+        currentStep: 0,
+        attachments: attachments.map((file, index) => ({
+          id: `att-${index}`,
+          name: file.name,
+          url: URL.createObjectURL(file),
+          size: file.size,
+          uploadedAt: new Date().toISOString(),
+        })),
+        timeline: [],
+      };
+      
+      onSubmit(request);
+      
+      // 申請作成完了後に通知を表示
+      setTimeout(() => {
+        toast.success('申請を作成しました', {
+          description: '承認者に通知が送信されました'
+        });
+      }, 100);
+      
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to create request:', error);
+      toast.error('申請の作成に失敗しました', {
+        description: 'もう一度お試しください'
       });
-    }, 100);
-    
-    onOpenChange(false);
-  };
+    }
+  };;
 
   const getRequestTitle = (type: WorkflowType, data: any): string => {
     switch (type) {
