@@ -295,10 +295,9 @@ export default function LoginPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={(e) => {
-                e.preventDefault();
-                console.log('Button clicked!');
-                handleDemoLogin();
+              onClick={() => {
+                alert('デモログインボタンがクリックされました');
+                window.location.href = '/ja/dashboard';
               }}
               disabled={isLoading}
               type="button"

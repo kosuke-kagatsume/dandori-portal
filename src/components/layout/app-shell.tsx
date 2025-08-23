@@ -33,7 +33,7 @@ export function AppShell({ children }: AppShellProps) {
         roles: [demoUser.role || 'manager'],
         status: 'active',
         timezone: 'Asia/Tokyo',
-        avatar: '/avatars/default.png',
+        avatar: '',
         position: demoUser.role === 'manager' ? 'マネージャー' : 'スタッフ',
         department: demoUser.department || '営業部',
       });
@@ -49,7 +49,7 @@ export function AppShell({ children }: AppShellProps) {
         roles: ['employee'],
         status: 'active',
         timezone: 'Asia/Tokyo',
-        avatar: '/avatars/default.png',
+        avatar: '',
         position: 'エンジニア',
         department: '開発部',
       });
