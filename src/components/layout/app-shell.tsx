@@ -17,24 +17,43 @@ export function AppShell({ children }: AppShellProps) {
   const { setCurrentUser } = useUserStore();
   const { setNotifications } = useNotificationStore();
 
-  // Initialize mock data (MSW disabled for production builds)
+  // Initialize user data
   useEffect(() => {
-    // Temporarily disable MSW for production builds
-    // Set mock current user directly
-    setCurrentUser({
-      id: '1',
-      name: '田中太郎',
-      email: 'tanaka@example.com',
-      phone: '090-1234-5678',
-      hireDate: '2020-04-01',
-      unitId: '1',
-      roles: ['employee'],
-      status: 'active',
-      timezone: 'Asia/Tokyo',
-      avatar: '/avatars/default.png',
-      position: 'エンジニア',
-      department: '開発部',
-    });
+    // Check for demo user in localStorage
+    const demoUserStr = localStorage.getItem('demo_user');
+    if (demoUserStr) {
+      const demoUser = JSON.parse(demoUserStr);
+      setCurrentUser({
+        id: demoUser.id || 'demo-user-1',
+        name: demoUser.name || '田中太郎',
+        email: demoUser.email || 'tanaka@demo.com',
+        phone: '090-1234-5678',
+        hireDate: '2020-04-01',
+        unitId: '1',
+        roles: [demoUser.role || 'manager'],
+        status: 'active',
+        timezone: 'Asia/Tokyo',
+        avatar: '/avatars/default.png',
+        position: demoUser.role === 'manager' ? 'マネージャー' : 'スタッフ',
+        department: demoUser.department || '営業部',
+      });
+    } else {
+      // Fallback to default user
+      setCurrentUser({
+        id: '1',
+        name: '田中太郎',
+        email: 'tanaka@example.com',
+        phone: '090-1234-5678',
+        hireDate: '2020-04-01',
+        unitId: '1',
+        roles: ['employee'],
+        status: 'active',
+        timezone: 'Asia/Tokyo',
+        avatar: '/avatars/default.png',
+        position: 'エンジニア',
+        department: '開発部',
+      });
+    }
   }, [setCurrentUser]);
 
   // Apply theme to document

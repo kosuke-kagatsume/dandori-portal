@@ -14,8 +14,28 @@ export function useAuth() {
   useEffect(() => {
     // 現在のユーザーを取得
     const getUser = async () => {
+      // まずSupabaseから取得を試みる
       const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      
+      if (user) {
+        setUser(user);
+      } else {
+        // Supabaseユーザーがいない場合、デモユーザーをチェック
+        const demoUserStr = localStorage.getItem('demo_user');
+        if (demoUserStr) {
+          // デモユーザーをSupabase User型に変換
+          const demoUser = JSON.parse(demoUserStr);
+          setUser({
+            id: demoUser.id,
+            email: demoUser.email,
+            user_metadata: {
+              name: demoUser.name,
+              department: demoUser.department,
+              role: demoUser.role,
+            },
+          } as any);
+        }
+      }
       setLoading(false);
     };
 
@@ -37,7 +57,14 @@ export function useAuth() {
   }, [router, supabase]);
 
   const signOut = async () => {
+    // Supabaseからサインアウト
     await supabase.auth.signOut();
+    // デモユーザー情報もクリア
+    localStorage.removeItem('demo_user');
+    // Cookieもクリア
+    if (typeof window !== 'undefined') {
+      document.cookie = 'demo_user=; path=/; max-age=0';
+    }
     router.push('/auth/login');
   };
 
