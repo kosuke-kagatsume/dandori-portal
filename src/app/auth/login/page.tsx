@@ -99,7 +99,8 @@ export default function LoginPage() {
   };
 
   // デモログイン
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = () => {
+    console.log('Demo login clicked');
     setIsLoading(true);
     setError(null);
 
@@ -113,19 +114,21 @@ export default function LoginPage() {
         role: 'manager',
       };
       
-      // localStorageとCookieの両方に保存
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('demo_user', JSON.stringify(demoUser));
-        document.cookie = `demo_user=${JSON.stringify(demoUser)}; path=/; max-age=86400`;
-      }
+      console.log('Saving demo user:', demoUser);
       
-      toast.success('デモアカウントでログインしました');
+      // localStorageに保存
+      localStorage.setItem('demo_user', JSON.stringify(demoUser));
       
-      // 少し遅延を入れてからリダイレクト
-      setTimeout(() => {
-        window.location.href = '/ja/dashboard';
-      }, 500);
+      // Cookieにも保存
+      document.cookie = `demo_user=${encodeURIComponent(JSON.stringify(demoUser))}; path=/; max-age=86400`;
+      
+      console.log('Demo user saved, redirecting...');
+      
+      // 即座にリダイレクト
+      window.location.href = '/ja/dashboard';
+      
     } catch (error: any) {
+      console.error('Demo login error:', error);
       setError('デモログインに失敗しました');
       setIsLoading(false);
     }

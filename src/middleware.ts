@@ -79,8 +79,12 @@ export async function middleware(request: NextRequest) {
   if (!isPublicPath && !user) {
     // デモユーザーのチェック（フォールバック）
     const demoUserCookie = request.cookies.get('demo_user');
+    console.log('Demo user cookie:', demoUserCookie?.value);
     if (!demoUserCookie) {
+      console.log('No demo user cookie, redirecting to login');
       return NextResponse.redirect(new URL('/auth/login', request.url));
+    } else {
+      console.log('Demo user found, allowing access');
     }
   }
 
