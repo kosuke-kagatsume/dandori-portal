@@ -28,13 +28,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import {
-  Calendar as CalendarIcon,
   Upload,
   X,
   FileText,
@@ -52,6 +49,7 @@ import {
   Plane,
   Coffee,
   Package,
+  Calendar,
 } from 'lucide-react';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -258,8 +256,15 @@ export function NewRequestForm({
     };
     
     onSubmit(request);
+    
+    // 申請作成完了後に通知を表示
+    setTimeout(() => {
+      toast.success('申請を作成しました', {
+        description: '承認者に通知が送信されました'
+      });
+    }, 100);
+    
     onOpenChange(false);
-    // 通知はonSubmit側で処理するため削除
   };
 
   const getRequestTitle = (type: WorkflowType, data: any): string => {
@@ -515,96 +520,77 @@ function LeaveRequestForm({ form, onFlowUpdate }: any) {
           <Calendar className="h-5 w-5 text-blue-600" />
           休暇申請
         </CardTitle>
+        <CardDescription>
+          休暇の申請を行います
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label>休暇種別</Label>
-          <RadioGroup defaultValue="paid_leave" onValueChange={(value) => form.setValue('leaveType', value)}>
-            <div className="flex items-center space-x-2">
+      <CardContent className="space-y-6">
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">休暇種別</Label>
+          <RadioGroup defaultValue="paid_leave" onValueChange={(value) => form.setValue('leaveType', value)} className="grid grid-cols-3 gap-4">
+            <div className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <RadioGroupItem value="paid_leave" id="paid_leave" />
-              <Label htmlFor="paid_leave">有給休暇</Label>
+              <Label htmlFor="paid_leave" className="cursor-pointer">有給休暇</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <RadioGroupItem value="sick_leave" id="sick_leave" />
-              <Label htmlFor="sick_leave">病気休暇</Label>
+              <Label htmlFor="sick_leave" className="cursor-pointer">病気休暇</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <RadioGroupItem value="special_leave" id="special_leave" />
-              <Label htmlFor="special_leave">特別休暇</Label>
+              <Label htmlFor="special_leave" className="cursor-pointer">特別休暇</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <RadioGroupItem value="half_day" id="half_day" />
-              <Label htmlFor="half_day">半休</Label>
+              <Label htmlFor="half_day" className="cursor-pointer">半休</Label>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <RadioGroupItem value="compensatory" id="compensatory" />
-              <Label htmlFor="compensatory">代休</Label>
+              <Label htmlFor="compensatory" className="cursor-pointer">代休</Label>
             </div>
           </RadioGroup>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>開始日</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !startDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, 'yyyy/MM/dd', { locale: ja }) : '選択してください'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={(date) => {
-                    setStartDate(date);
-                    form.setValue('startDate', date);
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+        <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+          <Label className="text-sm font-medium mb-3 block">休暇期間</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startDate" className="text-sm">開始日</Label>
+              <Input
+                id="startDate"
+                type="date"
+                className="w-full"
+                onChange={(e) => {
+                  const date = new Date(e.target.value);
+                  setStartDate(date);
+                  form.setValue('startDate', date);
+                  if (endDate) {
+                    const days = differenceInDays(endDate, date) + 1;
+                    onFlowUpdate('leave_request', { days });
+                  }
+                }}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>終了日</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !endDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, 'yyyy/MM/dd', { locale: ja }) : '選択してください'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={(date) => {
-                    setEndDate(date);
-                    form.setValue('endDate', date);
-                    if (startDate && date) {
-                      const days = differenceInDays(date, startDate) + 1;
-                      onFlowUpdate('leave_request', { days });
-                    }
-                  }}
-                  disabled={(date) => date < (startDate || new Date())}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <div className="space-y-2">
+              <Label htmlFor="endDate" className="text-sm">終了日</Label>
+              <Input
+                id="endDate"
+                type="date"
+                className="w-full"
+                onChange={(e) => {
+                  const date = new Date(e.target.value);
+                  setEndDate(date);
+                  form.setValue('endDate', date);
+                  if (startDate && date) {
+                    const days = differenceInDays(date, startDate) + 1;
+                    onFlowUpdate('leave_request', { days });
+                  }
+                }}
+                min={startDate ? startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+              />
+            </div>
           </div>
         </div>
 
@@ -616,33 +602,37 @@ function LeaveRequestForm({ form, onFlowUpdate }: any) {
           </div>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="reason">理由</Label>
-          <Textarea
-            id="reason"
-            placeholder="休暇の理由を入力してください"
-            {...form.register('reason')}
-            rows={3}
-          />
-        </div>
+        <div className="grid grid-cols-1 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="reason" className="text-sm font-medium">理由 <span className="text-red-500">*</span></Label>
+            <Textarea
+              id="reason"
+              placeholder="休暇を取得する理由を具体的に入力してください（最低10文字）"
+              {...form.register('reason')}
+              rows={3}
+              className="resize-none"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="handover">引き継ぎ事項</Label>
-          <Textarea
-            id="handover"
-            placeholder="不在中の業務引き継ぎについて記載してください"
-            {...form.register('handover')}
-            rows={3}
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="handover" className="text-sm font-medium">引き継ぎ事項 <span className="text-red-500">*</span></Label>
+            <Textarea
+              id="handover"
+              placeholder="不在中の業務引き継ぎや対応者について記載してください（最低10文字）"
+              {...form.register('handover')}
+              rows={3}
+              className="resize-none"
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="emergencyContact">緊急連絡先（任意）</Label>
-          <Input
-            id="emergencyContact"
-            placeholder="080-0000-0000"
-            {...form.register('emergencyContact')}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="emergencyContact" className="text-sm font-medium">緊急連絡先 <span className="text-gray-500">（任意）</span></Label>
+            <Input
+              id="emergencyContact"
+              placeholder="例：080-1234-5678"
+              {...form.register('emergencyContact')}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -702,33 +692,18 @@ function ExpenseClaimForm({ form, onFlowUpdate }: any) {
           </div>
 
           <div className="space-y-2">
-            <Label>支出日</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !expenseDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {expenseDate ? format(expenseDate, 'yyyy/MM/dd', { locale: ja }) : '選択してください'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={expenseDate}
-                  onSelect={(date) => {
-                    setExpenseDate(date);
-                    form.setValue('expenseDate', date);
-                  }}
-                  disabled={(date) => date > new Date()}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="expenseDate">支出日</Label>
+            <Input
+              id="expenseDate"
+              type="date"
+              className="w-full"
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                setExpenseDate(date);
+                form.setValue('expenseDate', date);
+              }}
+              max={new Date().toISOString().split('T')[0]}
+            />
           </div>
         </div>
 
@@ -805,32 +780,17 @@ function OvertimeRequestForm({ form, onFlowUpdate }: any) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>残業日</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !overtimeDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {overtimeDate ? format(overtimeDate, 'yyyy/MM/dd', { locale: ja }) : '選択してください'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={overtimeDate}
-                  onSelect={(date) => {
-                    setOvertimeDate(date);
-                    form.setValue('overtimeDate', date);
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="overtimeDate">残業日</Label>
+            <Input
+              id="overtimeDate"
+              type="date"
+              className="w-full"
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                setOvertimeDate(date);
+                form.setValue('overtimeDate', date);
+              }}
+            />
           </div>
 
           <div className="space-y-2">
@@ -937,62 +897,33 @@ function BusinessTripForm({ form, onFlowUpdate }: any) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>開始日</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !startDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, 'yyyy/MM/dd', { locale: ja }) : '選択してください'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={(date) => {
-                    setStartDate(date);
-                    form.setValue('startDate', date);
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="businessStartDate">開始日</Label>
+            <Input
+              id="businessStartDate"
+              type="date"
+              className="w-full"
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                setStartDate(date);
+                form.setValue('startDate', date);
+              }}
+              min={new Date().toISOString().split('T')[0]}
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>終了日</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !endDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, 'yyyy/MM/dd', { locale: ja }) : '選択してください'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={(date) => {
-                    setEndDate(date);
-                    form.setValue('endDate', date);
-                  }}
-                  disabled={(date) => date < (startDate || new Date())}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="businessEndDate">終了日</Label>
+            <Input
+              id="businessEndDate"
+              type="date"
+              className="w-full"
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                setEndDate(date);
+                form.setValue('endDate', date);
+              }}
+              min={startDate ? startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+            />
           </div>
         </div>
 
@@ -1275,68 +1206,39 @@ function RemoteWorkForm({ form, onFlowUpdate }: any) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>開始日</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !startDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, 'yyyy/MM/dd', { locale: ja }) : '選択してください'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={(date) => {
-                    setStartDate(date);
-                    form.setValue('startDate', date);
-                    if (date && endDate) {
-                      onFlowUpdate('remote_work', { startDate: date, endDate });
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="remoteStartDate">開始日</Label>
+            <Input
+              id="remoteStartDate"
+              type="date"
+              className="w-full"
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                setStartDate(date);
+                form.setValue('startDate', date);
+                if (date && endDate) {
+                  onFlowUpdate('remote_work', { startDate: date, endDate });
+                }
+              }}
+              min={new Date().toISOString().split('T')[0]}
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>終了日</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !endDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {endDate ? format(endDate, 'yyyy/MM/dd', { locale: ja }) : '選択してください'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={(date) => {
-                    setEndDate(date);
-                    form.setValue('endDate', date);
-                    if (startDate && date) {
-                      onFlowUpdate('remote_work', { startDate, endDate: date });
-                    }
-                  }}
-                  disabled={(date) => date < (startDate || new Date())}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="remoteEndDate">終了日</Label>
+            <Input
+              id="remoteEndDate"
+              type="date"
+              className="w-full"
+              onChange={(e) => {
+                const date = new Date(e.target.value);
+                setEndDate(date);
+                form.setValue('endDate', date);
+                if (startDate && date) {
+                  onFlowUpdate('remote_work', { startDate, endDate: date });
+                }
+              }}
+              min={startDate ? startDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+            />
           </div>
         </div>
 

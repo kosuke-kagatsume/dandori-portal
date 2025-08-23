@@ -269,7 +269,7 @@ export default function WorkflowPage() {
   const handleNewRequestSubmit = (data: Partial<WorkflowRequest>) => {
     const requestId = createRequest(data as Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>);
     submitRequest(requestId);
-    toast.success('申請を作成しました');
+    // toast.successは削除（NewRequestForm内で処理されるため）
     setShowNewRequestDialog(false);
     setSelectedRequestType(null);
   };

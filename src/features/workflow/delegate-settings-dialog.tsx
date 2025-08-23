@@ -138,13 +138,20 @@ export function DelegateSettingsDialog({
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent 
+                  align="start"
+                  side="bottom"
+                  sideOffset={6}
+                  className="z-[1000] p-0"
+                  forceMount
+                >
                   <Calendar
                     mode="single"
                     selected={startDate}
                     onSelect={setStartDate}
                     disabled={(date) => date < new Date()}
-                    initialFocus
+                    showOutsideDays={false}
+                    fixedWeeks
                   />
                 </PopoverContent>
               </Popover>
@@ -169,13 +176,20 @@ export function DelegateSettingsDialog({
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent 
+                  align="start"
+                  side="bottom"
+                  sideOffset={6}
+                  className="z-[1000] p-0"
+                  forceMount
+                >
                   <Calendar
                     mode="single"
                     selected={endDate}
                     onSelect={setEndDate}
                     disabled={(date) => date < startDate || date < new Date()}
-                    initialFocus
+                    showOutsideDays={false}
+                    fixedWeeks
                   />
                 </PopoverContent>
               </Popover>
