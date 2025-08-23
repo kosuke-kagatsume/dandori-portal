@@ -224,7 +224,7 @@ export function NewRequestForm({
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
-  const const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: any) => {
     try {
       // Supabaseに保存するためのデータを準備
       const workflowService = (await import('@/lib/supabase/workflow-service')).workflowService;
