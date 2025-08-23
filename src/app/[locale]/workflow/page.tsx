@@ -74,10 +74,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { DelegateSettingsDialog } from '@/features/workflow/delegate-settings-dialog';
+import { BulkApprovalBar } from '@/features/workflow/bulk-approval-bar';
+import { NewRequestForm } from '@/features/workflow/new-request-form';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function WorkflowPage() {
   const [selectedTab, setSelectedTab] = useState('pending');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
+  const [showDelegateSettings, setShowDelegateSettings] = useState(false);
+  const [selectedRequestType, setSelectedRequestType] = useState<WorkflowType | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<WorkflowRequest | null>(null);
@@ -99,13 +106,14 @@ export default function WorkflowPage() {
     requests,
     initializeDemoData,
     resetDemoData,
+    createRequest,
+    submitRequest,
     getMyRequests,
     getPendingApprovals,
     getDelegatedApprovals,
     approveRequest,
     rejectRequest,
     delegateApproval,
-    submitRequest,
     getStatistics,
   } = useWorkflowStore();
 
@@ -258,7 +266,17 @@ export default function WorkflowPage() {
     setSelectedRequest(null);
   };
 
+  const handleNewRequestSubmit = (data: Partial<WorkflowRequest>) => {
+    const requestId = createRequest(data as Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>);
+    submitRequest(requestId);
+    toast.success('申請を作成しました');
+    setShowNewRequestDialog(false);
+    setSelectedRequestType(null);
+  };
+
   const handleNewRequest = (type: WorkflowType) => {
+    setSelectedRequestType(type);
+    setShowNewRequestDialog(false);
     // より具体的なデモデータで新規申請を作成
     const getRequestDetails = (type: WorkflowType) => {
       const now = new Date();
@@ -599,6 +617,33 @@ export default function WorkflowPage() {
 
         {/* 承認待ちタブ */}
         <TabsContent value="pending" className="space-y-4">
+          {filteredPendingApprovals.length > 0 && (
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedRequestIds.length === filteredPendingApprovals.length && filteredPendingApprovals.length > 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedRequestIds(filteredPendingApprovals.map(r => r.id));
+                    } else {
+                      setSelectedRequestIds([]);
+                    }
+                  }}
+                />
+                <span className="text-sm text-muted-foreground">
+                  すべて選択
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowDelegateSettings(true)}
+              >
+                <UserCheck className="h-4 w-4 mr-1" />
+                代理承認者設定
+              </Button>
+            </div>
+          )}
           {filteredPendingApprovals.length > 0 ? (
             <div className="grid gap-4">
               {filteredPendingApprovals.map((request) => (
@@ -610,6 +655,15 @@ export default function WorkflowPage() {
                   onReject={() => openApprovalDialog(request, 'reject')}
                   onDelegate={() => openDelegateDialog(request)}
                   onDetail={() => openDetailDialog(request)}
+                  showCheckbox
+                  isSelected={selectedRequestIds.includes(request.id)}
+                  onSelectChange={(checked) => {
+                    if (checked) {
+                      setSelectedRequestIds([...selectedRequestIds, request.id]);
+                    } else {
+                      setSelectedRequestIds(selectedRequestIds.filter(id => id !== request.id));
+                    }
+                  }}
                 />
               ))}
             </div>
@@ -731,6 +785,18 @@ export default function WorkflowPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 新規申請フォーム */}
+      <NewRequestForm
+        open={selectedRequestType !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedRequestType(null);
+        }}
+        requestType={selectedRequestType}
+        onSubmit={handleNewRequestSubmit}
+        currentUserId={currentUserId}
+        currentUserName={currentUser?.name || '田中太郎'}
+      />
 
       {/* 承認/却下ダイアログ */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
@@ -992,6 +1058,19 @@ export default function WorkflowPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* 代理承認者設定ダイアログ */}
+      <DelegateSettingsDialog
+        open={showDelegateSettings}
+        onOpenChange={setShowDelegateSettings}
+        userId={currentUserId}
+      />
+
+      {/* 一括承認バー */}
+      <BulkApprovalBar
+        selectedIds={selectedRequestIds}
+        onClear={() => setSelectedRequestIds([])}
+      />
     </div>
   );
 }
@@ -1005,6 +1084,9 @@ function WorkflowCard({
   onDelegate, 
   onDetail,
   isDelegated = false,
+  isSelected = false,
+  onSelectChange,
+  showCheckbox = false,
 }: {
   request: WorkflowRequest;
   currentUserId: string;
@@ -1013,6 +1095,9 @@ function WorkflowCard({
   onDelegate?: () => void;
   onDetail: () => void;
   isDelegated?: boolean;
+  isSelected?: boolean;
+  onSelectChange?: (checked: boolean) => void;
+  showCheckbox?: boolean;
 }) {
   const Icon = getWorkflowTypeIcon(request.type);
   const progress = calculateProgress(request);
@@ -1023,10 +1108,17 @@ function WorkflowCard({
   ) && currentStep.status === 'pending';
 
   return (
-    <Card>
+    <Card className={isSelected ? 'ring-2 ring-blue-500' : ''}>
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex gap-4">
+            {showCheckbox && (
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={onSelectChange}
+                className="mt-3"
+              />
+            )}
             <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 flex items-center justify-center">
               <Icon className="h-6 w-6 text-blue-600" />
             </div>

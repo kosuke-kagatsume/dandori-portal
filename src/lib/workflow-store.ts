@@ -108,6 +108,17 @@ interface WorkflowStore {
   requests: WorkflowRequest[];
   initialized: boolean;
   
+  // 代理承認者設定
+  delegateSettings: {
+    userId: string;
+    delegateToId: string;
+    delegateName: string;
+    startDate: string;
+    endDate: string;
+    reason: string;
+    isActive: boolean;
+  }[];
+  
   // 初期化
   initializeDemoData: () => void;
   resetDemoData: () => void;
@@ -119,12 +130,22 @@ interface WorkflowStore {
   cancelRequest: (id: string, reason: string) => void;
   
   // 承認アクション
-  approveRequest: (requestId: string, stepId: string, comments?: string) => void;
+  approveRequest: (requestId: string, stepId: string, comments?: string, requireComment?: boolean) => void;
   rejectRequest: (requestId: string, stepId: string, reason: string) => void;
   delegateApproval: (requestId: string, stepId: string, delegateToId: string, delegateName: string, reason: string) => void;
   
+  // 一括承認機能
+  bulkApprove: (requestIds: string[], comments?: string) => void;
+  bulkReject: (requestIds: string[], reason: string) => void;
+  
+  // 代理承認者設定
+  setDelegateApprover: (setting: Omit<WorkflowStore['delegateSettings'][0], 'isActive'>) => void;
+  removeDelegateApprover: (userId: string) => void;
+  getActiveDelegateFor: (userId: string) => WorkflowStore['delegateSettings'][0] | undefined;
+  
   // エスカレーション
   checkAndEscalate: () => void;
+  setEscalationDeadline: (requestId: string, stepId: string, deadline: string) => void;
   
   // 取得系
   getRequestById: (id: string) => WorkflowRequest | undefined;
@@ -147,6 +168,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
     (set, get) => ({
       requests: [],
       initialized: false,
+      delegateSettings: [],
       
       initializeDemoData: () => {
         const state = get();
@@ -280,7 +302,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
         });
       },
       
-      approveRequest: (requestId, stepId, comments) => {
+      approveRequest: (requestId, stepId, comments, requireComment = false) => {
+        // コメント必須チェック
+        if (requireComment && !comments) {
+          throw new Error('この承認にはコメントが必要です');
+        }
         const now = new Date().toISOString();
         set((state) => {
           const request = state.requests.find(r => r.id === requestId);
@@ -500,6 +526,81 @@ export const useWorkflowStore = create<WorkflowStore>()(
             step.delegatedTo?.id === userId && step.status === 'pending'
           )
         );
+      },
+      
+      // 一括承認機能
+      bulkApprove: (requestIds, comments) => {
+        const userId = 'user1'; // TODO: 実際のユーザーIDを取得
+        const requests = get().requests.filter(r => requestIds.includes(r.id));
+        
+        requests.forEach(request => {
+          const currentStep = request.approvalSteps.find(step => 
+            step.approverId === userId && step.status === 'pending'
+          );
+          if (currentStep) {
+            get().approveRequest(request.id, currentStep.id, comments || '一括承認');
+          }
+        });
+      },
+      
+      bulkReject: (requestIds, reason) => {
+        const userId = 'user1'; // TODO: 実際のユーザーIDを取得
+        const requests = get().requests.filter(r => requestIds.includes(r.id));
+        
+        requests.forEach(request => {
+          const currentStep = request.approvalSteps.find(step => 
+            step.approverId === userId && step.status === 'pending'
+          );
+          if (currentStep) {
+            get().rejectRequest(request.id, currentStep.id, reason);
+          }
+        });
+      },
+      
+      // 代理承認者設定
+      setDelegateApprover: (setting) => {
+        const now = new Date().toISOString();
+        set((state) => ({
+          delegateSettings: [
+            ...state.delegateSettings.filter(s => s.userId !== setting.userId),
+            { ...setting, isActive: true }
+          ],
+        }));
+      },
+      
+      removeDelegateApprover: (userId) => {
+        set((state) => ({
+          delegateSettings: state.delegateSettings.filter(s => s.userId !== userId),
+        }));
+      },
+      
+      getActiveDelegateFor: (userId) => {
+        const now = new Date();
+        return get().delegateSettings.find(setting => 
+          setting.userId === userId &&
+          setting.isActive &&
+          new Date(setting.startDate) <= now &&
+          new Date(setting.endDate) >= now
+        );
+      },
+      
+      // エスカレーション期限設定
+      setEscalationDeadline: (requestId, stepId, deadline) => {
+        set((state) => ({
+          requests: state.requests.map(req => {
+            if (req.id !== requestId) return req;
+            
+            return {
+              ...req,
+              approvalSteps: req.approvalSteps.map(step =>
+                step.id === stepId
+                  ? { ...step, escalationDeadline: deadline }
+                  : step
+              ),
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+        }));
       },
       
       getStatistics: (userId) => {
