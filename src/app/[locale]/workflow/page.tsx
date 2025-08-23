@@ -92,6 +92,7 @@ export default function WorkflowPage() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showDelegateDialog, setShowDelegateDialog] = useState(false);
   const [showNewRequestDialog, setShowNewRequestDialog] = useState(false);
+  const [showNewRequestFormDialog, setShowNewRequestFormDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [comment, setComment] = useState('');
   const [delegateUserId, setDelegateUserId] = useState('');
@@ -277,6 +278,15 @@ export default function WorkflowPage() {
   const handleNewRequest = (type: WorkflowType) => {
     setSelectedRequestType(type);
     setShowNewRequestDialog(false);
+    // フォームダイアログを表示
+    setShowNewRequestFormDialog(true);
+  };
+
+  // 以下の古いデモデータ作成コードは使用しない（コメントアウト）
+  /*
+  const handleNewRequestOld = (type: WorkflowType) => {
+    setSelectedRequestType(type);
+    setShowNewRequestDialog(false);
     // より具体的なデモデータで新規申請を作成
     const getRequestDetails = (type: WorkflowType) => {
       const now = new Date();
@@ -445,6 +455,7 @@ export default function WorkflowPage() {
     
     setShowNewRequestDialog(false);
   };
+  */
 
   const openApprovalDialog = (request: WorkflowRequest, action: 'approve' | 'reject') => {
     setSelectedRequest(request);
@@ -788,8 +799,9 @@ export default function WorkflowPage() {
 
       {/* 新規申請フォーム */}
       <NewRequestForm
-        open={selectedRequestType !== null}
+        open={showNewRequestFormDialog && selectedRequestType !== null}
         onOpenChange={(open) => {
+          setShowNewRequestFormDialog(open);
           if (!open) setSelectedRequestType(null);
         }}
         requestType={selectedRequestType}

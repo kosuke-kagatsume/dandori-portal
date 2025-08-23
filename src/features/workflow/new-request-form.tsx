@@ -225,7 +225,6 @@ export function NewRequestForm({
   };
 
   const handleSubmit = (data: any) => {
-    console.log('Form submitted at step:', step);
     const request: Partial<WorkflowRequest> = {
       type: requestType!,
       title: getRequestTitle(requestType!, data),
@@ -495,10 +494,7 @@ export function NewRequestForm({
             </Button>
           )}
           {step < 3 ? (
-            <Button onClick={() => {
-              console.log('Next button clicked, moving from step', step, 'to', step + 1);
-              setStep(step + 1);
-            }}>
+            <Button onClick={() => setStep(step + 1)}>
               次へ
             </Button>
           ) : (
