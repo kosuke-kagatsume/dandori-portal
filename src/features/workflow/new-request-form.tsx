@@ -51,6 +51,7 @@ import {
   Laptop,
   Plane,
   Coffee,
+  Package,
 } from 'lucide-react';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -310,8 +311,12 @@ export function NewRequestForm({
         return <BusinessTripForm form={form} onFlowUpdate={setupApprovalFlow} />;
       case 'remote_work':
         return <RemoteWorkForm form={form} onFlowUpdate={setupApprovalFlow} />;
+      case 'purchase_request':
+        return <PurchaseRequestForm form={form} onFlowUpdate={setupApprovalFlow} />;
+      case 'document_approval':
+        return <DocumentApprovalForm form={form} onFlowUpdate={setupApprovalFlow} />;
       default:
-        return null;
+        return <DefaultRequestForm form={form} onFlowUpdate={setupApprovalFlow} />;
     }
   };
 
@@ -1073,6 +1078,182 @@ function BusinessTripForm({ form, onFlowUpdate }: any) {
             )}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// 購買申請フォーム
+function PurchaseRequestForm({ form, onFlowUpdate }: any) {
+  const [estimatedCost, setEstimatedCost] = useState<number>(0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Package className="h-5 w-5 text-pink-600" />
+          購買申請
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="itemName">購入品名</Label>
+          <Input
+            id="itemName"
+            placeholder="例：ノートPC、事務用品"
+            {...form.register('itemName')}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="quantity">数量</Label>
+            <Input
+              id="quantity"
+              type="number"
+              placeholder="1"
+              {...form.register('quantity')}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="estimatedCost">概算金額</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                ¥
+              </span>
+              <Input
+                id="estimatedCost"
+                type="number"
+                className="pl-8"
+                placeholder="0"
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  setEstimatedCost(value);
+                  form.setValue('estimatedCost', value);
+                  onFlowUpdate('purchase_request', { estimatedCost: value });
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="purpose">購入目的</Label>
+          <Textarea
+            id="purpose"
+            placeholder="購入の目的や必要性を入力してください"
+            {...form.register('purpose')}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="vendor">購入先（任意）</Label>
+          <Input
+            id="vendor"
+            placeholder="〇〇株式会社"
+            {...form.register('vendor')}
+          />
+        </div>
+
+        {estimatedCost > 0 && (
+          <div className="p-3 bg-pink-50 dark:bg-pink-950/50 rounded-lg">
+            <p className="text-sm font-medium text-pink-900 dark:text-pink-100">
+              概算金額: ¥{estimatedCost.toLocaleString()}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// 書類承認フォーム
+function DocumentApprovalForm({ form, onFlowUpdate }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-gray-600" />
+          書類承認
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="documentTitle">書類タイトル</Label>
+          <Input
+            id="documentTitle"
+            placeholder="例：契約書、提案書"
+            {...form.register('documentTitle')}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>書類種別</Label>
+          <Select onValueChange={(value) => form.setValue('documentType', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="選択してください" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="contract">契約書</SelectItem>
+              <SelectItem value="proposal">提案書</SelectItem>
+              <SelectItem value="report">報告書</SelectItem>
+              <SelectItem value="policy">規定・ポリシー</SelectItem>
+              <SelectItem value="other">その他</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="description">説明</Label>
+          <Textarea
+            id="description"
+            placeholder="書類の内容や承認が必要な理由を入力してください"
+            {...form.register('description')}
+            rows={3}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="deadline">承認期限（任意）</Label>
+          <Input
+            id="deadline"
+            type="date"
+            {...form.register('deadline')}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// デフォルトフォーム
+function DefaultRequestForm({ form }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>申請内容</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="title">タイトル</Label>
+          <Input
+            id="title"
+            placeholder="申請のタイトルを入力"
+            {...form.register('title')}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="description">詳細</Label>
+          <Textarea
+            id="description"
+            placeholder="申請の詳細を入力してください"
+            {...form.register('description')}
+            rows={5}
+          />
+        </div>
       </CardContent>
     </Card>
   );
