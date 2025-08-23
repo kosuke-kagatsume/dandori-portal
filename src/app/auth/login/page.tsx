@@ -104,17 +104,6 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // デモモード: Supabaseを使わずに直接ログイン
-      // 本番環境ではSupabaseの設定後に以下のコメントを解除
-      /*
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'tanaka@demo.com',
-        password: 'demo1234',
-      });
-
-      if (error) throw error;
-      */
-
       // デモユーザー情報をローカルストレージに保存
       const demoUser = {
         id: 'demo-user-1',
@@ -124,13 +113,20 @@ export default function LoginPage() {
         role: 'manager',
       };
       
-      localStorage.setItem('demo_user', JSON.stringify(demoUser));
+      // localStorageとCookieの両方に保存
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('demo_user', JSON.stringify(demoUser));
+        document.cookie = `demo_user=${JSON.stringify(demoUser)}; path=/; max-age=86400`;
+      }
       
       toast.success('デモアカウントでログインしました');
-      router.push('/ja/dashboard');
+      
+      // 少し遅延を入れてからリダイレクト
+      setTimeout(() => {
+        window.location.href = '/ja/dashboard';
+      }, 500);
     } catch (error: any) {
       setError('デモログインに失敗しました');
-    } finally {
       setIsLoading(false);
     }
   };
