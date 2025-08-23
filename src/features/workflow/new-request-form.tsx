@@ -225,6 +225,7 @@ export function NewRequestForm({
   };
 
   const handleSubmit = (data: any) => {
+    console.log('Form submitted at step:', step);
     const request: Partial<WorkflowRequest> = {
       type: requestType!,
       title: getRequestTitle(requestType!, data),
@@ -494,7 +495,10 @@ export function NewRequestForm({
             </Button>
           )}
           {step < 3 ? (
-            <Button onClick={() => setStep(step + 1)}>
+            <Button onClick={() => {
+              console.log('Next button clicked, moving from step', step, 'to', step + 1);
+              setStep(step + 1);
+            }}>
               次へ
             </Button>
           ) : (
@@ -651,8 +655,11 @@ function ExpenseClaimForm({ form, onFlowUpdate }: any) {
           <DollarSign className="h-5 w-5 text-green-600" />
           経費申請
         </CardTitle>
+        <CardDescription>
+          業務に関連する経費の申請を行います
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label>経費種別</Label>
           <Select onValueChange={(value) => form.setValue('expenseType', value)}>
@@ -669,41 +676,44 @@ function ExpenseClaimForm({ form, onFlowUpdate }: any) {
           </Select>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="amount">金額</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                ¥
-              </span>
+        <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+          <Label className="text-sm font-medium mb-3 block">経費詳細</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount" className="text-sm">金額 <span className="text-red-500">*</span></Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  ¥
+                </span>
+                <Input
+                  id="amount"
+                  type="number"
+                  className="pl-8"
+                  placeholder="例：5000"
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    setAmount(value);
+                    form.setValue('amount', value);
+                    onFlowUpdate('expense_claim', { amount: value });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="expenseDate" className="text-sm">支出日 <span className="text-red-500">*</span></Label>
               <Input
-                id="amount"
-                type="number"
-                className="pl-8"
-                placeholder="0"
+                id="expenseDate"
+                type="date"
+                className="w-full"
                 onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  setAmount(value);
-                  form.setValue('amount', value);
-                  onFlowUpdate('expense_claim', { amount: value });
+                  const date = new Date(e.target.value);
+                  setExpenseDate(date);
+                  form.setValue('expenseDate', date);
                 }}
+                max={new Date().toISOString().split('T')[0]}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="expenseDate">支出日</Label>
-            <Input
-              id="expenseDate"
-              type="date"
-              className="w-full"
-              onChange={(e) => {
-                const date = new Date(e.target.value);
-                setExpenseDate(date);
-                form.setValue('expenseDate', date);
-              }}
-              max={new Date().toISOString().split('T')[0]}
-            />
           </div>
         </div>
 
@@ -776,41 +786,47 @@ function OvertimeRequestForm({ form, onFlowUpdate }: any) {
           <Clock className="h-5 w-5 text-orange-600" />
           残業申請
         </CardTitle>
+        <CardDescription>
+          時間外勤務の申請を行います
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="overtimeDate">残業日</Label>
-            <Input
-              id="overtimeDate"
-              type="date"
-              className="w-full"
-              onChange={(e) => {
-                const date = new Date(e.target.value);
-                setOvertimeDate(date);
-                form.setValue('overtimeDate', date);
-              }}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="hours">残業時間</Label>
-            <div className="relative">
+      <CardContent className="space-y-6">
+        <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg">
+          <Label className="text-sm font-medium mb-3 block">残業詳細</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="overtimeDate" className="text-sm">残業日 <span className="text-red-500">*</span></Label>
               <Input
-                id="hours"
-                type="number"
-                step="0.5"
-                placeholder="0"
+                id="overtimeDate"
+                type="date"
+                className="w-full"
                 onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  setHours(value);
-                  form.setValue('hours', value);
-                  onFlowUpdate('overtime_request', { hours: value });
+                  const date = new Date(e.target.value);
+                  setOvertimeDate(date);
+                  form.setValue('overtimeDate', date);
                 }}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                時間
-              </span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="hours" className="text-sm">残業時間 <span className="text-red-500">*</span></Label>
+              <div className="relative">
+                <Input
+                  id="hours"
+                  type="number"
+                  step="0.5"
+                  placeholder="例：2.5"
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    setHours(value);
+                    form.setValue('hours', value);
+                    onFlowUpdate('overtime_request', { hours: value });
+                  }}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  時間
+                </span>
+              </div>
             </div>
           </div>
         </div>
