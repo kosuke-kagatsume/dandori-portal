@@ -295,8 +295,13 @@ export default function LoginPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={handleDemoLogin}
+              onClick={(e) => {
+                e.preventDefault();
+                console.log('Button clicked!');
+                handleDemoLogin();
+              }}
               disabled={isLoading}
+              type="button"
             >
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
