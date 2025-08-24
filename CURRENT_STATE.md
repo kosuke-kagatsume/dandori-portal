@@ -2,7 +2,8 @@
 ## 2025年8月24日 更新
 
 ## 🚀 本番環境（最新・動作確認済み）
-**メインURL: https://dandori-portal-kp86dzxja-kosukes-projects-c6ad92ba.vercel.app**
+**カスタムドメイン: https://dandori-portal.vercel.app**
+**デプロイメントURL: https://dandori-portal-kp86dzxja-kosukes-projects-c6ad92ba.vercel.app**
 - ✅ デモログイン機能: 完全動作中
 - ✅ ダッシュボード: アクセス可能
 - ✅ Supabase認証: 接続済み
