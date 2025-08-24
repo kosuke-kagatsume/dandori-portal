@@ -6,6 +6,7 @@
 .env.development.local
 .env.test.local
 .env.production.local
+.env
 
 # Ignore logs
 npm-debug.log*
@@ -15,3 +16,21 @@ yarn-error.log*
 # Ignore editor files
 .vscode
 .idea
+*.swp
+*.swo
+
+# Ignore documentation
+CURRENT_STATE.md
+SUPABASE_SETUP_GUIDE.md
+
+# Ignore test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__/
+coverage/
+
+# Ignore Storybook in production
+.storybook/
+storybook-static/
