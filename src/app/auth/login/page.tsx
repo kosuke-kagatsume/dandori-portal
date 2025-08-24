@@ -105,8 +105,8 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // デモログインAPIを呼び出す
-      const token = process.env.NEXT_PUBLIC_DEMO_LOGIN_TOKEN || '2b723ccc348073981432fcc0741efcd05c50915144d7d144e16e3cf384a85134';
+      // デモログインAPIを呼び出す（トークンはサーバー側で検証）
+      const token = '2b723ccc348073981432fcc0741efcd05c50915144d7d144e16e3cf384a85134';
       
       const response = await fetch('/api/auth/demo-login', {
         method: 'POST',
@@ -120,7 +120,19 @@ export default function LoginPage() {
         }),
       });
       
-      const data = await response.json();
+      // レスポンスをテキストとして取得して、JSONかどうか確認
+      const text = await response.text();
+      let data;
+      
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        // JSONパースエラーの場合、レスポンスが認証エラーの可能性
+        if (response.status === 401) {
+          throw new Error('認証エラー: デモログインが無効です');
+        }
+        throw new Error(`サーバーエラー: ${text}`);
+      }
       
       if (!response.ok || !data.ok) {
         throw new Error(data.error || 'デモログインに失敗しました');
@@ -128,13 +140,14 @@ export default function LoginPage() {
       
       console.log('Demo login successful:', data);
       
-      // 成功したらダッシュボードへリダイレクト
+      // 成功したらページをリロード（認証状態を更新）
       toast.success('デモアカウントでログインしました');
-      router.push('/ja/dashboard');
+      window.location.href = '/ja/dashboard';
       
     } catch (error: any) {
       console.error('Demo login error:', error);
       setError(error.message || 'デモログインに失敗しました');
+    } finally {
       setIsLoading(false);
     }
   };
