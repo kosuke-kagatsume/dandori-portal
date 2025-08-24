@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-interface OptimizedDataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface OptimizedDataTableProps<TData> {
+  columns: ColumnDef<TData, any>[];
   data: TData[];
   searchKey?: string;
   searchPlaceholder?: string;
@@ -50,13 +50,13 @@ const TableHeaderMemo = memo(({ headerGroups }: { headerGroups: any[] }) => (
 
 TableHeaderMemo.displayName = 'TableHeaderMemo';
 
-export const OptimizedDataTable = memo(<TData, TValue>({
+export const OptimizedDataTable = memo(<TData>({
   columns,
   data,
   searchKey = 'id',
   searchPlaceholder = '検索...',
   pageSize = 50,
-}: OptimizedDataTableProps<TData, TValue>) => {
+}: OptimizedDataTableProps<TData>) => {
   const [globalFilter, setGlobalFilter] = useState('');
 
   // テーブル設定をメモ化

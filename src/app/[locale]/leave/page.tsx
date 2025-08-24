@@ -279,7 +279,7 @@ export default function LeavePage() {
 
   // Calculate statistics from real data
   const leaveBalances = getLeaveBalances();
-  const currentUserBalance = leaveBalances.find(b => b.userId === '1'); // 田中太郎のデータ
+  const currentUserBalance = leaveBalances.find((b: any) => b.userId === '1'); // 田中太郎のデータ
   
   const stats = {
     remaining: currentUserBalance?.paidLeave.remaining || 12,

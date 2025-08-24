@@ -194,6 +194,7 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
     setValue,
     watch,
     reset,
+    getValues,
     formState: { errors },
   } = useForm<LeaveRequestData>({
     resolver: zodResolver(leaveRequestSchema),

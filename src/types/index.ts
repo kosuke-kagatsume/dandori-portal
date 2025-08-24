@@ -44,6 +44,7 @@ export const NotificationSchema = z.object({
   read: z.boolean().default(false),
   important: z.boolean().default(false),
   actionUrl: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 export const AttendanceDaySchema = z.object({

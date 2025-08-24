@@ -23,13 +23,13 @@ import { useUIStore, useUserStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 const navigation = [
-  { key: 'dashboard', href: '/ja/dashboard', icon: LayoutDashboard },
-  { key: 'users', href: '/ja/users', icon: Users },
-  { key: 'members', href: '/ja/members', icon: UserCheck },
-  { key: 'attendance', href: '/ja/attendance', icon: Clock },
-  { key: 'leave', href: '/ja/leave', icon: Calendar },
-  { key: 'workflow', href: '/ja/workflow', icon: GitBranch },
-  // { key: 'sites', href: '/ja/sites', icon: MapPin }, // 未実装
+  { key: 'dashboard', href: '/ja/dashboard', icon: LayoutDashboard, adminOnly: false },
+  { key: 'users', href: '/ja/users', icon: Users, adminOnly: false },
+  { key: 'members', href: '/ja/members', icon: UserCheck, adminOnly: false },
+  { key: 'attendance', href: '/ja/attendance', icon: Clock, adminOnly: false },
+  { key: 'leave', href: '/ja/leave', icon: Calendar, adminOnly: false },
+  { key: 'workflow', href: '/ja/workflow', icon: GitBranch, adminOnly: false },
+  // { key: 'sites', href: '/ja/sites', icon: MapPin, adminOnly: false }, // 未実装
   // { key: 'audit', href: '/ja/admin/audit-logs', icon: FileText, adminOnly: true }, // 未実装
 ];
 

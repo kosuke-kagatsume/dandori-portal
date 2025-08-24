@@ -192,6 +192,7 @@ export default function WorkflowPage() {
           type: 'success',
           timestamp: new Date().toISOString(),
           read: false,
+          important: false,
           userId: selectedRequest.requesterId,
         });
         
@@ -209,6 +210,7 @@ export default function WorkflowPage() {
           type: 'error',
           timestamp: new Date().toISOString(),
           read: false,
+          important: true,
           userId: selectedRequest.requesterId,
         });
         
