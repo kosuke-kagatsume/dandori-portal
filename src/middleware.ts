@@ -5,6 +5,11 @@ import { NextResponse } from 'next/server';
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   
+  // APIルートは認証チェックをスキップ
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+  
   // 認証不要なパスの定義
   const publicPaths = ['/auth/login', '/auth/callback', '/auth/signup'];
   const isPublicPath = publicPaths.some(path => pathname.startsWith(path));

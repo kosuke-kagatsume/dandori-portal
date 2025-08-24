@@ -245,6 +245,35 @@ export interface Database {
           updated_at?: string
         }
       }
+      profiles: {
+        Row: {
+          user_id: string
+          full_name: string | null
+          role: string | null
+          organization_id: string | null
+          department: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          full_name?: string | null
+          role?: string | null
+          organization_id?: string | null
+          department?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          full_name?: string | null
+          role?: string | null
+          organization_id?: string | null
+          department?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       notifications: {
         Row: {
           id: string

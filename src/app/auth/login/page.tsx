@@ -99,37 +99,42 @@ export default function LoginPage() {
   };
 
   // デモログイン
-  const handleDemoLogin = () => {
+  const handleDemoLogin = async () => {
     console.log('Demo login clicked');
     setIsLoading(true);
     setError(null);
 
     try {
-      // デモユーザー情報をローカルストレージに保存
-      const demoUser = {
-        id: 'demo-user-1',
-        email: 'tanaka@demo.com',
-        name: '田中太郎',
-        department: '営業部',
-        role: 'manager',
-      };
+      // デモログインAPIを呼び出す
+      const token = process.env.NEXT_PUBLIC_DEMO_LOGIN_TOKEN || '2b723ccc348073981432fcc0741efcd05c50915144d7d144e16e3cf384a85134';
       
-      console.log('Saving demo user:', demoUser);
+      const response = await fetch('/api/auth/demo-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email: 'demo@dandori.local',
+          password: 'demo-demo-demo',
+        }),
+      });
       
-      // localStorageに保存
-      localStorage.setItem('demo_user', JSON.stringify(demoUser));
+      const data = await response.json();
       
-      // Cookieにも保存
-      document.cookie = `demo_user=${encodeURIComponent(JSON.stringify(demoUser))}; path=/; max-age=86400`;
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'デモログインに失敗しました');
+      }
       
-      console.log('Demo user saved, redirecting...');
+      console.log('Demo login successful:', data);
       
-      // 即座にリダイレクト
-      window.location.href = '/ja/dashboard';
+      // 成功したらダッシュボードへリダイレクト
+      toast.success('デモアカウントでログインしました');
+      router.push('/ja/dashboard');
       
     } catch (error: any) {
       console.error('Demo login error:', error);
-      setError('デモログインに失敗しました');
+      setError(error.message || 'デモログインに失敗しました');
       setIsLoading(false);
     }
   };
@@ -204,8 +209,8 @@ export default function LoginPage() {
                     />
                   </div>
                   
-                  <Button
-                    type="submit"
+                  <Button 
+                    type="submit" 
                     className="w-full"
                     disabled={isLoading}
                   >
@@ -223,7 +228,7 @@ export default function LoginPage() {
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">お名前</Label>
+                    <Label htmlFor="signup-name">氏名</Label>
                     <Input
                       id="signup-name"
                       type="text"
@@ -249,6 +254,19 @@ export default function LoginPage() {
                   </div>
                   
                   <div className="space-y-2">
+                    <Label htmlFor="signup-department">部署</Label>
+                    <Input
+                      id="signup-department"
+                      type="text"
+                      placeholder="営業部"
+                      value={signupDepartment}
+                      onChange={(e) => setSignupDepartment(e.target.value)}
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
                     <Label htmlFor="signup-password">パスワード</Label>
                     <Input
                       id="signup-password"
@@ -258,24 +276,11 @@ export default function LoginPage() {
                       onChange={(e) => setSignupPassword(e.target.value)}
                       required
                       disabled={isLoading}
-                      minLength={6}
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-department">部署</Label>
-                    <Input
-                      id="signup-department"
-                      type="text"
-                      placeholder="営業部"
-                      value={signupDepartment}
-                      onChange={(e) => setSignupDepartment(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  
-                  <Button
-                    type="submit"
+                  <Button 
+                    type="submit" 
                     className="w-full"
                     disabled={isLoading}
                   >
@@ -295,10 +300,7 @@ export default function LoginPage() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => {
-                alert('デモログインボタンがクリックされました');
-                window.location.href = '/ja/dashboard';
-              }}
+              onClick={handleDemoLogin}
               disabled={isLoading}
               type="button"
             >
