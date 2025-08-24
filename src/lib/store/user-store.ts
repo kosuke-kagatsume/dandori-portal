@@ -1,10 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User } from '@/types';
+import type { User, DemoUser, UserRole } from '@/types';
+import { demoUsers } from '@/lib/demo-users';
 
 interface UserState {
   currentUser: User | null;
   users: User[];
+  // デモ用の役割管理
+  isDemoMode: boolean;
+  currentDemoUser: DemoUser | null;
+  switchDemoRole: (role: UserRole) => void;
+  setDemoMode: (enabled: boolean) => void;
+  
   setCurrentUser: (user: User) => void;
   setUsers: (users: User[]) => void;
   addUser: (user: User) => void;
@@ -25,6 +32,10 @@ export const useUserStore = create<UserState>()(
       users: [],
       isLoading: false,
       error: null,
+      
+      // デモモードの初期状態
+      isDemoMode: false,
+      currentDemoUser: null,
       
       setCurrentUser: (user) => {
         set({ currentUser: user });
@@ -75,11 +86,37 @@ export const useUserStore = create<UserState>()(
       setError: (error) => {
         set({ error });
       },
+      
+      // デモ役割切り替え機能
+      switchDemoRole: (role) => {
+        const demoUser = demoUsers[role];
+        set({ 
+          currentDemoUser: demoUser,
+          isDemoMode: true 
+        });
+      },
+      
+      setDemoMode: (enabled) => {
+        if (enabled) {
+          // デモモード有効化時、デフォルトで一般社員
+          set({ 
+            isDemoMode: true,
+            currentDemoUser: demoUsers.employee 
+          });
+        } else {
+          set({ 
+            isDemoMode: false,
+            currentDemoUser: null 
+          });
+        }
+      },
     }),
     {
       name: 'user-storage',
       partialize: (state) => ({
         currentUser: state.currentUser,
+        isDemoMode: state.isDemoMode,
+        currentDemoUser: state.currentDemoUser,
       }),
     }
   )

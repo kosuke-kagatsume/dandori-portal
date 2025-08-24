@@ -14,11 +14,17 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const { theme, sidebarCollapsed, getDensityClass } = useUIStore();
   const { setTenants } = useTenantStore();
-  const { setCurrentUser } = useUserStore();
+  const { setCurrentUser, setDemoMode } = useUserStore();
   const { setNotifications } = useNotificationStore();
 
   // Initialize user data
   useEffect(() => {
+    // Check if demo mode is enabled
+    const demoModeEnabled = localStorage.getItem('demo_mode') === 'true';
+    if (demoModeEnabled) {
+      setDemoMode(true);
+    }
+    
     // Check for demo user in localStorage
     const demoUserStr = localStorage.getItem('demo_user');
     if (demoUserStr) {

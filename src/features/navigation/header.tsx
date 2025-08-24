@@ -40,6 +40,7 @@ import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenter } from './notification-center';
 import { CommandPalette } from './command-palette';
 import { NotificationPanel, type Notification } from '@/features/notifications/notification-panel';
+import { DemoRoleSwitcher } from '@/components/demo/demo-role-switcher';
 
 export function Header() {
   const router = useRouter();
@@ -274,6 +275,11 @@ export function Header() {
                 minute: '2-digit' 
               })}
             </div>
+
+            <Separator orientation="vertical" className="h-6" />
+
+            {/* Demo Role Switcher */}
+            <DemoRoleSwitcher />
 
             <Separator orientation="vertical" className="h-6" />
 

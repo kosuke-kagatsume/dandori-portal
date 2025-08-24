@@ -140,6 +140,9 @@ export default function LoginPage() {
       
       console.log('Demo login successful:', data);
       
+      // デモモードを有効にする
+      localStorage.setItem('demo_mode', 'true');
+      
       // 成功したらページをリロード（認証状態を更新）
       toast.success('デモアカウントでログインしました');
       window.location.href = '/ja/dashboard';

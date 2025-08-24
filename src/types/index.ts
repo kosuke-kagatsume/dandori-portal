@@ -132,6 +132,20 @@ export type Workflow = z.infer<typeof WorkflowSchema>;
 export type Site = z.infer<typeof SiteSchema>;
 export type AuditLog = z.infer<typeof AuditLogSchema>;
 
+// Role and Permission types
+export type UserRole = 'employee' | 'manager' | 'hr' | 'admin';
+export type Permission = 'view_own' | 'view_team' | 'view_all' | 'approve_requests' | 'manage_system';
+
+export interface DemoUser {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department: string;
+  avatar: string;
+  permissions: Permission[];
+}
+
 // UI State types
 export type ViewMode = 'card' | 'table';
 export type Theme = 'light' | 'dark';
