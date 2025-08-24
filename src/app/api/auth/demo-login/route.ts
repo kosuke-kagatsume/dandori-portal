@@ -12,7 +12,12 @@ export async function POST(req: Request) {
     const token = process.env.DEMO_LOGIN_TOKEN;
     const authz = req.headers.get('authorization') || '';
     
+    console.log('Demo login API called');
+    console.log('Token exists:', !!token);
+    console.log('Auth header:', authz.substring(0, 20) + '...');
+    
     if (!token || authz !== `Bearer ${token}`) {
+      console.log('Token validation failed');
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
