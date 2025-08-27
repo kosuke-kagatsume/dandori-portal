@@ -23,7 +23,8 @@ export function useSettings() {
   useEffect(() => {
     const loaded = loadSettings();
     setSettingsState(loaded);
-    applyAllSettings(loaded);
+    // 初回ロード時は設定を適用しない（デフォルトのライトモードを維持）
+    // ユーザーが設定ページで明示的に変更した場合のみ適用される
     setIsLoading(false);
   }, []);
 
