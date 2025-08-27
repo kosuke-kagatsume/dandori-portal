@@ -50,13 +50,13 @@ const TableHeaderMemo = memo(({ headerGroups }: { headerGroups: any[] }) => (
 
 TableHeaderMemo.displayName = 'TableHeaderMemo';
 
-export const OptimizedDataTable = memo(<TData>({
+function OptimizedDataTableComponent<TData>({
   columns,
   data,
   searchKey = 'id',
   searchPlaceholder = '検索...',
   pageSize = 50,
-}: OptimizedDataTableProps<TData>) => {
+}: OptimizedDataTableProps<TData>) {
   const [globalFilter, setGlobalFilter] = useState('');
 
   // テーブル設定をメモ化
@@ -150,6 +150,6 @@ export const OptimizedDataTable = memo(<TData>({
       </div>
     </div>
   );
-});
+}
 
-OptimizedDataTable.displayName = 'OptimizedDataTable';
+export const OptimizedDataTable = memo(OptimizedDataTableComponent) as typeof OptimizedDataTableComponent;

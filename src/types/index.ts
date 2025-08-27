@@ -33,6 +33,58 @@ export const OrgUnitSchema = z.object({
   headUserId: z.string().optional(),
   type: z.enum(['company', 'division', 'department', 'team']),
   memberCount: z.number().default(0),
+  description: z.string().optional(),
+  isActive: z.boolean().default(true),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+// 組織階層とポジション管理
+export const PositionSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  level: z.number(),
+  unitId: z.string(),
+  description: z.string().optional(),
+  responsibilities: z.array(z.string()),
+  requiredSkills: z.array(z.string()),
+  reportingManager: z.string().optional(),
+  isManagerRole: z.boolean().default(false),
+  maxMembers: z.number().optional(),
+});
+
+// ユーザーと組織の関連
+export const UserOrganizationSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  unitId: z.string(),
+  positionId: z.string(),
+  role: z.enum(['employee', 'manager', 'hr', 'admin']),
+  permissions: z.array(z.string()),
+  startDate: z.string(),
+  endDate: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+// 権限マスタ
+export const PermissionSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string(),
+  category: z.enum(['attendance', 'leave', 'organization', 'system', 'reports']),
+  level: z.enum(['self', 'team', 'department', 'company', 'system']),
+});
+
+// ロール定義
+export const RoleSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string(),
+  permissions: z.array(z.string()),
+  isSystemRole: z.boolean().default(false),
+  unitTypes: z.array(z.string()).optional(),
 });
 
 export const NotificationSchema = z.object({
@@ -125,6 +177,10 @@ export const AuditLogSchema = z.object({
 export type User = z.infer<typeof UserSchema>;
 export type Tenant = z.infer<typeof TenantSchema>;
 export type OrgUnit = z.infer<typeof OrgUnitSchema>;
+export type Position = z.infer<typeof PositionSchema>;
+export type UserOrganization = z.infer<typeof UserOrganizationSchema>;
+export type PermissionDef = z.infer<typeof PermissionSchema>;
+export type RoleDef = z.infer<typeof RoleSchema>;
 export type Notification = z.infer<typeof NotificationSchema>;
 export type AttendanceDay = z.infer<typeof AttendanceDaySchema>;
 export type LeaveRequest = z.infer<typeof LeaveRequestSchema>;
@@ -144,6 +200,52 @@ export interface DemoUser {
   department: string;
   avatar: string;
   permissions: Permission[];
+  unitId?: string;
+  positionId?: string;
+  managerIds?: string[];
+  teamMemberIds?: string[];
+}
+
+// 組織図関連の型
+export interface OrganizationNode {
+  id: string;
+  name: string;
+  type: 'company' | 'division' | 'department' | 'team';
+  parentId?: string;
+  children: OrganizationNode[];
+  members: OrganizationMember[];
+  headMember?: OrganizationMember;
+  level: number;
+  memberCount: number;
+  description?: string;
+  isExpanded?: boolean;
+}
+
+export interface OrganizationMember {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  role: UserRole;
+  avatar?: string;
+  isManager: boolean;
+  joinDate: string;
+  status: 'active' | 'inactive' | 'leave';
+}
+
+// 権限管理関連の型
+export interface PermissionCategory {
+  id: string;
+  name: string;
+  permissions: PermissionItem[];
+}
+
+export interface PermissionItem {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  level: 'self' | 'team' | 'department' | 'company' | 'system';
 }
 
 // UI State types

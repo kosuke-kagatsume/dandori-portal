@@ -33,9 +33,9 @@ export const useUserStore = create<UserState>()(
       isLoading: false,
       error: null,
       
-      // デモモードの初期状態
-      isDemoMode: false,
-      currentDemoUser: null,
+      // デモモードの初期状態（デフォルトで有効）
+      isDemoMode: true,
+      currentDemoUser: demoUsers.employee,
       
       setCurrentUser: (user) => {
         set({ currentUser: user });

@@ -1,10 +1,9 @@
 'use client';
 
-// import { useTranslations } from 'next-intl'; // 一時的に無効化
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getDashboardStats, generateAttendanceData } from '@/lib/mock-data';
+import { getDashboardStats } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -18,16 +17,38 @@ import {
   Activity,
   Wifi,
   WifiOff,
+  ShieldCheck,
+  FileText,
+  BarChart3,
+  Settings,
 } from 'lucide-react';
+import { useUserStore } from '@/lib/store/user-store';
+import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
+import type { UserRole } from '@/types';
 
 export default function DashboardPage() {
-  // const t = useTranslations('dashboard'); // 一時的に無効化
+  const { currentDemoUser, switchDemoRole } = useUserStore();
+  const [effectiveDemoUser, setEffectiveDemoUser] = useState(currentDemoUser);
+  
+  // 初期化時にローカルストレージから役割を読み込み
+  useEffect(() => {
+    const storedRole = localStorage.getItem('demo-role') as UserRole;
+    if (storedRole && demoUsers[storedRole]) {
+      switchDemoRole(storedRole);
+      setEffectiveDemoUser(demoUsers[storedRole]);
+    } else if (currentDemoUser) {
+      setEffectiveDemoUser(currentDemoUser);
+    } else {
+      setEffectiveDemoUser(demoUsers.employee);
+    }
+  }, []); // 依存配列を空にして初回のみ実行
   
   // 固定の日本語翻訳関数
   const t = (key: string) => {
     const translations: Record<string, string> = {
       'title': 'ダッシュボード',
       'totalEmployees': '総従業員数',
+      'teamMembers': 'チームメンバー',
       'todayAttendance': '本日の出勤率',
       'pendingApprovals': '承認待ち',
       'monthlyUtilization': '月間稼働率',
@@ -37,7 +58,11 @@ export default function DashboardPage() {
       'pendingLeave': '申請中',
       'expiringLeave': '失効予定',
       'recentActivity': '最近のアクティビティ',
-      'systemConnection': 'システム接続状況'
+      'systemConnection': 'システム接続状況',
+      'myAttendance': '私の勤怠',
+      'teamApprovals': 'チーム承認待ち',
+      'systemHealth': 'システム健全性',
+      'userManagement': 'ユーザー管理'
     };
     return translations[key] || key;
   };
@@ -45,6 +70,7 @@ export default function DashboardPage() {
   // データを取得
   const [kpiData, setKpiData] = useState({
     totalEmployees: 50,
+    teamMembers: 8,
     todayAttendance: 42,
     pendingApprovals: 8,
     monthlyUtilization: 87.5,
@@ -54,6 +80,7 @@ export default function DashboardPage() {
     const stats = getDashboardStats();
     setKpiData({
       totalEmployees: stats.totalEmployees,
+      teamMembers: 8,
       todayAttendance: stats.todayAttendance,
       pendingApprovals: stats.pendingApprovals,
       monthlyUtilization: stats.monthlyUtilization,
@@ -74,105 +101,192 @@ export default function DashboardPage() {
     { id: 4, user: '鈴木一郎', action: '出勤記録', time: '1時間前' },
   ];
 
+  // 権限チェック（effectiveDemoUserを使用）
+  const canViewAll = hasPermission(effectiveDemoUser, 'view_all');
+  const canViewTeam = hasPermission(effectiveDemoUser, 'view_team');
+  const canApprove = hasPermission(effectiveDemoUser, 'approve_requests');
+  const canManageSystem = hasPermission(effectiveDemoUser, 'manage_system');
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">
-          今日の概要と重要な指標を確認できます
+          {effectiveDemoUser ? `${effectiveDemoUser.name}さん（${roleDisplayNames[effectiveDemoUser.role] || effectiveDemoUser.role}）のダッシュボード` : '今日の概要と重要な指標を確認できます'}
         </p>
+        {/* 役割説明バッジ */}
+        {effectiveDemoUser && (
+          <div className="mt-2 flex items-center gap-2">
+            <Badge variant={
+              effectiveDemoUser.role === 'admin' ? 'destructive' :
+              effectiveDemoUser.role === 'hr' ? 'default' :
+              effectiveDemoUser.role === 'manager' ? 'secondary' :
+              'outline'
+            }>
+              {effectiveDemoUser.role === 'employee' && '👤 自分の情報のみ表示'}
+              {effectiveDemoUser.role === 'manager' && '👥 チーム8名の情報を表示'}
+              {effectiveDemoUser.role === 'hr' && '🏢 全社50名の情報を表示'}
+              {effectiveDemoUser.role === 'admin' && '⚙️ システム管理機能付き'}
+            </Badge>
+          </div>
+        )}
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Role-based KPI Cards */}
+      <div className={`grid gap-4 md:grid-cols-2 ${
+        effectiveDemoUser?.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
+      }`}>
+        {/* Card 1: 従業員数/チームメンバー数 */}
         <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-transparent rounded-full -mr-16 -mt-16" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">
-              {t('totalEmployees')}
+              {canViewAll ? t('totalEmployees') : canViewTeam ? t('teamMembers') : t('myAttendance')}
             </CardTitle>
             <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
               <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">{kpiData.totalEmployees}</div>
+            <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
+              {canViewAll ? kpiData.totalEmployees : canViewTeam ? kpiData.teamMembers : '出勤中'}
+            </div>
             <div className="flex items-center gap-1 mt-1">
               <TrendingUp className="h-3 w-3 text-green-600" />
               <p className="text-xs text-orange-700 dark:text-orange-300">
-                +12 先月比
+                {canViewAll ? '+12 先月比' : canViewTeam ? 'チーム全員出勤' : '08:45 出勤'}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              {t('todayAttendance')}
-            </CardTitle>
-            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-              <UserCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{kpiData.todayAttendance}</div>
-            <div className="flex items-center gap-1 mt-1">
-              <Activity className="h-3 w-3 text-blue-600" />
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                出勤率 {Math.round((kpiData.todayAttendance / kpiData.totalEmployees) * 100)}%
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Card 2: 出勤率 */}
+        {(canViewAll || canViewTeam) && (
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                {t('todayAttendance')}
+              </CardTitle>
+              <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+                <UserCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
+                {canViewAll ? kpiData.todayAttendance : '7/8'}
+              </div>
+              <div className="flex items-center gap-1 mt-1">
+                <Activity className="h-3 w-3 text-blue-600" />
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  出勤率 {canViewAll ? Math.round((kpiData.todayAttendance / kpiData.totalEmployees) * 100) : 87.5}%
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">
-              {t('pendingApprovals')}
-            </CardTitle>
-            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">{kpiData.pendingApprovals}</div>
-            <div className="flex items-center gap-1 mt-1">
-              <Clock className="h-3 w-3 text-amber-600" />
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                3件は緊急
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Card 3: 承認待ち（承認権限がある場合のみ） */}
+        {canApprove && (
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                {canViewAll ? t('pendingApprovals') : t('teamApprovals')}
+              </CardTitle>
+              <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">
+                {canViewAll ? kpiData.pendingApprovals : 3}
+              </div>
+              <div className="flex items-center gap-1 mt-1">
+                <Clock className="h-3 w-3 text-amber-600" />
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  {canViewAll ? '3件は緊急' : '1件は緊急'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
-              {t('monthlyUtilization')}
-            </CardTitle>
-            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-              <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-900 dark:text-green-100">{kpiData.monthlyUtilization}%</div>
-            <div className="flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3 text-green-600" />
-              <p className="text-xs text-green-700 dark:text-green-300">
-                +2.1% 先月比
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Card 4: システム管理（管理者のみ） */}
+        {canManageSystem ? (
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
+                {t('systemHealth')}
+              </CardTitle>
+              <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+                <ShieldCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">99.9%</div>
+              <div className="flex items-center gap-1 mt-1">
+                <TrendingUp className="h-3 w-3 text-green-600" />
+                <p className="text-xs text-purple-700 dark:text-purple-300">
+                  稼働時間
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
+                {t('monthlyUtilization')}
+              </CardTitle>
+              <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-900 dark:text-green-100">{kpiData.monthlyUtilization}%</div>
+              <div className="flex items-center gap-1 mt-1">
+                <TrendingUp className="h-3 w-3 text-green-600" />
+                <p className="text-xs text-green-700 dark:text-green-300">
+                  +2.1% 先月比
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
+      {/* 一般社員専用の追加情報 */}
+      {effectiveDemoUser?.role === 'employee' && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+              権限制限のお知らせ
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              一般社員として、自分の情報のみ閲覧可能です。チームや全社の情報を見るには、マネージャー以上の権限が必要です。
+            </p>
+            <div className="mt-4 p-3 bg-muted rounded-lg">
+              <p className="text-xs">閲覧可能な情報：</p>
+              <ul className="text-xs mt-1 space-y-1">
+                <li>✅ 自分の勤怠記録</li>
+                <li>✅ 自分の有給残日数</li>
+                <li>❌ 他の社員の情報</li>
+                <li>❌ 承認機能</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Leave Balance Summary */}
+        {/* Leave Balance Summary - 全ロール共通 */}
         <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -180,7 +294,7 @@ export default function DashboardPage() {
               {t('leaveBalance')}
             </CardTitle>
             <CardDescription>
-              現在の有給休暇の状況
+              {canViewAll ? '組織全体の有給状況' : '現在の有給休暇の状況'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -211,7 +325,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity */}
+        {/* Recent Activity - 権限に応じて内容を変更 */}
         <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -219,22 +333,28 @@ export default function DashboardPage() {
               {t('recentActivity')}
             </CardTitle>
             <CardDescription>
-              最近のシステム活動
+              {canViewAll ? '全社の活動' : canViewTeam ? 'チームの活動' : '自分の活動'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{activity.user}</p>
-                    <p className="text-xs text-muted-foreground">{activity.action}</p>
+              {recentActivity
+                .filter((activity, index) => {
+                  if (canViewAll) return true;
+                  if (canViewTeam) return index < 3;
+                  return index === 0; // 自分の活動のみ
+                })
+                .map((activity) => (
+                  <div key={activity.id} className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{activity.user}</p>
+                      <p className="text-xs text-muted-foreground">{activity.action}</p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {activity.time}
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {activity.time}
-                  </Badge>
-                </div>
-              ))}
+                ))}
             </div>
             <Button variant="outline" size="sm" className="w-full mt-4">
               すべての活動を表示
@@ -242,61 +362,96 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* System Status */}
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wifi className="h-5 w-5 text-green-500" />
-              {t('systemConnection')}
-            </CardTitle>
-            <CardDescription>
-              システム接続状態
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">データベース</span>
-                <Badge variant="default" className="bg-green-500">
-                  <Wifi className="h-3 w-3 mr-1" />
-                  接続中
-                </Badge>
+        {/* System Status - 管理者向け詳細表示 */}
+        {canManageSystem ? (
+          <Card className="md:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-purple-500" />
+                システム管理
+              </CardTitle>
+              <CardDescription>
+                管理者専用機能
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Button variant="outline" className="w-full justify-start">
+                  <Users className="h-4 w-4 mr-2" />
+                  ユーザー管理
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  セキュリティ設定
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  システム分析
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <FileText className="h-4 w-4 mr-2" />
+                  監査ログ
+                </Button>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">外部API</span>
-                <Badge variant="default" className="bg-green-500">
-                  <Wifi className="h-3 w-3 mr-1" />
-                  接続中
-                </Badge>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="md:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wifi className="h-5 w-5 text-green-500" />
+                {t('systemConnection')}
+              </CardTitle>
+              <CardDescription>
+                システム接続状態
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">データベース</span>
+                  <Badge variant="default" className="bg-green-500">
+                    <Wifi className="h-3 w-3 mr-1" />
+                    接続中
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">外部API</span>
+                  <Badge variant="default" className="bg-green-500">
+                    <Wifi className="h-3 w-3 mr-1" />
+                    接続中
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">メール配信</span>
+                  <Badge variant="secondary">
+                    <WifiOff className="h-3 w-3 mr-1" />
+                    メンテナンス中
+                  </Badge>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">メール配信</span>
-                <Badge variant="secondary">
-                  <WifiOff className="h-3 w-3 mr-1" />
-                  メンテナンス中
-                </Badge>
+              
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground text-center">
+                  最終更新: 2024年1月15日 14:30
+                </p>
               </div>
-            </div>
-            
-            <div className="pt-2 border-t">
-              <p className="text-xs text-muted-foreground text-center">
-                最終更新: 2024年1月15日 14:30
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - 役割に応じた操作 */}
       <Card>
         <CardHeader>
           <CardTitle>クイックアクション</CardTitle>
           <CardDescription>
-            よく使う操作をすばやく実行できます
+            {effectiveDemoUser ? `${roleDisplayNames[effectiveDemoUser.role]}として実行可能な操作` : 'よく使う操作をすばやく実行できます'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            {/* 全員共通 */}
             <Link href="/ja/attendance">
               <Button className="h-16 w-full flex flex-col space-y-1">
                 <Clock className="h-5 w-5" />
@@ -309,18 +464,44 @@ export default function DashboardPage() {
                 <span className="text-sm">有給申請</span>
               </Button>
             </Link>
-            <Link href="/ja/members">
-              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                <Users className="h-5 w-5" />
-                <span className="text-sm">メンバー確認</span>
-              </Button>
-            </Link>
-            <Link href="/ja/leave">
-              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                <AlertCircle className="h-5 w-5" />
-                <span className="text-sm">承認待ち</span>
-              </Button>
-            </Link>
+            
+            {/* チーム管理者以上 */}
+            {canViewTeam && (
+              <Link href="/ja/members">
+                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                  <Users className="h-5 w-5" />
+                  <span className="text-sm">メンバー確認</span>
+                </Button>
+              </Link>
+            )}
+            
+            {/* 承認権限 */}
+            {canApprove && (
+              <Link href="/ja/approval">
+                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="text-sm">承認待ち</span>
+                </Button>
+              </Link>
+            )}
+            
+            {/* 管理者のみ */}
+            {canManageSystem && (
+              <>
+                <Link href="/ja/users">
+                  <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                    <ShieldCheck className="h-5 w-5" />
+                    <span className="text-sm">ユーザー管理</span>
+                  </Button>
+                </Link>
+                <Link href="/ja/settings">
+                  <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                    <Settings className="h-5 w-5" />
+                    <span className="text-sm">システム設定</span>
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
