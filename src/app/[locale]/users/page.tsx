@@ -26,8 +26,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DataTable } from '@/components/ui/common/data-table';
+import { LazyAvatar } from '@/components/ui/lazy-avatar';
+import { VirtualDataTable } from '@/components/ui/common/virtual-data-table';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
 import { toast } from 'sonner';
 import type { User } from '@/types';
@@ -142,12 +142,12 @@ export default function UsersPage() {
       cell: ({ row }) => {
         const user = row.original;
         return (
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar} alt={user.name} />
-            <AvatarFallback>
-              {user.name.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
+          <LazyAvatar
+            src={user.avatar}
+            alt={user.name}
+            fallback={user.name.charAt(0)}
+            className="h-8 w-8"
+          />
         );
       },
     },
@@ -356,11 +356,14 @@ export default function UsersPage() {
       {/* Users Table */}
       <div className="rounded-lg border bg-card">
         <div className="p-6">
-          <DataTable
+          <VirtualDataTable
             columns={columns}
             data={users}
             searchKey="name"
             searchPlaceholder="ユーザー名またはメールアドレスで検索..."
+            enableVirtualization={users.length > 100}
+            enableCaching={true}
+            pageSize={50}
           />
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { Theme, Locale, Density, ViewMode } from '@/types';
 
 interface UIState {
@@ -36,9 +36,9 @@ interface UIState {
   getDensityClass: () => string;
 }
 
-export const useUIStore = create<UIState>()(
-  persist(
-    (set, get) => ({
+// SSR対応: サーバーではpersistを無効化
+const createUIStore = () => {
+  const storeCreator = (set: any, get: any) => ({
       // Default values
       theme: 'light',
       locale: 'ja',
@@ -101,9 +101,18 @@ export const useUIStore = create<UIState>()(
         const { density } = get();
         return `density-${density}`;
       },
-    }),
-    {
+  });
+
+  // SSR時はpersistを使わない
+  if (typeof window === 'undefined') {
+    return create<UIState>()(storeCreator);
+  }
+
+  // クライアントサイドではpersistを使用
+  return create<UIState>()(
+    persist(storeCreator, {
       name: 'ui-storage',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         theme: state.theme,
         locale: state.locale,
@@ -113,6 +122,8 @@ export const useUIStore = create<UIState>()(
         defaultViewMode: state.defaultViewMode,
         itemsPerPage: state.itemsPerPage,
       }),
-    }
-  )
-);
+    })
+  );
+};
+
+export const useUIStore = createUIStore();

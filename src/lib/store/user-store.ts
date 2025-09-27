@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, DemoUser, UserRole } from '@/types';
 import { demoUsers } from '@/lib/demo-users';
 
@@ -25,9 +25,9 @@ interface UserState {
   setError: (error: string | null) => void;
 }
 
-export const useUserStore = create<UserState>()(
-  persist(
-    (set, get) => ({
+// SSR対応: サーバーではpersistを無効化
+const createUserStore = () => {
+  const storeCreator = (set: any, get: any) => ({
       currentUser: null,
       users: [],
       isLoading: false,
@@ -110,14 +110,25 @@ export const useUserStore = create<UserState>()(
           });
         }
       },
-    }),
-    {
+  });
+
+  // SSR時はpersistを使わない
+  if (typeof window === 'undefined') {
+    return create<UserState>()(storeCreator);
+  }
+
+  // クライアントサイドではpersistを使用
+  return create<UserState>()(
+    persist(storeCreator, {
       name: 'user-storage',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         currentUser: state.currentUser,
         isDemoMode: state.isDemoMode,
         currentDemoUser: state.currentDemoUser,
       }),
-    }
-  )
-);
+    })
+  );
+};
+
+export const useUserStore = createUserStore();

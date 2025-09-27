@@ -1,3 +1,16 @@
 {
-  "extends": ["next/core-web-vitals"]
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "Literal[value='›']",
+        "message": "JSXに生の›は禁止です。CSS疑似要素かSVGアイコンを使用してください"
+      },
+      {
+        "selector": "Literal[value='>']",
+        "message": "JSXに生の>は禁止です。CSS疑似要素かSVGアイコンを使用してください"
+      }
+    ]
+  }
 }

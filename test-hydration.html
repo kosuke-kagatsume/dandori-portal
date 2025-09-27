@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydration Error Test</title>
+</head>
+<body>
+    <h1>Hydration Error Test</h1>
+    <p>ブラウザで以下の手順を実行してください：</p>
+    <ol>
+        <li><a href="http://localhost:3001/auth/login" target="_blank">ログインページを開く</a></li>
+        <li>「デモアカウントでログイン」をクリック</li>
+        <li>ダッシュボードが表示されたら、ブラウザのDevToolsコンソールを開く（F12）</li>
+        <li>コンソールにHydrationエラーが表示されているか確認</li>
+    </ol>
+
+    <h2>確認ポイント：</h2>
+    <ul>
+        <li>❌ "Hydration failed because..." というエラーがある</li>
+        <li>❌ "Expected server HTML to contain..." というワーニングがある</li>
+        <li>✅ エラーがない場合は修正成功</li>
+    </ul>
+
+    <h2>サーバー状態：</h2>
+    <iframe src="http://localhost:3001" width="100%" height="600" style="border:1px solid #ccc;"></iframe>
+</body>
+</html>

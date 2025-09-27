@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LazyAvatar } from '@/components/ui/lazy-avatar';
 import {
   Select,
   SelectContent,
@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DataTable } from '@/components/ui/common/data-table';
+import { VirtualDataTable } from '@/components/ui/common/virtual-data-table';
 import { MemberCard } from '@/features/members/member-card';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -160,12 +160,12 @@ export default function MembersPage() {
         const member = row.original;
         return (
           <div className="flex items-center space-x-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={member.avatar} alt={member.name} />
-              <AvatarFallback>
-                {member.name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
+            <LazyAvatar
+              src={member.avatar}
+              alt={member.name}
+              fallback={member.name.charAt(0)}
+              className="h-8 w-8"
+            />
             <div>
               <div className="font-medium">{member.name}</div>
               <div className="text-sm text-muted-foreground">{member.department}</div>
@@ -384,11 +384,14 @@ export default function MembersPage() {
       ) : (
         <Card>
           <CardContent className="p-6">
-            <DataTable
+            <VirtualDataTable
               columns={columns}
               data={filteredMembers}
               searchKey="name"
               searchPlaceholder="メンバー検索..."
+              enableVirtualization={filteredMembers.length > 100}
+              enableCaching={true}
+              pageSize={50}
             />
           </CardContent>
         </Card>

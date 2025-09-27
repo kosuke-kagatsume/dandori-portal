@@ -2,7 +2,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LazyAvatar } from '@/components/ui/lazy-avatar';
 import { 
   MapPin, 
   Home, 
@@ -78,12 +78,12 @@ export function MemberCard({ member }: MemberCardProps) {
         <div className="flex items-start space-x-3">
           {/* Avatar */}
           <div className="relative">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={member.avatar} alt={member.name} />
-              <AvatarFallback>
-                {member.name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
+            <LazyAvatar
+              src={member.avatar}
+              alt={member.name}
+              fallback={member.name.charAt(0)}
+              className="h-10 w-10"
+            />
             {member.currentStatus === 'present' && (
               <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-white dark:border-gray-800 flex items-center justify-center">
                 <CheckCircle className="h-2.5 w-2.5 text-white" />
