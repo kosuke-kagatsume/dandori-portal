@@ -24,69 +24,84 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/ja${pathname}`, request.url));
   }
   
-  // Supabase クライアントの作成
+  // レスポンスオブジェクトの作成
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kwnybcmrwknjihxhhbso.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3bnliY21yd2tuamxoeGhoYnNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5NDk1OTMsImV4cCI6MjA3MTUyNTU5M30.Bpniq-nuEx0hwZ0O86Gw5T8HjDiOiX-C-nesECHHhMY',
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
+  // デモモードかチェック
+  const isDemoMode = process.env.DEMO_MODE === 'true' ||
+                    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+                    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  let user = null;
+
+  if (!isDemoMode) {
+    // Supabaseが利用可能な場合の認証チェック
+    try {
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get(name: string) {
+              return request.cookies.get(name)?.value;
             },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
+            set(name: string, value: string, options: CookieOptions) {
+              request.cookies.set({
+                name,
+                value,
+                ...options,
+              });
+              response = NextResponse.next({
+                request: {
+                  headers: request.headers,
+                },
+              });
+              response.cookies.set({
+                name,
+                value,
+                ...options,
+              });
             },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-        },
-      },
+            remove(name: string, options: CookieOptions) {
+              request.cookies.set({
+                name,
+                value: '',
+                ...options,
+              });
+              response = NextResponse.next({
+                request: {
+                  headers: request.headers,
+                },
+              });
+              response.cookies.set({
+                name,
+                value: '',
+                ...options,
+              });
+            },
+          },
+        }
+      );
+
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    } catch (error) {
+      console.warn('Supabase auth check failed, falling back to demo mode');
     }
-  );
+  }
 
-  // セッションの確認
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // 認証が必要なパスで未認証の場合はログインページへリダイレクト
+  // 認証が必要なパスで未認証の場合
   if (!isPublicPath && !user) {
-    // デモユーザーのチェック（フォールバック）
-    const demoUserCookie = request.cookies.get('demo_user');
-    console.log('Demo user cookie:', demoUserCookie?.value);
-    if (!demoUserCookie) {
-      console.log('No demo user cookie, redirecting to login');
+    // デモセッションのチェック（正しいキー名を使用）
+    const demoSessionCookie = request.cookies.get('demo_session');
+    console.log('Demo user cookie:', demoSessionCookie?.value);
+
+    if (!demoSessionCookie) {
+      console.log('No demo session cookie, redirecting to login');
       return NextResponse.redirect(new URL('/auth/login', request.url));
     } else {
       console.log('Demo user found, allowing access');

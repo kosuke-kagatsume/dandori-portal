@@ -19,31 +19,47 @@ export function AppShell({ children }: AppShellProps) {
 
   // Initialize user data
   useEffect(() => {
-    // Check if demo mode is enabled
-    const demoModeEnabled = localStorage.getItem('demo_mode') === 'true';
-    if (demoModeEnabled) {
-      setDemoMode(true);
-    }
-    
-    // Check for demo user in localStorage
-    const demoUserStr = localStorage.getItem('demo_user');
-    if (demoUserStr) {
-      const demoUser = JSON.parse(demoUserStr);
+    // デモモードを有効化
+    setDemoMode(true);
+
+    // demo_session Cookieからユーザー情報を取得
+    const getDemoUserFromCookie = () => {
+      try {
+        const value = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('demo_session='));
+
+        if (value) {
+          const cookieValue = value.split('=')[1];
+          return JSON.parse(decodeURIComponent(cookieValue));
+        }
+        return null;
+      } catch (error) {
+        console.error('Failed to parse demo session cookie:', error);
+        return null;
+      }
+    };
+
+    const demoUser = getDemoUserFromCookie();
+
+    if (demoUser && demoUser.user_metadata) {
+      console.log('Setting current user from cookie:', demoUser);
       setCurrentUser({
         id: demoUser.id || 'demo-user-1',
-        name: demoUser.name || '田中太郎',
+        name: demoUser.user_metadata.name || '田中太郎',
         email: demoUser.email || 'tanaka@demo.com',
         phone: '090-1234-5678',
         hireDate: '2020-04-01',
         unitId: '1',
-        roles: [demoUser.role || 'manager'],
+        roles: [demoUser.user_metadata.role || 'manager'],
         status: 'active',
         timezone: 'Asia/Tokyo',
         avatar: '',
-        position: demoUser.role === 'manager' ? 'マネージャー' : 'スタッフ',
-        department: demoUser.department || '営業部',
+        position: demoUser.user_metadata.role === 'manager' ? 'マネージャー' : 'スタッフ',
+        department: demoUser.user_metadata.department || '営業部',
       });
     } else {
+      console.log('No demo session cookie found, using fallback user');
       // Fallback to default user
       setCurrentUser({
         id: '1',
@@ -60,7 +76,7 @@ export function AppShell({ children }: AppShellProps) {
         department: '開発部',
       });
     }
-  }, [setCurrentUser]);
+  }, [setCurrentUser, setDemoMode]);
 
   // Apply theme to document
   useEffect(() => {
@@ -72,7 +88,7 @@ export function AppShell({ children }: AppShellProps) {
       <div className="flex h-screen">
         {/* Sidebar */}
         <Sidebar />
-        
+
         {/* Main Content */}
         <div className={cn(
           'flex-1 flex flex-col transition-all duration-300',
@@ -80,14 +96,14 @@ export function AppShell({ children }: AppShellProps) {
         )}>
           {/* Header */}
           <Header />
-          
+
           {/* Page Content */}
           <main className="flex-1 overflow-auto p-6">
             {children}
           </main>
         </div>
       </div>
-      
+
       {/* Global Toaster */}
       <Toaster position="top-right" />
     </div>
