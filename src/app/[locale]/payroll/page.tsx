@@ -81,6 +81,11 @@ export default function PayrollPage() {
   const calculationResults = getCalculationsByPeriod(selectedPeriod);
   const bonusResults = getBonusCalculationsByPeriod(selectedBonusPeriod, selectedBonusType);
 
+  // 統計計算
+  const totalGross = calculationResults.reduce((sum, calc) => sum + calc.grossSalary, 0);
+  const totalDeductions = calculationResults.reduce((sum, calc) => sum + calc.totalDeductions, 0);
+  const averageSalary = calculationResults.length > 0 ? totalGross / calculationResults.length : 0;
+
   // 詳細表示
   const handleViewDetails = (calculation: any) => {
     setSelectedCalculation(calculation);
@@ -153,61 +158,104 @@ export default function PayrollPage() {
       </div>
 
       {/* 統計カード */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">従業員数</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <MountGate fallback={<div className="text-2xl font-bold">--名</div>}>
+      <MountGate fallback={
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">従業員数</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">--名</div>
+              <p className="text-xs text-muted-foreground">+2名 前月比</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">総支給額</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">¥--</div>
+              <p className="text-xs text-muted-foreground">今月分</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均給与</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">¥--</div>
+              <p className="text-xs text-muted-foreground">全社平均</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">控除額合計</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">¥--</div>
+              <p className="text-xs text-muted-foreground">社会保険・税金</p>
+            </CardContent>
+          </Card>
+        </div>
+      }>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">従業員数</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
               <div className="text-2xl font-bold">{salaryMasters.length}名</div>
-            </MountGate>
-            <p className="text-xs text-muted-foreground">
-              +2名 前月比
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">総支給額</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(1320000)}</div>
-            <p className="text-xs text-muted-foreground">
-              今月分
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">平均給与</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(440000)}</div>
-            <p className="text-xs text-muted-foreground">
-              全社平均
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">控除額合計</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(370739)}</div>
-            <p className="text-xs text-muted-foreground">
-              社会保険・税金
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+              <p className="text-xs text-muted-foreground">
+                +2名 前月比
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">総支給額</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalGross)}</div>
+              <p className="text-xs text-muted-foreground">
+                今月分
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均給与</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(Math.round(averageSalary))}</div>
+              <p className="text-xs text-muted-foreground">
+                全社平均
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">控除額合計</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalDeductions)}</div>
+              <p className="text-xs text-muted-foreground">
+                社会保険・税金
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </MountGate>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">給与明細一覧</TabsTrigger>
           <TabsTrigger value="calculation">給与計算</TabsTrigger>
           <TabsTrigger value="bonus">賞与管理</TabsTrigger>
