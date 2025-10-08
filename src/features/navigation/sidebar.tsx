@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ClipboardCheck,
   Calculator,
+  Car,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -31,6 +32,7 @@ const navigation = [
   { key: 'leave', href: '/ja/leave', icon: Calendar, adminOnly: false },
   { key: 'workflow', href: '/ja/workflow', icon: GitBranch, adminOnly: false },
   { key: 'payroll', href: '/ja/payroll', icon: Calculator, adminOnly: false },
+  { key: 'assets', href: '/ja/assets', icon: Car, adminOnly: false },
   // { key: 'sites', href: '/ja/sites', icon: MapPin, adminOnly: false }, // 未実装
   // { key: 'audit', href: '/ja/admin/audit-logs', icon: FileText, adminOnly: true }, // 未実装
 ];
@@ -52,6 +54,7 @@ export function Sidebar() {
       'approval': '承認管理',
       'workflow': 'ワークフロー',
       'payroll': '給与管理',
+      'assets': '資産管理',
       'organization': '組織管理',
       'sites': '拠点管理',
       'settings': '設定',
