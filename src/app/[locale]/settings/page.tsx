@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
+import {
   Sun,
   Moon,
   Languages,
@@ -20,9 +20,15 @@ import {
   RefreshCw,
   CheckCircle,
   Info,
+  Building2,
+  Wallet,
+  FileText,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
+import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 
 // シンプルな設定の型定義
 interface SimpleSettings {
@@ -50,6 +56,14 @@ const defaultSettings: SimpleSettings = {
 
 export default function SimpleSettingsPage() {
   const { currentUser } = useUserStore();
+  const {
+    companyInfo,
+    payrollSettings,
+    yearEndAdjustmentSettings,
+    updateCompanyInfo,
+    updatePayrollSettings,
+    updateYearEndAdjustmentSettings
+  } = useCompanySettingsStore();
   const [settings, setSettings] = useState<SimpleSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -213,9 +227,21 @@ export default function SimpleSettingsPage() {
       </div>
 
       <Tabs defaultValue="appearance" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="appearance">外観</TabsTrigger>
           <TabsTrigger value="regional">地域と言語</TabsTrigger>
+          <TabsTrigger value="company">
+            <Building2 className="w-4 h-4 mr-1" />
+            会社情報
+          </TabsTrigger>
+          <TabsTrigger value="payroll">
+            <Wallet className="w-4 h-4 mr-1" />
+            給与設定
+          </TabsTrigger>
+          <TabsTrigger value="year-end">
+            <FileText className="w-4 h-4 mr-1" />
+            年末調整
+          </TabsTrigger>
           <TabsTrigger value="data">データ</TabsTrigger>
         </TabsList>
 
@@ -375,6 +401,475 @@ export default function SimpleSettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 会社情報設定 */}
+        <TabsContent value="company" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>基本情報</CardTitle>
+              <CardDescription>会社の基本情報を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>会社名 *</Label>
+                  <Input
+                    value={companyInfo.name}
+                    onChange={(e) => updateCompanyInfo({ name: e.target.value })}
+                    placeholder="サンプル株式会社"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>会社名（カナ） *</Label>
+                  <Input
+                    value={companyInfo.nameKana}
+                    onChange={(e) => updateCompanyInfo({ nameKana: e.target.value })}
+                    placeholder="サンプルカブシキガイシャ"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>郵便番号 *</Label>
+                  <Input
+                    value={companyInfo.postalCode}
+                    onChange={(e) => updateCompanyInfo({ postalCode: e.target.value })}
+                    placeholder="100-0001"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>住所 *</Label>
+                  <Input
+                    value={companyInfo.address}
+                    onChange={(e) => updateCompanyInfo({ address: e.target.value })}
+                    placeholder="東京都千代田区千代田1-1-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>電話番号 *</Label>
+                  <Input
+                    value={companyInfo.phone}
+                    onChange={(e) => updateCompanyInfo({ phone: e.target.value })}
+                    placeholder="03-1234-5678"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>FAX</Label>
+                  <Input
+                    value={companyInfo.fax || ''}
+                    onChange={(e) => updateCompanyInfo({ fax: e.target.value })}
+                    placeholder="03-1234-5679"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>メールアドレス</Label>
+                  <Input
+                    type="email"
+                    value={companyInfo.email || ''}
+                    onChange={(e) => updateCompanyInfo({ email: e.target.value })}
+                    placeholder="info@sample.co.jp"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>法人情報</CardTitle>
+              <CardDescription>税務・法務関連の情報を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>代表者名 *</Label>
+                  <Input
+                    value={companyInfo.representativeName}
+                    onChange={(e) => updateCompanyInfo({ representativeName: e.target.value })}
+                    placeholder="山田 太郎"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>代表者役職 *</Label>
+                  <Input
+                    value={companyInfo.representativeTitle}
+                    onChange={(e) => updateCompanyInfo({ representativeTitle: e.target.value })}
+                    placeholder="代表取締役"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>法人番号</Label>
+                  <Input
+                    value={companyInfo.corporateNumber || ''}
+                    onChange={(e) => updateCompanyInfo({ corporateNumber: e.target.value })}
+                    placeholder="1234567890123"
+                    maxLength={13}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>設立日</Label>
+                  <Input
+                    type="date"
+                    value={companyInfo.foundedDate || ''}
+                    onChange={(e) => updateCompanyInfo({ foundedDate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>所轄税務署 *</Label>
+                  <Input
+                    value={companyInfo.taxOffice}
+                    onChange={(e) => updateCompanyInfo({ taxOffice: e.target.value })}
+                    placeholder="麹町税務署"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>決算月 *</Label>
+                  <Select
+                    value={companyInfo.fiscalYearEnd}
+                    onValueChange={(value) => updateCompanyInfo({ fiscalYearEnd: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="01">1月</SelectItem>
+                      <SelectItem value="02">2月</SelectItem>
+                      <SelectItem value="03">3月</SelectItem>
+                      <SelectItem value="04">4月</SelectItem>
+                      <SelectItem value="05">5月</SelectItem>
+                      <SelectItem value="06">6月</SelectItem>
+                      <SelectItem value="07">7月</SelectItem>
+                      <SelectItem value="08">8月</SelectItem>
+                      <SelectItem value="09">9月</SelectItem>
+                      <SelectItem value="10">10月</SelectItem>
+                      <SelectItem value="11">11月</SelectItem>
+                      <SelectItem value="12">12月</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 給与設定 */}
+        <TabsContent value="payroll" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>給与支給設定</CardTitle>
+              <CardDescription>給与の支給日・締め日を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>締め日 *</Label>
+                  <Select
+                    value={String(payrollSettings.closingDay)}
+                    onValueChange={(value) => updatePayrollSettings({ closingDay: Number(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="31">月末締め</SelectItem>
+                      <SelectItem value="15">15日締め</SelectItem>
+                      <SelectItem value="20">20日締め</SelectItem>
+                      <SelectItem value="25">25日締め</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>支給日 *</Label>
+                  <Select
+                    value={String(payrollSettings.paymentDay)}
+                    onValueChange={(value) => updatePayrollSettings({ paymentDay: Number(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10日</SelectItem>
+                      <SelectItem value="15">15日</SelectItem>
+                      <SelectItem value="20">20日</SelectItem>
+                      <SelectItem value="25">25日</SelectItem>
+                      <SelectItem value="31">月末</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>支給タイミング *</Label>
+                  <Select
+                    value={payrollSettings.paymentDayType}
+                    onValueChange={(value: 'current' | 'next') => updatePayrollSettings({ paymentDayType: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="current">当月払い</SelectItem>
+                      <SelectItem value="next">翌月払い</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>所定労働時間/日 *</Label>
+                  <Input
+                    type="number"
+                    value={payrollSettings.standardWorkHours}
+                    onChange={(e) => updatePayrollSettings({ standardWorkHours: Number(e.target.value) })}
+                    min="1"
+                    max="24"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>所定労働日数/月 *</Label>
+                  <Input
+                    type="number"
+                    value={payrollSettings.standardWorkDays}
+                    onChange={(e) => updatePayrollSettings({ standardWorkDays: Number(e.target.value) })}
+                    min="1"
+                    max="31"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>給与体系 *</Label>
+                  <Select
+                    value={payrollSettings.defaultPayType}
+                    onValueChange={(value: 'monthly' | 'hourly' | 'daily') => updatePayrollSettings({ defaultPayType: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">月給制</SelectItem>
+                      <SelectItem value="daily">日給制</SelectItem>
+                      <SelectItem value="hourly">時給制</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>控除項目設定</CardTitle>
+              <CardDescription>給与から控除する項目を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>健康保険</Label>
+                  <p className="text-sm text-muted-foreground">健康保険料を控除する</p>
+                </div>
+                <Switch
+                  checked={payrollSettings.enableHealthInsurance}
+                  onCheckedChange={(checked) => updatePayrollSettings({ enableHealthInsurance: checked })}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>厚生年金</Label>
+                  <p className="text-sm text-muted-foreground">厚生年金保険料を控除する</p>
+                </div>
+                <Switch
+                  checked={payrollSettings.enablePensionInsurance}
+                  onCheckedChange={(checked) => updatePayrollSettings({ enablePensionInsurance: checked })}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>雇用保険</Label>
+                  <p className="text-sm text-muted-foreground">雇用保険料を控除する</p>
+                </div>
+                <Switch
+                  checked={payrollSettings.enableEmploymentInsurance}
+                  onCheckedChange={(checked) => updatePayrollSettings({ enableEmploymentInsurance: checked })}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>所得税</Label>
+                  <p className="text-sm text-muted-foreground">源泉所得税を控除する</p>
+                </div>
+                <Switch
+                  checked={payrollSettings.enableIncomeTax}
+                  onCheckedChange={(checked) => updatePayrollSettings({ enableIncomeTax: checked })}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>住民税</Label>
+                  <p className="text-sm text-muted-foreground">特別徴収住民税を控除する</p>
+                </div>
+                <Switch
+                  checked={payrollSettings.enableResidentTax}
+                  onCheckedChange={(checked) => updatePayrollSettings({ enableResidentTax: checked })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* 年末調整設定 */}
+        <TabsContent value="year-end" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>年末調整期間</CardTitle>
+              <CardDescription>年末調整の実施期間を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>開始月 *</Label>
+                  <Select
+                    value={String(yearEndAdjustmentSettings.adjustmentStartMonth)}
+                    onValueChange={(value) => updateYearEndAdjustmentSettings({ adjustmentStartMonth: Number(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10月</SelectItem>
+                      <SelectItem value="11">11月</SelectItem>
+                      <SelectItem value="12">12月</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>終了月 *</Label>
+                  <Select
+                    value={String(yearEndAdjustmentSettings.adjustmentEndMonth)}
+                    onValueChange={(value) => updateYearEndAdjustmentSettings({ adjustmentEndMonth: Number(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12">12月</SelectItem>
+                      <SelectItem value="1">1月</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>控除項目</CardTitle>
+              <CardDescription>年末調整で適用する控除項目を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>基礎控除</Label>
+                  <p className="text-sm text-muted-foreground">全員に適用される基礎控除（48万円）</p>
+                </div>
+                <Switch
+                  checked={yearEndAdjustmentSettings.enableBasicDeduction}
+                  onCheckedChange={(checked) => updateYearEndAdjustmentSettings({ enableBasicDeduction: checked })}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>配偶者控除</Label>
+                  <p className="text-sm text-muted-foreground">配偶者がいる場合の控除</p>
+                </div>
+                <Switch
+                  checked={yearEndAdjustmentSettings.enableSpouseDeduction}
+                  onCheckedChange={(checked) => updateYearEndAdjustmentSettings({ enableSpouseDeduction: checked })}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>扶養控除</Label>
+                  <p className="text-sm text-muted-foreground">扶養家族がいる場合の控除</p>
+                </div>
+                <Switch
+                  checked={yearEndAdjustmentSettings.enableDependentDeduction}
+                  onCheckedChange={(checked) => updateYearEndAdjustmentSettings({ enableDependentDeduction: checked })}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>生命保険料控除</Label>
+                  <p className="text-sm text-muted-foreground">生命保険・介護医療保険・個人年金保険</p>
+                </div>
+                <Switch
+                  checked={yearEndAdjustmentSettings.enableInsuranceDeduction}
+                  onCheckedChange={(checked) => updateYearEndAdjustmentSettings({ enableInsuranceDeduction: checked })}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>社会保険料控除</Label>
+                  <p className="text-sm text-muted-foreground">国民年金・国民健康保険等</p>
+                </div>
+                <Switch
+                  checked={yearEndAdjustmentSettings.enableSocialInsuranceDeduction}
+                  onCheckedChange={(checked) => updateYearEndAdjustmentSettings({ enableSocialInsuranceDeduction: checked })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>源泉徴収票設定</CardTitle>
+              <CardDescription>源泉徴収票の書式を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>書式</Label>
+                <Select
+                  value={yearEndAdjustmentSettings.withholdingSlipFormat}
+                  onValueChange={(value: 'standard' | 'detailed') => updateYearEndAdjustmentSettings({ withholdingSlipFormat: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">標準書式</SelectItem>
+                    <SelectItem value="detailed">詳細書式</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>QRコード</Label>
+                  <p className="text-sm text-muted-foreground">マイナンバー連携用QRコードを付与</p>
+                </div>
+                <Switch
+                  checked={yearEndAdjustmentSettings.includeQRCode}
+                  onCheckedChange={(checked) => updateYearEndAdjustmentSettings({ includeQRCode: checked })}
+                />
               </div>
             </CardContent>
           </Card>

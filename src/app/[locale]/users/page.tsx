@@ -4,17 +4,19 @@ import { useState, useEffect } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { generateMockUsers } from '@/lib/mock-data';
-import { 
-  MoreHorizontal, 
-  Plus, 
-  Download, 
-  Upload, 
+import {
+  MoreHorizontal,
+  Plus,
+  Download,
+  Upload,
   UserPlus,
   Mail,
   Phone,
   Edit,
   Trash2,
   Eye,
+  UserX,
+  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,8 +29,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { LazyAvatar } from '@/components/ui/lazy-avatar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { VirtualDataTable } from '@/components/ui/common/virtual-data-table';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
+import { RetireUserDialog } from '@/features/users/retire-user-dialog';
+import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
 import type { User } from '@/types';
 
@@ -44,6 +55,17 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>();
+  const [retireDialogOpen, setRetireDialogOpen] = useState(false);
+  const [retiringUser, setRetiringUser] = useState<User | undefined>();
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const { retireUser } = useUserStore();
+
+  // フィルタリングされたユーザー一覧
+  const filteredUsers = users.filter(user => {
+    if (statusFilter === 'all') return true;
+    return user.status === statusFilter;
+  });
 
   // Load users
   useEffect(() => {
@@ -98,20 +120,33 @@ export default function UsersPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('このユーザーを削除してもよろしいですか？')) return;
-    
+  const handleRetireUser = async (retiredDate: string, reason: string) => {
+    if (!retiringUser) return;
+
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) throw new Error('Failed to delete user');
-      
-      setUsers(prev => prev.filter(u => u.id !== userId));
-      toast.success('User deleted successfully');
+      // Update the user in the store
+      retireUser(
+        retiringUser.id,
+        retiredDate,
+        reason as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other'
+      );
+
+      // Update local state
+      setUsers(prev => prev.map(u =>
+        u.id === retiringUser.id
+          ? {
+              ...u,
+              status: 'retired' as const,
+              retiredDate,
+              retirementReason: reason as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other',
+            }
+          : u
+      ));
+
+      toast.success('退職処理が完了しました');
     } catch (error) {
-      toast.error('Failed to delete user');
+      toast.error('退職処理に失敗しました');
+      throw error;
     }
   };
 
@@ -120,12 +155,14 @@ export default function UsersPage() {
       active: 'default',
       inactive: 'secondary',
       suspended: 'destructive',
+      retired: 'outline',
     } as const;
-    
+
     const labels = {
       active: '有効',
       inactive: '無効',
       suspended: '停止',
+      retired: '退職',
     } as const;
 
     return (
@@ -220,8 +257,18 @@ export default function UsersPage() {
       accessorKey: 'hireDate',
       header: '入社日',
       cell: ({ row }) => {
-        const date = new Date(row.original.hireDate);
-        return date.toLocaleDateString('ja-JP');
+        const user = row.original;
+        const hireDate = new Date(user.hireDate);
+        return (
+          <div>
+            <div className="text-sm">{hireDate.toLocaleDateString('ja-JP')}</div>
+            {user.status === 'retired' && user.retiredDate && (
+              <div className="text-xs text-muted-foreground">
+                退職: {new Date(user.retiredDate).toLocaleDateString('ja-JP')}
+              </div>
+            )}
+          </div>
+        );
       },
     },
     {
@@ -260,11 +307,15 @@ export default function UsersPage() {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => handleDeleteUser(user.id)}
-                className="text-red-600"
+                onClick={() => {
+                  setRetiringUser(user);
+                  setRetireDialogOpen(true);
+                }}
+                className="text-orange-600"
+                disabled={user.status === 'retired'}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                削除
+                <UserX className="mr-2 h-4 w-4" />
+                退職処理
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -292,6 +343,19 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべて</SelectItem>
+              <SelectItem value="active">有効のみ</SelectItem>
+              <SelectItem value="retired">退職者のみ</SelectItem>
+              <SelectItem value="inactive">無効のみ</SelectItem>
+              <SelectItem value="suspended">停止のみ</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm">
             <Download className="mr-2 h-4 w-4" />
             エクスポート
@@ -300,7 +364,7 @@ export default function UsersPage() {
             <Upload className="mr-2 h-4 w-4" />
             インポート
           </Button>
-          <Button 
+          <Button
             onClick={() => {
               setEditingUser(undefined);
               setDialogOpen(true);
@@ -313,7 +377,7 @@ export default function UsersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center space-x-2">
             <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
@@ -340,6 +404,19 @@ export default function UsersPage() {
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center space-x-2">
+            <div className="rounded-full bg-orange-100 p-2 dark:bg-orange-900">
+              <UserX className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">退職者</p>
+              <p className="text-2xl font-bold">
+                {users.filter(u => u.status === 'retired').length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center space-x-2">
             <div className="rounded-full bg-yellow-100 p-2 dark:bg-yellow-900">
               <UserPlus className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
             </div>
@@ -358,10 +435,10 @@ export default function UsersPage() {
         <div className="p-6">
           <VirtualDataTable
             columns={columns}
-            data={users}
+            data={filteredUsers}
             searchKey="name"
             searchPlaceholder="ユーザー名またはメールアドレスで検索..."
-            enableVirtualization={users.length > 100}
+            enableVirtualization={filteredUsers.length > 100}
             enableCaching={true}
             pageSize={50}
           />
@@ -374,6 +451,14 @@ export default function UsersPage() {
         onOpenChange={setDialogOpen}
         user={editingUser}
         onSubmit={editingUser ? handleEditUser : handleCreateUser}
+      />
+
+      {/* Retire User Dialog */}
+      <RetireUserDialog
+        open={retireDialogOpen}
+        onOpenChange={setRetireDialogOpen}
+        user={retiringUser}
+        onConfirm={handleRetireUser}
       />
     </div>
   );

@@ -11,14 +11,17 @@ interface UserState {
   currentDemoUser: DemoUser | null;
   switchDemoRole: (role: UserRole) => void;
   setDemoMode: (enabled: boolean) => void;
-  
+
   setCurrentUser: (user: User) => void;
   setUsers: (users: User[]) => void;
   addUser: (user: User) => void;
   updateUser: (id: string, updates: Partial<User>) => void;
   removeUser: (id: string) => void;
+  retireUser: (id: string, retiredDate: string, reason: 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other') => void;
   getUserById: (id: string) => User | undefined;
   getUsersByUnit: (unitId: string) => User[];
+  getActiveUsers: () => User[];
+  getRetiredUsers: () => User[];
   isLoading: boolean;
   setLoading: (loading: boolean) => void;
   error: string | null;
@@ -70,13 +73,45 @@ const createUserStore = () => {
             state.currentUser?.id === id ? null : state.currentUser,
         }));
       },
-      
+
+      retireUser: (id, retiredDate, reason) => {
+        set((state) => ({
+          users: state.users.map((u) =>
+            u.id === id
+              ? {
+                  ...u,
+                  status: 'retired' as const,
+                  retiredDate,
+                  retirementReason: reason,
+                }
+              : u
+          ),
+          currentUser:
+            state.currentUser?.id === id
+              ? {
+                  ...state.currentUser,
+                  status: 'retired' as const,
+                  retiredDate,
+                  retirementReason: reason,
+                }
+              : state.currentUser,
+        }));
+      },
+
       getUserById: (id) => {
         return get().users.find((u) => u.id === id);
       },
-      
+
       getUsersByUnit: (unitId) => {
         return get().users.filter((u) => u.unitId === unitId);
+      },
+
+      getActiveUsers: () => {
+        return get().users.filter((u) => u.status === 'active');
+      },
+
+      getRetiredUsers: () => {
+        return get().users.filter((u) => u.status === 'retired');
       },
       
       setLoading: (loading) => {

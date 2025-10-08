@@ -1,6 +1,6 @@
 # Dandori Portal - 開発ドキュメント
 
-## 🎯 最終更新: 2025-09-27
+## 🎯 最終更新: 2025-10-08
 
 ### ✅ Hydrationエラーの完全解決
 
@@ -266,4 +266,71 @@ interface BonusCalculation {
 
 ---
 
-**最重要**: Hydrationエラーと白画面認証問題は完全に解決済み。再発防止策も実装済み。
+### 👥 ユーザー管理・退職処理機能（2025-10-08完成）
+
+#### 実装済み機能
+- **退職処理ダイアログ** - 削除→退職処理に変更、退職日・退職理由を記録
+- **退職者フィルター** - 全ユーザー/有効/退職者/無効/停止の5種類フィルター
+- **退職者一覧表示** - 入社日・退職日を並べて表示
+- **退職者統計カード** - 退職者数の専用統計表示
+
+#### ユーザーステータス種類
+```typescript
+type UserStatus =
+  | 'active'      // 有効（現在勤務中）
+  | 'inactive'    // 無効（一時無効化）
+  | 'suspended'   // 停止（アカウント停止）
+  | 'retired'     // 退職（退職処理済み、退職日・理由を記録）
+
+type RetirementReason =
+  | 'voluntary'       // 自己都合退職
+  | 'company'         // 会社都合退職
+  | 'contract_end'    // 契約期間満了
+  | 'retirement_age'  // 定年退職
+  | 'other'           // その他
+```
+
+#### 実装ファイル
+- `src/features/users/retire-user-dialog.tsx` - 退職処理ダイアログ
+- `src/app/[locale]/users/page.tsx` - ユーザー管理画面（フィルター・統計追加）
+- `src/lib/store/user-store.ts` - retireUser(), getActiveUsers(), getRetiredUsers() 追加
+- `src/types/index.ts` - UserSchema に retired ステータス、retiredDate、retirementReason 追加
+
+---
+
+### 🎨 Tabsレイアウト問題の恒久対策（2025-10-08）
+
+#### 問題の概要
+給与管理画面のタブ（給与明細一覧・給与計算・賞与管理・給与設定）が左寄りになり、画面幅いっぱいに広がらない問題が再発。
+
+#### 根本原因
+`<Tabs>` コンポーネント自体に `w-full` クラスが付いていなかった。`<TabsList>` に `grid w-full grid-cols-4` を指定していても、親要素に幅指定がないため左に寄ってしまう。
+
+#### 解決策
+```tsx
+// ❌ Before - Tabsに幅指定なし
+<Tabs defaultValue="overview" className="space-y-4">
+  <TabsList className="grid w-full grid-cols-4">
+    ...
+  </TabsList>
+</Tabs>
+
+// ✅ After - Tabsに w-full を追加
+<Tabs defaultValue="overview" className="space-y-4 w-full">
+  <TabsList className="grid w-full grid-cols-4">
+    ...
+  </TabsList>
+</Tabs>
+```
+
+#### 再発防止チェックリスト
+- ✅ **親要素の幅**: `<Tabs className="w-full">` 必須
+- ✅ **Grid設定**: `<TabsList className="grid w-full grid-cols-N">` でN等分
+- ✅ **確認対象ファイル**:
+  - `src/app/[locale]/payroll/page.tsx:257`
+  - `src/app/[locale]/settings/page.tsx`（設定画面も同様）
+  - その他Tabsを使用する全ページ
+
+---
+
+**最重要**: Hydrationエラーと白画面認証問題は完全に解決済み。再発防止策も実装済み。Tabsレイアウト問題も恒久対策完了。

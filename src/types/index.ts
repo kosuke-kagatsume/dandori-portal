@@ -9,7 +9,9 @@ export const UserSchema = z.object({
   hireDate: z.string(),
   unitId: z.string(),
   roles: z.array(z.string()),
-  status: z.enum(['active', 'inactive', 'suspended']),
+  status: z.enum(['active', 'inactive', 'suspended', 'retired']),
+  retiredDate: z.string().optional(), // 退職日
+  retirementReason: z.enum(['voluntary', 'company', 'contract_end', 'retirement_age', 'other']).optional(), // 退職理由
   timezone: z.string().default('Asia/Tokyo'),
   avatar: z.string().optional(),
   position: z.string().optional(),

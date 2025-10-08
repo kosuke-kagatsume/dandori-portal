@@ -254,7 +254,7 @@ export default function PayrollPage() {
         </div>
       </MountGate>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue="overview" className="space-y-4 w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">給与明細一覧</TabsTrigger>
           <TabsTrigger value="calculation">給与計算</TabsTrigger>

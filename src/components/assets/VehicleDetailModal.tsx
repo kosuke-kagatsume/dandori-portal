@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,21 +20,67 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { Vehicle } from '@/types/asset';
-import { Calendar, DollarSign, Edit, Gauge, Trash2, Wrench } from 'lucide-react';
+import type { MaintenanceRecord, MonthlyMileage, Vehicle } from '@/types/asset';
+import { Calendar, DollarSign, Edit, Gauge, Plus, Trash2, Wrench } from 'lucide-react';
+import { MaintenanceFormModal } from './MaintenanceFormModal';
+import { MileageFormModal } from './MileageFormModal';
 
 interface VehicleDetailModalProps {
   vehicle: Vehicle | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (vehicle: Vehicle) => void;
+  onDelete?: (vehicleId: string) => void;
 }
 
 export function VehicleDetailModal({
   vehicle,
   open,
   onOpenChange,
+  onEdit,
+  onDelete,
 }: VehicleDetailModalProps) {
+  const [maintenanceFormOpen, setMaintenanceFormOpen] = useState(false);
+  const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceRecord | undefined>(undefined);
+  const [mileageFormOpen, setMileageFormOpen] = useState(false);
+  const [editingMileage, setEditingMileage] = useState<MonthlyMileage | undefined>(undefined);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
   if (!vehicle) return null;
+
+  const handleAddMaintenance = () => {
+    setEditingMaintenance(undefined);
+    setMaintenanceFormOpen(true);
+  };
+
+  const handleEditMaintenance = (maintenance: MaintenanceRecord) => {
+    setEditingMaintenance(maintenance);
+    setMaintenanceFormOpen(true);
+  };
+
+  const handleAddMileage = () => {
+    setEditingMileage(undefined);
+    setMileageFormOpen(true);
+  };
+
+  const handleEditMileage = (mileage: MonthlyMileage) => {
+    setEditingMileage(mileage);
+    setMileageFormOpen(true);
+  };
+
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit(vehicle);
+      onOpenChange(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (onDelete && window.confirm(`車両 ${vehicle.vehicleNumber} を削除してもよろしいですか？`)) {
+      onDelete(vehicle.id);
+      onOpenChange(false);
+    }
+  };
 
   // ステータスバッジ
   const getStatusBadge = (status: Vehicle['status']) => {
@@ -374,9 +421,15 @@ export function VehicleDetailModal({
                 )}
 
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-sm text-muted-foreground">
-                    月次走行距離履歴
-                  </h3>
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-sm text-muted-foreground">
+                      月次走行距離履歴
+                    </h3>
+                    <Button size="sm" onClick={handleAddMileage}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      記録追加
+                    </Button>
+                  </div>
                   {vehicle.monthlyMileages.length > 0 ? (
                     <Table>
                       <TableHeader>
@@ -385,6 +438,7 @@ export function VehicleDetailModal({
                           <TableHead>走行距離</TableHead>
                           <TableHead>記録者</TableHead>
                           <TableHead>記録日</TableHead>
+                          <TableHead className="w-20">操作</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -394,6 +448,15 @@ export function VehicleDetailModal({
                             <TableCell>{mileage.distance.toLocaleString()} km</TableCell>
                             <TableCell>{mileage.recordedByName}</TableCell>
                             <TableCell>{formatDate(mileage.recordedAt)}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditMileage(mileage)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -414,6 +477,13 @@ export function VehicleDetailModal({
 
           {/* メンテナンスタブ */}
           <TabsContent value="maintenance" className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={handleAddMaintenance}>
+                <Plus className="mr-2 h-4 w-4" />
+                記録追加
+              </Button>
+            </div>
+
             {vehicle.maintenanceRecords.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -423,6 +493,7 @@ export function VehicleDetailModal({
                     <TableHead>業者</TableHead>
                     <TableHead>費用</TableHead>
                     <TableHead>内容</TableHead>
+                    <TableHead className="w-20">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -440,6 +511,15 @@ export function VehicleDetailModal({
                         {record.description}
                         {record.tireType && ` (${getTireTypeLabel(record.tireType)})`}
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditMaintenance(record)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -454,7 +534,7 @@ export function VehicleDetailModal({
 
         {/* フッターアクション */}
         <div className="flex justify-between mt-6 pt-4 border-t">
-          <Button variant="destructive" size="sm">
+          <Button variant="destructive" size="sm" onClick={handleDelete}>
             <Trash2 className="mr-2 h-4 w-4" />
             削除
           </Button>
@@ -462,12 +542,28 @@ export function VehicleDetailModal({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               閉じる
             </Button>
-            <Button>
+            <Button onClick={handleEdit}>
               <Edit className="mr-2 h-4 w-4" />
               編集
             </Button>
           </div>
         </div>
+
+        {/* メンテナンス記録追加モーダル */}
+        <MaintenanceFormModal
+          open={maintenanceFormOpen}
+          onOpenChange={setMaintenanceFormOpen}
+          vehicle={vehicle}
+          maintenance={editingMaintenance}
+        />
+
+        {/* 月次走行距離追加モーダル */}
+        <MileageFormModal
+          open={mileageFormOpen}
+          onOpenChange={setMileageFormOpen}
+          vehicle={vehicle}
+          mileage={editingMileage}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useVehicleStore } from '@/lib/store/vehicle-store';
+import { usePCStore } from '@/lib/store/pc-store';
 import {
   Car,
   Plus,
@@ -25,19 +26,31 @@ import {
   DollarSign,
   Filter,
   Search,
+  Trash2,
+  Monitor,
 } from 'lucide-react';
-import type { Vehicle, DeadlineWarning } from '@/types/asset';
+import type { Vehicle, DeadlineWarning, PCAsset, Vendor } from '@/types/asset';
 import { VehicleDetailModal } from '@/components/assets/VehicleDetailModal';
+import { VehicleFormModal } from '@/components/assets/VehicleFormModal';
+import { VendorFormModal } from '@/components/assets/VendorFormModal';
+import { PCFormModal } from '@/components/assets/PCFormModal';
 
 export default function AssetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'maintenance' | 'retired'>('all');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [vendorFormOpen, setVendorFormOpen] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [pcFormOpen, setPCFormOpen] = useState(false);
+  const [editingPC, setEditingPC] = useState<PCAsset | null>(null);
   const [maintenanceTypeFilter, setMaintenanceTypeFilter] = useState<string>('all');
   const [maintenanceVendorFilter, setMaintenanceVendorFilter] = useState<string>('all');
 
-  const { vehicles, vendors, getDeadlineWarnings } = useVehicleStore();
+  const { vehicles, vendors, getDeadlineWarnings, deleteVehicle, deleteVendor } = useVehicleStore();
+  const { pcs, deletePC } = usePCStore();
 
   // 統計値をstateで管理（SSR/CSR不一致を防ぐ）
   const [stats, setStats] = useState({
@@ -53,6 +66,12 @@ export default function AssetsPage() {
 
   const [warnings, setWarnings] = useState<DeadlineWarning[]>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  // マウント状態の設定（SSR/CSR差を吸収）
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 統計値の計算（クライアント側でのみ実行）
   useEffect(() => {
@@ -168,6 +187,15 @@ export default function AssetsPage() {
     }).format(amount);
   };
 
+  // 残日数計算（SSR/CSR不一致を防ぐため、mountedチェック後のみ使用）
+  const calculateDaysRemaining = (dateString: string) => {
+    if (!mounted) return 0;
+    return Math.ceil(
+      (new Date(dateString).getTime() - new Date().getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+  };
+
   // メンテナンス種別ラベル
   const getMaintenanceTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -208,7 +236,12 @@ export default function AssetsPage() {
             車両・PC・携帯電話などの資産を一元管理
           </p>
         </div>
-        <Button>
+        <Button
+          onClick={() => {
+            setEditingVehicle(null);
+            setFormModalOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           新規登録
         </Button>
@@ -267,11 +300,12 @@ export default function AssetsPage() {
 
       {/* メインコンテンツ */}
       <Tabs defaultValue="vehicles" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="vehicles">車両一覧</TabsTrigger>
+          <TabsTrigger value="pcs">PC一覧</TabsTrigger>
           <TabsTrigger value="warnings">
             期限警告
-            {stats.criticalWarningsCount > 0 && (
+            {mounted && stats.criticalWarningsCount > 0 && (
               <Badge variant="destructive" className="ml-2">
                 {stats.criticalWarningsCount}
               </Badge>
@@ -369,12 +403,7 @@ export default function AssetsPage() {
                           <TableCell>
                             <div className="text-sm">{formatDate(vehicle.inspectionDate)}</div>
                             <div className="text-xs text-muted-foreground">
-                              {Math.ceil(
-                                (new Date(vehicle.inspectionDate).getTime() -
-                                  new Date().getTime()) /
-                                  (1000 * 60 * 60 * 24)
-                              )}
-                              日後
+                              {calculateDaysRemaining(vehicle.inspectionDate)}日後
                             </div>
                           </TableCell>
                           <TableCell>
@@ -382,31 +411,160 @@ export default function AssetsPage() {
                               {formatDate(vehicle.maintenanceDate)}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {Math.ceil(
-                                (new Date(vehicle.maintenanceDate).getTime() -
-                                  new Date().getTime()) /
-                                  (1000 * 60 * 60 * 24)
-                              )}
-                              日後
+                              {calculateDaysRemaining(vehicle.maintenanceDate)}日後
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedVehicle(vehicle);
-                                setDetailModalOpen(true);
-                              }}
-                            >
-                              詳細
-                            </Button>
+                            <div className="flex gap-1 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedVehicle(vehicle);
+                                  setDetailModalOpen(true);
+                                }}
+                              >
+                                詳細
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingVehicle(vehicle);
+                                  setFormModalOpen(true);
+                                }}
+                              >
+                                編集
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (window.confirm(`車両 ${vehicle.vehicleNumber} を削除してもよろしいですか？`)) {
+                                    deleteVehicle(vehicle.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
                     )}
                   </TableBody>
                 </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* PC一覧タブ */}
+        <TabsContent value="pcs" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>PC一覧</CardTitle>
+                  <CardDescription>登録されている全PCの管理</CardDescription>
+                </div>
+                <Button
+                  onClick={() => {
+                    setEditingPC(null);
+                    setPCFormOpen(true);
+                  }}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  PC登録
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>資産番号</TableHead>
+                    <TableHead>メーカー・型番</TableHead>
+                    <TableHead>スペック</TableHead>
+                    <TableHead>割当先</TableHead>
+                    <TableHead>所有形態</TableHead>
+                    <TableHead>保証期限</TableHead>
+                    <TableHead>ステータス</TableHead>
+                    <TableHead className="text-right">アクション</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pcs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        PCが見つかりません
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    pcs.map((pc) => (
+                      <TableRow key={pc.id}>
+                        <TableCell className="font-medium">{pc.assetNumber}</TableCell>
+                        <TableCell>
+                          {pc.manufacturer} {pc.model}
+                          <div className="text-xs text-muted-foreground">
+                            S/N: {pc.serialNumber}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{pc.cpu}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {pc.memory} / {pc.storage}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {pc.assignedTo ? (
+                            <div>
+                              {pc.assignedTo.userName}
+                              <div className="text-xs text-muted-foreground">
+                                {formatDate(pc.assignedTo.assignedDate)}～
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">未割当</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{getOwnershipBadge(pc.ownershipType)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">{formatDate(pc.warrantyExpiration)}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {calculateDaysRemaining(pc.warrantyExpiration)}日後
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(pc.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingPC(pc);
+                                setPCFormOpen(true);
+                              }}
+                            >
+                              編集
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (window.confirm(`PC ${pc.assetNumber} を削除してもよろしいですか？`)) {
+                                  deletePC(pc.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -535,10 +693,13 @@ export default function AssetsPage() {
                       <TableHead>費用</TableHead>
                       <TableHead>内容</TableHead>
                       <TableHead>作業者</TableHead>
+                      <TableHead className="text-right">アクション</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredMaintenanceRecords.map((record) => (
+                    {filteredMaintenanceRecords.map((record) => {
+                      const vehicle = vehicles.find((v) => v.vehicleNumber === record.vehicleNumber);
+                      return (
                       <TableRow key={record.id}>
                         <TableCell className="whitespace-nowrap">
                           {formatDate(record.date)}
@@ -569,8 +730,23 @@ export default function AssetsPage() {
                         <TableCell className="text-sm">
                           {record.performedByName}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              if (vehicle) {
+                                setSelectedVehicle(vehicle);
+                                setDetailModalOpen(true);
+                              }
+                            }}
+                          >
+                            詳細
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -587,7 +763,10 @@ export default function AssetsPage() {
                   <CardTitle>業者管理</CardTitle>
                   <CardDescription>メンテナンス業者の管理</CardDescription>
                 </div>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => {
+                  setEditingVendor(null);
+                  setVendorFormOpen(true);
+                }}>
                   <Plus className="mr-2 h-4 w-4" />
                   業者追加
                 </Button>
@@ -625,9 +804,29 @@ export default function AssetsPage() {
                         </TableCell>
                         <TableCell>{vendor.workCount || 0}件</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">
-                            編集
-                          </Button>
+                          <div className="flex gap-1 justify-end">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingVendor(vendor);
+                                setVendorFormOpen(true);
+                              }}
+                            >
+                              編集
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (window.confirm(`業者 ${vendor.name} を削除してもよろしいですか？`)) {
+                                  deleteVendor(vendor.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -658,6 +857,49 @@ export default function AssetsPage() {
         vehicle={selectedVehicle}
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}
+        onEdit={(vehicle) => {
+          setEditingVehicle(vehicle);
+          setFormModalOpen(true);
+        }}
+        onDelete={(vehicleId) => {
+          deleteVehicle(vehicleId);
+        }}
+      />
+
+      {/* 車両登録・編集モーダル */}
+      <VehicleFormModal
+        open={formModalOpen}
+        onOpenChange={(open) => {
+          setFormModalOpen(open);
+          if (!open) {
+            setEditingVehicle(null);
+          }
+        }}
+        vehicle={editingVehicle}
+      />
+
+      {/* 業者追加・編集モーダル */}
+      <VendorFormModal
+        open={vendorFormOpen}
+        onOpenChange={(open) => {
+          setVendorFormOpen(open);
+          if (!open) {
+            setEditingVendor(null);
+          }
+        }}
+        vendor={editingVendor}
+      />
+
+      {/* PC追加・編集モーダル */}
+      <PCFormModal
+        open={pcFormOpen}
+        onOpenChange={(open) => {
+          setPCFormOpen(open);
+          if (!open) {
+            setEditingPC(null);
+          }
+        }}
+        pc={editingPC}
       />
     </div>
   );
