@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { MountGate } from '@/components/common/MountGate';
 import { useVehicleStore } from '@/lib/store/vehicle-store';
 import {
   Car,
@@ -35,37 +34,61 @@ export default function AssetsPage() {
 
   const { vehicles, vendors, getDeadlineWarnings } = useVehicleStore();
 
-  // フィルタリングされた車両リスト
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    const matchesSearch =
-      vehicle.vehicleNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.licensePlate.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.model.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesFilter = filterStatus === 'all' || vehicle.status === filterStatus;
-
-    return matchesSearch && matchesFilter;
+  // 統計値をstateで管理（SSR/CSR不一致を防ぐ）
+  const [stats, setStats] = useState({
+    activeVehicles: 0,
+    leasedVehicles: 0,
+    totalMaintenanceRecords: 0,
+    monthlyLeaseCost: 0,
+    criticalWarningsCount: 0,
+    warningsCount: 0,
   });
 
-  // 期限警告の取得
-  const warnings = getDeadlineWarnings();
-  const criticalWarnings = warnings.filter((w) => w.level === 'critical');
-  const warningCount = warnings.filter((w) => w.level === 'warning');
+  const [warnings, setWarnings] = useState<DeadlineWarning[]>([]);
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
 
-  // 統計計算
-  const activeVehicles = vehicles.filter((v) => v.status === 'active').length;
-  const leasedVehicles = vehicles.filter((v) => v.ownershipType === 'leased').length;
-  const totalMaintenanceRecords = vehicles.reduce(
-    (sum, v) => sum + v.maintenanceRecords.length,
-    0
-  );
+  // 統計値の計算（クライアント側でのみ実行）
+  useEffect(() => {
+    const activeVehicles = vehicles.filter((v) => v.status === 'active').length;
+    const leasedVehicles = vehicles.filter((v) => v.ownershipType === 'leased').length;
+    const totalMaintenanceRecords = vehicles.reduce(
+      (sum, v) => sum + v.maintenanceRecords.length,
+      0
+    );
+    const monthlyLeaseCost = vehicles
+      .filter((v) => v.ownershipType === 'leased' && v.leaseInfo)
+      .reduce((sum, v) => sum + (v.leaseInfo?.monthlyCost || 0), 0);
 
-  // 今月のリース費用合計
-  const currentMonth = new Date().toISOString().substring(0, 7);
-  const monthlyLeaseCost = vehicles
-    .filter((v) => v.ownershipType === 'leased' && v.leaseInfo)
-    .reduce((sum, v) => sum + (v.leaseInfo?.monthlyCost || 0), 0);
+    const currentWarnings = getDeadlineWarnings();
+    const criticalWarningsCount = currentWarnings.filter((w) => w.level === 'critical').length;
+    const warningsCount = currentWarnings.filter((w) => w.level === 'warning').length;
+
+    setStats({
+      activeVehicles,
+      leasedVehicles,
+      totalMaintenanceRecords,
+      monthlyLeaseCost,
+      criticalWarningsCount,
+      warningsCount,
+    });
+    setWarnings(currentWarnings);
+  }, [vehicles, getDeadlineWarnings]);
+
+  // フィルタリングされた車両リスト
+  useEffect(() => {
+    const filtered = vehicles.filter((vehicle) => {
+      const matchesSearch =
+        vehicle.vehicleNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        vehicle.licensePlate.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        vehicle.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        vehicle.model.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesFilter = filterStatus === 'all' || vehicle.status === filterStatus;
+
+      return matchesSearch && matchesFilter;
+    });
+    setFilteredVehicles(filtered);
+  }, [vehicles, searchQuery, filterStatus]);
 
   // ステータスバッジ
   const getStatusBadge = (status: Vehicle['status']) => {
@@ -160,9 +183,7 @@ export default function AssetsPage() {
             <Car className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <MountGate fallback={<div className="text-2xl font-bold">--</div>}>
-              <div className="text-2xl font-bold">{activeVehicles}台</div>
-            </MountGate>
+            <div className="text-2xl font-bold">{stats.activeVehicles}台</div>
             <p className="text-xs text-muted-foreground">総車両: {vehicles.length}台</p>
           </CardContent>
         </Card>
@@ -173,13 +194,11 @@ export default function AssetsPage() {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <MountGate fallback={<div className="text-2xl font-bold">--</div>}>
-              <div className="text-2xl font-bold text-destructive">
-                {criticalWarnings.length}件
-              </div>
-            </MountGate>
+            <div className="text-2xl font-bold text-destructive">
+              {stats.criticalWarningsCount}件
+            </div>
             <p className="text-xs text-muted-foreground">
-              注意: {warningCount.length}件
+              注意: {stats.warningsCount}件
             </p>
           </CardContent>
         </Card>
@@ -190,9 +209,7 @@ export default function AssetsPage() {
             <Wrench className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <MountGate fallback={<div className="text-2xl font-bold">--</div>}>
-              <div className="text-2xl font-bold">{totalMaintenanceRecords}件</div>
-            </MountGate>
+            <div className="text-2xl font-bold">{stats.totalMaintenanceRecords}件</div>
             <p className="text-xs text-muted-foreground">登録業者: {vendors.length}社</p>
           </CardContent>
         </Card>
@@ -203,10 +220,8 @@ export default function AssetsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <MountGate fallback={<div className="text-2xl font-bold">¥--</div>}>
-              <div className="text-2xl font-bold">{formatCurrency(monthlyLeaseCost)}</div>
-            </MountGate>
-            <p className="text-xs text-muted-foreground">リース車両: {leasedVehicles}台</p>
+            <div className="text-2xl font-bold">{formatCurrency(stats.monthlyLeaseCost)}</div>
+            <p className="text-xs text-muted-foreground">リース車両: {stats.leasedVehicles}台</p>
           </CardContent>
         </Card>
       </div>
@@ -217,9 +232,9 @@ export default function AssetsPage() {
           <TabsTrigger value="vehicles">車両一覧</TabsTrigger>
           <TabsTrigger value="warnings">
             期限警告
-            {criticalWarnings.length > 0 && (
+            {stats.criticalWarningsCount > 0 && (
               <Badge variant="destructive" className="ml-2">
-                {criticalWarnings.length}
+                {stats.criticalWarningsCount}
               </Badge>
             )}
           </TabsTrigger>
@@ -264,7 +279,6 @@ export default function AssetsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <MountGate fallback={<div className="text-center py-8">読み込み中...</div>}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -347,7 +361,6 @@ export default function AssetsPage() {
                     )}
                   </TableBody>
                 </Table>
-              </MountGate>
             </CardContent>
           </Card>
         </TabsContent>
@@ -362,7 +375,6 @@ export default function AssetsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <MountGate fallback={<div className="text-center py-8">読み込み中...</div>}>
                 {warnings.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     期限が近い項目はありません
@@ -409,7 +421,6 @@ export default function AssetsPage() {
                     </TableBody>
                   </Table>
                 )}
-              </MountGate>
             </CardContent>
           </Card>
         </TabsContent>
@@ -445,7 +456,6 @@ export default function AssetsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <MountGate fallback={<div className="text-center py-8">読み込み中...</div>}>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -485,7 +495,6 @@ export default function AssetsPage() {
                     ))}
                   </TableBody>
                 </Table>
-              </MountGate>
             </CardContent>
           </Card>
         </TabsContent>
