@@ -27,10 +27,13 @@ import {
   Search,
 } from 'lucide-react';
 import type { Vehicle, DeadlineWarning } from '@/types/asset';
+import { VehicleDetailModal } from '@/components/assets/VehicleDetailModal';
 
 export default function AssetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'maintenance' | 'retired'>('all');
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   const { vehicles, vendors, getDeadlineWarnings } = useVehicleStore();
 
@@ -356,7 +359,14 @@ export default function AssetsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="sm">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVehicle(vehicle);
+                                setDetailModalOpen(true);
+                              }}
+                            >
                               詳細
                             </Button>
                           </TableCell>
@@ -416,7 +426,17 @@ export default function AssetsPage() {
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const vehicle = vehicles.find((v) => v.id === warning.assetId);
+                                if (vehicle) {
+                                  setSelectedVehicle(vehicle);
+                                  setDetailModalOpen(true);
+                                }
+                              }}
+                            >
                               詳細
                             </Button>
                           </TableCell>
@@ -518,6 +538,13 @@ export default function AssetsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 車両詳細モーダル */}
+      <VehicleDetailModal
+        vehicle={selectedVehicle}
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+      />
     </div>
   );
 }
