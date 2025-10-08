@@ -34,6 +34,8 @@ export default function AssetsPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'maintenance' | 'retired'>('all');
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [maintenanceTypeFilter, setMaintenanceTypeFilter] = useState<string>('all');
+  const [maintenanceVendorFilter, setMaintenanceVendorFilter] = useState<string>('all');
 
   const { vehicles, vendors, getDeadlineWarnings } = useVehicleStore();
 
@@ -165,6 +167,36 @@ export default function AssetsPage() {
       currency: 'JPY',
     }).format(amount);
   };
+
+  // メンテナンス種別ラベル
+  const getMaintenanceTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      oil_change: 'オイル交換',
+      tire_change: 'タイヤ交換',
+      inspection: '点検',
+      shaken: '車検',
+      repair: '修理',
+      other: 'その他',
+    };
+    return labels[type] || type;
+  };
+
+  // 全メンテナンス記録を集約（車両情報付き）
+  const allMaintenanceRecords = vehicles.flatMap((vehicle) =>
+    vehicle.maintenanceRecords.map((record) => ({
+      ...record,
+      vehicleNumber: vehicle.vehicleNumber,
+      vehicleName: `${vehicle.make} ${vehicle.model}`,
+      licensePlate: vehicle.licensePlate,
+    }))
+  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // フィルタリングされたメンテナンス記録
+  const filteredMaintenanceRecords = allMaintenanceRecords.filter((record) => {
+    const matchesType = maintenanceTypeFilter === 'all' || record.type === maintenanceTypeFilter;
+    const matchesVendor = maintenanceVendorFilter === 'all' || record.vendorId === maintenanceVendorFilter;
+    return matchesType && matchesVendor;
+  });
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -453,13 +485,95 @@ export default function AssetsPage() {
         <TabsContent value="maintenance" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>メンテナンス履歴</CardTitle>
-              <CardDescription>全車両のメンテナンス記録</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>メンテナンス履歴</CardTitle>
+                  <CardDescription>全車両のメンテナンス記録</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    className="px-3 py-2 border rounded-md text-sm"
+                    value={maintenanceTypeFilter}
+                    onChange={(e) => setMaintenanceTypeFilter(e.target.value)}
+                  >
+                    <option value="all">全ての種別</option>
+                    <option value="oil_change">オイル交換</option>
+                    <option value="tire_change">タイヤ交換</option>
+                    <option value="inspection">点検</option>
+                    <option value="shaken">車検</option>
+                    <option value="repair">修理</option>
+                    <option value="other">その他</option>
+                  </select>
+                  <select
+                    className="px-3 py-2 border rounded-md text-sm"
+                    value={maintenanceVendorFilter}
+                    onChange={(e) => setMaintenanceVendorFilter(e.target.value)}
+                  >
+                    <option value="all">全ての業者</option>
+                    {vendors.map((vendor) => (
+                      <option key={vendor.id} value={vendor.id}>
+                        {vendor.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                メンテナンス履歴機能は開発中です
-              </div>
+              {filteredMaintenanceRecords.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  メンテナンス記録がありません
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>日付</TableHead>
+                      <TableHead>車両</TableHead>
+                      <TableHead>種別</TableHead>
+                      <TableHead>業者</TableHead>
+                      <TableHead>費用</TableHead>
+                      <TableHead>内容</TableHead>
+                      <TableHead>作業者</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredMaintenanceRecords.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="whitespace-nowrap">
+                          {formatDate(record.date)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{record.vehicleNumber}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {record.vehicleName}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {getMaintenanceTypeLabel(record.type)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{record.vendorName}</TableCell>
+                        <TableCell className="font-medium">
+                          {formatCurrency(record.cost)}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">
+                          {record.description}
+                          {record.notes && (
+                            <div className="text-xs text-muted-foreground">
+                              {record.notes}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {record.performedByName}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
