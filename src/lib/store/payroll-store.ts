@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useAttendanceHistoryStore } from './attendance-history-store';
 
-const DATA_VERSION = 2; // 3名→15名に変えたので上げる
+const DATA_VERSION = 3; // SSR対応実装のため上げる
 
 // 従業員の給与マスタデータ
 export interface EmployeeSalaryMaster {
@@ -517,25 +517,9 @@ const initialState: Pick<PayrollState, '_version' | 'salaryMasters' | 'calculati
   currentPeriod: new Date().toISOString().slice(0, 7),
 };
 
-export const usePayrollStore = create<PayrollState>()(
-  (typeof window === 'undefined')
-    ? () => ({
-        ...initialState,
-        resetToSeed: () => {},
-        runPayroll: async () => {},
-        calculatePayroll: () => ({} as PayrollCalculation),
-        calculateAllEmployees: () => [],
-        getCalculationsByPeriod: () => [],
-        getSalaryMaster: () => undefined,
-
-        // 賞与関連メソッド（SSR用ダミー）
-        calculateBonus: () => ({} as BonusCalculation),
-        calculateAllEmployeesBonus: () => [],
-        getBonusCalculationsByPeriod: () => [],
-        runBonusCalculation: async () => {},
-      }) // SSRは非persist
-    : persist(
-        (set, get) => ({
+// SSR対応: サーバーではpersistを無効化
+const createPayrollStore = () => {
+  const storeCreator = (set: any, get: any) => ({
           ...initialState,
 
           resetToSeed: () => {
@@ -837,29 +821,39 @@ export const usePayrollStore = create<PayrollState>()(
               set({ isCalculating: false });
             }
           },
-        }),
-        {
-          name: 'payroll-store',
-          version: DATA_VERSION,
-          migrate: (persisted, version) => {
-            console.log('[PayrollStore] Migration check:', { version, dataVersion: DATA_VERSION });
-            const safe = (persisted as Partial<PayrollState>) || {};
-            const count = Array.isArray(safe.salaryMasters) ? safe.salaryMasters.length : 0;
+        });
 
-            if (version !== DATA_VERSION || count < 15) {
-              console.log('[PayrollStore] Forcing reset due to version/count mismatch:', { version, count });
-              return { ...initialState };
-            }
-            return { ...safe } as any;
-          },
-          storage: createJSONStorage(() => localStorage),
-          partialize: (s) => ({
-            _version: s._version,
-            salaryMasters: s.salaryMasters,
-            calculations: s.calculations,
-            bonusCalculations: s.bonusCalculations,
-            currentPeriod: s.currentPeriod
-          }),
+  // SSR時はpersistを使わない
+  if (typeof window === 'undefined') {
+    return create<PayrollState>()(storeCreator);
+  }
+
+  // クライアントサイドではpersistを使用
+  return create<PayrollState>()(
+    persist(storeCreator, {
+      name: 'payroll-store',
+      version: DATA_VERSION,
+      migrate: (persisted, version) => {
+        console.log('[PayrollStore] Migration check:', { version, dataVersion: DATA_VERSION });
+        const safe = (persisted as Partial<PayrollState>) || {};
+        const count = Array.isArray(safe.salaryMasters) ? safe.salaryMasters.length : 0;
+
+        if (version !== DATA_VERSION || count < 15) {
+          console.log('[PayrollStore] Forcing reset due to version/count mismatch:', { version, count });
+          return { ...initialState };
         }
-      )
-);
+        return { ...safe } as any;
+      },
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({
+        _version: s._version,
+        salaryMasters: s.salaryMasters,
+        calculations: s.calculations,
+        bonusCalculations: s.bonusCalculations,
+        currentPeriod: s.currentPeriod
+      }),
+    })
+  );
+};
+
+export const usePayrollStore = createPayrollStore();
