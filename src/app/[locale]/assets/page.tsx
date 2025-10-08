@@ -42,6 +42,8 @@ export default function AssetsPage() {
     monthlyLeaseCost: 0,
     criticalWarningsCount: 0,
     warningsCount: 0,
+    totalVehicles: 0,
+    totalVendors: 0,
   });
 
   const [warnings, setWarnings] = useState<DeadlineWarning[]>([]);
@@ -70,9 +72,11 @@ export default function AssetsPage() {
       monthlyLeaseCost,
       criticalWarningsCount,
       warningsCount,
+      totalVehicles: vehicles.length,
+      totalVendors: vendors.length,
     });
     setWarnings(currentWarnings);
-  }, [vehicles, getDeadlineWarnings]);
+  }, [vehicles, vendors, getDeadlineWarnings]);
 
   // フィルタリングされた車両リスト
   useEffect(() => {
@@ -184,7 +188,7 @@ export default function AssetsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeVehicles}台</div>
-            <p className="text-xs text-muted-foreground">総車両: {vehicles.length}台</p>
+            <p className="text-xs text-muted-foreground">総車両: {stats.totalVehicles}台</p>
           </CardContent>
         </Card>
 
@@ -210,7 +214,7 @@ export default function AssetsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalMaintenanceRecords}件</div>
-            <p className="text-xs text-muted-foreground">登録業者: {vendors.length}社</p>
+            <p className="text-xs text-muted-foreground">登録業者: {stats.totalVendors}社</p>
           </CardContent>
         </Card>
 
