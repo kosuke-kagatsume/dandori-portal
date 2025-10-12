@@ -25,6 +25,22 @@ import {
 import { useUserStore } from '@/lib/store/user-store';
 import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
+import {
+  PersonalAttendanceChart,
+  PersonalLeaveChart,
+  PersonalWorkHoursChart,
+  TeamAttendanceChart,
+  TeamWorkloadChart,
+  ApprovalTasksChart,
+  CompanyAttendanceChart,
+  DepartmentLeaveChart,
+  DepartmentSalaryChart,
+  HeadcountTrendChart,
+  SaasCostTrendChart,
+  SaasCostByCategoryChart,
+  AssetUtilizationChart,
+  SystemHealthChart,
+} from '@/components/dashboard/role-based-charts';
 
 export default function DashboardPage() {
   const { currentDemoUser, switchDemoRole } = useUserStore();
@@ -283,6 +299,66 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* 権限別グラフセクション */}
+      {effectiveDemoUser?.role === 'employee' && (
+        <>
+          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">個人統計</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <PersonalAttendanceChart />
+            <PersonalLeaveChart />
+          </div>
+          <div className="grid gap-6 mt-6">
+            <PersonalWorkHoursChart />
+          </div>
+        </>
+      )}
+
+      {effectiveDemoUser?.role === 'manager' && (
+        <>
+          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">チーム統計</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <TeamAttendanceChart />
+            <TeamWorkloadChart />
+          </div>
+          <div className="grid gap-6 mt-6">
+            <ApprovalTasksChart />
+          </div>
+        </>
+      )}
+
+      {effectiveDemoUser?.role === 'hr' && (
+        <>
+          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">全社統計</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <CompanyAttendanceChart />
+            <DepartmentLeaveChart />
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 mt-6">
+            <DepartmentSalaryChart />
+            <HeadcountTrendChart />
+          </div>
+        </>
+      )}
+
+      {effectiveDemoUser?.role === 'admin' && (
+        <>
+          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">システム統計</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <SaasCostTrendChart />
+            <SaasCostByCategoryChart />
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 mt-6">
+            <AssetUtilizationChart />
+            <SystemHealthChart />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">全社統計（管理者用）</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <CompanyAttendanceChart />
+            <DepartmentSalaryChart />
+          </div>
+        </>
       )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
