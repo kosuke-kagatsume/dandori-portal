@@ -49,8 +49,59 @@ export default function AssetsPage() {
   const [maintenanceTypeFilter, setMaintenanceTypeFilter] = useState<string>('all');
   const [maintenanceVendorFilter, setMaintenanceVendorFilter] = useState<string>('all');
 
+  // 費用集計の期間選択
+  const today = new Date();
+  const sixMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 5, 1);
+  const [costStartMonth, setCostStartMonth] = useState(
+    `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}`
+  );
+  const [costEndMonth, setCostEndMonth] = useState(
+    `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
+  );
+
   const { vehicles, vendors, getDeadlineWarnings, deleteVehicle, deleteVendor } = useVehicleStore();
   const { pcs, deletePC } = usePCStore();
+
+  // 車両別費用集計を計算する関数
+  const calculateVehicleCosts = (startMonth: string, endMonth: string) => {
+    const start = new Date(startMonth + '-01');
+    const end = new Date(endMonth + '-01');
+    end.setMonth(end.getMonth() + 1); // 終了月を含める
+
+    return vehicles.map((vehicle) => {
+      let leaseCost = 0;
+      let maintenanceCost = 0;
+
+      // リース費用の計算
+      if (vehicle.ownershipType === 'leased' && vehicle.leaseInfo) {
+        const contractStart = new Date(vehicle.leaseInfo.contractStart);
+        const contractEnd = new Date(vehicle.leaseInfo.contractEnd);
+
+        // 期間内の月数を計算
+        let monthCount = 0;
+        for (let d = new Date(start); d < end; d.setMonth(d.getMonth() + 1)) {
+          if (d >= contractStart && d <= contractEnd) {
+            monthCount++;
+          }
+        }
+        leaseCost = vehicle.leaseInfo.monthlyCost * monthCount;
+      }
+
+      // メンテナンス費用の計算
+      vehicle.maintenanceRecords.forEach((record) => {
+        const recordDate = new Date(record.date);
+        if (recordDate >= start && recordDate < end) {
+          maintenanceCost += record.cost;
+        }
+      });
+
+      return {
+        vehicleId: vehicle.id,
+        leaseCost,
+        maintenanceCost,
+      };
+    }).filter(item => item.leaseCost > 0 || item.maintenanceCost > 0);
+  };
 
   // 統計値をstateで管理（SSR/CSR不一致を防ぐ）
   const [stats, setStats] = useState({
@@ -838,15 +889,132 @@ export default function AssetsPage() {
 
         {/* 費用集計タブ */}
         <TabsContent value="costs" className="space-y-4">
+          {/* 期間選択 */}
           <Card>
             <CardHeader>
-              <CardTitle>費用集計</CardTitle>
-              <CardDescription>リース費用・メンテナンス費用の月次集計</CardDescription>
+              <CardTitle>集計期間</CardTitle>
+              <CardDescription>費用集計の対象期間を選択してください</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                費用集計機能は開発中です
+              <div className="flex gap-4 items-center">
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">開始月</label>
+                  <input
+                    type="month"
+                    value={costStartMonth}
+                    onChange={(e) => setCostStartMonth(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium mb-2 block">終了月</label>
+                  <input
+                    type="month"
+                    value={costEndMonth}
+                    onChange={(e) => setCostEndMonth(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md"
+                  />
+                </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* 費用サマリー */}
+          <Card>
+            <CardHeader>
+              <CardTitle>車両別費用集計</CardTitle>
+              <CardDescription>
+                {costStartMonth} 〜 {costEndMonth} の費用内訳
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const costSummary = calculateVehicleCosts(costStartMonth, costEndMonth);
+                const totalLeaseCost = costSummary.reduce((sum, item) => sum + item.leaseCost, 0);
+                const totalMaintenanceCost = costSummary.reduce((sum, item) => sum + item.maintenanceCost, 0);
+                const totalCost = totalLeaseCost + totalMaintenanceCost;
+
+                if (costSummary.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      指定期間の費用データがありません
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {/* 合計表示 */}
+                    <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                      <div className="flex justify-between items-center">
+                        <div className="text-lg font-semibold">期間合計</div>
+                        <div className="text-3xl font-bold text-primary">
+                          {formatCurrency(totalCost)}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground flex gap-4">
+                        <span>
+                          リース費用: {formatCurrency(totalLeaseCost)}
+                        </span>
+                        <span>
+                          メンテナンス費用: {formatCurrency(totalMaintenanceCost)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 車両別費用テーブル */}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>車両番号</TableHead>
+                          <TableHead>車種</TableHead>
+                          <TableHead>所有形態</TableHead>
+                          <TableHead className="text-right">リース費用</TableHead>
+                          <TableHead className="text-right">メンテナンス費用</TableHead>
+                          <TableHead className="text-right">合計</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {costSummary.map((item) => {
+                          const vehicle = vehicles.find((v) => v.id === item.vehicleId);
+                          const total = item.leaseCost + item.maintenanceCost;
+
+                          return (
+                            <TableRow key={item.vehicleId}>
+                              <TableCell className="font-medium">
+                                {vehicle?.vehicleNumber || '-'}
+                              </TableCell>
+                              <TableCell>
+                                {vehicle ? `${vehicle.make} ${vehicle.model}` : '-'}
+                              </TableCell>
+                              <TableCell>
+                                {vehicle && (
+                                  <Badge variant="outline">
+                                    {vehicle.ownershipType === 'owned'
+                                      ? '自己所有'
+                                      : vehicle.ownershipType === 'leased'
+                                      ? 'リース'
+                                      : 'レンタル'}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right text-blue-600">
+                                {formatCurrency(item.leaseCost)}
+                              </TableCell>
+                              <TableCell className="text-right text-orange-600">
+                                {formatCurrency(item.maintenanceCost)}
+                              </TableCell>
+                              <TableCell className="text-right font-bold text-primary">
+                                {formatCurrency(total)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>

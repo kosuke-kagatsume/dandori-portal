@@ -52,7 +52,6 @@ export default function UsersPage() {
     };
     return translations[key] || key;
   };
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>();
@@ -61,7 +60,7 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const router = useRouter();
-  const { retireUser } = useUserStore();
+  const { users, setUsers, retireUser } = useUserStore();
 
   // フィルタリングされたユーザー一覧
   const filteredUsers = users.filter(user => {
@@ -73,9 +72,11 @@ export default function UsersPage() {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        // モックデータを使用（50人分）
-        const mockUsers = generateMockUsers();
-        setUsers(mockUsers);
+        // ストアが空の場合のみモックデータを生成
+        if (users.length === 0) {
+          const mockUsers = generateMockUsers();
+          setUsers(mockUsers);
+        }
       } catch (error) {
         toast.error('Failed to load users');
       } finally {
@@ -84,7 +85,7 @@ export default function UsersPage() {
     };
 
     loadUsers();
-  }, []);
+  }, [users.length, setUsers]);
 
   const handleCreateUser = async (userData: any) => {
     try {
