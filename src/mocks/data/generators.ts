@@ -48,6 +48,9 @@ export const generateOrgUnit = (overrides: Partial<OrgUnit> = {}): OrgUnit => ({
   headUserId: faker.string.uuid(),
   type: faker.helpers.arrayElement(['company', 'division', 'department', 'team']),
   memberCount: faker.number.int({ min: 1, max: 50 }),
+  isActive: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   ...overrides,
 });
 

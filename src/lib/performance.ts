@@ -47,7 +47,7 @@ class PerformanceMonitor {
   }
 
   // メトリクスを記録
-  private recordMetric(name: string, value: number): void {
+  public recordMetric(name: string, value: number): void {
     const metric: PerformanceMetric = {
       name,
       value,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,10 +13,14 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { Plus, Search, TrendingUp, TrendingDown, AlertCircle, Users, Building, Database } from 'lucide-react';
 import { useSaaSStore } from '@/lib/store/saas-store';
+import { useUserStore } from '@/lib/store/user-store';
 import { categoryLabels, licenseTypeLabels, type SaaSCategory, type LicenseType, type SaaSService } from '@/types/saas';
 import { ServiceFormDialog } from '@/features/saas/service-form-dialog';
+import { mockSaaSServices, generatePlansForService, generateAssignments } from '@/lib/mock-data/saas-mock-data';
+import { initializeUserMockData } from '@/lib/mock-data/user-mock-data';
+import { toast } from 'sonner';
 
 export default function SaaSManagementPage() {
   const router = useRouter();
@@ -27,13 +31,26 @@ export default function SaaSManagementPage() {
     getActiveLicenses,
     getTotalMonthlyCost,
     getUnusedLicensesCost,
+    addService,
+    addPlan,
+    addAssignment,
+    getServiceById,
+    getPlansByServiceId,
   } = useSaaSStore();
+
+  const { users, addUser } = useUserStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<SaaSCategory | 'all'>('all');
   const [licenseTypeFilter, setLicenseTypeFilter] = useState<LicenseType | 'all'>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<SaaSService | undefined>(undefined);
+  const [mounted, setMounted] = useState(false);
+
+  // クライアントサイドでのみマウント状態を管理
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ダイアログ操作
   const handleOpenCreateDialog = () => {
@@ -49,6 +66,166 @@ export default function SaaSManagementPage() {
   const handleCloseDialog = () => {
     setIsFormOpen(false);
     setSelectedService(undefined);
+  };
+
+  // 既存サービスにライセンス割り当てを追加
+  const handleAddAssignments = () => {
+    try {
+      toast.info('ライセンス割り当てを生成中...');
+
+      // ユーザーがいなければ初期化
+      if (users.length === 0) {
+        toast.info('ユーザーデータを初期化中...');
+        initializeUserMockData(addUser);
+      }
+
+      // 全サービスを取得
+      const allServices = services;
+
+      if (allServices.length === 0) {
+        toast.error('サービスが登録されていません');
+        return;
+      }
+
+      // 各サービスのプランを取得または作成
+      allServices.forEach((service) => {
+        const existingPlans = getPlansByServiceId(service.id);
+
+        // プランがなければ作成
+        if (existingPlans.length === 0) {
+          const plans = generatePlansForService(service.id, service.name, service.licenseType);
+          plans.forEach((plan) => {
+            addPlan(plan);
+          });
+        }
+      });
+
+      // 少し待ってからライセンス割り当てを追加
+      setTimeout(() => {
+        const plansWithIds = allServices.flatMap((service) => getPlansByServiceId(service.id));
+
+        // ストアから最新のユーザーを取得
+        const currentUsers = useUserStore.getState().users;
+
+        console.log('サービス数:', allServices.length);
+        console.log('プラン数:', plansWithIds.length);
+        console.log('ユーザー数:', currentUsers.length);
+
+        if (plansWithIds.length === 0) {
+          toast.error('プランの取得に失敗しました');
+          return;
+        }
+
+        if (currentUsers.length === 0) {
+          toast.error('ユーザーデータが見つかりません');
+          return;
+        }
+
+        const assignments = generateAssignments(allServices, plansWithIds, currentUsers);
+
+        console.log('生成された割り当て数:', assignments.length);
+
+        assignments.forEach((assignment) => {
+          addAssignment(assignment);
+        });
+
+        toast.success(`ライセンス割り当ての生成が完了しました！\n割り当て数: ${assignments.length}件`, {
+          duration: 5000,
+        });
+      }, 800);
+    } catch (error) {
+      console.error('ライセンス割り当て生成エラー:', error);
+      toast.error('ライセンス割り当ての生成に失敗しました');
+    }
+  };
+
+  // モックデータ生成
+  const handleGenerateMockData = () => {
+    if (services.length > 0) {
+      if (!confirm('既存のデータがあります。本当にモックデータを追加しますか？')) {
+        return;
+      }
+    }
+
+    try {
+      toast.info('モックデータを生成中...');
+
+      // 0. ユーザーがいなければ初期化
+      if (users.length === 0) {
+        toast.info('ユーザーデータを初期化中...');
+        initializeUserMockData(addUser);
+      }
+
+      // 1. サービスを追加
+      mockSaaSServices.forEach((service) => {
+        addService(service);
+      });
+
+      // 2. 短い遅延の後、追加されたサービスを取得してプランを追加
+      setTimeout(() => {
+        const allServices = services;
+        const addedServiceIds: string[] = [];
+
+        // 追加されたサービスのIDを収集（名前で照合）
+        mockSaaSServices.forEach((mockService) => {
+          const found = allServices.find(s => s.name === mockService.name);
+          if (found) {
+            addedServiceIds.push(found.id);
+          }
+        });
+
+        console.log('追加されたサービスID:', addedServiceIds);
+
+        // 3. 各サービスにプランを追加
+        addedServiceIds.forEach((serviceId) => {
+          const service = getServiceById(serviceId);
+          if (service) {
+            const plans = generatePlansForService(serviceId, service.name, service.licenseType);
+            plans.forEach((plan) => {
+              addPlan(plan);
+            });
+          }
+        });
+
+        // 4. さらに遅延してライセンス割り当てを追加
+        setTimeout(() => {
+          const servicesWithIds = addedServiceIds.map(id => getServiceById(id)).filter(Boolean) as typeof services;
+          const plansWithIds = servicesWithIds.flatMap((service) => getPlansByServiceId(service.id));
+
+          // ストアから最新のユーザーを取得
+          const currentUsers = useUserStore.getState().users;
+
+          console.log('取得したサービス:', servicesWithIds.length);
+          console.log('取得したプラン:', plansWithIds.length);
+          console.log('ユーザー数:', currentUsers.length);
+
+          if (plansWithIds.length === 0) {
+            toast.error('プランの取得に失敗しました。もう一度お試しください。');
+            return;
+          }
+
+          if (currentUsers.length === 0) {
+            toast.error('ユーザーデータが見つかりません');
+            return;
+          }
+
+          const assignments = generateAssignments(servicesWithIds, plansWithIds, currentUsers);
+
+          console.log('生成された割り当て数:', assignments.length);
+
+          assignments.forEach((assignment) => {
+            addAssignment(assignment);
+          });
+
+          toast.success(`モックデータの生成が完了しました！\nサービス: ${servicesWithIds.length}件\nプラン: ${plansWithIds.length}件\nライセンス割り当て: ${assignments.length}件`, {
+            duration: 5000,
+          });
+        }, 1000);
+      }, 500);
+    } catch (error) {
+      console.error('モックデータ生成エラー:', error);
+      toast.error('モックデータの生成に失敗しました');
+    }
   };
 
   // フィルタリング
@@ -78,66 +255,134 @@ export default function SaaSManagementPage() {
             社内で利用しているSaaSサービスのライセンスとコストを一元管理
           </p>
         </div>
-        <Button onClick={handleOpenCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          新規サービス登録
-        </Button>
+        <div className="flex gap-2">
+          {mounted && (
+            <>
+              {services.length === 0 ? (
+                <Button variant="secondary" onClick={handleGenerateMockData}>
+                  <Database className="mr-2 h-4 w-4" />
+                  サンプルデータ生成
+                </Button>
+              ) : getTotalLicenses() === 0 ? (
+                <Button variant="secondary" onClick={handleAddAssignments}>
+                  <Database className="mr-2 h-4 w-4" />
+                  ライセンス割り当て生成
+                </Button>
+              ) : null}
+            </>
+          )}
+          <Button variant="outline" onClick={() => router.push('/ja/saas/users')}>
+            <Users className="mr-2 h-4 w-4" />
+            ユーザー別利用
+          </Button>
+          <Button variant="outline" onClick={() => router.push('/ja/saas/departments')}>
+            <Building className="mr-2 h-4 w-4" />
+            部門別分析
+          </Button>
+          <Button onClick={handleOpenCreateDialog}>
+            <Plus className="mr-2 h-4 w-4" />
+            新規サービス登録
+          </Button>
+        </div>
       </div>
 
       {/* サマリーカード */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">総サービス数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalServices}</div>
-            <p className="text-xs text-muted-foreground">
-              契約中のサービス
-            </p>
-          </CardContent>
-        </Card>
+      {mounted ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">総サービス数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalServices}</div>
+              <p className="text-xs text-muted-foreground">
+                契約中のサービス
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">総ライセンス数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalLicenses}</div>
-            <p className="text-xs text-muted-foreground">
-              アクティブ: {activeLicenses}
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">総ライセンス数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalLicenses}</div>
+              <p className="text-xs text-muted-foreground">
+                アクティブ: {activeLicenses}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">月額総コスト</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">¥{totalMonthlyCost.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              今月の支払い予定額
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">月額総コスト</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">¥{totalMonthlyCost.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                今月の支払い予定額
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">削減可能額</CardTitle>
-            <AlertCircle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">
-              ¥{unusedLicensesCost.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              未使用ライセンス
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">削減可能額</CardTitle>
+              <AlertCircle className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-500">
+                ¥{unusedLicensesCost.toLocaleString()}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                未使用ライセンス
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">総サービス数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">読み込み中...</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">総ライセンス数</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">読み込み中...</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">月額総コスト</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">読み込み中...</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">削減可能額</CardTitle>
+              <AlertCircle className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">-</div>
+              <p className="text-xs text-muted-foreground">読み込み中...</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* フィルター */}
       <Card>
@@ -191,9 +436,22 @@ export default function SaaSManagementPage() {
           {/* サービスリスト */}
           <div className="space-y-4">
             {filteredServices.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="text-lg font-medium">サービスが登録されていません</p>
-                <p className="text-sm">「新規サービス登録」ボタンから登録を開始してください</p>
+              <div className="text-center py-12">
+                <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg font-medium text-muted-foreground mb-2">サービスが登録されていません</p>
+                <p className="text-sm text-muted-foreground mb-6">
+                  サンプルデータを生成するか、手動で登録を開始してください
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button onClick={handleGenerateMockData} size="lg">
+                    <Database className="mr-2 h-5 w-5" />
+                    サンプルデータを生成
+                  </Button>
+                  <Button variant="outline" onClick={handleOpenCreateDialog} size="lg">
+                    <Plus className="mr-2 h-5 w-5" />
+                    手動で登録
+                  </Button>
+                </div>
               </div>
             ) : (
               filteredServices.map((service) => (

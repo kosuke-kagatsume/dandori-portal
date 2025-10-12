@@ -111,7 +111,7 @@ export default function OptimizedDashboard() {
   }, []);
   
   // 固定の日本語翻訳をメモ化
-  const translations = useMemo(() => ({
+  const translations: Record<string, string> = useMemo(() => ({
     'title': 'ダッシュボード',
     'totalEmployees': '総従業員数',
     'teamMembers': 'チームメンバー',
@@ -130,8 +130,8 @@ export default function OptimizedDashboard() {
     'systemHealth': 'システム健全性',
     'userManagement': 'ユーザー管理'
   }), []);
-  
-  const t = useCallback((key: string) => translations[key] || key, [translations]);
+
+  const t = useCallback((key: string): string => translations[key] || key, [translations]);
 
   // キャッシュされたデータ取得
   const { data: kpiData, loading: kpiLoading } = useCachedData(
@@ -179,7 +179,7 @@ export default function OptimizedDashboard() {
     // Card 1: 従業員数/チームメンバー数
     cards.push({
       title: permissions.canViewAll ? t('totalEmployees') : permissions.canViewTeam ? t('teamMembers') : t('myAttendance'),
-      value: permissions.canViewAll ? kpiData?.totalEmployees : permissions.canViewTeam ? kpiData?.teamMembers : '出勤中',
+      value: permissions.canViewAll ? (kpiData?.totalEmployees ?? 0) : permissions.canViewTeam ? (kpiData?.teamMembers ?? 0) : '出勤中',
       trend: permissions.canViewAll ? '+12 先月比' : permissions.canViewTeam ? 'チーム全員出勤' : '08:45 出勤',
       icon: Users,
       gradient: 'from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900',
@@ -189,7 +189,7 @@ export default function OptimizedDashboard() {
     if (permissions.canViewAll || permissions.canViewTeam) {
       cards.push({
         title: t('todayAttendance'),
-        value: permissions.canViewAll ? kpiData?.todayAttendance : '7/8',
+        value: permissions.canViewAll ? (kpiData?.todayAttendance ?? 0) : '7/8',
         trend: `出勤率 ${permissions.canViewAll && kpiData ? Math.round((kpiData.todayAttendance / kpiData.totalEmployees) * 100) : 87.5}%`,
         icon: UserCheck,
         gradient: 'from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900',
@@ -200,7 +200,7 @@ export default function OptimizedDashboard() {
     if (permissions.canApprove) {
       cards.push({
         title: permissions.canViewAll ? t('pendingApprovals') : t('teamApprovals'),
-        value: permissions.canViewAll ? kpiData?.pendingApprovals : 3,
+        value: permissions.canViewAll ? (kpiData?.pendingApprovals ?? 0) : 3,
         trend: permissions.canViewAll ? '3件は緊急' : '1件は緊急',
         icon: AlertCircle,
         gradient: 'from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900',
@@ -210,10 +210,10 @@ export default function OptimizedDashboard() {
     // Card 4: システム管理/稼働率
     cards.push({
       title: permissions.canManageSystem ? t('systemHealth') : t('monthlyUtilization'),
-      value: permissions.canManageSystem ? '99.9%' : `${kpiData?.monthlyUtilization}%`,
+      value: permissions.canManageSystem ? '99.9%' : `${kpiData?.monthlyUtilization ?? 0}%`,
       trend: permissions.canManageSystem ? '稼働時間' : '+2.1% 先月比',
       icon: permissions.canManageSystem ? ShieldCheck : TrendingUp,
-      gradient: permissions.canManageSystem 
+      gradient: permissions.canManageSystem
         ? 'from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900'
         : 'from-green-50 to-green-100 dark:from-green-950 dark:to-green-900',
     });

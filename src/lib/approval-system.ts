@@ -27,8 +27,16 @@ export interface ApprovalFlow {
   autoApprovalRules?: string[];
 }
 
+// 部署の型定義
+interface Department {
+  manager: { userId: string; name: string; role: string };
+  members: string[];
+  isHR?: boolean;
+  isAdmin?: boolean;
+}
+
 // 組織構造とロール定義
-export const organizationHierarchy = {
+export const organizationHierarchy: { departments: Record<string, Department> } = {
   departments: {
     '開発部': {
       manager: { userId: '1', name: '田中太郎', role: 'manager' },

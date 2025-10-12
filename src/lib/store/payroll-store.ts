@@ -544,11 +544,11 @@ const createPayrollStore = () => {
           },
 
           getSalaryMaster: (employeeId: string) => {
-            return get().salaryMasters.find(m => m.employeeId === employeeId);
+            return get().salaryMasters.find((m: EmployeeSalaryMaster) => m.employeeId === employeeId);
           },
 
           getCalculationsByPeriod: (period: string) => {
-            return get().calculations.filter(c => c.period === period);
+            return get().calculations.filter((c: PayrollCalculation) => c.period === period);
           },
 
           calculatePayroll: (employeeId: string, period: string) => {
@@ -806,15 +806,15 @@ const createPayrollStore = () => {
           },
 
           getBonusCalculationsByPeriod: (period: string, bonusType?: 'summer' | 'winter' | 'special') => {
-            const all = get().bonusCalculations.filter(c => c.period === period);
-            return bonusType ? all.filter(c => c.bonusType === bonusType) : all;
+            const all = get().bonusCalculations.filter((c: BonusCalculation) => c.period === period);
+            return bonusType ? all.filter((c: BonusCalculation) => c.bonusType === bonusType) : all;
           },
 
           runBonusCalculation: async (period: string, bonusType: 'summer' | 'winter' | 'special') => {
             set({ isCalculating: true });
             try {
               const calculations = get().calculateAllEmployeesBonus(period, bonusType);
-              const existing = get().bonusCalculations.filter(c => !(c.period === period && c.bonusType === bonusType));
+              const existing = get().bonusCalculations.filter((c: BonusCalculation) => !(c.period === period && c.bonusType === bonusType));
               const updated = [...existing, ...calculations];
               set({ bonusCalculations: updated });
             } finally {

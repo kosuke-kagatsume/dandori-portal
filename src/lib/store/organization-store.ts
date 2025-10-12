@@ -150,18 +150,16 @@ export const useOrganizationStore = create<OrganizationStore>()(
         };
       }),
 
-      moveMember: (memberId, targetNodeId) => set((state) => {
-        if (!state.organizationTree) return state;
-
+      moveMember: (memberId, targetNodeId) => {
         const member = get().findMember(memberId);
-        if (!member) return state;
+        if (!member) return;
 
         // Remove from current location
-        let updatedState = get().removeMember(memberId);
-        
+        get().removeMember(memberId);
+
         // Add to target location
-        return get().addMember(targetNodeId, member);
-      }),
+        get().addMember(targetNodeId, member);
+      },
 
       // Node management
       addNode: (parentId, newNodeData) => set((state) => {

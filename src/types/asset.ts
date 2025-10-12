@@ -62,13 +62,16 @@ export interface MaintenanceRecord {
   vehicleId: string;
   type: MaintenanceType;
   date: string;               // ISO date string
+  mileage?: number;           // メンテナンス実施時の走行距離
   cost: number;
-  vendorId: string;           // 業者ID
-  vendorName: string;         // 業者名（参照用）
-  description: string;
+  vendorId?: string;          // 業者ID
+  vendorName?: string;        // 業者名（参照用）
+  description?: string;
+  nextDueDate?: string;       // 次回実施予定日 (ISO date string)
+  nextDueMileage?: number;    // 次回実施予定距離 (km)
   tireType?: TireType;        // タイヤ交換時のみ
-  performedBy: string;        // 作業者ID
-  performedByName: string;    // 作業者名
+  performedBy?: string;       // 作業者ID
+  performedByName?: string;   // 作業者名
   notes?: string;
   createdAt: string;          // ISO date string
   updatedAt: string;          // ISO date string
@@ -79,8 +82,8 @@ export interface Vendor {
   id: string;
   name: string;
   phone: string;
-  address: string;
-  contactPerson: string;
+  address?: string;
+  contactPerson?: string;
   email?: string;
   rating?: number;            // 評価（1-5）
   notes?: string;

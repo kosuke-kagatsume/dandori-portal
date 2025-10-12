@@ -95,8 +95,9 @@ export const useApprovalStore = create<ApprovalStore>()(
           }));
           
           // 承認フロー更新の通知
-          if (get().onFlowUpdate) {
-            get().onFlowUpdate(updatedFlow);
+          const callback = get().onFlowUpdate;
+          if (callback) {
+            callback(updatedFlow);
           }
           
         } catch (error) {

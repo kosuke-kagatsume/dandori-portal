@@ -55,9 +55,9 @@ export function useAuth() {
         setUser(user);
 
         // 認証状態の変更を監視
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
           setUser(session?.user ?? null);
-          
+
           if (!session?.user) {
             router.push('/auth/login');
           }

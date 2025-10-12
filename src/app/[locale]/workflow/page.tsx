@@ -259,6 +259,7 @@ export default function WorkflowPage() {
       type: 'info',
       timestamp: new Date().toISOString(),
       read: false,
+      important: false,
       userId: delegateUserId,
     });
 

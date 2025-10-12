@@ -185,7 +185,9 @@ class CacheService {
     // メモリキャッシュのサイズ制限（100エントリまで）
     if (this.memoryCache.size > 100) {
       const firstKey = this.memoryCache.keys().next().value;
-      this.memoryCache.delete(firstKey);
+      if (firstKey) {
+        this.memoryCache.delete(firstKey);
+      }
     }
   }
 
@@ -262,7 +264,7 @@ class CacheService {
   // パターンに一致するキャッシュを削除
   invalidatePattern(pattern: RegExp): void {
     // メモリキャッシュ
-    for (const key of this.memoryCache.keys()) {
+    for (const key of Array.from(this.memoryCache.keys())) {
       if (pattern.test(key)) {
         this.memoryCache.delete(key);
       }

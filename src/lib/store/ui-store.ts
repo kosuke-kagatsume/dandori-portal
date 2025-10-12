@@ -38,65 +38,65 @@ interface UIState {
 
 // SSR対応: サーバーではpersistを無効化
 const createUIStore = () => {
-  const storeCreator = (set: any, get: any) => ({
+  const storeCreator = (set: (partial: Partial<UIState> | ((state: UIState) => Partial<UIState>)) => void, get: () => UIState): UIState => ({
       // Default values
-      theme: 'light',
-      locale: 'ja',
-      density: 'standard',
+      theme: 'light' as Theme,
+      locale: 'ja' as Locale,
+      density: 'standard' as Density,
       animationsEnabled: true,
       sidebarCollapsed: false,
-      defaultViewMode: 'table',
+      defaultViewMode: 'table' as ViewMode,
       itemsPerPage: 10,
       commandPaletteOpen: false,
       globalLoading: false,
-      
+
       // Actions
-      setTheme: (theme) => {
+      setTheme: (theme: Theme) => {
         set({ theme });
         // Apply theme to document
         if (typeof document !== 'undefined') {
           document.documentElement.classList.toggle('dark', theme === 'dark');
         }
       },
-      
-      setLocale: (locale) => {
+
+      setLocale: (locale: Locale) => {
         set({ locale });
       },
-      
-      setDensity: (density) => {
+
+      setDensity: (density: Density) => {
         set({ density });
       },
-      
+
       toggleAnimations: () => {
-        set((state) => ({ animationsEnabled: !state.animationsEnabled }));
+        set((state: UIState) => ({ animationsEnabled: !state.animationsEnabled }));
       },
-      
+
       toggleSidebar: () => {
-        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
+        set((state: UIState) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
       },
-      
-      setViewMode: (mode) => {
+
+      setViewMode: (mode: ViewMode) => {
         set({ defaultViewMode: mode });
       },
-      
-      setItemsPerPage: (count) => {
+
+      setItemsPerPage: (count: number) => {
         set({ itemsPerPage: count });
       },
-      
-      setCommandPaletteOpen: (open) => {
+
+      setCommandPaletteOpen: (open: boolean) => {
         set({ commandPaletteOpen: open });
       },
-      
-      setGlobalLoading: (loading) => {
+
+      setGlobalLoading: (loading: boolean) => {
         set({ globalLoading: loading });
       },
-      
+
       // Computed
       getThemeClass: () => {
         const { theme } = get();
         return theme === 'dark' ? 'dark' : '';
       },
-      
+
       getDensityClass: () => {
         const { density } = get();
         return `density-${density}`;

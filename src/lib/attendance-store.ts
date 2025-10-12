@@ -29,6 +29,8 @@ export interface TodayAttendanceStatus {
   totalBreakTime: number;
   workLocation: 'office' | 'home' | 'client' | 'other';
   memo?: string;
+  needsApproval?: boolean;
+  approvalReason?: string;
 }
 
 interface AttendanceStore {

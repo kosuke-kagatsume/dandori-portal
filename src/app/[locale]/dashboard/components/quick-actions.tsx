@@ -13,9 +13,10 @@ import {
   Settings
 } from 'lucide-react';
 import { roleDisplayNames } from '@/lib/demo-users';
+import type { DemoUser } from '@/types';
 
 interface QuickActionsProps {
-  effectiveDemoUser: any;
+  effectiveDemoUser: DemoUser | null;
   permissions: {
     canViewAll: boolean;
     canViewTeam: boolean;

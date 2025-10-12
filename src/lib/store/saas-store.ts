@@ -56,6 +56,21 @@ interface SaaSState {
   getInactiveLicenses: () => number;
   getTotalMonthlyCost: () => number;
   getUnusedLicensesCost: () => number;
+
+  // ユーザー別統計情報（Phase 2A）
+  getUserTotalCost: (userId: string) => number;
+  getUserSaaSDetails: (userId: string) => Array<{
+    assignment: LicenseAssignment;
+    service: SaaSService;
+    plan: LicensePlan;
+    monthlyCost: number;
+  }>;
+  getUsersByTotalCost: () => Array<{
+    userId: string;
+    userName: string;
+    totalCost: number;
+    serviceCount: number;
+  }>;
 }
 
 // SSR対応: サーバーではpersistを無効化
@@ -271,6 +286,132 @@ const createSaaSStore = () => {
       });
 
       return unusedCost;
+    },
+
+    // ユーザー別統計情報（Phase 2A）
+    getUserTotalCost: (userId: string) => {
+      const state = get();
+      let totalCost = 0;
+
+      const userAssignments = state.getAssignmentsByUserId(userId);
+
+      userAssignments.forEach((assignment) => {
+        if (assignment.status !== 'active') return;
+
+        const plan = state.getPlanById(assignment.planId);
+        if (!plan) return;
+
+        const service = state.getServiceById(assignment.serviceId);
+        if (!service) return;
+
+        // ユーザー単価の場合
+        if (service.licenseType === 'user-based' && plan.pricePerUser) {
+          totalCost += plan.pricePerUser;
+        }
+        // 固定価格の場合は、そのサービスの全ユーザー数で割る
+        else if (service.licenseType === 'fixed' && plan.fixedPrice) {
+          const activeAssignments = state.getActiveAssignmentsByServiceId(service.id);
+          if (activeAssignments.length > 0) {
+            totalCost += plan.fixedPrice / activeAssignments.length;
+          }
+        }
+      });
+
+      return Math.round(totalCost);
+    },
+
+    getUserSaaSDetails: (userId: string) => {
+      const state = get();
+      const userAssignments = state.getAssignmentsByUserId(userId);
+      const details: Array<{
+        assignment: LicenseAssignment;
+        service: SaaSService;
+        plan: LicensePlan;
+        monthlyCost: number;
+      }> = [];
+
+      userAssignments.forEach((assignment) => {
+        const service = state.getServiceById(assignment.serviceId);
+        const plan = state.getPlanById(assignment.planId);
+
+        if (!service || !plan) return;
+
+        let monthlyCost = 0;
+
+        // ユーザー単価の場合
+        if (service.licenseType === 'user-based' && plan.pricePerUser) {
+          monthlyCost = plan.pricePerUser;
+        }
+        // 固定価格の場合は、そのサービスの全ユーザー数で割る
+        else if (service.licenseType === 'fixed' && plan.fixedPrice) {
+          const activeAssignments = state.getActiveAssignmentsByServiceId(service.id);
+          if (activeAssignments.length > 0) {
+            monthlyCost = Math.round(plan.fixedPrice / activeAssignments.length);
+          }
+        }
+
+        details.push({
+          assignment,
+          service,
+          plan,
+          monthlyCost,
+        });
+      });
+
+      // コストの高い順にソート
+      return details.sort((a, b) => b.monthlyCost - a.monthlyCost);
+    },
+
+    getUsersByTotalCost: () => {
+      const state = get();
+      const userCostMap = new Map<string, { userName: string; totalCost: number; serviceCount: number }>();
+
+      // 全ユーザーのコストを集計
+      state.assignments.forEach((assignment) => {
+        if (assignment.status !== 'active') return;
+
+        const userId = assignment.userId;
+        const existing = userCostMap.get(userId);
+
+        const plan = state.getPlanById(assignment.planId);
+        const service = state.getServiceById(assignment.serviceId);
+        if (!plan || !service) return;
+
+        let costForThisService = 0;
+
+        // ユーザー単価の場合
+        if (service.licenseType === 'user-based' && plan.pricePerUser) {
+          costForThisService = plan.pricePerUser;
+        }
+        // 固定価格の場合は、そのサービスの全ユーザー数で割る
+        else if (service.licenseType === 'fixed' && plan.fixedPrice) {
+          const activeAssignments = state.getActiveAssignmentsByServiceId(service.id);
+          if (activeAssignments.length > 0) {
+            costForThisService = plan.fixedPrice / activeAssignments.length;
+          }
+        }
+
+        if (existing) {
+          existing.totalCost += costForThisService;
+          existing.serviceCount += 1;
+        } else {
+          userCostMap.set(userId, {
+            userName: assignment.userName,
+            totalCost: costForThisService,
+            serviceCount: 1,
+          });
+        }
+      });
+
+      // Mapを配列に変換してコスト順にソート
+      return Array.from(userCostMap.entries())
+        .map(([userId, data]) => ({
+          userId,
+          userName: data.userName,
+          totalCost: Math.round(data.totalCost),
+          serviceCount: data.serviceCount,
+        }))
+        .sort((a, b) => b.totalCost - a.totalCost);
     },
   });
 

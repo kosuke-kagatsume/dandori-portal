@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { generateMockUsers } from '@/lib/mock-data';
@@ -59,6 +60,7 @@ export default function UsersPage() {
   const [retiringUser, setRetiringUser] = useState<User | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
+  const router = useRouter();
   const { retireUser } = useUserStore();
 
   // フィルタリングされたユーザー一覧
@@ -289,8 +291,7 @@ export default function UsersPage() {
               <DropdownMenuLabel>操作</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => {
-                  setEditingUser(user);
-                  setDialogOpen(true);
+                  router.push(`/ja/users/${user.id}`);
                 }}
               >
                 <Eye className="mr-2 h-4 w-4" />

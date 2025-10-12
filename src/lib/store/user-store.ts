@@ -30,32 +30,32 @@ interface UserState {
 
 // SSR対応: サーバーではpersistを無効化
 const createUserStore = () => {
-  const storeCreator = (set: any, get: any) => ({
+  const storeCreator = (set: (partial: Partial<UserState> | ((state: UserState) => Partial<UserState>)) => void, get: () => UserState): UserState => ({
       currentUser: null,
       users: [],
       isLoading: false,
       error: null,
-      
+
       // デモモードの初期状態（デフォルトで有効）
       isDemoMode: true,
       currentDemoUser: demoUsers.employee,
-      
-      setCurrentUser: (user) => {
+
+      setCurrentUser: (user: User) => {
         set({ currentUser: user });
       },
-      
-      setUsers: (users) => {
+
+      setUsers: (users: User[]) => {
         set({ users });
       },
-      
-      addUser: (user) => {
-        set((state) => ({
+
+      addUser: (user: User) => {
+        set((state: UserState) => ({
           users: [...state.users, user],
         }));
       },
-      
-      updateUser: (id, updates) => {
-        set((state) => ({
+
+      updateUser: (id: string, updates: Partial<User>) => {
+        set((state: UserState) => ({
           users: state.users.map((u) =>
             u.id === id ? { ...u, ...updates } : u
           ),
@@ -65,17 +65,17 @@ const createUserStore = () => {
               : state.currentUser,
         }));
       },
-      
-      removeUser: (id) => {
-        set((state) => ({
+
+      removeUser: (id: string) => {
+        set((state: UserState) => ({
           users: state.users.filter((u) => u.id !== id),
           currentUser:
             state.currentUser?.id === id ? null : state.currentUser,
         }));
       },
 
-      retireUser: (id, retiredDate, reason) => {
-        set((state) => ({
+      retireUser: (id: string, retiredDate: string, reason: 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other') => {
+        set((state: UserState) => ({
           users: state.users.map((u) =>
             u.id === id
               ? {
@@ -98,11 +98,11 @@ const createUserStore = () => {
         }));
       },
 
-      getUserById: (id) => {
+      getUserById: (id: string) => {
         return get().users.find((u) => u.id === id);
       },
 
-      getUsersByUnit: (unitId) => {
+      getUsersByUnit: (unitId: string) => {
         return get().users.filter((u) => u.unitId === unitId);
       },
 
@@ -113,35 +113,35 @@ const createUserStore = () => {
       getRetiredUsers: () => {
         return get().users.filter((u) => u.status === 'retired');
       },
-      
-      setLoading: (loading) => {
+
+      setLoading: (loading: boolean) => {
         set({ isLoading: loading });
       },
-      
-      setError: (error) => {
+
+      setError: (error: string | null) => {
         set({ error });
       },
-      
+
       // デモ役割切り替え機能
-      switchDemoRole: (role) => {
+      switchDemoRole: (role: UserRole) => {
         const demoUser = demoUsers[role];
-        set({ 
+        set({
           currentDemoUser: demoUser,
-          isDemoMode: true 
+          isDemoMode: true
         });
       },
-      
-      setDemoMode: (enabled) => {
+
+      setDemoMode: (enabled: boolean) => {
         if (enabled) {
           // デモモード有効化時、デフォルトで一般社員
-          set({ 
+          set({
             isDemoMode: true,
-            currentDemoUser: demoUsers.employee 
+            currentDemoUser: demoUsers.employee
           });
         } else {
-          set({ 
+          set({
             isDemoMode: false,
-            currentDemoUser: null 
+            currentDemoUser: null
           });
         }
       },
@@ -159,6 +159,7 @@ const createUserStore = () => {
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         currentUser: state.currentUser,
+        users: state.users, // ユーザー配列も永続化
         isDemoMode: state.isDemoMode,
         currentDemoUser: state.currentDemoUser,
       }),

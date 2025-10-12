@@ -38,7 +38,7 @@ const userSchema = z.object({
   department: z.string().min(1, 'Department is required'),
   position: z.string().min(1, 'Position is required'),
   hireDate: z.date(),
-  status: z.enum(['active', 'inactive', 'suspended']),
+  status: z.enum(['active', 'inactive', 'suspended', 'retired']),
   roles: z.array(z.string()).min(1, 'At least one role is required'),
 });
 

@@ -187,7 +187,7 @@ export function DelegateSettingsDialog({
                     mode="single"
                     selected={endDate}
                     onSelect={setEndDate}
-                    disabled={(date) => date < startDate || date < new Date()}
+                    disabled={(date) => (startDate ? date < startDate : false) || date < new Date()}
                     showOutsideDays={false}
                     fixedWeeks
                   />
