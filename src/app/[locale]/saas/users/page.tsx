@@ -101,6 +101,13 @@ export default function SaaSUserListPage() {
         <div className="flex gap-2">
           <Button
             variant="outline"
+            onClick={() => router.push('/ja/saas/departments')}
+          >
+            <Building className="mr-2 h-4 w-4" />
+            部門別分析
+          </Button>
+          <Button
+            variant="outline"
             size="sm"
             onClick={handleExportSummaryCSV}
             disabled={sortedUsers.length === 0}

@@ -119,15 +119,24 @@ export default function SaaSDepartmentAnalysisPage() {
           <h1 className="text-3xl font-bold tracking-tight">部門別SaaS利用分析</h1>
           <p className="text-muted-foreground">部門ごとのSaaS利用状況とコストを分析</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportCSV}
-          disabled={departmentData.length === 0}
-        >
-          <Download className="mr-2 h-4 w-4" />
-          CSV出力
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/ja/saas/users')}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            ユーザー別利用
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            disabled={departmentData.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            CSV出力
+          </Button>
+        </div>
       </div>
 
       {/* サマリーカード */}
