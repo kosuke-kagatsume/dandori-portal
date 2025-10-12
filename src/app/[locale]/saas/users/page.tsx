@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, ArrowLeft, TrendingUp, Users, Download } from 'lucide-react';
+import { Search, ArrowLeft, TrendingUp, Users, Download, Building } from 'lucide-react';
 import { useSaaSStore } from '@/lib/store/saas-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { exportAllUsersSaaSToCSV, exportDetailedAllUsersSaaSToCSV } from '@/lib/utils/csv-export';
