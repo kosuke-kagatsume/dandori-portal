@@ -23,6 +23,11 @@ import {
   Building2,
   Wallet,
   FileText,
+  Cloud,
+  DollarSign,
+  AlertTriangle,
+  Clock,
+  Package,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -40,6 +45,34 @@ interface SimpleSettings {
     browser: boolean;
     sound: boolean;
   };
+  saas: {
+    monthlyBudget: number;
+    budgetAlertThreshold: number;
+    unusedLicenseDays: number;
+    enableUnusedLicenseAlert: boolean;
+  };
+  attendance: {
+    defaultBreakMinutes: number;
+    overtimeCalculationMethod: 'daily' | 'monthly';
+    lateNightStartHour: number;
+    lateNightEndHour: number;
+    requireGpsForClockIn: boolean;
+    allowedClockInRadius: number;
+    annualLeaveGrantDays: number;
+    enableLeaveCarryover: boolean;
+    maxCarryoverDays: number;
+  };
+  assets: {
+    assetNumberPrefix: string;
+    depreciationMethod: 'straight-line' | 'declining-balance';
+    requireApprovalForPurchase: boolean;
+    approvalAmountThreshold: number;
+    inventoryCheckFrequency: 'monthly' | 'quarterly' | 'yearly';
+    enableAutoAssignment: boolean;
+    lowStockAlertThreshold: number;
+    enableReturnReminder: boolean;
+    returnReminderDays: number;
+  };
 }
 
 // デフォルト設定
@@ -51,6 +84,34 @@ const defaultSettings: SimpleSettings = {
   notifications: {
     browser: false,
     sound: false,
+  },
+  saas: {
+    monthlyBudget: 500000,
+    budgetAlertThreshold: 80,
+    unusedLicenseDays: 30,
+    enableUnusedLicenseAlert: true,
+  },
+  attendance: {
+    defaultBreakMinutes: 60,
+    overtimeCalculationMethod: 'daily',
+    lateNightStartHour: 22,
+    lateNightEndHour: 5,
+    requireGpsForClockIn: false,
+    allowedClockInRadius: 500,
+    annualLeaveGrantDays: 10,
+    enableLeaveCarryover: true,
+    maxCarryoverDays: 20,
+  },
+  assets: {
+    assetNumberPrefix: 'AST',
+    depreciationMethod: 'straight-line',
+    requireApprovalForPurchase: true,
+    approvalAmountThreshold: 100000,
+    inventoryCheckFrequency: 'yearly',
+    enableAutoAssignment: false,
+    lowStockAlertThreshold: 3,
+    enableReturnReminder: true,
+    returnReminderDays: 7,
   },
 };
 
@@ -226,8 +287,8 @@ export default function SimpleSettingsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="appearance" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+      <Tabs defaultValue="appearance" className="space-y-4 w-full">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="appearance">外観</TabsTrigger>
           <TabsTrigger value="regional">地域と言語</TabsTrigger>
           <TabsTrigger value="company">
@@ -241,6 +302,18 @@ export default function SimpleSettingsPage() {
           <TabsTrigger value="year-end">
             <FileText className="w-4 h-4 mr-1" />
             年末調整
+          </TabsTrigger>
+          <TabsTrigger value="attendance">
+            <Clock className="w-4 h-4 mr-1" />
+            勤怠・休暇
+          </TabsTrigger>
+          <TabsTrigger value="assets">
+            <Package className="w-4 h-4 mr-1" />
+            資産管理
+          </TabsTrigger>
+          <TabsTrigger value="saas">
+            <Cloud className="w-4 h-4 mr-1" />
+            SaaS管理
           </TabsTrigger>
           <TabsTrigger value="data">データ</TabsTrigger>
         </TabsList>
@@ -873,6 +946,584 @@ export default function SimpleSettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* 勤怠・休暇設定 */}
+        <TabsContent value="attendance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>勤怠管理設定</CardTitle>
+              <CardDescription>勤怠打刻と労働時間の管理設定を行います</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>デフォルト休憩時間</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={settings.attendance.defaultBreakMinutes}
+                      onChange={(e) => updateSettings({
+                        attendance: { ...settings.attendance, defaultBreakMinutes: Number(e.target.value) }
+                      })}
+                      min="0"
+                      max="240"
+                    />
+                    <span className="text-sm text-muted-foreground">分</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    標準的な休憩時間を設定します（例：60分）
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>残業計算方法</Label>
+                  <Select
+                    value={settings.attendance.overtimeCalculationMethod}
+                    onValueChange={(value: 'daily' | 'monthly') => updateSettings({
+                      attendance: { ...settings.attendance, overtimeCalculationMethod: value }
+                    })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="daily">日次計算</SelectItem>
+                      <SelectItem value="monthly">月次計算</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {settings.attendance.overtimeCalculationMethod === 'daily'
+                      ? '毎日8時間超を残業として計算'
+                      : '月間総労働時間から残業を計算'}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">深夜労働時間帯</h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>深夜労働開始時刻</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={settings.attendance.lateNightStartHour}
+                        onChange={(e) => updateSettings({
+                          attendance: { ...settings.attendance, lateNightStartHour: Number(e.target.value) }
+                        })}
+                        min="0"
+                        max="23"
+                      />
+                      <span className="text-sm text-muted-foreground">時</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>深夜労働終了時刻</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={settings.attendance.lateNightEndHour}
+                        onChange={(e) => updateSettings({
+                          attendance: { ...settings.attendance, lateNightEndHour: Number(e.target.value) }
+                        })}
+                        min="0"
+                        max="23"
+                      />
+                      <span className="text-sm text-muted-foreground">時</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  労働基準法：22時〜翌5時は深夜労働として割増賃金25%加算
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>打刻設定</CardTitle>
+              <CardDescription>勤怠打刻時の位置情報管理を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>GPS位置情報の必須化</Label>
+                  <p className="text-sm text-muted-foreground">
+                    打刻時にGPS位置情報の取得を必須にします
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.attendance.requireGpsForClockIn}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      attendance: { ...settings.attendance, requireGpsForClockIn: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              {settings.attendance.requireGpsForClockIn && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>打刻可能範囲</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={settings.attendance.allowedClockInRadius}
+                        onChange={(e) => updateSettings({
+                          attendance: { ...settings.attendance, allowedClockInRadius: Number(e.target.value) }
+                        })}
+                        min="50"
+                        max="5000"
+                        step="50"
+                      />
+                      <span className="text-sm text-muted-foreground">メートル</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      会社所在地から{settings.attendance.allowedClockInRadius}m以内で打刻可能
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>年次有給休暇設定</CardTitle>
+              <CardDescription>有給休暇の付与と繰越ルールを設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>年次有給休暇付与日数</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={settings.attendance.annualLeaveGrantDays}
+                      onChange={(e) => updateSettings({
+                        attendance: { ...settings.attendance, annualLeaveGrantDays: Number(e.target.value) }
+                      })}
+                      min="0"
+                      max="20"
+                    />
+                    <span className="text-sm text-muted-foreground">日</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    入社半年後に付与される有給休暇日数（法定最低：10日）
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>最大繰越日数</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={settings.attendance.maxCarryoverDays}
+                      onChange={(e) => updateSettings({
+                        attendance: { ...settings.attendance, maxCarryoverDays: Number(e.target.value) }
+                      })}
+                      min="0"
+                      max="40"
+                      disabled={!settings.attendance.enableLeaveCarryover}
+                    />
+                    <span className="text-sm text-muted-foreground">日</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    翌年度に繰り越せる有給休暇の最大日数
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>有給休暇繰越を許可</Label>
+                  <p className="text-sm text-muted-foreground">
+                    未消化の有給休暇を翌年度に繰り越すことを許可します
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.attendance.enableLeaveCarryover}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      attendance: { ...settings.attendance, enableLeaveCarryover: checked }
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              これらの設定は、勤怠管理・休暇管理画面の動作に反映されます。
+              労働基準法に準拠した設定を行ってください。
+            </AlertDescription>
+          </Alert>
+        </TabsContent>
+
+        {/* 資産管理設定 */}
+        <TabsContent value="assets" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>資産番号設定</CardTitle>
+              <CardDescription>資産の識別番号フォーマットを設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>資産番号プレフィックス</Label>
+                <Input
+                  value={settings.assets.assetNumberPrefix}
+                  onChange={(e) => updateSettings({
+                    assets: { ...settings.assets, assetNumberPrefix: e.target.value }
+                  })}
+                  placeholder="AST"
+                  maxLength={10}
+                />
+                <p className="text-xs text-muted-foreground">
+                  例: 「AST」→ AST-0001, AST-0002... のように自動採番されます
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>減価償却設定</CardTitle>
+              <CardDescription>固定資産の減価償却方法を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>減価償却方法</Label>
+                <Select
+                  value={settings.assets.depreciationMethod}
+                  onValueChange={(value: 'straight-line' | 'declining-balance') => updateSettings({
+                    assets: { ...settings.assets, depreciationMethod: value }
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="straight-line">定額法</SelectItem>
+                    <SelectItem value="declining-balance">定率法</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {settings.assets.depreciationMethod === 'straight-line'
+                    ? '毎年一定額を償却する方法（建物、構築物など）'
+                    : '毎年一定率で償却する方法（機械装置、車両など）'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>購入承認設定</CardTitle>
+              <CardDescription>資産購入時の承認フローを設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>購入承認の必須化</Label>
+                  <p className="text-sm text-muted-foreground">
+                    資産購入時に承認フローを必須にします
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.assets.requireApprovalForPurchase}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      assets: { ...settings.assets, requireApprovalForPurchase: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              {settings.assets.requireApprovalForPurchase && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>承認必須金額</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={settings.assets.approvalAmountThreshold}
+                        onChange={(e) => updateSettings({
+                          assets: { ...settings.assets, approvalAmountThreshold: Number(e.target.value) }
+                        })}
+                        min="0"
+                        step="10000"
+                      />
+                      <span className="text-sm text-muted-foreground">円</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      ¥{settings.assets.approvalAmountThreshold.toLocaleString()}以上の資産購入時に承認が必要
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>棚卸設定</CardTitle>
+              <CardDescription>定期的な資産棚卸の頻度を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>棚卸実施頻度</Label>
+                <Select
+                  value={settings.assets.inventoryCheckFrequency}
+                  onValueChange={(value: 'monthly' | 'quarterly' | 'yearly') => updateSettings({
+                    assets: { ...settings.assets, inventoryCheckFrequency: value }
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">毎月</SelectItem>
+                    <SelectItem value="quarterly">四半期ごと</SelectItem>
+                    <SelectItem value="yearly">年1回</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  棚卸通知と記録が自動的に管理されます
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>在庫アラート設定</CardTitle>
+              <CardDescription>消耗品などの在庫切れアラートを設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>在庫アラート閾値</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={settings.assets.lowStockAlertThreshold}
+                    onChange={(e) => updateSettings({
+                      assets: { ...settings.assets, lowStockAlertThreshold: Number(e.target.value) }
+                    })}
+                    min="0"
+                    max="100"
+                  />
+                  <span className="text-sm text-muted-foreground">個</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  在庫数が{settings.assets.lowStockAlertThreshold}個以下になるとアラート通知
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>返却リマインダー設定</CardTitle>
+              <CardDescription>貸出資産の返却期限リマインダーを設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>返却リマインダーを有効化</Label>
+                  <p className="text-sm text-muted-foreground">
+                    返却期限が近づいた際に自動通知します
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.assets.enableReturnReminder}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      assets: { ...settings.assets, enableReturnReminder: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              {settings.assets.enableReturnReminder && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>リマインダー送信日数</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={settings.assets.returnReminderDays}
+                        onChange={(e) => updateSettings({
+                          assets: { ...settings.assets, returnReminderDays: Number(e.target.value) }
+                        })}
+                        min="1"
+                        max="30"
+                      />
+                      <span className="text-sm text-muted-foreground">日前</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      返却期限の{settings.assets.returnReminderDays}日前にリマインダー送信
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>自動割当設定</CardTitle>
+              <CardDescription>新入社員への資産自動割当を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>自動割当を有効化</Label>
+                  <p className="text-sm text-muted-foreground">
+                    入社時に標準資産（PC、モニター等）を自動割当
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.assets.enableAutoAssignment}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      assets: { ...settings.assets, enableAutoAssignment: checked }
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              これらの設定は、資産管理画面の動作に反映されます。
+              定期的な棚卸実施により、資産の適切な管理を維持しましょう。
+            </AlertDescription>
+          </Alert>
+        </TabsContent>
+
+        {/* SaaS管理設定 */}
+        <TabsContent value="saas" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>予算設定</CardTitle>
+              <CardDescription>月額予算とアラート設定を管理します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>月額予算上限</Label>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="number"
+                      value={settings.saas.monthlyBudget}
+                      onChange={(e) => updateSettings({
+                        saas: { ...settings.saas, monthlyBudget: Number(e.target.value) }
+                      })}
+                      min="0"
+                      step="10000"
+                    />
+                    <span className="text-sm text-muted-foreground">円</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    SaaSサービスの月額合計予算を設定します
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>予算超過アラート閾値</Label>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-orange-500" />
+                    <Input
+                      type="number"
+                      value={settings.saas.budgetAlertThreshold}
+                      onChange={(e) => updateSettings({
+                        saas: { ...settings.saas, budgetAlertThreshold: Number(e.target.value) }
+                      })}
+                      min="0"
+                      max="100"
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    予算の{settings.saas.budgetAlertThreshold}%（¥{Math.floor(settings.saas.monthlyBudget * settings.saas.budgetAlertThreshold / 100).toLocaleString()}）を超えるとアラート
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>未使用ライセンス検出</CardTitle>
+              <CardDescription>使用されていないライセンスを自動検出してコスト削減を支援します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>未使用ライセンス検出を有効化</Label>
+                  <p className="text-sm text-muted-foreground">
+                    一定期間使用されていないライセンスを検出します
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.saas.enableUnusedLicenseAlert}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      saas: { ...settings.saas, enableUnusedLicenseAlert: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              {settings.saas.enableUnusedLicenseAlert && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>未使用と判定する日数</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={settings.saas.unusedLicenseDays}
+                        onChange={(e) => updateSettings({
+                          saas: { ...settings.saas, unusedLicenseDays: Number(e.target.value) }
+                        })}
+                        min="1"
+                        max="365"
+                      />
+                      <span className="text-sm text-muted-foreground">日間</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      最終使用日から{settings.saas.unusedLicenseDays}日間使用がない場合、未使用ライセンスとして検出されます
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              これらの設定は、SaaS管理画面のサマリーカードやアラート機能に反映されます。
+              定期的に見直して、適切な予算管理を行いましょう。
+            </AlertDescription>
+          </Alert>
         </TabsContent>
 
         {/* データ管理 */}
