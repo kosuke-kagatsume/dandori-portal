@@ -77,15 +77,19 @@ class PDFFontLoader {
   }
 
   /**
-   * Noto Sans JP フォントを読み込んでjsPDFに登録
+   * フォントをプリロード（jsPDFインスタンス不要）
+   * アプリ起動時やページ表示時に呼び出すことで、後のPDF生成を高速化
    */
-  public async loadFont(doc: jsPDF): Promise<FontLoaderResult> {
+  public async preloadFont(): Promise<FontLoaderResult> {
     try {
-      // 既にロード済みの場合は再利用
+      // 既にロード済みの場合はスキップ
       if (this.cache.loaded && this.cache.data) {
-        this.registerFont(doc, this.cache.data);
+        console.log('[PDFFontLoader] Font already preloaded');
         return { success: true };
       }
+
+      console.log('[PDFFontLoader] Preloading font...');
+      const startTime = performance.now();
 
       // フォントを取得
       const response = await fetch(FONT_CONFIG.FONT_PATH);
@@ -105,16 +109,49 @@ class PDFFontLoader {
       this.cache.loaded = true;
       this.cache.error = null;
 
-      // jsPDFに登録
-      this.registerFont(doc, base64);
+      const loadTime = Math.round(performance.now() - startTime);
+      console.log(`[PDFFontLoader] Font preloaded successfully in ${loadTime}ms`);
 
-      console.log('[PDFFontLoader] Noto Sans JP font loaded successfully');
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[PDFFontLoader] Failed to preload font:', errorMessage);
+
+      this.cache.error = error instanceof Error ? error : new Error(errorMessage);
+
+      return {
+        success: false,
+        error: `フォントのプリロードに失敗しました: ${errorMessage}`,
+      };
+    }
+  }
+
+  /**
+   * Noto Sans JP フォントを読み込んでjsPDFに登録
+   */
+  public async loadFont(doc: jsPDF): Promise<FontLoaderResult> {
+    try {
+      // 既にロード済みの場合は再利用
+      if (this.cache.loaded && this.cache.data) {
+        this.registerFont(doc, this.cache.data);
+        return { success: true };
+      }
+
+      // プリロードされていない場合は、ここで読み込む
+      const preloadResult = await this.preloadFont();
+      if (!preloadResult.success) {
+        throw new Error(preloadResult.error || 'Font preload failed');
+      }
+
+      // jsPDFに登録
+      if (this.cache.data) {
+        this.registerFont(doc, this.cache.data);
+      }
+
       return { success: true };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('[PDFFontLoader] Failed to load Japanese font:', errorMessage);
-
-      this.cache.error = error instanceof Error ? error : new Error(errorMessage);
 
       // フォールバック: helveticaを使用
       this.setFallbackFont(doc);
