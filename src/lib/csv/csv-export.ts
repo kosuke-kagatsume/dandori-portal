@@ -1,7 +1,22 @@
-// CSV出力ユーティリティ
+/**
+ * CSV出力ユーティリティ
+ * 勤怠・給与・賞与データのCSV出力機能
+ */
 
-// CSVエスケープ処理
-const escapeCSV = (value: any): string => {
+import type { AttendanceRecord, PayrollRecord, BonusRecord, CSVExportResult } from '@/types/csv';
+import {
+  getWorkLocationLabel,
+  getStatusLabel,
+  getApprovalStatusLabel,
+  getBonusTypeLabel,
+} from '@/config/labels';
+
+// ===== ヘルパー関数 =====
+
+/**
+ * CSVエスケープ処理
+ */
+const escapeCSV = (value: string | number | null | undefined): string => {
   if (value === null || value === undefined) return '';
   const str = String(value);
   // カンマ、改行、ダブルクォートを含む場合はダブルクォートで囲む
@@ -11,225 +26,236 @@ const escapeCSV = (value: any): string => {
   return str;
 };
 
-// CSV文字列を生成
-const generateCSVString = (headers: string[], rows: string[][]): string => {
+/**
+ * CSV文字列を生成
+ */
+const generateCSVString = (headers: string[], rows: (string | number)[][]): string => {
   const headerRow = headers.map(escapeCSV).join(',');
-  const dataRows = rows.map(row => row.map(escapeCSV).join(',')).join('\n');
+  const dataRows = rows.map((row) => row.map(escapeCSV).join(',')).join('\n');
   return `${headerRow}\n${dataRows}`;
 };
 
-// CSVファイルをダウンロード
-const downloadCSV = (csvString: string, filename: string) => {
-  // BOM付きUTF-8に変換（Excel対応）
-  const bom = '\uFEFF';
-  const blob = new Blob([bom + csvString], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+/**
+ * CSVファイルをダウンロード
+ */
+const downloadCSV = (csvString: string, filename: string): void => {
+  try {
+    // BOM付きUTF-8に変換（Excel対応）
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('CSV download failed:', error);
+    throw new Error('CSVファイルのダウンロードに失敗しました');
+  }
 };
 
-// 勤怠データをCSV出力
-export const exportAttendanceToCSV = (records: any[], filename?: string) => {
-  const headers = [
-    '従業員ID',
-    '従業員名',
-    '日付',
-    '出勤時刻',
-    '退勤時刻',
-    '休憩開始',
-    '休憩終了',
-    '休憩時間(分)',
-    '勤務時間(分)',
-    '残業時間(分)',
-    '勤務場所',
-    'ステータス',
-    '承認状況',
-    'メモ',
-  ];
-
-  const rows = records.map(record => [
-    record.userId || '',
-    record.userName || '',
-    record.date || '',
-    record.checkIn || '',
-    record.checkOut || '',
-    record.breakStart || '',
-    record.breakEnd || '',
-    record.totalBreakMinutes || 0,
-    record.workMinutes || 0,
-    record.overtimeMinutes || 0,
-    getWorkLocationLabel(record.workLocation),
-    getStatusLabel(record.status),
-    getApprovalStatusLabel(record.approvalStatus),
-    record.memo || '',
-  ]);
-
-  const csvString = generateCSVString(headers, rows);
-  const defaultFilename = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
-  downloadCSV(csvString, filename || defaultFilename);
+/**
+ * 現在日付を「YYYY-MM-DD」形式で取得
+ */
+const getCurrentDate = (): string => {
+  return new Date().toISOString().split('T')[0];
 };
 
-// 給与データをCSV出力
-export const exportPayrollToCSV = (calculations: any[], filename?: string) => {
-  const headers = [
-    '従業員ID',
-    '従業員名',
-    '部署',
-    '支給年月',
-    '基本給',
-    '役職手当',
-    '資格手当',
-    '住宅手当',
-    '家族手当',
-    '通勤手当',
-    '残業手当',
-    '深夜手当',
-    '休日手当',
-    '手当合計',
-    '総支給額',
-    '健康保険',
-    '厚生年金',
-    '雇用保険',
-    '所得税',
-    '住民税',
-    '控除合計',
-    '差引支給額',
-    '勤務日数',
-    '総労働時間',
-  ];
+// ===== エクスポート関数 =====
 
-  const rows = calculations.map(calc => [
-    calc.employeeId || '',
-    calc.employeeName || '',
-    calc.department || '',
-    calc.period || '',
-    calc.basicSalary || 0,
-    calc.positionAllowance || 0,
-    calc.skillAllowance || 0,
-    calc.housingAllowance || 0,
-    calc.familyAllowance || 0,
-    calc.commutingAllowance || 0,
-    calc.overtimePay || 0,
-    calc.lateNightPay || 0,
-    calc.holidayPay || 0,
-    calc.totalAllowances || 0,
-    calc.grossSalary || 0,
-    calc.healthInsurance || 0,
-    calc.pension || 0,
-    calc.employmentInsurance || 0,
-    calc.incomeTax || 0,
-    calc.residentTax || 0,
-    calc.totalDeductions || 0,
-    calc.netSalary || 0,
-    calc.workDays || 0,
-    calc.totalWorkHours || 0,
-  ]);
+/**
+ * 勤怠データをCSV出力
+ */
+export const exportAttendanceToCSV = (
+  records: AttendanceRecord[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!records || records.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
 
-  const csvString = generateCSVString(headers, rows);
-  const defaultFilename = `payroll_${new Date().toISOString().split('T')[0]}.csv`;
-  downloadCSV(csvString, filename || defaultFilename);
+    const headers = [
+      '従業員ID',
+      '従業員名',
+      '日付',
+      '出勤時刻',
+      '退勤時刻',
+      '休憩開始',
+      '休憩終了',
+      '休憩時間(分)',
+      '勤務時間(分)',
+      '残業時間(分)',
+      '勤務場所',
+      'ステータス',
+      '承認状況',
+      'メモ',
+    ];
+
+    const rows = records.map((record) => [
+      record.userId,
+      record.userName,
+      record.date,
+      record.checkIn || '',
+      record.checkOut || '',
+      record.breakStart || '',
+      record.breakEnd || '',
+      record.totalBreakMinutes,
+      record.workMinutes,
+      record.overtimeMinutes,
+      getWorkLocationLabel(record.workLocation),
+      getStatusLabel(record.status),
+      getApprovalStatusLabel(record.approvalStatus),
+      record.memo || '',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `attendance_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: records.length,
+    };
+  } catch (error) {
+    console.error('Failed to export attendance CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '勤怠CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
 };
 
-// 賞与データをCSV出力
-export const exportBonusToCSV = (bonuses: any[], filename?: string) => {
-  const headers = [
-    '従業員ID',
-    '従業員名',
-    '部署',
-    '役職',
-    '支給年月',
-    '賞与種別',
-    '基本賞与',
-    '役職賞与',
-    '査定賞与',
-    '特別手当',
-    '総支給額',
-    '健康保険',
-    '厚生年金',
-    '雇用保険',
-    '所得税',
-    '住民税',
-    '控除合計',
-    '差引支給額',
-    '査定評価',
-    '査定スコア',
-    'ステータス',
-  ];
+/**
+ * 給与データをCSV出力
+ */
+export const exportPayrollToCSV = (
+  records: PayrollRecord[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!records || records.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
 
-  const rows = bonuses.map(bonus => [
-    bonus.employeeId || '',
-    bonus.employeeName || '',
-    bonus.department || '',
-    bonus.position || '',
-    bonus.period || '',
-    getBonusTypeLabel(bonus.bonusType),
-    bonus.basicBonus || 0,
-    bonus.positionBonus || 0,
-    bonus.performanceBonus || 0,
-    bonus.specialAllowance || 0,
-    bonus.totalGrossBonus || 0,
-    bonus.healthInsurance || 0,
-    bonus.pension || 0,
-    bonus.employmentInsurance || 0,
-    bonus.incomeTax || 0,
-    bonus.residentTax || 0,
-    bonus.totalDeductions || 0,
-    bonus.netBonus || 0,
-    bonus.performanceRating || '',
-    bonus.performanceScore || 0,
-    getStatusLabel(bonus.status),
-  ]);
+    const headers = [
+      '従業員ID',
+      '従業員名',
+      '部署',
+      '支給年月',
+      '基本給',
+      '手当合計',
+      '総支給額',
+      '控除合計',
+      '差引支給額',
+      'ステータス',
+      '支払日',
+    ];
 
-  const csvString = generateCSVString(headers, rows);
-  const defaultFilename = `bonus_${new Date().toISOString().split('T')[0]}.csv`;
-  downloadCSV(csvString, filename || defaultFilename);
+    const rows = records.map((record) => [
+      record.employeeId,
+      record.employeeName,
+      record.department,
+      record.period,
+      record.basicSalary,
+      record.totalAllowances,
+      record.basicSalary + record.totalAllowances,
+      record.totalDeductions,
+      record.netSalary,
+      getStatusLabel(record.status),
+      record.paymentDate || '',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `payroll_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: records.length,
+    };
+  } catch (error) {
+    console.error('Failed to export payroll CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '給与CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
 };
 
-// ヘルパー関数
-const getWorkLocationLabel = (location?: string): string => {
-  const labels: { [key: string]: string } = {
-    office: 'オフィス',
-    home: '在宅',
-    client: '客先',
-    other: 'その他',
-  };
-  return labels[location || ''] || '';
-};
+/**
+ * 賞与データをCSV出力
+ */
+export const exportBonusToCSV = (
+  records: BonusRecord[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!records || records.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
 
-const getStatusLabel = (status?: string): string => {
-  const labels: { [key: string]: string } = {
-    present: '出勤',
-    absent: '欠勤',
-    holiday: '休日',
-    leave: '休暇',
-    late: '遅刻',
-    early: '早退',
-    draft: '下書き',
-    approved: '承認済み',
-    paid: '支払済み',
-  };
-  return labels[status || ''] || '';
-};
+    const headers = [
+      '従業員ID',
+      '従業員名',
+      '部署',
+      '支給年月',
+      '賞与種別',
+      '基本賞与',
+      '査定賞与',
+      '査定評価',
+      '控除合計',
+      '差引支給額',
+      'ステータス',
+      '支払日',
+    ];
 
-const getApprovalStatusLabel = (status?: string): string => {
-  const labels: { [key: string]: string } = {
-    pending: '承認待ち',
-    approved: '承認済み',
-    rejected: '却下',
-  };
-  return labels[status || ''] || '';
-};
+    const rows = records.map((record) => [
+      record.employeeId,
+      record.employeeName,
+      record.department,
+      record.period,
+      getBonusTypeLabel(record.bonusType),
+      record.basicBonus,
+      record.performanceBonus,
+      record.performanceRating,
+      record.totalDeductions,
+      record.netBonus,
+      getStatusLabel(record.status),
+      record.paymentDate || '',
+    ]);
 
-const getBonusTypeLabel = (type?: string): string => {
-  const labels: { [key: string]: string } = {
-    summer: '夏季賞与',
-    winter: '冬季賞与',
-    special: '特別賞与',
-  };
-  return labels[type || ''] || '';
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `bonus_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: records.length,
+    };
+  } catch (error) {
+    console.error('Failed to export bonus CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '賞与CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
 };
