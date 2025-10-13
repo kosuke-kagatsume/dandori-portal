@@ -19,6 +19,7 @@ import {
   Calculator,
   Car,
   Cloud,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -33,6 +34,7 @@ const navigation = [
   { key: 'leave', href: '/ja/leave', icon: Calendar, adminOnly: false },
   { key: 'workflow', href: '/ja/workflow', icon: GitBranch, adminOnly: false },
   { key: 'payroll', href: '/ja/payroll', icon: Calculator, adminOnly: false },
+  { key: 'evaluation', href: '/ja/evaluation', icon: Star, adminOnly: false },
   { key: 'assets', href: '/ja/assets', icon: Car, adminOnly: false },
   { key: 'saas', href: '/ja/saas', icon: Cloud, adminOnly: false },
   // { key: 'sites', href: '/ja/sites', icon: MapPin, adminOnly: false }, // 未実装
@@ -56,6 +58,7 @@ export function Sidebar() {
       'approval': '承認管理',
       'workflow': 'ワークフロー',
       'payroll': '給与管理',
+      'evaluation': '人事評価',
       'assets': '資産管理',
       'saas': 'SaaS管理',
       'organization': '組織管理',
