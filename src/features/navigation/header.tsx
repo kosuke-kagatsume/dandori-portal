@@ -128,7 +128,7 @@ export function Header() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="検索... (⌘K)"
+                placeholder="検索..."
                 className="pl-9"
                 onFocus={() => setCommandPaletteOpen(true)}
                 readOnly

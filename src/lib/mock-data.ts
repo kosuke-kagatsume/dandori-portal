@@ -272,7 +272,7 @@ export function generateLeaveData() {
 export function getDashboardStats() {
   const users = generateMockUsers();
   const attendance = generateAttendanceData();
-  
+
   return {
     totalEmployees: 50,
     todayAttendance: attendance.filter(a => a.status !== '休暇').length,
@@ -282,4 +282,212 @@ export function getDashboardStats() {
     completedTasks: 234,
     upcomingDeadlines: 8
   };
+}
+
+// ユーザーの勤怠履歴を生成（指定月数分）
+export function generateUserAttendanceHistory(userId: string, userName: string, months: number = 6) {
+  const records = [];
+  const today = new Date();
+
+  // 過去N ヶ月分の勤怠データを生成
+  for (let m = 0; m < months; m++) {
+    const targetDate = new Date(today);
+    targetDate.setMonth(targetDate.getMonth() - m);
+
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // その月の各日の勤怠を生成
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day);
+      const dayOfWeek = date.getDay();
+
+      // 土日はスキップ（一部は休日出勤）
+      if ((dayOfWeek === 0 || dayOfWeek === 6) && Math.random() > 0.05) continue;
+
+      // 将来の日付はスキップ
+      if (date > today) continue;
+
+      // 10%の確率で欠勤・休暇
+      const isAbsent = Math.random() < 0.02; // 2%欠勤
+      const isLeave = Math.random() < 0.08; // 8%休暇
+
+      if (isAbsent) {
+        records.push({
+          id: `attendance-${userId}-${date.toISOString().split('T')[0]}`,
+          userId,
+          userName,
+          date: date.toISOString().split('T')[0],
+          checkIn: null,
+          checkOut: null,
+          breakStart: null,
+          breakEnd: null,
+          totalBreakMinutes: 0,
+          workMinutes: 0,
+          overtimeMinutes: 0,
+          workLocation: 'office' as const,
+          status: 'absent' as const,
+          createdAt: date.toISOString(),
+          updatedAt: date.toISOString(),
+        });
+        continue;
+      }
+
+      if (isLeave) {
+        records.push({
+          id: `attendance-${userId}-${date.toISOString().split('T')[0]}`,
+          userId,
+          userName,
+          date: date.toISOString().split('T')[0],
+          checkIn: null,
+          checkOut: null,
+          breakStart: null,
+          breakEnd: null,
+          totalBreakMinutes: 0,
+          workMinutes: 0,
+          overtimeMinutes: 0,
+          workLocation: 'office' as const,
+          status: 'leave' as const,
+          createdAt: date.toISOString(),
+          updatedAt: date.toISOString(),
+        });
+        continue;
+      }
+
+      // 通常の出勤
+      const isLate = Math.random() < 0.10; // 10%遅刻
+      const isEarly = Math.random() < 0.05; // 5%早退
+      const isRemote = Math.random() < 0.20; // 20%在宅
+
+      const checkInHour = isLate ? 9 + Math.floor(Math.random() * 2) : 9;
+      const checkInMinute = Math.floor(Math.random() * 60);
+      const checkIn = `${String(checkInHour).padStart(2, '0')}:${String(checkInMinute).padStart(2, '0')}`;
+
+      const checkOutHour = isEarly ? 16 + Math.floor(Math.random() * 2) : 18 + Math.floor(Math.random() * 3);
+      const checkOutMinute = Math.floor(Math.random() * 60);
+      const checkOut = `${String(checkOutHour).padStart(2, '0')}:${String(checkOutMinute).padStart(2, '0')}`;
+
+      // 勤務時間計算（分単位）
+      const checkInTime = checkInHour * 60 + checkInMinute;
+      const checkOutTime = checkOutHour * 60 + checkOutMinute;
+      const totalMinutes = checkOutTime - checkInTime;
+      const breakMinutes = 60; // 1時間休憩
+      const workMinutes = totalMinutes - breakMinutes;
+      const overtimeMinutes = Math.max(0, workMinutes - 480); // 8時間超過分
+
+      records.push({
+        id: `attendance-${userId}-${date.toISOString().split('T')[0]}`,
+        userId,
+        userName,
+        date: date.toISOString().split('T')[0],
+        checkIn,
+        checkOut,
+        breakStart: '12:00',
+        breakEnd: '13:00',
+        totalBreakMinutes: breakMinutes,
+        workMinutes,
+        overtimeMinutes,
+        workLocation: isRemote ? 'home' as const : 'office' as const,
+        status: isLate ? 'late' as const : isEarly ? 'early' as const : 'present' as const,
+        createdAt: date.toISOString(),
+        updatedAt: date.toISOString(),
+      });
+    }
+  }
+
+  return records;
+}
+
+// ユーザーの給与計算履歴を生成（指定月数分）
+export function generateUserPayrollHistory(userId: string, userName: string, department: string, position: string, months: number = 12) {
+  const calculations = [];
+  const today = new Date();
+
+  // 基本給を役職に応じて設定
+  const baseSalaries: Record<string, number> = {
+    '代表取締役': 800000,
+    '専務取締役': 700000,
+    '常務取締役': 650000,
+    '本部長': 600000,
+    '部長': 550000,
+    '次長': 500000,
+    '課長': 450000,
+    '係長': 400000,
+    '主任': 380000,
+    'リーダー': 360000,
+    'シニアエンジニア': 500000,
+    'エンジニア': 420000,
+    'ジュニアエンジニア': 320000,
+    'マネージャー': 480000,
+    'スペシャリスト': 450000,
+    'アナリスト': 400000,
+    'コンサルタント': 450000,
+    '一般社員': 300000,
+  };
+
+  const basicSalary = baseSalaries[position] || 350000;
+
+  for (let m = 0; m < months; m++) {
+    const targetDate = new Date(today);
+    targetDate.setMonth(targetDate.getMonth() - m);
+    const period = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+
+    // 手当
+    const positionAllowance = position.includes('長') || position.includes('役') ? Math.floor(basicSalary * 0.1) : 0;
+    const housingAllowance = Math.random() > 0.5 ? 30000 : 0;
+    const commuteAllowance = Math.floor(Math.random() * 20000) + 5000;
+    const familyAllowance = Math.random() > 0.6 ? (Math.floor(Math.random() * 3) + 1) * 10000 : 0;
+
+    // 労働時間（160～180時間）
+    const totalWorkHours = 160 + Math.floor(Math.random() * 21);
+    const overtimeHours = Math.max(0, totalWorkHours - 160);
+
+    // 残業代（時給の1.25倍）
+    const hourlyRate = Math.floor(basicSalary / 160);
+    const overtimePay = Math.floor(hourlyRate * 1.25 * overtimeHours);
+
+    // 総支給額
+    const grossSalary = basicSalary + positionAllowance + housingAllowance + commuteAllowance + familyAllowance + overtimePay;
+
+    // 控除
+    const healthInsurance = Math.floor(grossSalary * 0.0495); // 健康保険4.95%
+    const pensionInsurance = Math.floor(grossSalary * 0.09150); // 厚生年金9.15%
+    const employmentInsurance = Math.floor(grossSalary * 0.006); // 雇用保険0.6%
+    const incomeTax = Math.floor(grossSalary * 0.0521); // 所得税5.21%
+    const residentTax = Math.floor(grossSalary * 0.10); // 住民税10%
+
+    const totalDeductions = healthInsurance + pensionInsurance + employmentInsurance + incomeTax + residentTax;
+    const netSalary = grossSalary - totalDeductions;
+
+    calculations.push({
+      id: `payroll-${userId}-${period}`,
+      employeeId: userId,
+      employeeName: userName,
+      department,
+      position,
+      period,
+      basicSalary,
+      positionAllowance,
+      housingAllowance,
+      commuteAllowance,
+      familyAllowance,
+      overtimePay,
+      grossSalary,
+      healthInsurance,
+      pensionInsurance,
+      employmentInsurance,
+      incomeTax,
+      residentTax,
+      totalDeductions,
+      netSalary,
+      totalWorkHours,
+      overtimeHours,
+      status: 'paid' as const,
+      paidDate: `${period}-25`,
+      calculatedAt: targetDate.toISOString(),
+    });
+  }
+
+  return calculations;
 }

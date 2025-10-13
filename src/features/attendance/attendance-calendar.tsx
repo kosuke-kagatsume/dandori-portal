@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,11 +13,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { 
-  Clock, 
-  Calendar as CalendarIcon, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Clock,
+  Calendar as CalendarIcon,
+  CheckCircle,
+  XCircle,
   Home,
   MapPin,
   Edit,
@@ -25,6 +25,7 @@ import {
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { MountGate } from '@/components/common/MountGate';
 
 interface AttendanceRecord {
   date: Date;
@@ -45,6 +46,51 @@ export function AttendanceCalendar({ records }: AttendanceCalendarProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // カレンダーのセルサイズを強制的に固定
+  useEffect(() => {
+    const fixCalendarSize = () => {
+      const cells = document.querySelectorAll('.rdp .rdp-day, .rdp td');
+      const buttons = document.querySelectorAll('.rdp button, .rdp .rdp-button');
+
+      cells.forEach((cell) => {
+        if (cell instanceof HTMLElement) {
+          cell.style.width = '36px';
+          cell.style.height = '36px';
+          cell.style.minWidth = '36px';
+          cell.style.minHeight = '36px';
+          cell.style.maxWidth = '36px';
+          cell.style.maxHeight = '36px';
+          cell.style.padding = '0';
+        }
+      });
+
+      buttons.forEach((button) => {
+        if (button instanceof HTMLElement) {
+          button.style.width = '36px';
+          button.style.height = '36px';
+          button.style.minWidth = '36px';
+          button.style.minHeight = '36px';
+          button.style.maxWidth = '36px';
+          button.style.maxHeight = '36px';
+          button.style.padding = '0';
+          button.style.margin = '0';
+          button.style.display = 'inline-flex';
+          button.style.alignItems = 'center';
+          button.style.justifyContent = 'center';
+        }
+      });
+    };
+
+    // 初回実行
+    fixCalendarSize();
+
+    // 0.5秒後にもう一度実行（CSSが適用された後）
+    const timer = setTimeout(fixCalendarSize, 500);
+
+    // クリーンアップ
+    return () => clearTimeout(timer);
+  }, [date]);
 
   const getRecordForDate = (date: Date) => {
     return records.find(record => 
@@ -129,12 +175,112 @@ export function AttendanceCalendar({ records }: AttendanceCalendarProps) {
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Calendar */}
             <div className="flex-1">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border"
-              />
+              <MountGate
+                fallback={
+                  <div className="w-full h-96 flex items-center justify-center">
+                    <div className="animate-pulse text-muted-foreground">
+                      カレンダーを読み込み中...
+                    </div>
+                  </div>
+                }
+              >
+                <div className="calendar-wrapper not-prose">
+                  <style dangerouslySetInnerHTML={{
+                    __html: `
+                      .calendar-wrapper .rdp table {
+                        display: table !important;
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        table-layout: fixed !important;
+                      }
+                      .calendar-wrapper .rdp thead {
+                        display: table-header-group !important;
+                      }
+                      .calendar-wrapper .rdp tbody {
+                        display: table-row-group !important;
+                      }
+                      .calendar-wrapper .rdp tr {
+                        display: table-row !important;
+                        width: 100% !important;
+                      }
+                      .calendar-wrapper .rdp th,
+                      .calendar-wrapper .rdp td {
+                        display: table-cell !important;
+                        vertical-align: middle !important;
+                        text-align: center !important;
+                        width: 14.2857% !important;
+                      }
+                      /* .rdp-weekdays は <tr> 要素 */
+                      .calendar-wrapper .rdp-weekdays,
+                      .calendar-wrapper thead tr {
+                        display: table-row !important;
+                        width: 100% !important;
+                      }
+                      /* .rdp-weekday は <th> 要素 - 最優先 */
+                      .calendar-wrapper .rdp-weekday,
+                      .calendar-wrapper thead th {
+                        display: table-cell !important;
+                        vertical-align: middle !important;
+                        text-align: center !important;
+                        width: 14.2857% !important;
+                        min-width: 40px !important;
+                        max-width: none !important;
+                      }
+                    `
+                  }} />
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    className="w-full rounded-md border"
+                    styles={{
+                      table: { display: 'table', width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' },
+                      month_grid: { width: '100%' },
+                      weekdays: { display: 'table-row', width: '100%' },
+                      weekday: { display: 'table-cell', textAlign: 'center', verticalAlign: 'middle', width: '14.2857%' },
+                      week: { display: 'table-row', width: '100%' },
+                      head_row: { display: 'table-row' },
+                      row: { display: 'table-row' },
+                      day: {
+                        display: 'table-cell',
+                        textAlign: 'center',
+                        verticalAlign: 'middle',
+                        width: '36px',
+                        height: '36px',
+                        minWidth: '36px',
+                        minHeight: '36px',
+                        maxWidth: '36px',
+                        maxHeight: '36px',
+                        padding: '0',
+                        overflow: 'hidden',
+                      },
+                      day_button: {
+                        width: '36px',
+                        height: '36px',
+                        minWidth: '36px',
+                        minHeight: '36px',
+                        maxWidth: '36px',
+                        maxHeight: '36px',
+                        padding: '0',
+                        margin: '0',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        background: 'transparent',
+                      },
+                    }}
+                    classNames={{
+                      table: "w-full border-collapse",
+                      month_grid: "w-full",
+                      weekdays: "w-full",
+                      weekday: "text-muted-foreground select-none text-[0.8rem] font-normal",
+                      week: "mt-2 w-full",
+                      // ⛔️ row/head_row を定義しない（grid grid-cols-7 を当てない）
+                    }}
+                  />
+                </div>
+              </MountGate>
             </div>
 
             {/* Legend and Summary */}

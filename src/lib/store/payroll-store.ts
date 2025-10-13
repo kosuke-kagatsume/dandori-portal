@@ -501,6 +501,10 @@ type PayrollState = {
   getCalculationsByPeriod: (period: string) => PayrollCalculation[];
   getSalaryMaster: (employeeId: string) => EmployeeSalaryMaster | undefined;
 
+  // データ追加メソッド（モックデータ用）
+  addCalculation: (calculation: PayrollCalculation) => void;
+  addMultipleCalculations: (calculations: PayrollCalculation[]) => void;
+
   // 賞与関連メソッド
   calculateBonus: (employeeId: string, period: string, bonusType: 'summer' | 'winter' | 'special') => BonusCalculation;
   calculateAllEmployeesBonus: (period: string, bonusType: 'summer' | 'winter' | 'special') => BonusCalculation[];
@@ -549,6 +553,19 @@ const createPayrollStore = () => {
 
           getCalculationsByPeriod: (period: string) => {
             return get().calculations.filter((c: PayrollCalculation) => c.period === period);
+          },
+
+          // モックデータ追加用メソッド
+          addCalculation: (calculation: PayrollCalculation) => {
+            set((state: PayrollState) => ({
+              calculations: [...state.calculations, calculation]
+            }));
+          },
+
+          addMultipleCalculations: (calculations: PayrollCalculation[]) => {
+            set((state: PayrollState) => ({
+              calculations: [...state.calculations, ...calculations]
+            }));
           },
 
           calculatePayroll: (employeeId: string, period: string) => {

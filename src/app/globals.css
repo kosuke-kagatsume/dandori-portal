@@ -1,10 +1,87 @@
 @import '../styles/tokens.css';
 @import '../styles/brand-colors.css';
+@import 'react-day-picker/dist/style.css';
 @import '../styles/calendar-fix.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ✅ DayPicker を確実に 7 列テーブルに戻す強制レイアウト */
+.rdp table { display: table !important; width: 100%; border-collapse: collapse; table-layout: fixed; }
+.rdp thead { display: table-header-group !important; }
+.rdp tbody { display: table-row-group !important; }
+.rdp tr    { display: table-row !important; }
+.rdp th,
+.rdp td    { display: table-cell !important; vertical-align: middle; text-align: center; }
+
+/* （複数月表示を使うなら） */
+.rdp-months { display: flex !important; gap: 1rem; }
+
+/* ==== DayPicker配下のボタン肥大化を確実に止める ==== */
+.rdp {
+  --rdp-cell-size: 36px;              /* 好みで 32〜40px に */
+  --rdp-accent-color: rgb(37 99 235); /* 任意 */
+}
+
+.rdp * { box-sizing: border-box; }
+
+/* ここが本命：漏れたボタン系ユーティリティを無効化してサイズ固定 */
+.rdp .rdp-button,
+.rdp .rdp-day_button,
+.rdp button,
+.rdp .rdp-day > button,
+.rdp td > button,
+.rdp .rdp-day button {
+  /* all: unset は使わない - 特定プロパティだけ上書き */
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: var(--rdp-cell-size) !important;
+  height: var(--rdp-cell-size) !important;
+  min-width: var(--rdp-cell-size) !important;
+  min-height: var(--rdp-cell-size) !important;
+  max-width: var(--rdp-cell-size) !important;
+  max-height: var(--rdp-cell-size) !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: 14px !important;
+  font-weight: normal !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s !important;
+}
+
+/* セル自体のサイズも制限 */
+.rdp .rdp-cell {
+  padding: 0 !important;
+}
+
+.rdp .rdp-day {
+  all: unset;
+  display: inline-flex;
+  width: var(--rdp-cell-size);
+  height: var(--rdp-cell-size);
+  line-height: var(--rdp-cell-size);
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+/* 選択状態の見た目 */
+.rdp .rdp-day_selected {
+  background: var(--rdp-accent-color);
+  color: #fff;
+}
+
+/* 曜日ヘッダも詰める */
+.rdp-weekday { padding: 4px 0; font-size: 12px; color: rgb(107 114 128); } /* text-gray-500 */
 
 @layer utilities {
   @keyframes shimmer {

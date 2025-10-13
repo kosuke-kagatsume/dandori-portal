@@ -1,6 +1,57 @@
-/* カレンダーコンポーネント基本調整（react-day-picker v9.9.0 + style.css使用） */
+/* DayPickerのレイアウトを"表"に戻す強制リセット */
+.rdp table {
+  display: table !important;
+  width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: fixed !important;
+}
 
-/* 必要最小限の調整のみ */
-.rdp {
-  --rdp-cell-size: 2.5rem;
+.rdp thead {
+  display: table-header-group !important;
+}
+
+.rdp tbody {
+  display: table-row-group !important;
+}
+
+.rdp tr {
+  display: table-row !important;
+}
+
+.rdp th,
+.rdp td {
+  display: table-cell !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+}
+
+/* 曜日ヘッダー行を強制 */
+/* .rdp-weekdays は <tr> 要素なので table-row */
+.rdp-weekdays {
+  display: table-row !important;
+  width: 100% !important;
+}
+
+.rdp thead tr {
+  display: table-row !important;
+}
+
+/* .rdp-weekday は <th> 要素 */
+.rdp-weekday {
+  display: table-cell !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+  width: calc(100% / 7) !important;
+}
+
+.rdp thead th {
+  display: table-cell !important;
+  vertical-align: middle !important;
+  text-align: center !important;
+}
+
+/* 複数月用の横並び（必要なら） */
+.rdp-months {
+  display: flex !important;
+  gap: 1rem !important;
 }

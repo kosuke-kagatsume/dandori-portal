@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,21 @@ import { Loader2, LogIn, UserPlus, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return <ActualLoginForm />;
+}
+
+function ActualLoginForm() {
   const router = useRouter();
   const supabase = createClient();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   

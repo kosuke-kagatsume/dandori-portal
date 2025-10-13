@@ -333,4 +333,46 @@ type RetirementReason =
 
 ---
 
-**最重要**: Hydrationエラーと白画面認証問題は完全に解決済み。再発防止策も実装済み。Tabsレイアウト問題も恒久対策完了。
+---
+
+### 📅 カレンダーレイアウト問題（2025-10-12）- 未解決
+
+#### 問題の症状
+- **初回表示時**: カレンダーが正しく7列で表示される ✅
+- **リロード後**: 左列だけが巨大化、または全体が崩れる ❌
+- **パターン**: 「初回OK、リロード後NG」が一貫して再現
+
+#### 根本原因の推測
+react-day-pickerのハイドレーション時に、`row`/`head_row` に `grid grid-cols-7` が動的に適用され、table レイアウトが壊れる。
+
+#### 実施した修正（12回以上）
+1. globals.css への table 強制レイアウト（!important）
+2. ボタンサイズの強制固定（CSS変数）
+3. セル自体のサイズ制限
+4. 選択状態のセル固定
+5. calendar.tsx から `aspect-square h-full w-full` 削除
+6. `defaultClassNames.day` 削除
+7. attendance-calendar.tsx の `styles` プロパティでインラインスタイル
+8. attendance-calendar.tsx のインラインCSS（`<style>`タグ）
+9. useEffect でDOM直接操作（初回実行）
+10. useEffect でDOM直接操作（遅延実行追加）
+11. **NEW**: `not-prose` クラス追加（typography対策）
+12. **NEW**: `styles` プロップで `display: table-row` をインラインスタイル強制
+
+#### 現在のファイル状態
+- ✅ `src/components/ui/calendar.tsx`: `not-prose` + inline styles
+- ✅ `src/features/attendance/attendance-calendar.tsx`: `not-prose` + inline styles
+- ✅ `src/app/globals.css`: table 強制 + `.rdp .rdp-day { all: unset; }`
+
+#### 次回への引き継ぎ
+- [ ] 本番ビルド（`npm run build && npm run start`）で確認
+- [ ] DevTools で `tr.rdp-row` の Computed > display を確認
+- [ ] react-day-picker のバージョン確認・アップデート検討
+- [ ] 最終手段：完全自作カレンダーまたはライブラリ変更
+
+#### 参考ドキュメント
+- `CALENDAR_BUG_FINAL_REPORT_v3.md` - 全試行の詳細記録
+
+---
+
+**最重要**: Hydrationエラーと白画面認証問題は完全に解決済み。再発防止策も実装済み。Tabsレイアウト問題も恒久対策完了。カレンダー問題は継続調査中。

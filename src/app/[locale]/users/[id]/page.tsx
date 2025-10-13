@@ -16,15 +16,15 @@ import { usePayrollStore } from '@/lib/store/payroll-store';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
 import { categoryLabels } from '@/types/saas';
 import { exportUserSaaSToCSV } from '@/lib/utils/csv-export';
-import { generateMockUsers } from '@/lib/mock-data';
+import { generateMockUsers, generateUserAttendanceHistory, generateUserPayrollHistory } from '@/lib/mock-data';
 import { toast } from 'sonner';
 
 export default function UserDetailPage({ params }: { params: { id: string; locale: string } }) {
   const router = useRouter();
   const { users, setUsers } = useUserStore();
   const { getUserSaaSDetails, getUserTotalCost } = useSaaSStore();
-  const { records: attendanceRecords } = useAttendanceHistoryStore();
-  const { calculations: payrollCalculations } = usePayrollStore();
+  const { records: attendanceRecords, addOrUpdateRecord: addAttendanceRecord } = useAttendanceHistoryStore();
+  const { calculations: payrollCalculations, addMultipleCalculations } = usePayrollStore();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
@@ -35,6 +35,34 @@ export default function UserDetailPage({ params }: { params: { id: string; local
       setUsers(mockUsers);
     }
   }, [users.length, setUsers]);
+
+  // ユーザー詳細表示時に、そのユーザーのデータがない場合は生成
+  useEffect(() => {
+    const user = users.find((u) => u.id === params.id);
+    if (!user) return;
+
+    // 勤怠データがない場合は生成
+    const userAttendanceData = attendanceRecords.filter(r => r.userId === user.id);
+    if (userAttendanceData.length === 0) {
+      const mockAttendance = generateUserAttendanceHistory(user.id, user.name, 6);
+      mockAttendance.forEach(record => {
+        addAttendanceRecord(record);
+      });
+    }
+
+    // 給与データがない場合は生成
+    const userPayrollData = payrollCalculations.filter(c => c.employeeId === user.id);
+    if (userPayrollData.length === 0) {
+      const mockPayroll = generateUserPayrollHistory(
+        user.id,
+        user.name,
+        user.department || '未所属',
+        user.position || '一般社員',
+        12
+      );
+      addMultipleCalculations(mockPayroll);
+    }
+  }, [params.id, users, attendanceRecords, payrollCalculations, addAttendanceRecord, addMultipleCalculations]);
 
   // ユーザー情報を取得
   const user = useMemo(() => {
