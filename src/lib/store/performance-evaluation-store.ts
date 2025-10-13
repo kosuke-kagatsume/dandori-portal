@@ -175,83 +175,83 @@ export const usePerformanceEvaluationStore = create<PerformanceEvaluationStore>(
 
       updateEvaluation: (id, updates) => {
         set((state) => ({
-          evaluations: state.evaluations.map((eval) =>
-            eval.id === id
-              ? { ...eval, ...updates, updatedAt: new Date().toISOString() }
-              : eval
+          evaluations: state.evaluations.map((item) =>
+            item.id === id
+              ? { ...item, ...updates, updatedAt: new Date().toISOString() }
+              : item
           ),
         }));
       },
 
       deleteEvaluation: (id) => {
         set((state) => ({
-          evaluations: state.evaluations.filter((eval) => eval.id !== id),
+          evaluations: state.evaluations.filter((item) => item.id !== id),
         }));
       },
 
       getEvaluation: (id) => {
-        return get().evaluations.find((eval) => eval.id === id);
+        return get().evaluations.find((item) => item.id === id);
       },
 
       getEvaluationsByEmployee: (employeeId) => {
-        return get().evaluations.filter((eval) => eval.employeeId === employeeId);
+        return get().evaluations.filter((item) => item.employeeId === employeeId);
       },
 
       getEvaluationsByPeriod: (fiscalYear, period) => {
         return get().evaluations.filter(
-          (eval) => eval.fiscalYear === fiscalYear && eval.period === period
+          (item) => item.fiscalYear === fiscalYear && item.period === period
         );
       },
 
       getEvaluationsByDepartment: (department) => {
-        return get().evaluations.filter((eval) => eval.department === department);
+        return get().evaluations.filter((item) => item.department === department);
       },
 
       getEvaluationsByStatus: (status) => {
-        return get().evaluations.filter((eval) => eval.status === status);
+        return get().evaluations.filter((item) => item.status === status);
       },
 
       submitEvaluation: (id) => {
         set((state) => ({
-          evaluations: state.evaluations.map((eval) =>
-            eval.id === id
+          evaluations: state.evaluations.map((item) =>
+            item.id === id
               ? {
-                  ...eval,
+                  ...item,
                   status: 'submitted',
                   submittedAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 }
-              : eval
+              : item
           ),
         }));
       },
 
       approveEvaluation: (id) => {
         set((state) => ({
-          evaluations: state.evaluations.map((eval) =>
-            eval.id === id
+          evaluations: state.evaluations.map((item) =>
+            item.id === id
               ? {
-                  ...eval,
+                  ...item,
                   status: 'approved',
                   approvedAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 }
-              : eval
+              : item
           ),
         }));
       },
 
       finalizeEvaluation: (id) => {
         set((state) => ({
-          evaluations: state.evaluations.map((eval) =>
-            eval.id === id
+          evaluations: state.evaluations.map((item) =>
+            item.id === id
               ? {
-                  ...eval,
+                  ...item,
                   status: 'finalized',
                   finalizedAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 }
-              : eval
+              : item
           ),
         }));
       },
@@ -273,39 +273,39 @@ export const usePerformanceEvaluationStore = create<PerformanceEvaluationStore>(
 
       updateBonusEvaluation: (id, updates) => {
         set((state) => ({
-          bonusEvaluations: state.bonusEvaluations.map((eval) =>
-            eval.id === id ? { ...eval, ...updates } : eval
+          bonusEvaluations: state.bonusEvaluations.map((item) =>
+            item.id === id ? { ...item, ...updates } : item
           ),
         }));
       },
 
       getBonusEvaluation: (id) => {
-        return get().bonusEvaluations.find((eval) => eval.id === id);
+        return get().bonusEvaluations.find((item) => item.id === id);
       },
 
       getBonusEvaluationsByEmployee: (employeeId) => {
-        return get().bonusEvaluations.filter((eval) => eval.employeeId === employeeId);
+        return get().bonusEvaluations.filter((item) => item.employeeId === employeeId);
       },
 
       approveBonusEvaluation: (id) => {
         set((state) => ({
-          bonusEvaluations: state.bonusEvaluations.map((eval) =>
-            eval.id === id
+          bonusEvaluations: state.bonusEvaluations.map((item) =>
+            item.id === id
               ? {
-                  ...eval,
+                  ...item,
                   status: 'approved',
                   approvedAt: new Date().toISOString(),
                 }
-              : eval
+              : item
           ),
         }));
       },
 
       // Statistics
       getEvaluationStats: (fiscalYear, period) => {
-        const evaluations = get().evaluations.filter((eval) => {
-          const matchYear = eval.fiscalYear === fiscalYear;
-          const matchPeriod = period ? eval.period === period : true;
+        const evaluations = get().evaluations.filter((item) => {
+          const matchYear = item.fiscalYear === fiscalYear;
+          const matchPeriod = period ? item.period === period : true;
           return matchYear && matchPeriod;
         });
 
@@ -326,10 +326,10 @@ export const usePerformanceEvaluationStore = create<PerformanceEvaluationStore>(
 
         let totalScore = 0;
 
-        evaluations.forEach((eval) => {
-          byRating[eval.overallRating]++;
-          byStatus[eval.status]++;
-          totalScore += eval.overallScore;
+        evaluations.forEach((item) => {
+          byRating[item.overallRating]++;
+          byStatus[item.status]++;
+          totalScore += item.overallScore;
         });
 
         return {

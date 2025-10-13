@@ -109,15 +109,15 @@ export default function EvaluationPage() {
   }, [evaluations.length, initializeSampleData]);
 
   // フィルタリングされた評価データ
-  const filteredEvaluations = evaluations.filter((eval) => {
-    const matchYear = eval.fiscalYear === selectedYear;
-    const matchPeriod = selectedPeriod === 'all' || eval.period === selectedPeriod;
-    const matchDepartment = selectedDepartment === 'all' || eval.department === selectedDepartment;
-    const matchStatus = selectedStatus === 'all' || eval.status === selectedStatus;
+  const filteredEvaluations = evaluations.filter((evaluation) => {
+    const matchYear = evaluation.fiscalYear === selectedYear;
+    const matchPeriod = selectedPeriod === 'all' || evaluation.period === selectedPeriod;
+    const matchDepartment = selectedDepartment === 'all' || evaluation.department === selectedDepartment;
+    const matchStatus = selectedStatus === 'all' || evaluation.status === selectedStatus;
     const matchSearch =
       searchQuery === '' ||
-      eval.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      eval.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
+      evaluation.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      evaluation.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchYear && matchPeriod && matchDepartment && matchStatus && matchSearch;
   });
