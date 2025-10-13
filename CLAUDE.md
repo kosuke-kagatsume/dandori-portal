@@ -315,6 +315,11 @@ export default function LoginPage() {
 3. ✅ Calendar の row/head_row に grid を渡さない
 4. ✅ ビルドキャッシュは定期的にクリア（`.next`, `.turbo`, `node_modules/.cache`）
 5. ✅ `npm run lint:arrows` で定期チェック
+6. ✅ `npm run lint:calendar` でカレンダー禁止パターンチェック
+7. ✅ `npm run build:strict` で厳密ビルド（TypeScript + カレンダーチェック）
+
+#### 保守ガイド
+詳細は `CALENDAR_MAINTENANCE.md` を参照してください。
 
 ---
 

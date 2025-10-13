@@ -7,7 +7,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ✅ DayPicker を確実に 7 列テーブルに戻す強制レイアウト */
+/* ✅ DayPicker を確実に 7 列テーブルに戻す強制レイアウト
+ * ⚠️ 重要: DayPicker は table レイアウト前提。
+ * ⚠️ classNames で row/head_row に grid を渡さないこと。
+ * ⚠️ この !important は Tailwind/Radix の grid を上書きするために必須。
+ */
 .rdp table { display: table !important; width: 100%; border-collapse: collapse; table-layout: fixed; }
 .rdp thead { display: table-header-group !important; }
 .rdp tbody { display: table-row-group !important; }

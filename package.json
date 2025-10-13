@@ -5,11 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:strict": "npm run typecheck && next build",
+    "build:strict": "npm run typecheck && npm run lint:calendar && next build",
     "build:analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "next lint",
     "lint:arrows": "grep -r -n \"›\\|&gt;\\|['\\\"]>['\\\"]\" src && echo 'NG: found arrow characters' && exit 1 || echo 'OK: no arrow characters found'",
+    "lint:calendar": "grep -r -n \"head_row:.*grid\\|row:.*grid\" src/components src/features 2>/dev/null && echo 'NG: found grid in calendar row/head_row' && exit 1 || echo 'OK: no grid in calendar'",
     "typecheck": "tsc --noEmit",
     "dev:clean": "pkill -f \"next|node\" || true && rm -rf .next .turbo node_modules/.cache && npm ci && npm dedupe && HOST=127.0.0.1 PORT=3100 npm run dev",
     "storybook": "storybook dev -p 6006",
