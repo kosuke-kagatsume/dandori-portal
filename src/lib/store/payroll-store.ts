@@ -3,8 +3,15 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useAttendanceHistoryStore } from './attendance-history-store';
+import { calculateMonthlyIncomeTax, calculateBonusIncomeTax } from '@/lib/payroll/income-tax-calculator';
+import {
+  YearEndAdjustmentResult,
+  YearEndAdjustmentDeductions,
+  YearEndAdjustmentDeclaration,
+} from '@/lib/payroll/year-end-adjustment-types';
+import { calculateYearEndAdjustment } from '@/lib/payroll/year-end-adjustment-calculator';
 
-const DATA_VERSION = 3; // SSR対応実装のため上げる
+const DATA_VERSION = 4; // 所得税計算エンジン統合（dependentsフィールド追加）
 
 // 従業員の給与マスタデータ
 export interface EmployeeSalaryMaster {
@@ -31,6 +38,7 @@ export interface EmployeeSalaryMaster {
   unionFee?: number;
   savingsAmount?: number;
   loanRepayment?: number;
+  dependents?: number; // 扶養親族等の数（所得税計算用）
   updatedAt: string;
 }
 
@@ -154,6 +162,7 @@ const initialSalaryMasters: EmployeeSalaryMaster[] = [
     residentTaxAmount: 45000,
     unionFee: 3000,
     savingsAmount: 20000,
+    dependents: 2, // 配偶者+子供1人
     updatedAt: new Date().toISOString(),
   },
   {
@@ -492,6 +501,8 @@ type PayrollState = {
   salaryMasters: EmployeeSalaryMaster[];
   calculations: PayrollCalculation[];
   bonusCalculations: BonusCalculation[];
+  yearEndAdjustments: YearEndAdjustmentResult[]; // 年末調整計算結果
+  yearEndAdjustmentDeclarations: YearEndAdjustmentDeclaration[]; // 年末調整申告データ
   isCalculating: boolean;
   currentPeriod: string;
   resetToSeed: () => void;
@@ -510,13 +521,22 @@ type PayrollState = {
   calculateAllEmployeesBonus: (period: string, bonusType: 'summer' | 'winter' | 'special') => BonusCalculation[];
   getBonusCalculationsByPeriod: (period: string, bonusType?: 'summer' | 'winter' | 'special') => BonusCalculation[];
   runBonusCalculation: (period: string, bonusType: 'summer' | 'winter' | 'special') => Promise<void>;
+
+  // 年末調整関連メソッド
+  runYearEndAdjustment: (fiscalYear: number, employeeId: string, deductions: YearEndAdjustmentDeductions) => Promise<YearEndAdjustmentResult>;
+  getYearEndAdjustment: (fiscalYear: number, employeeId: string) => YearEndAdjustmentResult | undefined;
+  getYearEndAdjustmentsByYear: (fiscalYear: number) => YearEndAdjustmentResult[];
+  saveDeclaration: (declaration: YearEndAdjustmentDeclaration) => void;
+  getDeclaration: (fiscalYear: number, employeeId: string) => YearEndAdjustmentDeclaration | undefined;
 };
 
-const initialState: Pick<PayrollState, '_version' | 'salaryMasters' | 'calculations' | 'bonusCalculations' | 'isCalculating' | 'currentPeriod'> = {
+const initialState: Pick<PayrollState, '_version' | 'salaryMasters' | 'calculations' | 'bonusCalculations' | 'yearEndAdjustments' | 'yearEndAdjustmentDeclarations' | 'isCalculating' | 'currentPeriod'> = {
   _version: DATA_VERSION,
   salaryMasters: initialSalaryMasters,
   calculations: [],
   bonusCalculations: [],
+  yearEndAdjustments: [],
+  yearEndAdjustmentDeclarations: [],
   isCalculating: false,
   currentPeriod: new Date().toISOString().slice(0, 7),
 };
@@ -634,9 +654,10 @@ const createPayrollStore = () => {
             const pension = Math.round(grossSalary * INSURANCE_RATES.pension.employee);
             const employmentInsurance = Math.round(grossSalary * INSURANCE_RATES.employment.employee);
 
-            // 源泉徴収税額計算
+            // 源泉徴収税額計算（源泉徴収税額表を使用）
             const taxableIncome = grossSalary - (healthInsurance + pension + employmentInsurance);
-            const incomeTax = master.incomeTaxAmount || Math.round(taxableIncome * 0.05);
+            const dependents = master.dependents || 0; // 扶養人数（未設定の場合は0）
+            const incomeTax = calculateMonthlyIncomeTax(taxableIncome, dependents);
 
             // その他控除
             const unionFee = master.unionFee || 0;
@@ -757,9 +778,20 @@ const createPayrollStore = () => {
             const pension = Math.round(totalGrossBonus * INSURANCE_RATES.pension.employee);
             const employmentInsurance = Math.round(totalGrossBonus * INSURANCE_RATES.employment.employee);
 
-            // 源泉徴収税額（賞与用税率）
+            // 源泉徴収税額（賞与用税率表を使用）
             const taxableBonus = totalGrossBonus - (healthInsurance + pension + employmentInsurance);
-            const incomeTax = Math.round(taxableBonus * 0.1021); // 賞与用税率
+            const dependents = master.dependents || 0;
+
+            // 前月給与を取得（社会保険料控除後）
+            // 実際の給与計算結果から取得するのが理想だが、ここでは簡易的にマスターから計算
+            const previousMonthGrossSalary = master.basicSalary + master.positionAllowance +
+              master.skillAllowance + master.housingAllowance + master.familyAllowance + master.commutingAllowance;
+            const previousMonthSocialInsurance = Math.round(
+              previousMonthGrossSalary * (INSURANCE_RATES.health.employee + INSURANCE_RATES.pension.employee + INSURANCE_RATES.employment.employee)
+            );
+            const previousMonthSalary = previousMonthGrossSalary - previousMonthSocialInsurance;
+
+            const incomeTax = calculateBonusIncomeTax(taxableBonus, previousMonthSalary, dependents);
 
             const residentTax = 0; // 賞与は住民税なし
             const totalDeductions = healthInsurance + pension + employmentInsurance + incomeTax + residentTax;
@@ -838,6 +870,72 @@ const createPayrollStore = () => {
               set({ isCalculating: false });
             }
           },
+
+          // 年末調整関連メソッド
+          runYearEndAdjustment: async (fiscalYear: number, employeeId: string, deductions: YearEndAdjustmentDeductions): Promise<YearEndAdjustmentResult> => {
+            set({ isCalculating: true });
+            try {
+              const master = get().getSalaryMaster(employeeId);
+              if (!master) {
+                throw new Error(`Employee master not found: ${employeeId}`);
+              }
+
+              // 年間給与の集計（1月〜12月）
+              const yearCalculations = get().calculations.filter((c: PayrollCalculation) => {
+                const year = parseInt(c.period.split('-')[0]);
+                return year === fiscalYear && c.employeeId === employeeId;
+              });
+
+              const totalAnnualIncome = yearCalculations.reduce((sum, c) => sum + c.grossSalary, 0);
+              const withheldTaxTotal = yearCalculations.reduce((sum, c) => sum + c.incomeTax, 0);
+
+              // 年末調整計算を実行
+              const result = calculateYearEndAdjustment(
+                employeeId,
+                master.employeeName,
+                master.department,
+                fiscalYear,
+                totalAnnualIncome,
+                withheldTaxTotal,
+                deductions
+              );
+
+              // 結果を保存
+              const existing = get().yearEndAdjustments.filter((a: YearEndAdjustmentResult) =>
+                !(a.fiscalYear === fiscalYear && a.employeeId === employeeId)
+              );
+              const updated = [...existing, result];
+              set({ yearEndAdjustments: updated });
+
+              return result;
+            } finally {
+              set({ isCalculating: false });
+            }
+          },
+
+          getYearEndAdjustment: (fiscalYear: number, employeeId: string) => {
+            return get().yearEndAdjustments.find((a: YearEndAdjustmentResult) =>
+              a.fiscalYear === fiscalYear && a.employeeId === employeeId
+            );
+          },
+
+          getYearEndAdjustmentsByYear: (fiscalYear: number) => {
+            return get().yearEndAdjustments.filter((a: YearEndAdjustmentResult) => a.fiscalYear === fiscalYear);
+          },
+
+          saveDeclaration: (declaration: YearEndAdjustmentDeclaration) => {
+            const existing = get().yearEndAdjustmentDeclarations.filter((d: YearEndAdjustmentDeclaration) =>
+              !(d.fiscalYear === declaration.fiscalYear && d.employeeId === declaration.employeeId)
+            );
+            const updated = [...existing, declaration];
+            set({ yearEndAdjustmentDeclarations: updated });
+          },
+
+          getDeclaration: (fiscalYear: number, employeeId: string) => {
+            return get().yearEndAdjustmentDeclarations.find((d: YearEndAdjustmentDeclaration) =>
+              d.fiscalYear === fiscalYear && d.employeeId === employeeId
+            );
+          },
         });
 
   // SSR時はpersistを使わない
@@ -867,6 +965,8 @@ const createPayrollStore = () => {
         salaryMasters: s.salaryMasters,
         calculations: s.calculations,
         bonusCalculations: s.bonusCalculations,
+        yearEndAdjustments: s.yearEndAdjustments,
+        yearEndAdjustmentDeclarations: s.yearEndAdjustmentDeclarations,
         currentPeriod: s.currentPeriod
       }),
     })
