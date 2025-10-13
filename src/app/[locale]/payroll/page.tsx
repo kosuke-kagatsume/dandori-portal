@@ -12,6 +12,9 @@ import { PayrollDetailModal } from '@/components/features/payroll/payroll-detail
 import { MountGate } from '@/components/common/MountGate';
 import { generatePayrollPDF, generateBonusPDF } from '@/lib/pdf/payroll-pdf';
 import { exportPayrollToCSV, exportBonusToCSV } from '@/lib/csv/csv-export';
+import { YearEndAdjustmentForm } from '@/components/features/payroll/year-end-adjustment-form';
+import { YearEndAdjustmentResultDisplay } from '@/components/features/payroll/year-end-adjustment-result';
+import type { YearEndAdjustmentDeductions } from '@/lib/payroll/year-end-adjustment-types';
 import {
   Table,
   TableBody,
@@ -55,6 +58,11 @@ export default function PayrollPage() {
   const [selectedBonusType, setSelectedBonusType] = useState<'summer' | 'winter' | 'special'>('winter');
   const [selectedBonusCalculation, setSelectedBonusCalculation] = useState<any>(null);
 
+  // 年末調整関連のstate
+  const [selectedYear, setSelectedYear] = useState(2024);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('demo-user-1');
+  const [yearEndResult, setYearEndResult] = useState<any>(null);
+
   const { toast } = useToast();
 
   const {
@@ -66,6 +74,8 @@ export default function PayrollPage() {
     getCalculationsByPeriod,
     getBonusCalculationsByPeriod,
     runBonusCalculation,
+    runYearEndAdjustment,
+    getYearEndAdjustment,
     resetToSeed,
   } = usePayrollStore();
 
@@ -271,6 +281,27 @@ export default function PayrollPage() {
     }
   };
 
+  // 年末調整計算実行
+  const handleYearEndAdjustment = async (deductions: YearEndAdjustmentDeductions) => {
+    console.log('[PayrollPage] 年末調整計算実行', { selectedYear, selectedEmployeeId });
+    try {
+      const result = await runYearEndAdjustment(selectedYear, selectedEmployeeId, deductions);
+      setYearEndResult(result);
+
+      toast({
+        title: '年末調整計算完了',
+        description: `${result.employeeName}さんの年末調整が完了しました。`,
+      });
+    } catch (error) {
+      console.error('[PayrollPage] 年末調整エラー:', error);
+      toast({
+        title: 'エラー',
+        description: '年末調整計算中にエラーが発生しました。',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
@@ -391,10 +422,11 @@ export default function PayrollPage() {
       </MountGate>
 
       <Tabs defaultValue="overview" className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">給与明細一覧</TabsTrigger>
           <TabsTrigger value="calculation">給与計算</TabsTrigger>
           <TabsTrigger value="bonus">賞与管理</TabsTrigger>
+          <TabsTrigger value="yearEnd">年末調整</TabsTrigger>
           <TabsTrigger value="settings">給与設定</TabsTrigger>
         </TabsList>
 
@@ -763,6 +795,67 @@ export default function PayrollPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="yearEnd" className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-3">
+            <Card className="md:col-span-1">
+              <CardHeader>
+                <CardTitle>年末調整対象者</CardTitle>
+                <CardDescription>
+                  対象年度と従業員を選択
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">対象年度</label>
+                  <select
+                    className="w-full p-2 border rounded-md"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  >
+                    <option value={2024}>2024年</option>
+                    <option value={2025}>2025年</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">従業員</label>
+                  <select
+                    className="w-full p-2 border rounded-md"
+                    value={selectedEmployeeId}
+                    onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                  >
+                    {salaryMasters.map((emp) => (
+                      <option key={emp.employeeId} value={emp.employeeId}>
+                        {emp.employeeName} ({emp.department})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="md:col-span-2">
+              {!yearEndResult ? (
+                <YearEndAdjustmentForm
+                  employeeId={selectedEmployeeId}
+                  employeeName={salaryMasters.find((e) => e.employeeId === selectedEmployeeId)?.employeeName || ''}
+                  fiscalYear={selectedYear}
+                  onSubmit={handleYearEndAdjustment}
+                  isCalculating={isCalculating}
+                />
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Button onClick={() => setYearEndResult(null)} variant="outline">
+                      新しい年末調整を開始
+                    </Button>
+                  </div>
+                  <YearEndAdjustmentResultDisplay result={yearEndResult} />
+                </div>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
