@@ -10,6 +10,21 @@
       {
         "selector": "Literal[value='>']",
         "message": "JSXに生の>は禁止です。CSS疑似要素かSVGアイコンを使用してください"
+      },
+      {
+        "selector": "Literal[value='⌘']",
+        "message": "特殊文字⌘はHydrationエラーの原因になります。アイコンコンポーネントを使用してください"
+      }
+    ],
+    "no-restricted-globals": [
+      "warn",
+      {
+        "name": "localStorage",
+        "message": "localStorageは必ずuseEffect内で使用してください（SSR非対応）"
+      },
+      {
+        "name": "sessionStorage",
+        "message": "sessionStorageは必ずuseEffect内で使用してください（SSR非対応）"
       }
     ]
   }

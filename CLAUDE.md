@@ -266,6 +266,58 @@ interface BonusCalculation {
 
 ---
 
+### 🔧 Hydrationエラー根本対策（2025-10-13完全解決）
+
+#### 問題の経緯
+ログインページで Hydration エラーが発生し、「4 errors」が表示される問題が発生。
+- **症状**: Expected server HTML to contain a matching text node for ">" in <div>
+- **原因**: SSR/CSR の不一致（特殊文字、クライアント専用API、古いキャッシュ）
+
+#### 実施した対策
+
+##### 1. useIsMounted フックの作成
+SSR/CSR の不一致を防ぐための汎用フック：
+```typescript
+// src/hooks/useIsMounted.ts
+"use client";
+import { useEffect, useState } from "react";
+
+export const useIsMounted = () => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted;
+};
+```
+
+##### 2. ログインページの修正
+マウント後のみレンダリング：
+```tsx
+export default function LoginPage() {
+  const mounted = useIsMounted();
+  if (!mounted) return null;
+  return <ActualLoginForm />;
+}
+```
+
+##### 3. ESLint 設定の強化
+`.eslintrc.json` に以下を追加：
+- 特殊文字（›, >, ⌘）の禁止
+- localStorage/sessionStorage の直接参照を警告
+
+##### 4. Calendar の Table 固定
+- `classNames.row/head_row` に grid を渡さない
+- `globals.css` で table 表示を `!important` で強制
+- `styles` プロップで `display: 'table-row'` を明示的に設定
+
+#### 再発防止策
+1. ✅ クライアント専用API（localStorage, window, document）は必ず useEffect 内で使用
+2. ✅ 特殊文字（⌘, ›, >）は使用せず、アイコンコンポーネントを使用
+3. ✅ Calendar の row/head_row に grid を渡さない
+4. ✅ ビルドキャッシュは定期的にクリア（`.next`, `.turbo`, `node_modules/.cache`）
+5. ✅ `npm run lint:arrows` で定期チェック
+
+---
+
 ### 👥 ユーザー管理・退職処理機能（2025-10-08完成）
 
 #### 実装済み機能
