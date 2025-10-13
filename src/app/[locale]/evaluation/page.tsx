@@ -18,6 +18,8 @@ import { MountGate } from '@/components/common/MountGate';
 import { usePerformanceEvaluationStore } from '@/lib/store/performance-evaluation-store';
 import { PerformanceEvaluationForm } from '@/components/features/payroll/performance-evaluation-form';
 import { PerformanceEvaluationResult } from '@/components/features/payroll/performance-evaluation-result';
+import { downloadEvaluationPDF } from '@/lib/pdf/evaluation-pdf';
+import { exportEvaluationToCSV } from '@/lib/csv/csv-export';
 import {
   Star,
   TrendingUp,
@@ -32,6 +34,7 @@ import {
   Clock,
   FileText,
   Search,
+  Download,
 } from 'lucide-react';
 import type {
   PerformanceEvaluation,
@@ -184,6 +187,40 @@ export default function EvaluationPage() {
     });
   };
 
+  // PDF出力
+  const handleDownloadPDF = async (evaluation: PerformanceEvaluation) => {
+    try {
+      await downloadEvaluationPDF(evaluation);
+      toast({
+        title: 'PDFをダウンロードしました',
+        description: `${evaluation.employeeName}さんの評価結果PDFをダウンロードしました。`,
+      });
+    } catch (error) {
+      toast({
+        title: 'エラー',
+        description: 'PDFのダウンロードに失敗しました。',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // CSV一括出力
+  const handleDownloadCSV = () => {
+    const result = exportEvaluationToCSV(filteredEvaluations);
+    if (result.success) {
+      toast({
+        title: 'CSVをダウンロードしました',
+        description: `${result.recordCount}件の評価データをエクスポートしました。`,
+      });
+    } else {
+      toast({
+        title: 'エラー',
+        description: result.error || 'CSVのダウンロードに失敗しました。',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -191,15 +228,25 @@ export default function EvaluationPage() {
           <h1 className="text-3xl font-bold">人事評価管理</h1>
           <p className="text-muted-foreground">従業員の人事評価を管理します</p>
         </div>
-        <Button
-          onClick={() => {
-            setIsCreating(true);
-            setActiveTab('create');
-          }}
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          新規評価
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleDownloadCSV}
+            disabled={filteredEvaluations.length === 0}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            CSV出力
+          </Button>
+          <Button
+            onClick={() => {
+              setIsCreating(true);
+              setActiveTab('create');
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            新規評価
+          </Button>
+        </div>
       </div>
 
       {/* 統計カード */}
@@ -506,10 +553,21 @@ export default function EvaluationPage() {
           {selectedEvaluation && (
             <Card>
               <CardHeader>
-                <CardTitle>評価結果</CardTitle>
-                <CardDescription>
-                  {selectedEvaluation.employeeName}さんの評価結果
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>評価結果</CardTitle>
+                    <CardDescription>
+                      {selectedEvaluation.employeeName}さんの評価結果
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDownloadPDF(selectedEvaluation)}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    PDF出力
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <PerformanceEvaluationResult evaluation={selectedEvaluation} />
