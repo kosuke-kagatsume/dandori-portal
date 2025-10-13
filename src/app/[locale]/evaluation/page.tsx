@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { MountGate } from '@/components/common/MountGate';
 import { usePerformanceEvaluationStore } from '@/lib/store/performance-evaluation-store';
 import { PerformanceEvaluationForm } from '@/components/features/payroll/performance-evaluation-form';
 import { PerformanceEvaluationResult } from '@/components/features/payroll/performance-evaluation-result';
@@ -202,76 +203,80 @@ export default function EvaluationPage() {
       </div>
 
       {/* 統計カード */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">総評価数</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {selectedYear}年度 {selectedPeriod !== 'all' && periodLabels[selectedPeriod]}
-            </p>
-          </CardContent>
-        </Card>
+      <MountGate>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">総評価数</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.total}</div>
+              <p className="text-xs text-muted-foreground">
+                {selectedYear}年度 {selectedPeriod !== 'all' && periodLabels[selectedPeriod]}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">平均スコア</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.averageScore}点</div>
-            <p className="text-xs text-muted-foreground">全体の平均評価スコア</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均スコア</CardTitle>
+              <Star className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.averageScore}点</div>
+              <p className="text-xs text-muted-foreground">全体の平均評価スコア</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">承認済み</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byStatus.approved}</div>
-            <p className="text-xs text-muted-foreground">承認済みの評価数</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">承認済み</CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.byStatus.approved}</div>
+              <p className="text-xs text-muted-foreground">承認済みの評価数</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">申告待ち</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.byStatus.draft + stats.byStatus.submitted}</div>
-            <p className="text-xs text-muted-foreground">申告・承認待ちの評価</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">申告待ち</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.byStatus.draft + stats.byStatus.submitted}</div>
+              <p className="text-xs text-muted-foreground">申告・承認待ちの評価</p>
+            </CardContent>
+          </Card>
+        </div>
+      </MountGate>
 
       {/* 評価分布 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">評価分布</CardTitle>
-          <CardDescription>評価等級ごとの人数</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-5 gap-4">
-            {Object.entries(ratingLabels).map(([rating, label]) => (
-              <div key={rating} className="text-center">
-                <Badge className={`w-full ${ratingColors[rating as PerformanceRating]}`}>
-                  {label}
-                </Badge>
-                <div className="text-2xl font-bold mt-2">
-                  {stats.byRating[rating as PerformanceRating]}
+      <MountGate>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">評価分布</CardTitle>
+            <CardDescription>評価等級ごとの人数</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-5 gap-4">
+              {Object.entries(ratingLabels).map(([rating, label]) => (
+                <div key={rating} className="text-center">
+                  <Badge className={`w-full ${ratingColors[rating as PerformanceRating]}`}>
+                    {label}
+                  </Badge>
+                  <div className="text-2xl font-bold mt-2">
+                    {stats.byRating[rating as PerformanceRating]}
+                  </div>
+                  <p className="text-xs text-muted-foreground">人</p>
                 </div>
-                <p className="text-xs text-muted-foreground">人</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </MountGate>
 
       {/* タブコンテンツ */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full">
