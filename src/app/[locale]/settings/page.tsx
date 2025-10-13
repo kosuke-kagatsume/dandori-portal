@@ -28,6 +28,8 @@ import {
   AlertTriangle,
   Clock,
   Package,
+  GitBranch,
+  UserCheck,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -44,6 +46,9 @@ interface SimpleSettings {
   notifications: {
     browser: boolean;
     sound: boolean;
+    email: boolean;
+    emailAddress: string;
+    emailTiming: 'instant' | 'daily' | 'weekly';
   };
   saas: {
     monthlyBudget: number;
@@ -52,6 +57,10 @@ interface SimpleSettings {
     enableUnusedLicenseAlert: boolean;
   };
   attendance: {
+    workStartTime: string;
+    workEndTime: string;
+    weekendDays: number[];
+    enableNationalHolidays: boolean;
     defaultBreakMinutes: number;
     overtimeCalculationMethod: 'daily' | 'monthly';
     lateNightStartHour: number;
@@ -73,6 +82,16 @@ interface SimpleSettings {
     enableReturnReminder: boolean;
     returnReminderDays: number;
   };
+  workflow: {
+    defaultApprovalDeadlineDays: number;
+    enableAutoEscalation: boolean;
+    escalationReminderDays: number;
+    autoApprovalThreshold: number;
+    enableAutoApproval: boolean;
+    requireCommentOnReject: boolean;
+    allowParallelApproval: boolean;
+    enableProxyApproval: boolean;
+  };
 }
 
 // デフォルト設定
@@ -84,6 +103,9 @@ const defaultSettings: SimpleSettings = {
   notifications: {
     browser: false,
     sound: false,
+    email: false,
+    emailAddress: '',
+    emailTiming: 'daily',
   },
   saas: {
     monthlyBudget: 500000,
@@ -92,6 +114,10 @@ const defaultSettings: SimpleSettings = {
     enableUnusedLicenseAlert: true,
   },
   attendance: {
+    workStartTime: '09:00',
+    workEndTime: '18:00',
+    weekendDays: [0, 6], // 0=日曜, 6=土曜
+    enableNationalHolidays: true,
     defaultBreakMinutes: 60,
     overtimeCalculationMethod: 'daily',
     lateNightStartHour: 22,
@@ -112,6 +138,16 @@ const defaultSettings: SimpleSettings = {
     lowStockAlertThreshold: 3,
     enableReturnReminder: true,
     returnReminderDays: 7,
+  },
+  workflow: {
+    defaultApprovalDeadlineDays: 3,
+    enableAutoEscalation: true,
+    escalationReminderDays: 1,
+    autoApprovalThreshold: 5000,
+    enableAutoApproval: false,
+    requireCommentOnReject: true,
+    allowParallelApproval: false,
+    enableProxyApproval: true,
   },
 };
 
@@ -288,7 +324,7 @@ export default function SimpleSettingsPage() {
       </div>
 
       <Tabs defaultValue="appearance" className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-9">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="appearance">外観</TabsTrigger>
           <TabsTrigger value="regional">地域と言語</TabsTrigger>
           <TabsTrigger value="company">
@@ -306,6 +342,10 @@ export default function SimpleSettingsPage() {
           <TabsTrigger value="attendance">
             <Clock className="w-4 h-4 mr-1" />
             勤怠・休暇
+          </TabsTrigger>
+          <TabsTrigger value="workflow">
+            <GitBranch className="w-4 h-4 mr-1" />
+            ワークフロー
           </TabsTrigger>
           <TabsTrigger value="assets">
             <Package className="w-4 h-4 mr-1" />
@@ -404,6 +444,72 @@ export default function SimpleSettingsPage() {
                   <Bell className="w-4 h-4 mr-2" />
                   通知をテスト
                 </Button>
+              )}
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>メール通知</Label>
+                  <p className="text-sm text-muted-foreground">
+                    重要な更新をメールで通知
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.notifications.email}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      notifications: { ...settings.notifications, email: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              {settings.notifications.email && (
+                <>
+                  <div className="space-y-2">
+                    <Label>通知先メールアドレス</Label>
+                    <Input
+                      type="email"
+                      value={settings.notifications.emailAddress}
+                      onChange={(e) => {
+                        updateSettings({
+                          notifications: { ...settings.notifications, emailAddress: e.target.value }
+                        });
+                      }}
+                      placeholder="your.email@example.com"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      通知を受け取るメールアドレスを入力してください
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>通知タイミング</Label>
+                    <Select
+                      value={settings.notifications.emailTiming}
+                      onValueChange={(value: 'instant' | 'daily' | 'weekly') => {
+                        updateSettings({
+                          notifications: { ...settings.notifications, emailTiming: value }
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="instant">即時</SelectItem>
+                        <SelectItem value="daily">1日1回（まとめて）</SelectItem>
+                        <SelectItem value="weekly">1週間1回（まとめて）</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {settings.notifications.emailTiming === 'instant' && '通知が発生した瞬間にメールを送信'}
+                      {settings.notifications.emailTiming === 'daily' && '1日分の通知を午前9時にまとめて送信'}
+                      {settings.notifications.emailTiming === 'weekly' && '1週間分の通知を毎週月曜日にまとめて送信'}
+                    </p>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -950,6 +1056,97 @@ export default function SimpleSettingsPage() {
 
         {/* 勤怠・休暇設定 */}
         <TabsContent value="attendance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>営業時間設定</CardTitle>
+              <CardDescription>標準的な勤務時間帯を設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>勤務開始時刻</Label>
+                  <Input
+                    type="time"
+                    value={settings.attendance.workStartTime}
+                    onChange={(e) => updateSettings({
+                      attendance: { ...settings.attendance, workStartTime: e.target.value }
+                    })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    標準的な勤務開始時刻（例：09:00）
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>勤務終了時刻</Label>
+                  <Input
+                    type="time"
+                    value={settings.attendance.workEndTime}
+                    onChange={(e) => updateSettings({
+                      attendance: { ...settings.attendance, workEndTime: e.target.value }
+                    })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    標準的な勤務終了時刻（例：18:00）
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>休日設定</CardTitle>
+              <CardDescription>週休日と祝日の扱いを設定します</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>週休日</Label>
+                <div className="grid grid-cols-7 gap-2">
+                  {['日', '月', '火', '水', '木', '金', '土'].map((day, index) => (
+                    <Button
+                      key={index}
+                      variant={settings.attendance.weekendDays.includes(index) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        const newWeekendDays = settings.attendance.weekendDays.includes(index)
+                          ? settings.attendance.weekendDays.filter(d => d !== index)
+                          : [...settings.attendance.weekendDays, index];
+                        updateSettings({
+                          attendance: { ...settings.attendance, weekendDays: newWeekendDays }
+                        });
+                      }}
+                    >
+                      {day}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  選択した曜日が週休日として扱われます
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>日本の祝日を自動適用</Label>
+                  <p className="text-sm text-muted-foreground">
+                    日本の国民の祝日を自動的に休日として扱います
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.attendance.enableNationalHolidays}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      attendance: { ...settings.attendance, enableNationalHolidays: checked }
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>勤怠管理設定</CardTitle>
@@ -1522,6 +1719,214 @@ export default function SimpleSettingsPage() {
             <AlertDescription>
               これらの設定は、SaaS管理画面のサマリーカードやアラート機能に反映されます。
               定期的に見直して、適切な予算管理を行いましょう。
+            </AlertDescription>
+          </Alert>
+        </TabsContent>
+
+        {/* ワークフロー設定 */}
+        <TabsContent value="workflow" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>承認フロー設定</CardTitle>
+              <CardDescription>
+                申請の承認に関する基本設定を行います
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* 承認期限 */}
+              <div className="space-y-2">
+                <Label>デフォルト承認期限</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={settings.workflow.defaultApprovalDeadlineDays}
+                    onChange={(e) => updateSettings({
+                      workflow: { ...settings.workflow, defaultApprovalDeadlineDays: Number(e.target.value) }
+                    })}
+                    min="1"
+                    max="30"
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">営業日</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  申請から承認までの標準期限です
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* 並列承認 */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>並列承認を許可</Label>
+                  <p className="text-xs text-muted-foreground">
+                    複数の承認者が同時に承認できるようにします
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.workflow.allowParallelApproval}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      workflow: { ...settings.workflow, allowParallelApproval: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              <Separator />
+
+              {/* 却下時コメント必須 */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>却下時のコメントを必須にする</Label>
+                  <p className="text-xs text-muted-foreground">
+                    申請を却下する際、理由の入力を必須にします
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.workflow.requireCommentOnReject}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      workflow: { ...settings.workflow, requireCommentOnReject: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              <Separator />
+
+              {/* 代理承認 */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>代理承認を許可</Label>
+                  <p className="text-xs text-muted-foreground">
+                    不在時に代理承認者が承認できるようにします
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.workflow.enableProxyApproval}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      workflow: { ...settings.workflow, enableProxyApproval: checked }
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>エスカレーション設定</CardTitle>
+              <CardDescription>
+                承認期限超過時の自動エスカレーション設定
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* エスカレーション有効化 */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>自動エスカレーション</Label>
+                  <p className="text-xs text-muted-foreground">
+                    承認期限を超えた場合、上位承認者に自動通知します
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.workflow.enableAutoEscalation}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      workflow: { ...settings.workflow, enableAutoEscalation: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              {settings.workflow.enableAutoEscalation && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>リマインド送信タイミング</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={settings.workflow.escalationReminderDays}
+                        onChange={(e) => updateSettings({
+                          workflow: { ...settings.workflow, escalationReminderDays: Number(e.target.value) }
+                        })}
+                        min="1"
+                        max="10"
+                        className="w-24"
+                      />
+                      <span className="text-sm text-muted-foreground">日前</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      承認期限の{settings.workflow.escalationReminderDays}日前にリマインダーを送信します
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>自動承認設定</CardTitle>
+              <CardDescription>
+                条件に応じた自動承認の設定
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* 自動承認有効化 */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label>自動承認を有効にする</Label>
+                  <p className="text-xs text-muted-foreground">
+                    一定金額以下の申請を自動的に承認します
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.workflow.enableAutoApproval}
+                  onCheckedChange={(checked) => {
+                    updateSettings({
+                      workflow: { ...settings.workflow, enableAutoApproval: checked }
+                    });
+                  }}
+                />
+              </div>
+
+              {settings.workflow.enableAutoApproval && (
+                <>
+                  <Separator />
+                  <div className="space-y-2">
+                    <Label>自動承認の金額上限</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">¥</span>
+                      <Input
+                        type="number"
+                        value={settings.workflow.autoApprovalThreshold}
+                        onChange={(e) => updateSettings({
+                          workflow: { ...settings.workflow, autoApprovalThreshold: Number(e.target.value) }
+                        })}
+                        min="0"
+                        step="1000"
+                        className="flex-1"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      ¥{settings.workflow.autoApprovalThreshold.toLocaleString()}以下の経費申請は自動承認されます
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              ワークフロー設定は、休暇申請・経費申請・出張申請などすべての申請に適用されます。
+              変更後は承認者に共有することをお勧めします。
             </AlertDescription>
           </Alert>
         </TabsContent>
