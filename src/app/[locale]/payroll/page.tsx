@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calculator, Users, TrendingUp, DollarSign, FileText, Calendar, CheckCircle, AlertCircle, Eye } from 'lucide-react';
+import { Calculator, Users, TrendingUp, DollarSign, FileText, Calendar, CheckCircle, AlertCircle, Eye, Download } from 'lucide-react';
 import { usePayrollStore } from '@/lib/store/payroll-store';
 import { useToast } from '@/hooks/use-toast';
 import { PayrollDetailModal } from '@/components/features/payroll/payroll-detail-modal';
 import { MountGate } from '@/components/common/MountGate';
+import { generatePayrollPDF, generateBonusPDF } from '@/lib/pdf/payroll-pdf';
+import { exportPayrollToCSV, exportBonusToCSV } from '@/lib/csv/csv-export';
 import {
   Table,
   TableBody,
@@ -92,6 +94,86 @@ export default function PayrollPage() {
     setIsDetailModalOpen(true);
   };
 
+  // 給与明細PDFダウンロード
+  const handleDownloadPayrollPDF = async (calc: any) => {
+    try {
+      const pdf = await generatePayrollPDF({
+        employeeName: calc.employeeName,
+        employeeId: calc.employeeId,
+        department: calc.department,
+        paymentDate: selectedPeriod,
+        basicSalary: calc.basicSalary,
+        allowances: {
+          positionAllowance: calc.positionAllowance || 0,
+          commuteAllowance: calc.commutingAllowance || 0,
+          familyAllowance: calc.familyAllowance || 0,
+          housingAllowance: calc.housingAllowance || 0,
+          qualificationAllowance: calc.skillAllowance || 0,
+          overtimeAllowance: calc.overtimePay || 0,
+        },
+        deductions: {
+          healthInsurance: calc.healthInsurance || 0,
+          pensionInsurance: calc.pension || 0,
+          employmentInsurance: calc.employmentInsurance || 0,
+          incomeTax: calc.incomeTax || 0,
+          residentTax: calc.residentTax || 0,
+        },
+        totalAllowances: calc.totalAllowances,
+        totalDeductions: calc.totalDeductions,
+        netSalary: calc.netSalary,
+      });
+      pdf.save(`salary_${calc.employeeName}_${selectedPeriod}.pdf`);
+      toast({
+        title: 'PDFダウンロード完了',
+        description: `${calc.employeeName}さんの給与明細をダウンロードしました`,
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({
+        title: 'エラー',
+        description: 'PDFの生成に失敗しました',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // 賞与明細PDFダウンロード
+  const handleDownloadBonusPDF = async (bonus: any) => {
+    try {
+      const pdf = await generateBonusPDF({
+        employeeName: bonus.employeeName,
+        employeeId: bonus.employeeId,
+        department: bonus.department,
+        bonusType: selectedBonusType,
+        paymentDate: selectedBonusPeriod,
+        basicBonus: bonus.basicBonus + bonus.positionBonus,
+        performanceBonus: bonus.performanceBonus,
+        performanceRating: bonus.performanceRating,
+        deductions: {
+          healthInsurance: bonus.healthInsurance || 0,
+          pensionInsurance: bonus.pension || 0,
+          employmentInsurance: bonus.employmentInsurance || 0,
+          incomeTax: bonus.incomeTax || 0,
+          residentTax: bonus.residentTax || 0,
+        },
+        totalDeductions: bonus.totalDeductions,
+        netBonus: bonus.netBonus,
+      });
+      pdf.save(`bonus_${bonus.employeeName}_${selectedBonusPeriod}.pdf`);
+      toast({
+        title: 'PDFダウンロード完了',
+        description: `${bonus.employeeName}さんの賞与明細をダウンロードしました`,
+      });
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast({
+        title: 'エラー',
+        description: 'PDFの生成に失敗しました',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // 給与計算実行
   const handleCalculatePayroll = async () => {
     console.log('[PayrollPage] 給与計算実行ボタンがクリックされました');
@@ -108,6 +190,60 @@ export default function PayrollPage() {
       toast({
         title: 'エラー',
         description: '給与計算中にエラーが発生しました。',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // 給与データCSV出力
+  const handleExportPayrollCSV = () => {
+    try {
+      if (calculationResults.length === 0) {
+        toast({
+          title: 'データがありません',
+          description: 'エクスポートする給与データがありません',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      exportPayrollToCSV(calculationResults, `payroll_${selectedPeriod}.csv`);
+      toast({
+        title: 'CSV出力完了',
+        description: `${calculationResults.length}件の給与データをエクスポートしました`,
+      });
+    } catch (error) {
+      console.error('CSV export error:', error);
+      toast({
+        title: 'エラー',
+        description: 'CSVの出力に失敗しました',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // 賞与データCSV出力
+  const handleExportBonusCSV = () => {
+    try {
+      if (bonusResults.length === 0) {
+        toast({
+          title: 'データがありません',
+          description: 'エクスポートする賞与データがありません',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      exportBonusToCSV(bonusResults, `bonus_${selectedBonusPeriod}_${selectedBonusType}.csv`);
+      toast({
+        title: 'CSV出力完了',
+        description: `${bonusResults.length}件の賞与データをエクスポートしました`,
+      });
+    } catch (error) {
+      console.error('CSV export error:', error);
+      toast({
+        title: 'エラー',
+        description: 'CSVの出力に失敗しました',
         variant: 'destructive',
       });
     }
@@ -265,10 +401,23 @@ export default function PayrollPage() {
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>給与明細一覧</CardTitle>
-              <CardDescription>
-                2025-01月分の給与明細
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>給与明細一覧</CardTitle>
+                  <CardDescription>
+                    2025-01月分の給与明細
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={handleExportPayrollCSV}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  disabled={calculationResults.length === 0}
+                >
+                  <Download className="h-4 w-4" />
+                  CSV出力
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -321,14 +470,26 @@ export default function PayrollPage() {
                             <Badge variant="outline">確定</Badge>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewDetails(calc)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewDetails(calc)}
+                                title="詳細表示"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDownloadPayrollPDF(calc)}
+                                title="PDF出力"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -446,10 +607,23 @@ export default function PayrollPage() {
           {/* 賞与計算・管理セクション */}
           <Card>
             <CardHeader>
-              <CardTitle>賞与計算・管理</CardTitle>
-              <CardDescription>
-                従業員別賞与計算と明細管理
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>賞与計算・管理</CardTitle>
+                  <CardDescription>
+                    従業員別賞与計算と明細管理
+                  </CardDescription>
+                </div>
+                <Button
+                  onClick={handleExportBonusCSV}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  disabled={bonusResults.length === 0}
+                >
+                  <Download className="h-4 w-4" />
+                  CSV出力
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -555,17 +729,29 @@ export default function PayrollPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-center">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedBonusCalculation(bonus);
-                                    setIsDetailModalOpen(true);
-                                  }}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedBonusCalculation(bonus);
+                                      setIsDetailModalOpen(true);
+                                    }}
+                                    title="詳細表示"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDownloadBonusPDF(bonus)}
+                                    title="PDF出力"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))

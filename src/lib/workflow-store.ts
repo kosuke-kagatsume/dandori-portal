@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { generateDemoWorkflowData } from './workflow-demo-data';
+import { useNotificationStore } from './store/notification-store';
 
 export type WorkflowType = 
   | 'leave_request'      // 休暇申請
@@ -367,6 +368,45 @@ export const useWorkflowStore = create<WorkflowStore>()(
             ),
           };
         });
+
+        // 通知を作成
+        const request = get().requests.find(r => r.id === requestId);
+        if (request) {
+          const stepIndex = request.approvalSteps.findIndex(s => s.id === stepId);
+          const step = request.approvalSteps[stepIndex];
+          const isFullyApproved = request.status === 'approved';
+
+          // 申請者に通知
+          useNotificationStore.getState().addNotification({
+            id: `notif-${Date.now()}-${Math.random()}`,
+            type: 'success',
+            title: isFullyApproved ? '申請が承認されました' : '申請が承認されました（次のステップへ）',
+            message: `${step?.approverName || '承認者'}が${request.title}を承認しました${comments ? `：${comments}` : ''}`,
+            timestamp: now,
+            read: false,
+            important: isFullyApproved,
+            actionUrl: `/ja/workflow`,
+            userId: request.requesterId,
+          });
+
+          // 次の承認者に通知
+          if (!isFullyApproved && stepIndex < request.approvalSteps.length - 1) {
+            const nextStep = request.approvalSteps[stepIndex + 1];
+            if (nextStep && nextStep.status === 'pending') {
+              useNotificationStore.getState().addNotification({
+                id: `notif-${Date.now()}-${Math.random()}-next`,
+                type: 'info',
+                title: '新しい承認依頼',
+                message: `${request.requesterName}さんから${request.title}の承認依頼があります`,
+                timestamp: now,
+                read: false,
+                important: true,
+                actionUrl: `/ja/workflow`,
+                userId: nextStep.approverId,
+              });
+            }
+          }
+        }
       },
       
       rejectRequest: (requestId, stepId, reason) => {
@@ -407,6 +447,23 @@ export const useWorkflowStore = create<WorkflowStore>()(
             ),
           };
         });
+
+        // 申請者に却下通知
+        const request = get().requests.find(r => r.id === requestId);
+        if (request) {
+          const step = request.approvalSteps.find(s => s.id === stepId);
+          useNotificationStore.getState().addNotification({
+            id: `notif-${Date.now()}-${Math.random()}`,
+            type: 'error',
+            title: '申請が却下されました',
+            message: `${step?.approverName || '承認者'}が${request.title}を却下しました：${reason}`,
+            timestamp: now,
+            read: false,
+            important: true,
+            actionUrl: `/ja/workflow`,
+            userId: request.requesterId,
+          });
+        }
       },
       
       delegateApproval: (requestId, stepId, delegateToId, delegateName, reason) => {

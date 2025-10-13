@@ -6,7 +6,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { generateAttendanceData } from '@/lib/mock-data';
 import { generateRealisticAttendanceData, employees } from '@/lib/realistic-mock-data';
 import { useAttendanceStore } from '@/lib/attendance-store';
-import { 
+import {
   Clock,
   Calendar as CalendarIcon,
   BarChart3,
@@ -20,6 +20,7 @@ import {
   Edit,
   MoreHorizontal,
   TrendingUp,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +41,8 @@ import { AdvancedCheckIn } from '@/features/attendance/advanced-check-in';
 import { AttendanceCalendar } from '@/features/attendance/attendance-calendar';
 import { StatCardsLoadingSkeleton, TableLoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { toast } from 'sonner';
+import { exportAttendanceToCSV } from '@/lib/csv/csv-export';
+import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
 
 // 重いコンポーネントをlazyロード
 const LazyAdvancedCheckIn = lazy(() => 
@@ -153,9 +156,40 @@ export default function AttendancePage() {
   };
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Attendance store integration
   const { getTodayRecord, setOnAttendanceUpdate } = useAttendanceStore();
+  const { getAllRecords } = useAttendanceHistoryStore();
+
+  // CSV出力ハンドラー
+  const handleExportCSV = () => {
+    try {
+      // 勤怠履歴ストアから全データを取得
+      const allRecords = getAllRecords();
+
+      if (allRecords.length === 0) {
+        toast({
+          title: 'データがありません',
+          description: 'エクスポートする勤怠データがありません',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      exportAttendanceToCSV(allRecords);
+      toast({
+        title: 'CSV出力完了',
+        description: `${allRecords.length}件の勤怠データをエクスポートしました`,
+      });
+    } catch (error) {
+      console.error('CSV export error:', error);
+      toast({
+        title: 'エラー',
+        description: 'CSVの出力に失敗しました',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Load attendance data and update when attendance changes
   useEffect(() => {
@@ -495,6 +529,22 @@ export default function AttendancePage() {
 
         <TabsContent value="list" className="space-y-4">
           <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>勤怠一覧</CardTitle>
+                  <CardDescription>過去の勤怠記録を確認・管理</CardDescription>
+                </div>
+                <Button
+                  onClick={handleExportCSV}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  CSV出力
+                </Button>
+              </div>
+            </CardHeader>
             <CardContent className="p-6">
               <OptimizedDataTable
                 columns={columns}
