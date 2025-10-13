@@ -10,6 +10,11 @@ import {
   YearEndAdjustmentDeclaration,
 } from '@/lib/payroll/year-end-adjustment-types';
 import { calculateYearEndAdjustment } from '@/lib/payroll/year-end-adjustment-calculator';
+import {
+  BonusEvaluation,
+  PerformanceRating,
+  getBonusMultiplier,
+} from '@/lib/payroll/performance-evaluation-types';
 
 const DATA_VERSION = 4; // 所得税計算エンジン統合（dependentsフィールド追加）
 
@@ -501,6 +506,7 @@ type PayrollState = {
   salaryMasters: EmployeeSalaryMaster[];
   calculations: PayrollCalculation[];
   bonusCalculations: BonusCalculation[];
+  bonusEvaluations: BonusEvaluation[]; // 賞与評価データ
   yearEndAdjustments: YearEndAdjustmentResult[]; // 年末調整計算結果
   yearEndAdjustmentDeclarations: YearEndAdjustmentDeclaration[]; // 年末調整申告データ
   isCalculating: boolean;
@@ -528,13 +534,19 @@ type PayrollState = {
   getYearEndAdjustmentsByYear: (fiscalYear: number) => YearEndAdjustmentResult[];
   saveDeclaration: (declaration: YearEndAdjustmentDeclaration) => void;
   getDeclaration: (fiscalYear: number, employeeId: string) => YearEndAdjustmentDeclaration | undefined;
+
+  // 賞与評価データ管理メソッド
+  saveBonusEvaluation: (evaluation: BonusEvaluation) => void;
+  getBonusEvaluation: (fiscalYear: number, employeeId: string, bonusType: 'summer' | 'winter' | 'special') => BonusEvaluation | undefined;
+  getBonusEvaluationsByYear: (fiscalYear: number) => BonusEvaluation[];
 };
 
-const initialState: Pick<PayrollState, '_version' | 'salaryMasters' | 'calculations' | 'bonusCalculations' | 'yearEndAdjustments' | 'yearEndAdjustmentDeclarations' | 'isCalculating' | 'currentPeriod'> = {
+const initialState: Pick<PayrollState, '_version' | 'salaryMasters' | 'calculations' | 'bonusCalculations' | 'bonusEvaluations' | 'yearEndAdjustments' | 'yearEndAdjustmentDeclarations' | 'isCalculating' | 'currentPeriod'> = {
   _version: DATA_VERSION,
   salaryMasters: initialSalaryMasters,
   calculations: [],
   bonusCalculations: [],
+  bonusEvaluations: [],
   yearEndAdjustments: [],
   yearEndAdjustmentDeclarations: [],
   isCalculating: false,
@@ -758,14 +770,31 @@ const createPayrollStore = () => {
             const positionBonusMonths = bonusType === 'summer' ? 1.5 : bonusType === 'winter' ? 2.0 : 0.5;
             const positionBonus = Math.round(master.positionAllowance * positionBonusMonths);
 
-            // 査定賞与（基本賞与の0-50%）- 現在はランダム
-            const performanceRatings: Array<'S' | 'A' | 'B' | 'C' | 'D'> = ['S', 'A', 'B', 'C', 'D'];
-            const performanceRating = performanceRatings[Math.floor(Math.random() * performanceRatings.length)];
-            const performanceMultiplier = {
-              'S': 0.5, 'A': 0.3, 'B': 0.15, 'C': 0.05, 'D': 0
-            }[performanceRating];
+            // 査定賞与の計算
+            // 賞与評価データから取得、なければランダム生成
+            const year = parseInt(period.split('-')[0]);
+            const existingEvaluation = get().bonusEvaluations.find((e: BonusEvaluation) =>
+              e.employeeId === employeeId && e.fiscalYear === year && e.bonusType === bonusType
+            );
+
+            let performanceRating: PerformanceRating;
+            let performanceScore: number;
+            let performanceMultiplier: number;
+
+            if (existingEvaluation) {
+              // 評価データが存在する場合
+              performanceRating = existingEvaluation.performanceRating;
+              performanceScore = existingEvaluation.performanceScore;
+              performanceMultiplier = existingEvaluation.bonusMultiplier;
+            } else {
+              // 評価データがない場合はランダム生成（後方互換性）
+              const performanceRatings: PerformanceRating[] = ['S', 'A', 'B', 'C', 'D'];
+              performanceRating = performanceRatings[Math.floor(Math.random() * performanceRatings.length)];
+              performanceMultiplier = getBonusMultiplier(performanceRating);
+              performanceScore = { 'S': 95, 'A': 85, 'B': 75, 'C': 65, 'D': 50 }[performanceRating];
+            }
+
             const performanceBonus = Math.round(basicBonus * performanceMultiplier);
-            const performanceScore = { 'S': 95, 'A': 85, 'B': 75, 'C': 65, 'D': 50 }[performanceRating];
 
             // 特別手当
             const specialAllowance = bonusType === 'special' ? 50000 : 0;
@@ -936,6 +965,25 @@ const createPayrollStore = () => {
               d.fiscalYear === fiscalYear && d.employeeId === employeeId
             );
           },
+
+          // 賞与評価データ管理メソッド
+          saveBonusEvaluation: (evaluation: BonusEvaluation) => {
+            const existing = get().bonusEvaluations.filter((e: BonusEvaluation) =>
+              !(e.fiscalYear === evaluation.fiscalYear && e.employeeId === evaluation.employeeId && e.bonusType === evaluation.bonusType)
+            );
+            const updated = [...existing, evaluation];
+            set({ bonusEvaluations: updated });
+          },
+
+          getBonusEvaluation: (fiscalYear: number, employeeId: string, bonusType: 'summer' | 'winter' | 'special') => {
+            return get().bonusEvaluations.find((e: BonusEvaluation) =>
+              e.fiscalYear === fiscalYear && e.employeeId === employeeId && e.bonusType === bonusType
+            );
+          },
+
+          getBonusEvaluationsByYear: (fiscalYear: number) => {
+            return get().bonusEvaluations.filter((e: BonusEvaluation) => e.fiscalYear === fiscalYear);
+          },
         });
 
   // SSR時はpersistを使わない
@@ -965,6 +1013,7 @@ const createPayrollStore = () => {
         salaryMasters: s.salaryMasters,
         calculations: s.calculations,
         bonusCalculations: s.bonusCalculations,
+        bonusEvaluations: s.bonusEvaluations,
         yearEndAdjustments: s.yearEndAdjustments,
         yearEndAdjustmentDeclarations: s.yearEndAdjustmentDeclarations,
         currentPeriod: s.currentPeriod
