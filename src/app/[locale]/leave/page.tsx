@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
-import { generateLeaveData } from '@/lib/mock-data';
-import { generateRealisticLeaveRequests, getLeaveBalances } from '@/lib/realistic-mock-data';
-import { 
+import { useLeaveManagementStore, LeaveType, LeaveRequest } from '@/lib/store/leave-management-store';
+import {
   Calendar,
   Plus,
   Clock,
@@ -39,22 +37,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
-interface LeaveRequest {
-  id: string;
-  type: 'annual' | 'sick' | 'personal' | 'maternity' | 'paternity' | 'bereavement';
-  startDate: string;
-  endDate: string;
-  days: number;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  submittedAt: string;
-  approvedAt?: string;
-  approver?: string;
-  note?: string;
-}
-
 export default function LeavePage() {
-  // const t = useTranslations('leave');
   const t = (key: string) => {
     const translations: Record<string, string> = {
       'title': '休暇管理',
@@ -68,76 +51,145 @@ export default function LeavePage() {
     };
     return translations[key] || key;
   };
-  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
 
-  // Load leave requests
-  useEffect(() => {
-    const loadRequests = async () => {
-      try {
-        // APIを使わず直接モックデータを使用
-        // キャッシュされている場合は即座に返す
-        await new Promise(resolve => setTimeout(resolve, 100)); // 最小限のローディング
-        
-        // リアルな休暇申請データを取得
-        const realisticRequests = generateRealisticLeaveRequests();
-        
-        // データをマッピング
-        const mappedRequests: LeaveRequest[] = realisticRequests.map(req => ({
-          id: req.id,
-          type: req.leaveType === 'paid' ? 'annual' as const :
-                req.leaveType === 'sick' ? 'sick' as const :
-                req.leaveType === 'marriage' || req.leaveType === 'mourning' ? 'personal' as const :
-                req.leaveType === 'maternity' ? 'maternity' as const :
-                req.leaveType === 'childcare' ? 'paternity' as const :
-                'personal' as const,
-          startDate: req.startDate,
-          endDate: req.endDate,
-          days: req.days,
-          reason: req.reason,
-          status: req.status === 'draft' ? 'pending' as const :
-                 req.status === 'pending' ? 'pending' as const :
-                 req.status === 'approved' ? 'approved' as const :
-                 req.status === 'rejected' ? 'rejected' as const :
-                 'cancelled' as const,
-          submittedAt: req.requestDate,
-          approvedAt: req.approvalDate,
-          approver: req.approver,
-        }));
-        
-        setRequests(mappedRequests);
-      } catch (error) {
-        console.error('Error loading leave requests:', error);
-        // エラーメッセージを表示しない（モックデータなので）
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Zustand ストアから状態と関数を取得
+  const {
+    requests,
+    getUserRequests,
+    getPendingRequests,
+    getLeaveBalance,
+    initializeLeaveBalance,
+    deleteRequest,
+    cancelLeaveRequest,
+  } = useLeaveManagementStore();
 
-    loadRequests();
+  const currentUserId = '1'; // 現在のユーザー（田中太郎）
+  const currentYear = new Date().getFullYear();
+
+  // 初期化：サンプルデータの作成
+  useEffect(() => {
+    setLoading(true);
+
+    // 休暇残数の初期化（まだ初期化されていない場合）
+    const balance = getLeaveBalance(currentUserId, currentYear);
+    if (!balance) {
+      initializeLeaveBalance(currentUserId, currentYear, 20);
+    }
+
+    // サンプルデータの追加（ストアが空の場合）
+    if (requests.length === 0) {
+      const { createLeaveRequest } = useLeaveManagementStore.getState();
+
+      // サンプルデータ
+      const sampleRequests = [
+        {
+          userId: '1',
+          userName: '田中太郎',
+          type: 'paid' as LeaveType,
+          startDate: '2025-01-20',
+          endDate: '2025-01-22',
+          days: 3,
+          reason: '家族旅行のため',
+          status: 'approved' as const,
+          approver: '山田部長',
+          approvedDate: '2025-01-15',
+        },
+        {
+          userId: '1',
+          userName: '田中太郎',
+          type: 'sick' as LeaveType,
+          startDate: '2025-01-10',
+          endDate: '2025-01-10',
+          days: 1,
+          reason: '体調不良',
+          status: 'approved' as const,
+          approver: '山田部長',
+          approvedDate: '2025-01-11',
+        },
+        {
+          userId: '1',
+          userName: '田中太郎',
+          type: 'paid' as LeaveType,
+          startDate: '2025-02-05',
+          endDate: '2025-02-07',
+          days: 3,
+          reason: '私用',
+          status: 'pending' as const,
+        },
+        {
+          userId: '1',
+          userName: '田中太郎',
+          type: 'paid' as LeaveType,
+          startDate: '2024-12-28',
+          endDate: '2025-01-03',
+          days: 5,
+          reason: '年末年始休暇',
+          status: 'approved' as const,
+          approver: '山田部長',
+          approvedDate: '2024-12-20',
+        },
+      ];
+
+      sampleRequests.forEach(req => createLeaveRequest(req));
+    }
+
+    setLoading(false);
   }, []);
+
+  const userRequests = getUserRequests(currentUserId);
+  const balance = getLeaveBalance(currentUserId, currentYear);
 
   const handleCreateRequest = async (data: any) => {
     try {
-      const response = await fetch('/api/leave-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+      const { createLeaveRequest } = useLeaveManagementStore.getState();
+
+      createLeaveRequest({
+        userId: currentUserId,
+        userName: '田中太郎', // TODO: 実際のユーザー名を取得
+        type: data.type || 'paid',
+        startDate: data.startDate,
+        endDate: data.endDate,
+        days: data.days,
+        reason: data.reason,
+        status: 'pending',
       });
-      
-      if (!response.ok) throw new Error('Failed to create request');
-      
-      const newRequest = await response.json();
-      setRequests(prev => [newRequest, ...prev]);
+
+      toast.success('休暇申請を作成しました');
+      setDialogOpen(false);
     } catch (error) {
+      console.error('Failed to create request:', error);
+      toast.error('休暇申請の作成に失敗しました');
       throw error;
+    }
+  };
+
+  const handleCancelRequest = (id: string) => {
+    try {
+      cancelLeaveRequest(id);
+      toast.success('休暇申請をキャンセルしました');
+    } catch (error) {
+      console.error('Failed to cancel request:', error);
+      toast.error('キャンセルに失敗しました');
+    }
+  };
+
+  const handleDeleteRequest = (id: string) => {
+    try {
+      deleteRequest(id);
+      toast.success('休暇申請を削除しました');
+    } catch (error) {
+      console.error('Failed to delete request:', error);
+      toast.error('削除に失敗しました');
     }
   };
 
   const getStatusBadge = (status: LeaveRequest['status']) => {
     const config = {
+      draft: { label: '下書き', variant: 'secondary' as const, icon: FileText },
       pending: { label: '承認待ち', variant: 'outline' as const, icon: Clock },
       approved: { label: '承認済み', variant: 'default' as const, icon: CheckCircle },
       rejected: { label: '却下', variant: 'destructive' as const, icon: XCircle },
@@ -153,24 +205,24 @@ export default function LeavePage() {
     );
   };
 
-  const getTypeLabel = (type: LeaveRequest['type']) => {
-    const labels = {
-      annual: '年次有給',
+  const getTypeLabel = (type: LeaveType) => {
+    const labels: Record<LeaveType, string> = {
+      paid: '年次有給',
       sick: '病気休暇',
-      personal: '私用休暇',
-      maternity: '産休',
-      paternity: '育休',
-      bereavement: '忌引',
+      special: '特別休暇',
+      compensatory: '代休',
+      half_day_am: '午前半休',
+      half_day_pm: '午後半休',
     };
     return labels[type];
   };
 
   const columns: ColumnDef<LeaveRequest>[] = [
     {
-      accessorKey: 'submittedAt',
+      accessorKey: 'createdAt',
       header: '申請日',
       cell: ({ row }) => {
-        const date = new Date(row.original.submittedAt);
+        const date = new Date(row.original.createdAt);
         return (
           <div className="text-sm">
             {format(date, 'MM/dd', { locale: ja })}
@@ -194,7 +246,7 @@ export default function LeavePage() {
         const request = row.original;
         const start = new Date(request.startDate);
         const end = new Date(request.endDate);
-        
+
         return (
           <div className="text-sm">
             <div>{format(start, 'MM/dd', { locale: ja })} ～</div>
@@ -243,7 +295,7 @@ export default function LeavePage() {
       header: '操作',
       cell: ({ row }) => {
         const request = row.original;
-        
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -264,9 +316,24 @@ export default function LeavePage() {
                     編集
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600">
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    onClick={() => handleCancelRequest(request.id)}
+                  >
                     <Trash2 className="mr-2 h-4 w-4" />
                     キャンセル
+                  </DropdownMenuItem>
+                </>
+              )}
+              {(request.status === 'draft' || request.status === 'cancelled') && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    onClick={() => handleDeleteRequest(request.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    削除
                   </DropdownMenuItem>
                 </>
               )}
@@ -277,16 +344,14 @@ export default function LeavePage() {
     },
   ];
 
-  // Calculate statistics from real data
-  const leaveBalances = getLeaveBalances();
-  const currentUserBalance = leaveBalances.find((b: any) => b.userId === '1'); // 田中太郎のデータ
-  
+  // 統計情報の計算
   const stats = {
-    remaining: currentUserBalance?.paidLeave.remaining || 12,
-    used: currentUserBalance?.paidLeave.used || 8,
-    pending: requests.filter(r => r.status === 'pending').length,
-    expiring: currentUserBalance?.paidLeave.expiring || 3,
-    thisYearUsed: requests.filter(r => {
+    remaining: balance?.paidLeave.remaining || 0,
+    used: balance?.paidLeave.used || 0,
+    total: balance?.paidLeave.total || 20,
+    pending: userRequests.filter(r => r.status === 'pending').length,
+    expiring: 0, // TODO: 有効期限から失効予定日数を計算
+    thisYearUsed: userRequests.filter(r => {
       const year = new Date().getFullYear();
       return new Date(r.startDate).getFullYear() === year && r.status === 'approved';
     }).reduce((sum, r) => sum + r.days, 0),
@@ -383,15 +448,15 @@ export default function LeavePage() {
           <div>
             <div className="flex justify-between text-sm mb-2">
               <span>使用日数</span>
-              <span>{stats.used} / 20日</span>
+              <span>{stats.used} / {stats.total}日</span>
             </div>
-            <Progress value={(stats.used / 20) * 100} className="h-2" />
+            <Progress value={(stats.used / stats.total) * 100} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
               <span>推奨: 15日以上</span>
               <span>{stats.used >= 15 ? '✓ 達成' : `あと${15 - stats.used}日`}</span>
             </div>
           </div>
-          
+
           {stats.expiring > 0 && (
             <div className="bg-red-50 dark:bg-red-950 p-4 rounded-lg">
               <div className="flex items-center space-x-2">
@@ -432,7 +497,7 @@ export default function LeavePage() {
             <CardContent className="p-6">
               <OptimizedDataTable
                 columns={columns}
-                data={requests}
+                data={userRequests}
                 searchKey="reason"
                 searchPlaceholder="理由で検索..."
                 pageSize={15}
@@ -454,7 +519,7 @@ export default function LeavePage() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>付与日数</span>
-                    <span className="font-medium">20日</span>
+                    <span className="font-medium">{stats.total}日</span>
                   </div>
                   <div className="flex justify-between">
                     <span>使用済み</span>
@@ -465,7 +530,7 @@ export default function LeavePage() {
                     <span className="font-medium text-green-600">{stats.remaining}日</span>
                   </div>
                 </div>
-                <Progress value={(stats.used / 20) * 100} />
+                <Progress value={(stats.used / stats.total) * 100} />
               </CardContent>
             </Card>
 
@@ -479,19 +544,30 @@ export default function LeavePage() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span>病気休暇</span>
-                  <Badge variant="secondary">無制限</Badge>
+                  <div className="text-right">
+                    <div className="font-medium">{balance?.sickLeave.remaining || 0}日</div>
+                    <div className="text-xs text-muted-foreground">
+                      {balance?.sickLeave.total || 0}日中
+                    </div>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>忌引休暇</span>
-                  <Badge variant="secondary">規定による</Badge>
+                  <span>特別休暇</span>
+                  <div className="text-right">
+                    <div className="font-medium">{balance?.specialLeave.remaining || 0}日</div>
+                    <div className="text-xs text-muted-foreground">
+                      {balance?.specialLeave.total || 0}日中
+                    </div>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>産前産後休暇</span>
-                  <Badge variant="secondary">法定</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>育児休業</span>
-                  <Badge variant="secondary">法定</Badge>
+                  <span>代休</span>
+                  <div className="text-right">
+                    <div className="font-medium">{balance?.compensatoryLeave.remaining || 0}日</div>
+                    <div className="text-xs text-muted-foreground">
+                      {balance?.compensatoryLeave.total || 0}日中
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
