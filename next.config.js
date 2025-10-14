@@ -1,6 +1,6 @@
-// next-intlを一時的に無効化してデプロイメント問題を解決
-// const createNextIntlPlugin = require('next-intl/plugin');
-// const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+// next-intl設定
+const createNextIntlPlugin = require('next-intl/plugin');
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 // Bundle Analyzer設定
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -94,6 +94,5 @@ const nextConfig = {
   },
 };
 
-// next-intl無効化時の設定
-module.exports = withBundleAnalyzer(nextConfig);
-// module.exports = withNextIntl(withBundleAnalyzer(nextConfig));
+// next-intl有効化
+module.exports = withNextIntl(withBundleAnalyzer(nextConfig));

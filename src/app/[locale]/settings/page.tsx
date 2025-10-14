@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -41,6 +42,7 @@ import { hasPermission } from '@/lib/demo-users';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { BackupPanel } from '@/components/backup/backup-panel';
 
 // シンプルな設定の型定義
 interface SimpleSettings {
@@ -157,6 +159,7 @@ const defaultSettings: SimpleSettings = {
 };
 
 export default function SimpleSettingsPage() {
+  const router = useRouter();
   const { currentUser, currentDemoUser, switchDemoRole } = useUserStore();
   const {
     companyInfo,
@@ -2021,6 +2024,9 @@ export default function SimpleSettingsPage() {
               定期的にバックアップを取ることをお勧めします。
             </AlertDescription>
           </Alert>
+
+          {/* 一括データバックアップ */}
+          <BackupPanel />
         </TabsContent>
 
         {/* システム管理（管理者のみ） */}
@@ -2138,7 +2144,11 @@ export default function SimpleSettingsPage() {
                 <p className="text-sm text-muted-foreground mb-4">
                   すべてのシステム操作は自動的にログに記録されます。
                 </p>
-                <Button variant="outline" className="w-full justify-start">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => router.push('/ja/audit')}
+                >
                   <FileText className="w-4 h-4 mr-2" />
                   監査ログを表示
                 </Button>

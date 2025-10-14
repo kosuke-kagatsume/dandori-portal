@@ -16,13 +16,14 @@ export type WorkflowType =
   | 'shift_change'       // シフト変更
   | 'remote_work';       // リモートワーク申請
 
-export type WorkflowStatus = 
+export type WorkflowStatus =
   | 'draft'              // 下書き
   | 'pending'            // 申請中（承認待ち）
   | 'in_review'          // 確認中
   | 'partially_approved' // 一部承認済み
   | 'approved'           // 承認済み
   | 'rejected'           // 却下
+  | 'returned'           // 差し戻し（修正依頼）
   | 'cancelled'          // 取り消し
   | 'completed'          // 完了
   | 'escalated';         // エスカレーション中

@@ -31,6 +31,8 @@ import {
 import { OrganizationChart } from '@/components/organization/organization-chart';
 import { UserManagementPanel } from '@/components/organization/user-management-panel';
 import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
+import { TransferHistoryPanel } from '@/components/organization/transfer-history-panel';
+import { AddTransferDialog } from '@/components/organization/add-transfer-dialog';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { useUserStore } from '@/lib/store';
 import { demoOrganizationTree, demoMembers } from '@/lib/demo-organization';
@@ -39,6 +41,7 @@ import type { OrganizationNode, OrganizationMember } from '@/types';
 
 export default function OrganizationPage() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const { currentDemoUser } = useUserStore();
   
   const {
@@ -194,10 +197,11 @@ export default function OrganizationPage() {
       </div>
 
       {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">組織図</TabsTrigger>
           <TabsTrigger value="members">メンバー管理</TabsTrigger>
+          <TabsTrigger value="transfers">異動履歴</TabsTrigger>
           <TabsTrigger value="permissions" disabled={!canManageOrganization}>
             権限管理
           </TabsTrigger>
@@ -322,6 +326,13 @@ export default function OrganizationPage() {
           />
         </TabsContent>
 
+        {/* 異動履歴タブ */}
+        <TabsContent value="transfers">
+          <TransferHistoryPanel
+            onAddTransfer={canManageOrganization ? () => setTransferDialogOpen(true) : undefined}
+          />
+        </TabsContent>
+
         {/* 権限管理タブ */}
         <TabsContent value="permissions">
           {canManageOrganization ? (
@@ -418,6 +429,12 @@ export default function OrganizationPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* 異動登録ダイアログ */}
+      <AddTransferDialog
+        open={transferDialogOpen}
+        onOpenChange={setTransferDialogOpen}
+      />
     </div>
   );
 }

@@ -22,10 +22,12 @@ import {
   FileText,
   BarChart3,
   Settings,
+  Loader2,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
+import { MountGate } from '@/components/common/MountGate';
 import {
   PersonalAttendanceChart,
   PersonalLeaveChart,
@@ -45,19 +47,31 @@ import {
 
 export default function DashboardPage() {
   const { currentDemoUser, switchDemoRole } = useUserStore();
-  const [effectiveDemoUser, setEffectiveDemoUser] = useState(currentDemoUser);
+  // 初期値を確実に設定（SSR/CSR一致のため）
+  const [effectiveDemoUser, setEffectiveDemoUser] = useState(demoUsers.employee);
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // 初期化時にローカルストレージから役割を読み込み
   useEffect(() => {
-    const storedRole = localStorage.getItem('demo-role') as UserRole;
-    if (storedRole && demoUsers[storedRole]) {
-      switchDemoRole(storedRole);
-      setEffectiveDemoUser(demoUsers[storedRole]);
-    } else if (currentDemoUser) {
-      setEffectiveDemoUser(currentDemoUser);
-    } else {
-      setEffectiveDemoUser(demoUsers.employee);
+    setMounted(true);
+
+    // localStorageへの安全なアクセス
+    if (typeof window !== 'undefined') {
+      try {
+        const storedRole = localStorage.getItem('demo-role') as UserRole;
+        if (storedRole && demoUsers[storedRole]) {
+          switchDemoRole(storedRole);
+          setEffectiveDemoUser(demoUsers[storedRole]);
+        } else if (currentDemoUser) {
+          setEffectiveDemoUser(currentDemoUser);
+        } else {
+          setEffectiveDemoUser(demoUsers.employee);
+        }
+      } catch (error) {
+        console.error('Failed to access localStorage:', error);
+        setEffectiveDemoUser(demoUsers.employee);
+      }
     }
   }, []); // 依存配列を空にして初回のみ実行
   
@@ -141,35 +155,45 @@ export default function DashboardPage() {
   const canApprove = hasPermission(effectiveDemoUser, 'approve_requests');
   const canManageSystem = hasPermission(effectiveDemoUser, 'manage_system');
 
+  // マウント完了までローディング表示
+  if (!mounted) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">
-          {effectiveDemoUser ? `${effectiveDemoUser.name}さん（${roleDisplayNames[effectiveDemoUser.role] || effectiveDemoUser.role}）のダッシュボード` : '今日の概要と重要な指標を確認できます'}
+          {`${effectiveDemoUser.name}さん（${roleDisplayNames[effectiveDemoUser.role] || effectiveDemoUser.role}）のダッシュボード`}
         </p>
         {/* 役割説明バッジ */}
-        {effectiveDemoUser && (
-          <div className="mt-2 flex items-center gap-2">
-            <Badge variant={
-              effectiveDemoUser.role === 'admin' ? 'destructive' :
-              effectiveDemoUser.role === 'hr' ? 'default' :
-              effectiveDemoUser.role === 'manager' ? 'secondary' :
-              'outline'
-            }>
-              {effectiveDemoUser.role === 'employee' && '👤 自分の情報のみ表示'}
-              {effectiveDemoUser.role === 'manager' && '👥 チーム8名の情報を表示'}
-              {effectiveDemoUser.role === 'hr' && '🏢 全社50名の情報を表示'}
-              {effectiveDemoUser.role === 'admin' && '⚙️ システム管理機能付き'}
-            </Badge>
-          </div>
-        )}
+        <div className="mt-2 flex items-center gap-2">
+          <Badge variant={
+            effectiveDemoUser.role === 'admin' ? 'destructive' :
+            effectiveDemoUser.role === 'hr' ? 'default' :
+            effectiveDemoUser.role === 'manager' ? 'secondary' :
+            'outline'
+          }>
+            {effectiveDemoUser.role === 'employee' && '👤 自分の情報のみ表示'}
+            {effectiveDemoUser.role === 'manager' && '👥 チーム8名の情報を表示'}
+            {effectiveDemoUser.role === 'hr' && '🏢 全社50名の情報を表示'}
+            {effectiveDemoUser.role === 'admin' && '⚙️ システム管理機能付き'}
+          </Badge>
+        </div>
       </div>
 
       {/* Role-based KPI Cards */}
       <div className={`grid gap-4 md:grid-cols-2 ${
-        effectiveDemoUser?.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
+        effectiveDemoUser.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
       }`}>
         {/* Card 1: 従業員数/チームメンバー数 */}
         <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">

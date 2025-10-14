@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ApprovalFlow, createApprovalFlow, processApproval, getPendingApprovalsForUser } from './approval-system';
+import { ApprovalFlow, createApprovalFlow, processApproval, returnToSender, getPendingApprovalsForUser, RequestMetadata, checkForOverdueApprovals, escalateApproval } from './approval-system';
 
 interface ApprovalStore {
   // 承認フローの管理
@@ -12,7 +12,8 @@ interface ApprovalStore {
     requestType: ApprovalFlow['requestType'],
     applicantId: string,
     applicantName: string,
-    urgency?: ApprovalFlow['urgency']
+    urgency?: ApprovalFlow['urgency'],
+    metadata?: RequestMetadata
   ) => ApprovalFlow;
   
   // 申請を提出（下書きから申請中に変更）
@@ -25,7 +26,14 @@ interface ApprovalStore {
     action: 'approve' | 'reject',
     comment?: string
   ) => void;
-  
+
+  // 差し戻し処理
+  returnToSender: (
+    flowId: string,
+    approverUserId: string,
+    reason: string
+  ) => void;
+
   // 特定ユーザーの承認待ちを取得
   getPendingApprovals: (userId: string) => ApprovalFlow[];
   
@@ -40,7 +48,15 @@ interface ApprovalStore {
   
   // 通知カウントの管理
   getNotificationCount: (userId: string) => number;
-  
+
+  // エスカレーション機能
+  checkOverdueApprovals: () => Array<{
+    flow: ApprovalFlow;
+    step: any;
+    hoursOverdue: number;
+  }>;
+  escalateApproval: (flowId: string) => void;
+
   // 承認フロー更新時のコールバック
   onFlowUpdate: ((flow: ApprovalFlow) => void) | null;
   setOnFlowUpdate: (callback: (flow: ApprovalFlow) => void) => void;
@@ -56,13 +72,13 @@ export const useApprovalStore = create<ApprovalStore>()(
         set({ onFlowUpdate: callback });
       },
       
-      createFlow: (requestId, requestType, applicantId, applicantName, urgency = 'normal') => {
-        const flow = createApprovalFlow(requestId, requestType, applicantId, applicantName, urgency);
-        
+      createFlow: (requestId, requestType, applicantId, applicantName, urgency = 'normal', metadata) => {
+        const flow = createApprovalFlow(requestId, requestType, applicantId, applicantName, urgency, metadata);
+
         set((state) => ({
           approvalFlows: [...state.approvalFlows, flow]
         }));
-        
+
         return flow;
       },
       
@@ -104,7 +120,31 @@ export const useApprovalStore = create<ApprovalStore>()(
           console.error('Approval processing failed:', error);
         }
       },
-      
+
+      returnToSender: (flowId, approverUserId, reason) => {
+        const flow = get().approvalFlows.find(f => f.id === flowId);
+        if (!flow) return;
+
+        try {
+          const updatedFlow = returnToSender(flow, approverUserId, reason);
+
+          set((state) => ({
+            approvalFlows: state.approvalFlows.map(f =>
+              f.id === flowId ? updatedFlow : f
+            )
+          }));
+
+          // 承認フロー更新の通知
+          const callback = get().onFlowUpdate;
+          if (callback) {
+            callback(updatedFlow);
+          }
+
+        } catch (error) {
+          console.error('Return to sender failed:', error);
+        }
+      },
+
       getPendingApprovals: (userId) => {
         return getPendingApprovalsForUser(userId, get().approvalFlows);
       },
@@ -136,6 +176,40 @@ export const useApprovalStore = create<ApprovalStore>()(
       
       getNotificationCount: (userId) => {
         return getPendingApprovalsForUser(userId, get().approvalFlows).length;
+      },
+
+      checkOverdueApprovals: () => {
+        return checkForOverdueApprovals(get().approvalFlows);
+      },
+
+      escalateApproval: (flowId) => {
+        const flow = get().approvalFlows.find(f => f.id === flowId);
+        if (!flow) return;
+
+        const overdueApprovals = checkForOverdueApprovals([flow]);
+        if (overdueApprovals.length === 0) {
+          console.warn('No overdue approvals found for flow:', flowId);
+          return;
+        }
+
+        try {
+          const { step } = overdueApprovals[0];
+          const updatedFlow = escalateApproval(flow, step);
+
+          set((state) => ({
+            approvalFlows: state.approvalFlows.map(f =>
+              f.id === flowId ? updatedFlow : f
+            )
+          }));
+
+          // 承認フロー更新の通知
+          const callback = get().onFlowUpdate;
+          if (callback) {
+            callback(updatedFlow);
+          }
+        } catch (error) {
+          console.error('Escalation failed:', error);
+        }
       },
     }),
     {

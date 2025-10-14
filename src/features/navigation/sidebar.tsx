@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-// import { useTranslations } from 'next-intl'; // 一時的に無効化
+import { usePathname, useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import LogoCompact from '@/components/LogoCompact';
 import { MountGate } from '@/components/common/MountGate';
 import {
@@ -26,51 +26,31 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { useUIStore, useUserStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
-const navigation = [
-  { key: 'dashboard', href: '/ja/dashboard', icon: LayoutDashboard, adminOnly: false },
-  { key: 'users', href: '/ja/users', icon: Users, adminOnly: false },
-  { key: 'members', href: '/ja/members', icon: UserCheck, adminOnly: false },
-  { key: 'attendance', href: '/ja/attendance', icon: Clock, adminOnly: false },
-  { key: 'leave', href: '/ja/leave', icon: Calendar, adminOnly: false },
-  { key: 'workflow', href: '/ja/workflow', icon: GitBranch, adminOnly: false },
-  { key: 'payroll', href: '/ja/payroll', icon: Calculator, adminOnly: false },
-  { key: 'evaluation', href: '/ja/evaluation', icon: Star, adminOnly: false },
-  { key: 'assets', href: '/ja/assets', icon: Car, adminOnly: false },
-  { key: 'saas', href: '/ja/saas', icon: Cloud, adminOnly: false },
-  // { key: 'sites', href: '/ja/sites', icon: MapPin, adminOnly: false }, // 未実装
-  // { key: 'audit', href: '/ja/admin/audit-logs', icon: FileText, adminOnly: true }, // 未実装
+const getNavigation = (locale: string) => [
+  { key: 'dashboard', href: `/${locale}/dashboard`, icon: LayoutDashboard, adminOnly: false },
+  { key: 'users', href: `/${locale}/users`, icon: Users, adminOnly: false },
+  { key: 'members', href: `/${locale}/members`, icon: UserCheck, adminOnly: false },
+  { key: 'attendance', href: `/${locale}/attendance`, icon: Clock, adminOnly: false },
+  { key: 'leave', href: `/${locale}/leave`, icon: Calendar, adminOnly: false },
+  { key: 'workflows', href: `/${locale}/workflow`, icon: GitBranch, adminOnly: false },
+  { key: 'payroll', href: `/${locale}/payroll`, icon: Calculator, adminOnly: false },
+  { key: 'evaluation', href: `/${locale}/evaluation`, icon: Star, adminOnly: false },
+  { key: 'assets', href: `/${locale}/assets`, icon: Car, adminOnly: false },
+  { key: 'saas', href: `/${locale}/saas`, icon: Cloud, adminOnly: false },
+  // { key: 'sites', href: `/${locale}/sites`, icon: MapPin, adminOnly: false }, // 未実装
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  // const t = useTranslations('navigation'); // 一時的に無効化
+  const params = useParams();
+  const currentLocale = (params?.locale as string) || 'ja';
+  const tNav = useTranslations('navigation');
+  const tCommon = useTranslations('common');
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const { currentUser } = useUserStore();
-  
-  // 固定の日本語翻訳関数
-  const t = (key: string) => {
-    const translations: Record<string, string> = {
-      'dashboard': 'ダッシュボード',
-      'users': 'ユーザー管理',
-      'members': 'メンバー管理',
-      'attendance': '勤怠管理',
-      'leave': '休暇管理',
-      'approval': '承認管理',
-      'workflow': 'ワークフロー',
-      'payroll': '給与管理',
-      'evaluation': '人事評価',
-      'assets': '資産管理',
-      'saas': 'SaaS管理',
-      'organization': '組織管理',
-      'sites': '拠点管理',
-      'settings': '設定',
-      'profile': 'プロフィール',
-      'audit': '監査ログ',
-    };
-    return translations[key] || key;
-  };
 
   const isAdmin = currentUser?.roles?.includes('admin');
+  const navigation = getNavigation(currentLocale);
 
   const filteredNavigation = navigation.filter(item => 
     !item.adminOnly || isAdmin
@@ -84,7 +64,7 @@ export function Sidebar() {
       )}>
         {/* Logo/Brand */}
         <div className="flex h-16 items-center px-4 border-b border-border">
-          <Link href="/ja/dashboard" className={cn(
+          <Link href={`/${currentLocale}/dashboard`} className={cn(
             "flex items-center",
             sidebarCollapsed ? "justify-center w-full" : ""
           )}>
@@ -117,7 +97,7 @@ export function Sidebar() {
               >
                 <Icon className={cn('w-5 h-5', !sidebarCollapsed && 'mr-3')} />
                 {!sidebarCollapsed && (
-                  <span>{t(item.key)}</span>
+                  <span>{tNav(item.key)}</span>
                 )}
               </Link>
             );
@@ -129,7 +109,7 @@ export function Sidebar() {
                     {navItem}
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    {t(item.key)}
+                    {tNav(item.key)}
                   </TooltipContent>
                 </Tooltip>
               );
@@ -150,10 +130,10 @@ export function Sidebar() {
               sidebarCollapsed ? 'justify-center' : 'justify-between'
             )}
             aria-expanded={!sidebarCollapsed}
-            aria-label={sidebarCollapsed ? 'メニューを展開' : 'メニューを折りたたむ'}
+            aria-label={sidebarCollapsed ? tCommon('expandMenu') : tCommon('collapseMenu')}
           >
             <span className={cn("text-sm", sidebarCollapsed && "sr-only")}>
-              {sidebarCollapsed ? 'メニューを展開' : 'メニューを折りたたむ'}
+              {sidebarCollapsed ? tCommon('expandMenu') : tCommon('collapseMenu')}
             </span>
             <ChevronLeft
               className={cn(

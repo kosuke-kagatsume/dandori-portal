@@ -32,7 +32,8 @@ export async function POST(req: Request) {
         email: email,
         user_metadata: {
           name: 'デモユーザー',
-          role: 'demo',
+          role: 'admin',
+          roles: ['admin'],
           department: '営業部',
         },
         created_at: new Date().toISOString(),
@@ -96,7 +97,8 @@ export async function POST(req: Request) {
         email: email,
         user_metadata: {
           name: 'デモユーザー',
-          role: 'demo',
+          role: 'admin',
+          roles: ['admin'],
           department: '営業部',
         },
         created_at: new Date().toISOString(),
@@ -136,7 +138,8 @@ export async function POST(req: Request) {
         email: 'demo@dandori.local',
         user_metadata: {
           name: 'デモユーザー',
-          role: 'demo',
+          role: 'admin',
+          roles: ['admin'],
           department: '営業部',
         },
         created_at: new Date().toISOString(),

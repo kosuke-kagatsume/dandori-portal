@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useApprovalStore } from '@/lib/approval-store';
 import { ApprovalFlow, calculateProgress } from '@/lib/approval-system';
-import { 
+import {
   Clock,
   CheckCircle,
   XCircle,
@@ -17,6 +17,10 @@ import {
   TrendingUp,
   Users,
   Eye,
+  RotateCcw,
+  Info,
+  AlertTriangle,
+  ArrowUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OptimizedDataTable } from '@/components/ui/common/optimized-data-table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Dialog,
   DialogContent,
@@ -42,18 +47,23 @@ export default function ApprovalPage() {
   const [loading, setLoading] = useState(true);
   const [selectedFlow, setSelectedFlow] = useState<ApprovalFlow | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [comment, setComment] = useState('');
+  const [returnReason, setReturnReason] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
-  
+
   const currentUserId = '1'; // 現在のユーザー（田中太郎）
-  
-  const { 
-    approvalFlows, 
-    getPendingApprovals, 
-    getUserRequests, 
+
+  const {
+    approvalFlows,
+    getPendingApprovals,
+    getUserRequests,
     processApproval: processApprovalAction,
-    getNotificationCount
+    returnToSender: returnToSenderAction,
+    getNotificationCount,
+    checkOverdueApprovals,
+    escalateApproval: escalateApprovalAction
   } = useApprovalStore();
 
   useEffect(() => {
@@ -86,11 +96,31 @@ export default function ApprovalPage() {
       setShowApprovalDialog(false);
       setSelectedFlow(null);
       setComment('');
-      
+
       toast.success(
         approvalAction === 'approve' ? '申請を承認しました' : '申請を却下しました',
         { description: '申請者に通知が送信されました' }
       );
+    } catch (error) {
+      toast.error('処理に失敗しました');
+    }
+  };
+
+  const handleReturn = async () => {
+    if (!selectedFlow || !returnReason.trim()) {
+      toast.error('差し戻し理由を入力してください');
+      return;
+    }
+
+    try {
+      returnToSenderAction(selectedFlow.id, currentUserId, returnReason);
+      setShowReturnDialog(false);
+      setSelectedFlow(null);
+      setReturnReason('');
+
+      toast.success('申請を差し戻しました', {
+        description: '申請者に修正依頼が送信されました'
+      });
     } catch (error) {
       toast.error('処理に失敗しました');
     }
@@ -102,12 +132,47 @@ export default function ApprovalPage() {
     setShowApprovalDialog(true);
   };
 
+  const openReturnDialog = (flow: ApprovalFlow) => {
+    setSelectedFlow(flow);
+    setShowReturnDialog(true);
+  };
+
+  const handleEscalate = (flow: ApprovalFlow) => {
+    try {
+      escalateApprovalAction(flow.id);
+      toast.success('承認をエスカレーションしました', {
+        description: '上位承認者に通知が送信されました'
+      });
+    } catch (error) {
+      toast.error('エスカレーションに失敗しました');
+    }
+  };
+
+  // 期限の状態を判定
+  const getDeadlineStatus = (deadline: string | undefined) => {
+    if (!deadline) return null;
+
+    const now = new Date();
+    const deadlineDate = new Date(deadline);
+    const hoursRemaining = (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursRemaining < 0) {
+      return { status: 'overdue', hours: Math.abs(hoursRemaining), color: 'text-red-600' };
+    } else if (hoursRemaining < 6) {
+      return { status: 'urgent', hours: hoursRemaining, color: 'text-orange-600' };
+    } else if (hoursRemaining < 24) {
+      return { status: 'soon', hours: hoursRemaining, color: 'text-yellow-600' };
+    }
+    return null;
+  };
+
   const getStatusBadge = (status: ApprovalFlow['overallStatus']) => {
     const config = {
       draft: { label: '下書き', variant: 'outline' as const, icon: FileText },
       pending: { label: '承認待ち', variant: 'default' as const, icon: Clock },
       approved: { label: '承認済み', variant: 'default' as const, icon: CheckCircle },
       rejected: { label: '却下', variant: 'destructive' as const, icon: XCircle },
+      returned: { label: '差し戻し', variant: 'secondary' as const, icon: RotateCcw },
       cancelled: { label: 'キャンセル', variant: 'secondary' as const, icon: AlertCircle },
     };
 
@@ -184,16 +249,79 @@ export default function ApprovalPage() {
         const flow = row.original;
         const progress = calculateProgress(flow);
         const currentStep = flow.steps.find(s => s.stepNumber === flow.currentStep);
-        
+        const deadlineStatus = currentStep?.deadline ? getDeadlineStatus(currentStep.deadline) : null;
+
         return (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <Progress value={progress} className="h-2 w-20" />
               <span className="text-xs text-muted-foreground">{progress.toFixed(0)}%</span>
+              {flow.appliedRules && flow.appliedRules.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-blue-500 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-semibold mb-1">条件分岐ルール適用</p>
+                      {flow.appliedRules.map((rule, index) => (
+                        <p key={index} className="text-xs">• {rule}</p>
+                      ))}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {deadlineStatus && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className={`h-4 w-4 ${deadlineStatus.color} cursor-help`} />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-semibold">
+                        {deadlineStatus.status === 'overdue' && '期限超過'}
+                        {deadlineStatus.status === 'urgent' && '緊急（6時間以内）'}
+                        {deadlineStatus.status === 'soon' && '期限接近（24時間以内）'}
+                      </p>
+                      <p className="text-xs">
+                        {deadlineStatus.status === 'overdue'
+                          ? `${Math.floor(deadlineStatus.hours)}時間超過`
+                          : `残り${Math.floor(deadlineStatus.hours)}時間`}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {currentStep?.escalatedAt && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ArrowUp className="h-4 w-4 text-purple-600 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-semibold">エスカレーション済み</p>
+                      <p className="text-xs">
+                        {format(new Date(currentStep.escalatedAt), 'MM/dd HH:mm', { locale: ja })}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             {currentStep && (
               <p className="text-xs text-muted-foreground">
                 ステップ {currentStep.stepNumber}: {currentStep.approverName}
+                {currentStep.addedByRule && (
+                  <span className="text-blue-500 ml-1">(条件追加)</span>
+                )}
+                {currentStep.escalatedTo && (
+                  <span className="text-purple-600 ml-1">(エスカレーション済)</span>
+                )}
+              </p>
+            )}
+            {deadlineStatus?.status === 'overdue' && flow.overallStatus === 'pending' && (
+              <p className="text-xs text-red-600 font-medium">
+                エスカレーション推奨
               </p>
             )}
           </div>
@@ -205,12 +333,15 @@ export default function ApprovalPage() {
       header: '操作',
       cell: ({ row }) => {
         const flow = row.original;
-        const canApprove = flow.steps.some(step => 
+        const canApprove = flow.steps.some(step =>
           step.stepNumber === flow.currentStep &&
           step.approverUserId === currentUserId &&
           step.status === 'pending'
         );
-        
+        const currentStep = flow.steps.find(s => s.stepNumber === flow.currentStep);
+        const deadlineStatus = currentStep?.deadline ? getDeadlineStatus(currentStep.deadline) : null;
+        const isOverdue = deadlineStatus?.status === 'overdue' && flow.overallStatus === 'pending';
+
         return canApprove ? (
           <div className="flex items-center gap-2">
             <Button
@@ -228,16 +359,49 @@ export default function ApprovalPage() {
             >
               却下
             </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8"
+              onClick={() => openReturnDialog(flow)}
+            >
+              <RotateCcw className="h-4 w-4 mr-1" />
+              差し戻し
+            </Button>
+            {isOverdue && !currentStep?.escalatedAt && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-8"
+                onClick={() => handleEscalate(flow)}
+              >
+                <ArrowUp className="h-4 w-4 mr-1" />
+                エスカレート
+              </Button>
+            )}
           </div>
         ) : (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-8"
-            onClick={() => setSelectedFlow(flow)}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8"
+              onClick={() => setSelectedFlow(flow)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            {isOverdue && !currentStep?.escalatedAt && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-8"
+                onClick={() => handleEscalate(flow)}
+              >
+                <ArrowUp className="h-4 w-4 mr-1" />
+                エスカレート
+              </Button>
+            )}
+          </div>
         );
       },
     },
@@ -463,14 +627,14 @@ export default function ApprovalPage() {
               )}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="comment">コメント（任意）</Label>
               <Textarea
                 id="comment"
                 placeholder={
-                  approvalAction === 'approve' 
+                  approvalAction === 'approve'
                     ? '承認理由やコメントをご入力ください'
                     : '却下理由をご入力ください（推奨）'
                 }
@@ -480,7 +644,7 @@ export default function ApprovalPage() {
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowApprovalDialog(false)}>
               キャンセル
@@ -491,6 +655,55 @@ export default function ApprovalPage() {
               variant={approvalAction === 'reject' ? 'destructive' : 'default'}
             >
               {approvalAction === 'approve' ? '承認する' : '却下する'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Return to Sender Dialog */}
+      <Dialog open={showReturnDialog} onOpenChange={setShowReturnDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>申請を差し戻す</DialogTitle>
+            <DialogDescription>
+              {selectedFlow && (
+                <div className="space-y-2 text-left">
+                  <p>申請者: {selectedFlow.applicantName}</p>
+                  <p>申請種別: {getRequestTypeLabel(selectedFlow.requestType)}</p>
+                  <p>申請日: {format(new Date(selectedFlow.submittedAt), 'yyyy/MM/dd HH:mm', { locale: ja })}</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    差し戻し理由を入力してください。申請者に修正依頼が送信されます。
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="returnReason">差し戻し理由 *</Label>
+              <Textarea
+                id="returnReason"
+                placeholder="例：経費の領収書が添付されていません"
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReturnDialog(false)}>
+              キャンセル
+            </Button>
+            <Button
+              onClick={handleReturn}
+              variant="secondary"
+              disabled={!returnReason.trim()}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              差し戻す
             </Button>
           </DialogFooter>
         </DialogContent>

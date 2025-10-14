@@ -175,6 +175,30 @@ export const AuditLogSchema = z.object({
   timestamp: z.string(),
 });
 
+// 異動履歴（配置転換）
+export const TransferHistorySchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  userName: z.string(),
+  type: z.enum(['transfer', 'promotion', 'demotion', 'role_change']),
+  fromUnitId: z.string(),
+  fromUnitName: z.string(),
+  toUnitId: z.string(),
+  toUnitName: z.string(),
+  fromPosition: z.string(),
+  toPosition: z.string(),
+  fromRole: z.enum(['employee', 'manager', 'hr', 'admin']).optional(),
+  toRole: z.enum(['employee', 'manager', 'hr', 'admin']).optional(),
+  effectiveDate: z.string(),
+  reason: z.string().optional(),
+  notes: z.string().optional(),
+  approvedBy: z.string().optional(),
+  approvedByName: z.string().optional(),
+  createdAt: z.string(),
+  createdBy: z.string(),
+  createdByName: z.string(),
+});
+
 // Type exports
 export type User = z.infer<typeof UserSchema>;
 export type Tenant = z.infer<typeof TenantSchema>;
@@ -189,6 +213,7 @@ export type LeaveRequest = z.infer<typeof LeaveRequestSchema>;
 export type Workflow = z.infer<typeof WorkflowSchema>;
 export type Site = z.infer<typeof SiteSchema>;
 export type AuditLog = z.infer<typeof AuditLogSchema>;
+export type TransferHistory = z.infer<typeof TransferHistorySchema>;
 
 // Role and Permission types
 export type UserRole = 'employee' | 'manager' | 'hr' | 'admin';

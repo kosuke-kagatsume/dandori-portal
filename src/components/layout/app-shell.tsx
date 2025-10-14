@@ -51,11 +51,11 @@ export function AppShell({ children }: AppShellProps) {
         phone: '090-1234-5678',
         hireDate: '2020-04-01',
         unitId: '1',
-        roles: [demoUser.user_metadata.role || 'manager'],
+        roles: demoUser.user_metadata.roles || [demoUser.user_metadata.role || 'manager'],
         status: 'active',
         timezone: 'Asia/Tokyo',
         avatar: '',
-        position: demoUser.user_metadata.role === 'manager' ? 'マネージャー' : 'スタッフ',
+        position: demoUser.user_metadata.role === 'admin' ? '管理者' : demoUser.user_metadata.role === 'manager' ? 'マネージャー' : 'スタッフ',
         department: demoUser.user_metadata.department || '営業部',
       });
     } else {

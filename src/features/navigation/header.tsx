@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-// import { useTranslations } from 'next-intl'; // 一時的に無効化
+import { useRouter, useParams, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
 import { 
   Search,
@@ -43,21 +43,11 @@ import { SimpleDemoSwitcher } from '@/components/demo/simple-demo-switcher';
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams();
+  const currentLocale = (params?.locale as string) || 'ja';
   const { signOut } = useAuth();
-  // const t = useTranslations('common'); // 一時的に無効化
-  
-  // 固定の日本語翻訳関数
-  const t = (key: string) => {
-    const translations: Record<string, string> = {
-      'search': '検索',
-      'settings': '設定',
-      'theme': 'テーマ',
-      'language': '言語',
-      'profile': 'プロフィール',
-      'logout': 'ログアウト'
-    };
-    return translations[key] || key;
-  };
+  const t = useTranslations('common');
   const { 
     theme, 
     setTheme, 
@@ -113,6 +103,15 @@ export function Header() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [setCommandPaletteOpen]);
 
+  // 言語切り替え関数
+  const switchLanguage = () => {
+    const newLocale = currentLocale === 'ja' ? 'en' : 'ja';
+    // 現在のパスから言語プレフィックスを除去
+    const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');
+    // 新しい言語でパスを構築
+    const newPath = `/${newLocale}${pathWithoutLocale}`;
+    router.push(newPath);
+  };
 
   return (
     <>
@@ -128,7 +127,7 @@ export function Header() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="検索..."
+                placeholder={`${t('search')}...`}
                 className="pl-9"
                 onFocus={() => setCommandPaletteOpen(true)}
                 readOnly
@@ -161,8 +160,8 @@ export function Header() {
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
                   >
                     {unreadCount}
@@ -170,6 +169,21 @@ export function Header() {
                 )}
               </Button>
             </NotificationCenterV2>
+
+            <Separator orientation="vertical" className="h-6" />
+
+            {/* Language Switcher */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={switchLanguage}
+              title={currentLocale === 'ja' ? 'Switch to English' : '日本語に切り替え'}
+            >
+              <Globe className="h-5 w-5" />
+              <span className="ml-1 text-xs font-medium">
+                {currentLocale === 'ja' ? 'EN' : 'JA'}
+              </span>
+            </Button>
 
             <Separator orientation="vertical" className="h-6" />
 
@@ -203,30 +217,31 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push('/ja/profile')}>
+                <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/profile`)}>
                   <User className="mr-2 h-4 w-4" />
-                  <span>プロフィール</span>
+                  <span>{t('profile')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/ja/organization')}>
+                <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/organization`)}>
                   <Building2 className="mr-2 h-4 w-4" />
                   <span>組織管理</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push('/ja/settings')}>
+                <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/settings`)}>
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>設定</span>
+                  <span>{t('settings')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="text-red-600"
                   onClick={async () => {
                     // ログアウト処理
-                    if (confirm('ログアウトしますか？')) {
+                    const confirmMessage = currentLocale === 'ja' ? 'ログアウトしますか？' : 'Do you want to logout?';
+                    if (confirm(confirmMessage)) {
                       await signOut();
                     }
                   }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>ログアウト</span>
+                  <span>{t('logout')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

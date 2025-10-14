@@ -59,6 +59,7 @@ export default function UsersPage() {
   const [retireDialogOpen, setRetireDialogOpen] = useState(false);
   const [retiringUser, setRetiringUser] = useState<User | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [importInputRef, setImportInputRef] = useState<HTMLInputElement | null>(null);
 
   const router = useRouter();
   const { users, setUsers, retireUser } = useUserStore();
@@ -166,6 +167,103 @@ export default function UsersPage() {
       console.error('Failed to export CSV:', error);
       toast.error('CSV出力に失敗しました');
     }
+  };
+
+  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv')) {
+      toast.error('CSVファイルを選択してください');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+
+        if (lines.length < 2) {
+          toast.error('CSVファイルが空です');
+          return;
+        }
+
+        // ヘッダー行をスキップ
+        const dataLines = lines.slice(1);
+        const importedUsers: User[] = [];
+        let errorCount = 0;
+
+        dataLines.forEach((line, index) => {
+          try {
+            // CSV行をパース（カンマで分割、引用符考慮）
+            const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+            const cleanValues = values.map(v => v.replace(/^"|"$/g, '').trim());
+
+            if (cleanValues.length < 6) {
+              errorCount++;
+              return;
+            }
+
+            const [id, name, email, phone, department, position, hireDate, status, roles] = cleanValues;
+
+            const user: User = {
+              id: id || `imported-${Date.now()}-${index}`,
+              name: name || '',
+              email: email || '',
+              phone: phone || '',
+              department: department || '',
+              position: position || '',
+              hireDate: hireDate || new Date().toISOString().split('T')[0],
+              status: (status as any) || 'active',
+              roles: roles ? roles.split(';') : ['employee'],
+              unitId: '1',
+              timezone: 'Asia/Tokyo',
+              avatar: '',
+            };
+
+            // 基本的なバリデーション
+            if (user.name && user.email) {
+              importedUsers.push(user);
+            } else {
+              errorCount++;
+            }
+          } catch (error) {
+            console.error(`Line ${index + 2} parse error:`, error);
+            errorCount++;
+          }
+        });
+
+        if (importedUsers.length > 0) {
+          // 既存のユーザーと重複チェック（メールアドレスで）
+          const existingEmails = new Set(users.map(u => u.email));
+          const newUsers = importedUsers.filter(u => !existingEmails.has(u.email));
+
+          if (newUsers.length > 0) {
+            setUsers([...users, ...newUsers]);
+            toast.success(`${newUsers.length}件のユーザーをインポートしました${errorCount > 0 ? ` (${errorCount}件のエラーをスキップ)` : ''}`);
+          } else {
+            toast.warning('すべてのユーザーが既に登録されています');
+          }
+        } else {
+          toast.error(`インポートに失敗しました (${errorCount}件のエラー)`);
+        }
+
+        // input要素をリセット
+        if (event.target) {
+          event.target.value = '';
+        }
+      } catch (error) {
+        console.error('Failed to import CSV:', error);
+        toast.error('CSVの読み込みに失敗しました');
+      }
+    };
+
+    reader.onerror = () => {
+      toast.error('ファイルの読み込みに失敗しました');
+    };
+
+    reader.readAsText(file, 'UTF-8');
   };
 
   const getStatusBadge = (status: string) => {
@@ -377,10 +475,21 @@ export default function UsersPage() {
             <Download className="mr-2 h-4 w-4" />
             エクスポート
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => importInputRef?.click()}
+          >
             <Upload className="mr-2 h-4 w-4" />
             インポート
           </Button>
+          <input
+            ref={(el) => setImportInputRef(el)}
+            type="file"
+            accept=".csv"
+            onChange={handleImportCSV}
+            style={{ display: 'none' }}
+          />
           <Button
             onClick={() => {
               setEditingUser(undefined);

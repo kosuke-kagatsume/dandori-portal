@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { OrganizationNode, OrganizationMember, UserRole } from '@/types';
+import type { OrganizationNode, OrganizationMember, UserRole, TransferHistory } from '@/types';
 
 interface OrganizationStore {
   // State
@@ -15,6 +15,7 @@ interface OrganizationStore {
     department: string | 'all';
     status: 'active' | 'inactive' | 'all';
   };
+  transferHistories: TransferHistory[];
 
   // Actions
   setOrganizationTree: (tree: OrganizationNode) => void;
@@ -35,6 +36,13 @@ interface OrganizationStore {
   updateNode: (nodeId: string, updates: Partial<OrganizationNode>) => void;
   removeNode: (nodeId: string) => void;
   
+  // Transfer History management
+  addTransferHistory: (transfer: TransferHistory) => void;
+  getTransferHistoriesByUser: (userId: string) => TransferHistory[];
+  getAllTransferHistories: () => TransferHistory[];
+  getTransferHistoriesByUnit: (unitId: string) => TransferHistory[];
+  getRecentTransfers: (limit?: number) => TransferHistory[];
+
   // Utility functions
   findMember: (memberId: string) => OrganizationMember | null;
   findNode: (nodeId: string) => OrganizationNode | null;
@@ -59,6 +67,7 @@ export const useOrganizationStore = create<OrganizationStore>()(
         department: 'all',
         status: 'active'
       },
+      transferHistories: [],
 
       // Basic setters
       setOrganizationTree: (tree) => set({ organizationTree: tree }),
@@ -301,22 +310,54 @@ export const useOrganizationStore = create<OrganizationStore>()(
 
         const findMembersUnderManager = (node: OrganizationNode): OrganizationMember[] => {
           let members: OrganizationMember[] = [];
-          
+
           // If this node's head is the manager, add all members
           if (node.headMember?.id === managerId) {
             members = [...node.members];
           }
-          
+
           // Recursively search children
           for (const child of node.children) {
             members = [...members, ...findMembersUnderManager(child)];
           }
-          
+
           return members;
         };
 
         return findMembersUnderManager(state.organizationTree)
           .filter(member => member.id !== managerId);
+      },
+
+      // Transfer History management
+      addTransferHistory: (transfer) => set((state) => ({
+        transferHistories: [transfer, ...state.transferHistories]
+      })),
+
+      getTransferHistoriesByUser: (userId) => {
+        const state = get();
+        return state.transferHistories
+          .filter(t => t.userId === userId)
+          .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+      },
+
+      getAllTransferHistories: () => {
+        const state = get();
+        return state.transferHistories
+          .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+      },
+
+      getTransferHistoriesByUnit: (unitId) => {
+        const state = get();
+        return state.transferHistories
+          .filter(t => t.fromUnitId === unitId || t.toUnitId === unitId)
+          .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime());
+      },
+
+      getRecentTransfers: (limit = 10) => {
+        const state = get();
+        return state.transferHistories
+          .sort((a, b) => new Date(b.effectiveDate).getTime() - new Date(a.effectiveDate).getTime())
+          .slice(0, limit);
       }
     }),
     {
@@ -325,7 +366,8 @@ export const useOrganizationStore = create<OrganizationStore>()(
         organizationTree: state.organizationTree,
         allMembers: state.allMembers,
         viewMode: state.viewMode,
-        filters: state.filters
+        filters: state.filters,
+        transferHistories: state.transferHistories
       })
     }
   )
