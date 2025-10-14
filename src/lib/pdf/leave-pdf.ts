@@ -1,10 +1,10 @@
 import { jsPDF } from 'jspdf';
 import type { LeaveRequest } from '@/lib/store/leave-management-store';
-import { getLeaveTypeLabel, getLeaveStatusLabel } from '@/config/labels';
 import { loadJapaneseFont } from './font-loader';
+import { PDF_LAYOUT, PDF_COMPANY } from '@/config/pdf-constants';
 
 /**
- * 休暇申請一覧PDF生成
+ * 休暇申請一覧PDF生成（統一フォーマット）
  */
 export const generateLeavePDF = async (requests: LeaveRequest[]): Promise<jsPDF> => {
   try {
@@ -14,149 +14,221 @@ export const generateLeavePDF = async (requests: LeaveRequest[]): Promise<jsPDF>
       format: 'a4',
     });
 
-    // 日本語フォントをロード
+    // 日本語フォント読み込み
     await loadJapaneseFont(doc);
     doc.setFont('NotoSansJP', 'normal');
 
-    let yPos = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const { MARGIN, FONT_SIZE, COLOR, LINE_WIDTH, SPACING } = PDF_LAYOUT;
 
-    // タイトル
-    doc.setFontSize(20);
-    doc.text('休暇申請一覧', 105, yPos, { align: 'center' });
-    yPos += 15;
+    let y = MARGIN.TOP;
 
-    // 統計情報
-    doc.setFontSize(10);
-    const totalRequests = requests.length;
-    const approvedCount = requests.filter((r) => r.status === 'approved').length;
-    const pendingCount = requests.filter((r) => r.status === 'pending').length;
-    const rejectedCount = requests.filter((r) => r.status === 'rejected').length;
+    // ===== ヘッダー =====
+    doc.setFontSize(FONT_SIZE.BODY);
+    doc.setTextColor(...COLOR.TEXT.DARK_GRAY);
+    doc.text(PDF_COMPANY.NAME, MARGIN.LEFT, y);
 
-    doc.text(`総申請数: ${totalRequests}件`, 20, yPos);
-    doc.text(`承認済み: ${approvedCount}件`, 80, yPos);
-    doc.text(`承認待ち: ${pendingCount}件`, 140, yPos);
-    yPos += 6;
-    doc.text(`却下: ${rejectedCount}件`, 20, yPos);
-    yPos += 10;
+    doc.setFontSize(FONT_SIZE.TITLE);
+    doc.setTextColor(...COLOR.TEXT.BLACK);
+    doc.text('休暇申請一覧', pageWidth - MARGIN.RIGHT, y, { align: 'right' });
+    y += SPACING.SM;
+
+    doc.setFontSize(FONT_SIZE.SMALL);
+    doc.setTextColor(...COLOR.TEXT.LIGHT_GRAY);
+    doc.text(`${PDF_COMPANY.FULL_ADDRESS} / TEL: ${PDF_COMPANY.TEL}`, MARGIN.LEFT, y);
+
+    const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+    doc.setFontSize(FONT_SIZE.SUBTITLE);
+    doc.text(today, pageWidth - MARGIN.RIGHT, y, { align: 'right' });
+    y += SPACING.MD;
 
     // 区切り線
-    doc.setLineWidth(0.5);
-    doc.line(20, yPos, 190, yPos);
-    yPos += 8;
+    doc.setDrawColor(...COLOR.LINE.LIGHT);
+    doc.setLineWidth(LINE_WIDTH.THIN);
+    doc.line(MARGIN.LEFT, y, pageWidth - MARGIN.RIGHT, y);
+    y += SPACING.MD;
 
-    // 申請データを表示
+    // ===== 統計情報 =====
+    const stats = {
+      total: requests.length,
+      approved: requests.filter(r => r.status === 'approved').length,
+      pending: requests.filter(r => r.status === 'pending').length,
+      rejected: requests.filter(r => r.status === 'rejected').length,
+    };
+
+    doc.setFontSize(FONT_SIZE.SECTION_TITLE);
+    doc.setTextColor(...COLOR.TEXT.DARK_GRAY);
+    doc.text('申請状況サマリー', MARGIN.LEFT, y);
+    y += SPACING.SM;
+
+    doc.setFontSize(FONT_SIZE.BODY);
+    doc.setTextColor(...COLOR.TEXT.BLACK);
+    doc.text(`総申請数: ${stats.total}件`, MARGIN.LEFT + 5, y);
+    doc.text(`承認済み: ${stats.approved}件`, MARGIN.LEFT + 55, y);
+    doc.text(`承認待ち: ${stats.pending}件`, MARGIN.LEFT + 105, y);
+    doc.text(`却下: ${stats.rejected}件`, MARGIN.LEFT + 155, y);
+    y += SPACING.LG;
+
+    // ===== 申請一覧テーブル =====
+    doc.setFontSize(FONT_SIZE.SECTION_TITLE);
+    doc.setTextColor(...COLOR.TEXT.DARK_GRAY);
+    doc.text('申請一覧', MARGIN.LEFT, y);
+    y += SPACING.SM;
+
+    // テーブルヘッダー
+    doc.setFillColor(...COLOR.BACKGROUND.BLUE_GRAY);
+    doc.rect(MARGIN.LEFT, y, pageWidth - MARGIN.LEFT - MARGIN.RIGHT, 7, 'F');
+
+    doc.setFontSize(FONT_SIZE.SMALL);
+    doc.setTextColor(...COLOR.TEXT.BLACK);
+    const headerY = y + 5;
+    doc.text('従業員名', MARGIN.LEFT + 2, headerY);
+    doc.text('種別', MARGIN.LEFT + 40, headerY);
+    doc.text('期間', MARGIN.LEFT + 65, headerY);
+    doc.text('日数', MARGIN.LEFT + 115, headerY);
+    doc.text('ステータス', MARGIN.LEFT + 130, headerY);
+    doc.text('承認者', MARGIN.LEFT + 160, headerY);
+    y += 7;
+
+    // テーブル行
+    doc.setFontSize(FONT_SIZE.SMALL);
+
+    const statusLabels: Record<string, string> = {
+      draft: '下書き',
+      pending: '承認待ち',
+      approved: '承認済み',
+      rejected: '却下',
+      cancelled: 'キャンセル',
+    };
+
+    const typeLabels: Record<string, string> = {
+      paid: '有給',
+      sick: '病気',
+      special: '特別',
+      compensatory: '代休',
+      half_day_am: '午前半休',
+      half_day_pm: '午後半休',
+    };
+
     for (const request of requests) {
       // 改ページチェック
-      if (yPos > 260) {
+      if (y > pageHeight - 40) {
         doc.addPage();
-        yPos = 20;
+        y = MARGIN.TOP;
       }
 
-      // 申請情報ヘッダー
-      doc.setFontSize(12);
-      doc.setFont(undefined, 'bold');
-      doc.text(`${request.userName} - ${getLeaveTypeLabel(request.type)}`, 20, yPos);
+      // 行の背景色（交互）
+      const rowIndex = requests.indexOf(request);
+      if (rowIndex % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(MARGIN.LEFT, y, pageWidth - MARGIN.LEFT - MARGIN.RIGHT, 6, 'F');
+      }
 
-      // ステータスバッジ
-      const statusLabel = getLeaveStatusLabel(request.status);
-      const statusX = 150;
-      doc.setFontSize(9);
-
-      // ステータスに応じて色を設定
+      // ステータスに応じた色
       if (request.status === 'approved') {
-        doc.setFillColor(34, 197, 94); // green-500
-      } else if (request.status === 'pending') {
-        doc.setFillColor(251, 191, 36); // amber-400
+        doc.setTextColor(34, 197, 94); // green
       } else if (request.status === 'rejected') {
-        doc.setFillColor(239, 68, 68); // red-500
-      } else if (request.status === 'cancelled') {
-        doc.setFillColor(156, 163, 175); // gray-400
+        doc.setTextColor(239, 68, 68); // red
       } else {
-        doc.setFillColor(209, 213, 219); // gray-300
+        doc.setTextColor(...COLOR.TEXT.BLACK);
       }
 
-      doc.roundedRect(statusX, yPos - 3, 30, 5, 1, 1, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.text(statusLabel, statusX + 15, yPos, { align: 'center' });
-      doc.setTextColor(0, 0, 0);
+      const rowY = y + 4;
+      doc.text(request.userName, MARGIN.LEFT + 2, rowY);
+      doc.text(typeLabels[request.type] || request.type, MARGIN.LEFT + 40, rowY);
+      doc.text(`${request.startDate}〜`, MARGIN.LEFT + 65, rowY);
+      doc.text(`${request.days}日`, MARGIN.LEFT + 115, rowY);
+      doc.text(statusLabels[request.status] || request.status, MARGIN.LEFT + 130, rowY);
+      doc.text(request.approver || '-', MARGIN.LEFT + 160, rowY);
 
-      yPos += 7;
+      y += 6;
+    }
 
-      // 詳細情報
-      doc.setFont(undefined, 'normal');
-      doc.setFontSize(9);
-      doc.text(`従業員ID: ${request.userId}`, 25, yPos);
-      yPos += 5;
-      doc.text(`期間: ${request.startDate} 〜 ${request.endDate}`, 25, yPos);
-      doc.text(`日数: ${request.days}日`, 150, yPos);
-      yPos += 5;
+    y += SPACING.LG;
 
-      // 理由
-      doc.text('理由:', 25, yPos);
-      yPos += 4;
-      const reasonLines = doc.splitTextToSize(request.reason, 160);
-      doc.text(reasonLines, 30, yPos);
-      yPos += reasonLines.length * 4;
+    // ===== 詳細セクション（最初の5件のみ） =====
+    if (requests.length > 0) {
+      const detailRequests = requests.slice(0, 5);
 
-      // 承認者情報
-      if (request.approver) {
-        yPos += 2;
-        doc.text(`承認者: ${request.approver}`, 25, yPos);
-        if (request.approvedDate) {
-          doc.text(`承認日: ${request.approvedDate}`, 100, yPos);
+      doc.setFontSize(FONT_SIZE.SECTION_TITLE);
+      doc.setTextColor(...COLOR.TEXT.DARK_GRAY);
+      doc.text('申請詳細（最新5件）', MARGIN.LEFT, y);
+      y += SPACING.SM;
+
+      for (const request of detailRequests) {
+        // 改ページチェック
+        if (y > pageHeight - 60) {
+          doc.addPage();
+          y = MARGIN.TOP;
         }
-        yPos += 5;
+
+        // 申請カード
+        doc.setDrawColor(...COLOR.LINE.MEDIUM);
+        doc.setLineWidth(LINE_WIDTH.THIN);
+        doc.roundedRect(MARGIN.LEFT, y, pageWidth - MARGIN.LEFT - MARGIN.RIGHT, 25, 2, 2);
+
+        y += 5;
+
+        // 従業員名 + ステータス
+        doc.setFontSize(FONT_SIZE.SECTION_TITLE);
+        doc.setTextColor(...COLOR.TEXT.BLACK);
+        doc.text(`${request.userName} - ${typeLabels[request.type]}`, MARGIN.LEFT + 3, y);
+
+        // ステータスバッジ
+        const statusLabel = statusLabels[request.status];
+        const badgeX = pageWidth - MARGIN.RIGHT - 30;
+        if (request.status === 'approved') {
+          doc.setFillColor(34, 197, 94);
+        } else if (request.status === 'pending') {
+          doc.setFillColor(251, 191, 36);
+        } else if (request.status === 'rejected') {
+          doc.setFillColor(239, 68, 68);
+        } else {
+          doc.setFillColor(156, 163, 175);
+        }
+        doc.roundedRect(badgeX, y - 3, 25, 5, 1, 1, 'F');
+        doc.setFontSize(FONT_SIZE.SMALL);
+        doc.setTextColor(255, 255, 255);
+        doc.text(statusLabel, badgeX + 12.5, y, { align: 'center' });
+
+        y += 5;
+
+        // 詳細情報
+        doc.setFontSize(FONT_SIZE.SMALL);
+        doc.setTextColor(...COLOR.TEXT.MID_GRAY);
+        doc.text(`期間: ${request.startDate} 〜 ${request.endDate} (${request.days}日)`, MARGIN.LEFT + 3, y);
+        y += 4;
+
+        doc.text(`理由: ${request.reason}`, MARGIN.LEFT + 3, y);
+        y += 4;
+
+        if (request.approver) {
+          doc.text(`承認者: ${request.approver}`, MARGIN.LEFT + 3, y);
+          if (request.approvedDate) {
+            doc.text(`承認日: ${request.approvedDate}`, MARGIN.LEFT + 70, y);
+          }
+          y += 4;
+        }
+
+        doc.setFontSize(8);
+        doc.setTextColor(...COLOR.TEXT.LIGHT_GRAY);
+        doc.text(`申請日: ${new Date(request.createdAt).toLocaleString('ja-JP')}`, MARGIN.LEFT + 3, y);
+
+        y += 8;
       }
-
-      // 却下理由
-      if (request.rejectedReason) {
-        yPos += 2;
-        doc.setFont(undefined, 'bold');
-        doc.text('却下理由:', 25, yPos);
-        doc.setFont(undefined, 'normal');
-        yPos += 4;
-        const rejectLines = doc.splitTextToSize(request.rejectedReason, 160);
-        doc.text(rejectLines, 30, yPos);
-        yPos += rejectLines.length * 4;
-      }
-
-      // 申請日・更新日
-      yPos += 2;
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`申請日: ${new Date(request.createdAt).toLocaleString('ja-JP')}`, 25, yPos);
-      doc.text(`更新日: ${new Date(request.updatedAt).toLocaleString('ja-JP')}`, 100, yPos);
-      doc.setTextColor(0, 0, 0);
-      yPos += 8;
-
-      // 区切り線
-      doc.setLineWidth(0.1);
-      doc.setDrawColor(200, 200, 200);
-      doc.line(20, yPos, 190, yPos);
-      doc.setDrawColor(0, 0, 0);
-      yPos += 8;
     }
 
-    // フッター（全ページ）
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(
-        `生成日時: ${new Date().toLocaleString('ja-JP')}`,
-        105,
-        287,
-        { align: 'center' }
-      );
-      doc.text(
-        `Page ${i} / ${pageCount}`,
-        190,
-        287,
-        { align: 'right' }
-      );
-      doc.setTextColor(0, 0, 0);
-    }
+    // ===== フッター =====
+    const footerY = pageHeight - MARGIN.BOTTOM;
+    doc.setDrawColor(...COLOR.LINE.LIGHT);
+    doc.setLineWidth(LINE_WIDTH.THIN);
+    doc.line(MARGIN.LEFT, footerY, pageWidth - MARGIN.RIGHT, footerY);
+
+    doc.setTextColor(...COLOR.TEXT.LIGHT_GRAY);
+    doc.setFontSize(FONT_SIZE.SMALL);
+    doc.text(`お問い合わせ：${PDF_COMPANY.DEPARTMENT}`, MARGIN.LEFT, footerY + 5);
+    doc.text('※本書面は大切に保管してください', pageWidth - MARGIN.RIGHT, footerY + 5, { align: 'right' });
 
     return doc;
   } catch (error) {
