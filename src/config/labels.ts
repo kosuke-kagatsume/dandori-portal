@@ -70,6 +70,25 @@ export const APPROVAL_STATUS_LABELS: Record<string, string> = {
   rejected: '却下',
 } as const;
 
+// ===== 休暇種別ラベル =====
+export const LEAVE_TYPE_LABELS: Record<string, string> = {
+  paid: '有給休暇',
+  sick: '病気休暇',
+  special: '特別休暇',
+  compensatory: '代休',
+  half_day_am: '半日休暇(午前)',
+  half_day_pm: '半日休暇(午後)',
+} as const;
+
+// ===== 休暇ステータスラベル =====
+export const LEAVE_STATUS_LABELS: Record<string, string> = {
+  draft: '下書き',
+  pending: '承認待ち',
+  approved: '承認済み',
+  rejected: '却下',
+  cancelled: 'キャンセル',
+} as const;
+
 // ===== ヘルパー関数 =====
 
 /**
@@ -122,4 +141,18 @@ export const getStatusLabel = (key?: string): string => {
 export const getApprovalStatusLabel = (key?: string): string => {
   if (!key) return '';
   return APPROVAL_STATUS_LABELS[key] || '';
+};
+
+/**
+ * 休暇種別のラベルを取得（フォールバック付き）
+ */
+export const getLeaveTypeLabel = (key: string): string => {
+  return LEAVE_TYPE_LABELS[key] || key;
+};
+
+/**
+ * 休暇ステータスのラベルを取得（フォールバック付き）
+ */
+export const getLeaveStatusLabel = (key: string): string => {
+  return LEAVE_STATUS_LABELS[key] || key;
 };

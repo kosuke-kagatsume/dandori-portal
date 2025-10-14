@@ -5,11 +5,14 @@
 
 import type { AttendanceRecord, PayrollRecord, BonusRecord, CSVExportResult } from '@/types/csv';
 import type { PerformanceEvaluation } from '@/lib/payroll/performance-evaluation-types';
+import type { LeaveRequest } from '@/lib/store/leave-management-store';
 import {
   getWorkLocationLabel,
   getStatusLabel,
   getApprovalStatusLabel,
   getBonusTypeLabel,
+  getLeaveTypeLabel,
+  getLeaveStatusLabel,
 } from '@/config/labels';
 
 // ===== ヘルパー関数 =====
@@ -367,6 +370,74 @@ export const exportEvaluationToCSV = (
     return {
       success: false,
       error: error instanceof Error ? error.message : '人事評価CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+/**
+ * 休暇申請データをCSV出力
+ */
+export const exportLeaveToCSV = (
+  requests: LeaveRequest[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!requests || requests.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
+
+    const headers = [
+      '申請ID',
+      '従業員ID',
+      '従業員名',
+      '休暇種別',
+      '開始日',
+      '終了日',
+      '日数',
+      '理由',
+      'ステータス',
+      '承認者',
+      '承認日',
+      '却下理由',
+      '申請日',
+      '更新日',
+    ];
+
+    const rows = requests.map((request) => [
+      request.id,
+      request.userId,
+      request.userName,
+      getLeaveTypeLabel(request.type),
+      request.startDate,
+      request.endDate,
+      request.days,
+      request.reason,
+      getLeaveStatusLabel(request.status),
+      request.approver || '',
+      request.approvedDate || '',
+      request.rejectedReason || '',
+      request.createdAt,
+      request.updatedAt,
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `leave_requests_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: requests.length,
+    };
+  } catch (error) {
+    console.error('Failed to export leave CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '休暇申請CSVの出力に失敗しました',
       recordCount: 0,
     };
   }

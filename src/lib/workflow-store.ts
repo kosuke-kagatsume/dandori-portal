@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { generateDemoWorkflowData } from './workflow-demo-data';
 import { useNotificationStore } from './store/notification-store';
+import { useUserStore } from './store/user-store';
 
 export type WorkflowType = 
   | 'leave_request'      // 休暇申請
@@ -587,11 +588,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
       
       // 一括承認機能
       bulkApprove: (requestIds, comments) => {
-        const userId = 'user1'; // TODO: 実際のユーザーIDを取得
+        const userId = useUserStore.getState().currentDemoUser?.id || 'user1';
         const requests = get().requests.filter(r => requestIds.includes(r.id));
-        
+
         requests.forEach(request => {
-          const currentStep = request.approvalSteps.find(step => 
+          const currentStep = request.approvalSteps.find(step =>
             step.approverId === userId && step.status === 'pending'
           );
           if (currentStep) {
@@ -601,11 +602,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
       },
       
       bulkReject: (requestIds, reason) => {
-        const userId = 'user1'; // TODO: 実際のユーザーIDを取得
+        const userId = useUserStore.getState().currentDemoUser?.id || 'user1';
         const requests = get().requests.filter(r => requestIds.includes(r.id));
-        
+
         requests.forEach(request => {
-          const currentStep = request.approvalSteps.find(step => 
+          const currentStep = request.approvalSteps.find(step =>
             step.approverId === userId && step.status === 'pending'
           );
           if (currentStep) {

@@ -17,6 +17,8 @@ import {
   Eye,
   Edit,
   Trash2,
+  Download,
+  FileDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +38,8 @@ import { LeaveRequestDialog } from '@/features/leave/leave-request-dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { exportLeaveToCSV } from '@/lib/csv/csv-export';
+import { downloadLeavePDF } from '@/lib/pdf/leave-pdf';
 
 export default function LeavePage() {
   const t = (key: string) => {
@@ -184,6 +188,30 @@ export default function LeavePage() {
     } catch (error) {
       console.error('Failed to delete request:', error);
       toast.error('削除に失敗しました');
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      const result = exportLeaveToCSV(userRequests);
+      if (result.success) {
+        toast.success(`CSV出力完了: ${result.recordCount}件`);
+      } else {
+        toast.error(result.error || 'CSV出力に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+      toast.error('CSV出力に失敗しました');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      await downloadLeavePDF(userRequests);
+      toast.success('PDF出力完了');
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      toast.error('PDF出力に失敗しました');
     }
   };
 
@@ -375,10 +403,20 @@ export default function LeavePage() {
             有給休暇の申請と管理を行います
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          有給申請
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            CSV出力
+          </Button>
+          <Button variant="outline" onClick={handleExportPDF}>
+            <FileDown className="mr-2 h-4 w-4" />
+            PDF出力
+          </Button>
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            有給申請
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
