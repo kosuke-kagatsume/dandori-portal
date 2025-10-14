@@ -13,13 +13,14 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, TrendingUp, TrendingDown, AlertCircle, Users, Building, Database } from 'lucide-react';
+import { Plus, Search, TrendingUp, TrendingDown, AlertCircle, Users, Building, Database, Download } from 'lucide-react';
 import { useSaaSStore } from '@/lib/store/saas-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { categoryLabels, licenseTypeLabels, type SaaSCategory, type LicenseType, type SaaSService } from '@/types/saas';
 import { ServiceFormDialog } from '@/features/saas/service-form-dialog';
 import { mockSaaSServices, generatePlansForService, generateAssignments } from '@/lib/mock-data/saas-mock-data';
 import { initializeUserMockData } from '@/lib/mock-data/user-mock-data';
+import { exportSaaSServicesToCSV, exportLicenseAssignmentsToCSV } from '@/lib/csv/csv-export';
 import { toast } from 'sonner';
 
 export default function SaaSManagementPage() {
@@ -36,6 +37,7 @@ export default function SaaSManagementPage() {
     addAssignment,
     getServiceById,
     getPlansByServiceId,
+    assignments,
   } = useSaaSStore();
 
   const { users, addUser } = useUserStore();
@@ -245,6 +247,36 @@ export default function SaaSManagementPage() {
   const totalMonthlyCost = getTotalMonthlyCost();
   const unusedLicensesCost = getUnusedLicensesCost();
 
+  // SaaSサービスCSV出力ハンドラー
+  const handleExportServicesCSV = () => {
+    try {
+      const result = exportSaaSServicesToCSV(filteredServices);
+      if (result.success) {
+        toast.success(`CSV出力完了: ${result.recordCount}件`);
+      } else {
+        toast.error(result.error || 'CSV出力に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to export services CSV:', error);
+      toast.error('CSV出力に失敗しました');
+    }
+  };
+
+  // ライセンス割り当てCSV出力ハンドラー
+  const handleExportAssignmentsCSV = () => {
+    try {
+      const result = exportLicenseAssignmentsToCSV(assignments);
+      if (result.success) {
+        toast.success(`CSV出力完了: ${result.recordCount}件`);
+      } else {
+        toast.error(result.error || 'CSV出力に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to export assignments CSV:', error);
+      toast.error('CSV出力に失敗しました');
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* ヘッダー */}
@@ -268,7 +300,18 @@ export default function SaaSManagementPage() {
                   <Database className="mr-2 h-4 w-4" />
                   ライセンス割り当て生成
                 </Button>
-              ) : null}
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleExportServicesCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    サービスCSV
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleExportAssignmentsCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    割り当てCSV
+                  </Button>
+                </>
+              )}
             </>
           )}
           <Button variant="outline" onClick={() => router.push('/ja/saas/users')}>

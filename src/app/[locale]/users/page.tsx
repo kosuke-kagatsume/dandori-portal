@@ -43,6 +43,7 @@ import { RetireUserDialog } from '@/features/users/retire-user-dialog';
 import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
 import type { User } from '@/types';
+import { exportUsersToCSV } from '@/lib/csv/csv-export';
 
 export default function UsersPage() {
   // const t = useTranslations('users');
@@ -150,6 +151,20 @@ export default function UsersPage() {
     } catch (error) {
       toast.error('退職処理に失敗しました');
       throw error;
+    }
+  };
+
+  const handleExportCSV = () => {
+    try {
+      const result = exportUsersToCSV(filteredUsers);
+      if (result.success) {
+        toast.success(`CSV出力完了: ${result.recordCount}件`);
+      } else {
+        toast.error(result.error || 'CSV出力に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+      toast.error('CSV出力に失敗しました');
     }
   };
 
@@ -358,7 +373,7 @@ export default function UsersPage() {
               <SelectItem value="suspended">停止のみ</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="mr-2 h-4 w-4" />
             エクスポート
           </Button>

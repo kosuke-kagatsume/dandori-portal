@@ -28,12 +28,15 @@ import {
   Search,
   Trash2,
   Monitor,
+  Download,
 } from 'lucide-react';
 import type { Vehicle, DeadlineWarning, PCAsset, Vendor } from '@/types/asset';
 import { VehicleDetailModal } from '@/components/assets/VehicleDetailModal';
 import { VehicleFormModal } from '@/components/assets/VehicleFormModal';
 import { VendorFormModal } from '@/components/assets/VendorFormModal';
 import { PCFormModal } from '@/components/assets/PCFormModal';
+import { exportVehiclesToCSV, exportPCAssetsToCSV } from '@/lib/csv/csv-export';
+import { toast } from 'sonner';
 
 export default function AssetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -277,6 +280,36 @@ export default function AssetsPage() {
     return matchesType && matchesVendor;
   });
 
+  // 車両CSV出力ハンドラー
+  const handleExportVehiclesCSV = () => {
+    try {
+      const result = exportVehiclesToCSV(filteredVehicles);
+      if (result.success) {
+        toast.success(`CSV出力完了: ${result.recordCount}件`);
+      } else {
+        toast.error(result.error || 'CSV出力に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to export vehicles CSV:', error);
+      toast.error('CSV出力に失敗しました');
+    }
+  };
+
+  // PC資産CSV出力ハンドラー
+  const handleExportPCsCSV = () => {
+    try {
+      const result = exportPCAssetsToCSV(pcs);
+      if (result.success) {
+        toast.success(`CSV出力完了: ${result.recordCount}件`);
+      } else {
+        toast.error(result.error || 'CSV出力に失敗しました');
+      }
+    } catch (error) {
+      console.error('Failed to export PCs CSV:', error);
+      toast.error('CSV出力に失敗しました');
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* ヘッダー */}
@@ -399,6 +432,10 @@ export default function AssetsPage() {
                     <option value="maintenance">整備中</option>
                     <option value="retired">廃車</option>
                   </select>
+                  <Button variant="outline" size="sm" onClick={handleExportVehiclesCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    CSV出力
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -518,15 +555,21 @@ export default function AssetsPage() {
                   <CardTitle>PC一覧</CardTitle>
                   <CardDescription>登録されている全PCの管理</CardDescription>
                 </div>
-                <Button
-                  onClick={() => {
-                    setEditingPC(null);
-                    setPCFormOpen(true);
-                  }}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  PC登録
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleExportPCsCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    CSV出力
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setEditingPC(null);
+                      setPCFormOpen(true);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    PC登録
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>

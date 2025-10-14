@@ -6,6 +6,9 @@
 import type { AttendanceRecord, PayrollRecord, BonusRecord, CSVExportResult } from '@/types/csv';
 import type { PerformanceEvaluation } from '@/lib/payroll/performance-evaluation-types';
 import type { LeaveRequest } from '@/lib/store/leave-management-store';
+import type { User } from '@/types';
+import type { Vehicle, PCAsset } from '@/types/asset';
+import type { SaaSService, LicenseAssignment } from '@/types/saas';
 import {
   getWorkLocationLabel,
   getStatusLabel,
@@ -13,6 +16,14 @@ import {
   getBonusTypeLabel,
   getLeaveTypeLabel,
   getLeaveStatusLabel,
+  getUserStatusLabel,
+  getRetirementReasonLabel,
+  getAssetStatusLabel,
+  getOwnershipTypeLabel,
+  getSaaSCategoryLabel,
+  getLicenseTypeLabel,
+  getLicenseStatusLabel,
+  getSecurityRatingLabel,
 } from '@/config/labels';
 
 // ===== ヘルパー関数 =====
@@ -438,6 +449,352 @@ export const exportLeaveToCSV = (
     return {
       success: false,
       error: error instanceof Error ? error.message : '休暇申請CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+/**
+ * ユーザー（従業員）データをCSV出力
+ */
+export const exportUsersToCSV = (
+  users: User[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!users || users.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
+
+    const headers = [
+      '従業員ID',
+      '氏名',
+      'メールアドレス',
+      '電話番号',
+      '部署',
+      '役職',
+      '入社日',
+      'ステータス',
+      '退職日',
+      '退職理由',
+      '役割',
+      'タイムゾーン',
+    ];
+
+    const rows = users.map((user) => [
+      user.id,
+      user.name,
+      user.email,
+      user.phone || '',
+      user.department || '',
+      user.position || '',
+      user.hireDate,
+      getUserStatusLabel(user.status),
+      user.retiredDate || '',
+      getRetirementReasonLabel(user.retirementReason),
+      user.roles.join(', '),
+      user.timezone || 'Asia/Tokyo',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `users_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: users.length,
+    };
+  } catch (error) {
+    console.error('Failed to export users CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'ユーザーCSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+/**
+ * 車両データをCSV出力
+ */
+export const exportVehiclesToCSV = (
+  vehicles: Vehicle[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!vehicles || vehicles.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
+
+    const headers = [
+      '車両番号',
+      'ナンバープレート',
+      'メーカー',
+      '車種',
+      '年式',
+      '割当先',
+      '割当日',
+      '所有形態',
+      'ステータス',
+      '車検期限',
+      '点検期限',
+      '保険期限',
+      '現在走行距離',
+      'リース契約開始',
+      'リース契約終了',
+      '月額リース費用',
+      'メンテナンス記録数',
+    ];
+
+    const rows = vehicles.map((vehicle) => [
+      vehicle.vehicleNumber,
+      vehicle.licensePlate,
+      vehicle.make,
+      vehicle.model,
+      vehicle.year,
+      vehicle.assignedTo?.userName || '未割当',
+      vehicle.assignedTo?.assignedDate || '',
+      getOwnershipTypeLabel(vehicle.ownershipType),
+      getAssetStatusLabel(vehicle.status),
+      vehicle.inspectionDate,
+      vehicle.maintenanceDate,
+      vehicle.insuranceDate,
+      vehicle.currentMileage || '',
+      vehicle.leaseInfo?.contractStart || '',
+      vehicle.leaseInfo?.contractEnd || '',
+      vehicle.leaseInfo?.monthlyCost || '',
+      vehicle.maintenanceRecords.length,
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `vehicles_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: vehicles.length,
+    };
+  } catch (error) {
+    console.error('Failed to export vehicles CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '車両CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+/**
+ * PC資産データをCSV出力
+ */
+export const exportPCAssetsToCSV = (
+  pcs: PCAsset[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!pcs || pcs.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
+
+    const headers = [
+      '資産番号',
+      'メーカー',
+      '型番',
+      'シリアルナンバー',
+      'CPU',
+      'メモリ',
+      'ストレージ',
+      'OS',
+      '割当先',
+      '割当日',
+      '所有形態',
+      'ステータス',
+      '保証期限',
+      '購入日',
+      '購入価格',
+      'リース契約開始',
+      'リース契約終了',
+      '月額リース費用',
+    ];
+
+    const rows = pcs.map((pc) => [
+      pc.assetNumber,
+      pc.manufacturer,
+      pc.model,
+      pc.serialNumber,
+      pc.cpu,
+      pc.memory,
+      pc.storage,
+      pc.os,
+      pc.assignedTo?.userName || '未割当',
+      pc.assignedTo?.assignedDate || '',
+      getOwnershipTypeLabel(pc.ownershipType),
+      getAssetStatusLabel(pc.status),
+      pc.warrantyExpiration,
+      pc.purchaseDate || '',
+      pc.purchasePrice || '',
+      pc.leaseInfo?.contractStart || '',
+      pc.leaseInfo?.contractEnd || '',
+      pc.leaseInfo?.monthlyCost || '',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `pc_assets_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: pcs.length,
+    };
+  } catch (error) {
+    console.error('Failed to export PC assets CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'PC資産CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+/**
+ * SaaSサービスデータをCSV出力
+ */
+export const exportSaaSServicesToCSV = (
+  services: SaaSService[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!services || services.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
+
+    const headers = [
+      'サービスID',
+      'サービス名',
+      'カテゴリ',
+      'ベンダー',
+      'ライセンスタイプ',
+      '公式サイト',
+      '管理者メール',
+      '契約開始日',
+      '契約終了日',
+      '自動更新',
+      'SSO対応',
+      'MFA対応',
+      'セキュリティ評価',
+      'アクティブ',
+    ];
+
+    const rows = services.map((service) => [
+      service.id,
+      service.name,
+      getSaaSCategoryLabel(service.category),
+      service.vendor,
+      getLicenseTypeLabel(service.licenseType),
+      service.website,
+      service.adminEmail || '',
+      service.contractStartDate || '',
+      service.contractEndDate || '',
+      service.autoRenew ? '有効' : '無効',
+      service.ssoEnabled ? '対応' : '未対応',
+      service.mfaEnabled ? '対応' : '未対応',
+      getSecurityRatingLabel(service.securityRating),
+      service.isActive ? 'はい' : 'いいえ',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `saas_services_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: services.length,
+    };
+  } catch (error) {
+    console.error('Failed to export SaaS services CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'SaaSサービスCSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+/**
+ * ライセンス割り当てデータをCSV出力
+ */
+export const exportLicenseAssignmentsToCSV = (
+  assignments: LicenseAssignment[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    if (!assignments || assignments.length === 0) {
+      return {
+        success: false,
+        error: 'エクスポートするデータがありません',
+        recordCount: 0,
+      };
+    }
+
+    const headers = [
+      '割り当てID',
+      'サービス名',
+      'プラン名',
+      'ユーザー名',
+      'メールアドレス',
+      '部署名',
+      'ステータス',
+      '割り当て日',
+      '最終使用日',
+      '月次使用回数',
+      '削除日',
+      'メモ',
+    ];
+
+    const rows = assignments.map((assignment) => [
+      assignment.id,
+      assignment.serviceName,
+      assignment.planName,
+      assignment.userName || '',
+      assignment.userEmail || '',
+      assignment.departmentName || '',
+      getLicenseStatusLabel(assignment.status),
+      assignment.assignedDate,
+      assignment.lastUsedAt || '',
+      assignment.usageCount || 0,
+      assignment.revokedDate || '',
+      assignment.notes || '',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `license_assignments_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    return {
+      success: true,
+      recordCount: assignments.length,
+    };
+  } catch (error) {
+    console.error('Failed to export license assignments CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'ライセンス割り当てCSVの出力に失敗しました',
       recordCount: 0,
     };
   }
