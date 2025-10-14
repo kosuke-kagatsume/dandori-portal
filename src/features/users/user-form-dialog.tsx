@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { roleDisplayNames } from '@/lib/demo-users';
+import type { UserRole } from '@/types';
 import { 
   Dialog,
   DialogContent,
@@ -69,16 +71,16 @@ const positions = [
   'スペシャリスト',
 ];
 
-const roleOptions = [
-  { value: 'admin', label: '管理者' },
-  { value: 'manager', label: 'マネージャー' },
-  { value: 'employee', label: '従業員' },
-  { value: 'hr', label: '人事' },
+// 役職オプション (UserRole型を使用)
+const roleOptions: Array<{ value: UserRole; label: string }> = [
+  { value: 'employee', label: roleDisplayNames.employee },
+  { value: 'manager', label: roleDisplayNames.manager },
+  { value: 'hr', label: roleDisplayNames.hr },
+  { value: 'admin', label: roleDisplayNames.admin },
 ];
 
 export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedRoles, setSelectedRoles] = useState<string[]>(user?.roles || ['employee']);
 
   const {
     register,
@@ -115,15 +117,6 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleRoleToggle = (roleValue: string) => {
-    const newRoles = selectedRoles.includes(roleValue)
-      ? selectedRoles.filter(r => r !== roleValue)
-      : [...selectedRoles, roleValue];
-    
-    setSelectedRoles(newRoles);
-    setValue('roles', newRoles);
   };
 
   return (
@@ -292,25 +285,31 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
               </div>
             </div>
 
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">権限 *</Label>
-              <div className="col-span-3 space-y-2">
-                {roleOptions.map((role) => (
-                  <div key={role.value} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={role.value}
-                      checked={selectedRoles.includes(role.value)}
-                      onChange={() => handleRoleToggle(role.value)}
-                      className="rounded border-gray-300"
-                    />
-                    <Label htmlFor={role.value} className="text-sm">
-                      {role.label}
-                    </Label>
-                  </div>
-                ))}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role" className="text-right">
+                役職権限 *
+              </Label>
+              <div className="col-span-3">
+                <Select
+                  onValueChange={(value) => setValue('roles', [value])}
+                  defaultValue={user?.roles?.[0] || 'employee'}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="役職権限を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleOptions.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ユーザーの役職と権限レベルを設定します
+                </p>
                 {errors.roles && (
-                  <p className="text-sm text-red-500">{errors.roles.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.roles.message}</p>
                 )}
               </div>
             </div>

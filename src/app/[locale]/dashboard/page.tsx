@@ -7,10 +7,11 @@ import { getDashboardStats } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Users, 
-  UserCheck, 
-  Clock, 
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Users,
+  UserCheck,
+  Clock,
   AlertCircle,
   Calendar,
   TrendingUp,
@@ -45,7 +46,8 @@ import {
 export default function DashboardPage() {
   const { currentDemoUser, switchDemoRole } = useUserStore();
   const [effectiveDemoUser, setEffectiveDemoUser] = useState(currentDemoUser);
-  
+  const [showAllActivities, setShowAllActivities] = useState(false);
+
   // 初期化時にローカルストレージから役割を読み込み
   useEffect(() => {
     const storedRole = localStorage.getItem('demo-role') as UserRole;
@@ -111,10 +113,26 @@ export default function DashboardPage() {
   };
 
   const recentActivity = [
-    { id: 1, user: '田中太郎', action: '有給申請を提出', time: '5分前' },
-    { id: 2, user: '佐藤花子', action: '勤怠記録を修正', time: '15分前' },
-    { id: 3, user: '山田次郎', action: '経費申請を承認', time: '30分前' },
-    { id: 4, user: '鈴木一郎', action: '出勤記録', time: '1時間前' },
+    { id: 1, user: '田中太郎', action: '有給申請を提出', time: '5分前', type: 'leave' as const },
+    { id: 2, user: '佐藤花子', action: '勤怠記録を修正', time: '15分前', type: 'attendance' as const },
+    { id: 3, user: '山田次郎', action: '経費申請を承認', time: '30分前', type: 'approval' as const },
+    { id: 4, user: '鈴木一郎', action: '出勤記録', time: '1時間前', type: 'attendance' as const },
+  ];
+
+  // 全ての活動（モーダル用）
+  const allActivities = [
+    { id: 1, user: '田中太郎', action: '有給申請を提出', time: '5分前', type: 'leave' as const },
+    { id: 2, user: '佐藤花子', action: '勤怠記録を修正', time: '15分前', type: 'attendance' as const },
+    { id: 3, user: '山田次郎', action: '経費申請を承認', time: '30分前', type: 'approval' as const },
+    { id: 4, user: '鈴木一郎', action: '出勤記録', time: '1時間前', type: 'attendance' as const },
+    { id: 5, user: '高橋美咲', action: '退勤記録', time: '2時間前', type: 'attendance' as const },
+    { id: 6, user: '伊藤健太', action: '休暇申請を承認', time: '3時間前', type: 'approval' as const },
+    { id: 7, user: '渡辺由美', action: '勤怠報告書を提出', time: '4時間前', type: 'report' as const },
+    { id: 8, user: '中村雅人', action: 'プロフィールを更新', time: '5時間前', type: 'profile' as const },
+    { id: 9, user: '小林優子', action: '給与明細を確認', time: '6時間前', type: 'payroll' as const },
+    { id: 10, user: '加藤大輔', action: '有給申請を提出', time: '7時間前', type: 'leave' as const },
+    { id: 11, user: '吉田春奈', action: '出勤記録', time: '8時間前', type: 'attendance' as const },
+    { id: 12, user: '山口隆', action: '経費申請を提出', time: '9時間前', type: 'expense' as const },
   ];
 
   // 権限チェック（effectiveDemoUserを使用）
@@ -432,89 +450,60 @@ export default function DashboardPage() {
                   </div>
                 ))}
             </div>
-            <Button variant="outline" size="sm" className="w-full mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-4"
+              onClick={() => setShowAllActivities(true)}
+            >
               すべての活動を表示
             </Button>
           </CardContent>
         </Card>
 
-        {/* System Status - 管理者向け詳細表示 */}
-        {canManageSystem ? (
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5 text-purple-500" />
-                システム管理
-              </CardTitle>
-              <CardDescription>
-                管理者専用機能
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
-                  <Users className="h-4 w-4 mr-2" />
-                  ユーザー管理
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <ShieldCheck className="h-4 w-4 mr-2" />
-                  セキュリティ設定
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  システム分析
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <FileText className="h-4 w-4 mr-2" />
-                  監査ログ
-                </Button>
+        {/* System Status - システム接続状況 */}
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wifi className="h-5 w-5 text-green-500" />
+              {t('systemConnection')}
+            </CardTitle>
+            <CardDescription>
+              システム接続状態
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">データベース</span>
+                <Badge variant="default" className="bg-green-500">
+                  <Wifi className="h-3 w-3 mr-1" />
+                  接続中
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wifi className="h-5 w-5 text-green-500" />
-                {t('systemConnection')}
-              </CardTitle>
-              <CardDescription>
-                システム接続状態
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">データベース</span>
-                  <Badge variant="default" className="bg-green-500">
-                    <Wifi className="h-3 w-3 mr-1" />
-                    接続中
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">外部API</span>
-                  <Badge variant="default" className="bg-green-500">
-                    <Wifi className="h-3 w-3 mr-1" />
-                    接続中
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">メール配信</span>
-                  <Badge variant="secondary">
-                    <WifiOff className="h-3 w-3 mr-1" />
-                    メンテナンス中
-                  </Badge>
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">外部API</span>
+                <Badge variant="default" className="bg-green-500">
+                  <Wifi className="h-3 w-3 mr-1" />
+                  接続中
+                </Badge>
               </div>
-              
-              <div className="pt-2 border-t">
-                <p className="text-xs text-muted-foreground text-center">
-                  最終更新: 2024年1月15日 14:30
-                </p>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">メール配信</span>
+                <Badge variant="secondary">
+                  <WifiOff className="h-3 w-3 mr-1" />
+                  メンテナンス中
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+
+            <div className="pt-2 border-t">
+              <p className="text-xs text-muted-foreground text-center">
+                最終更新: 2024年1月15日 14:30
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Quick Actions - 役割に応じた操作 */}
@@ -581,6 +570,45 @@ export default function DashboardPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 全ての活動を表示するモーダル */}
+      <Dialog open={showAllActivities} onOpenChange={setShowAllActivities}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>すべての活動</DialogTitle>
+            <DialogDescription>
+              {canViewAll ? '全社の活動履歴' : canViewTeam ? 'チームの活動履歴' : '自分の活動履歴'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            {allActivities
+              .filter((activity, index) => {
+                if (canViewAll) return true;
+                if (canViewTeam) return index < 8;
+                return index < 4;
+              })
+              .map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <Activity className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">{activity.user}</p>
+                      <p className="text-xs text-muted-foreground">{activity.action}</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {activity.time}
+                  </Badge>
+                </div>
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

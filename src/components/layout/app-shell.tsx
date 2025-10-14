@@ -85,23 +85,21 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className={cn('min-h-screen bg-background', getDensityClass())}>
-      <div className="flex h-screen">
-        {/* Sidebar */}
-        <Sidebar />
+      {/* Sidebar */}
+      <Sidebar />
 
-        {/* Main Content */}
-        <div className={cn(
-          'flex-1 flex flex-col transition-all duration-300',
-          sidebarCollapsed ? 'ml-16' : 'ml-64'
-        )}>
-          {/* Header */}
-          <Header />
+      {/* Main Content */}
+      <div className={cn(
+        'flex flex-col min-h-screen transition-all duration-300',
+        sidebarCollapsed ? 'ml-16' : 'ml-64'
+      )}>
+        {/* Header */}
+        <Header />
 
-          {/* Page Content */}
-          <main className="flex-1 overflow-auto p-6">
-            {children}
-          </main>
-        </div>
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto p-6">
+          {children}
+        </main>
       </div>
 
       {/* Global Toaster */}

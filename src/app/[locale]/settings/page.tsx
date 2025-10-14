@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -30,9 +30,14 @@ import {
   Package,
   GitBranch,
   UserCheck,
+  ShieldCheck,
+  Settings as SettingsIcon,
+  Users,
+  BarChart3,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
+import { hasPermission } from '@/lib/demo-users';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -152,7 +157,7 @@ const defaultSettings: SimpleSettings = {
 };
 
 export default function SimpleSettingsPage() {
-  const { currentUser } = useUserStore();
+  const { currentUser, currentDemoUser, switchDemoRole } = useUserStore();
   const {
     companyInfo,
     payrollSettings,
@@ -163,6 +168,25 @@ export default function SimpleSettingsPage() {
   } = useCompanySettingsStore();
   const [settings, setSettings] = useState<SimpleSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // ページロード時にlocalStorageから役職を読み込む
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedRole = localStorage.getItem('demo-role') as any;
+      if (storedRole && !currentDemoUser) {
+        console.log('[Settings] Loading role from localStorage:', storedRole);
+        switchDemoRole(storedRole);
+      }
+    }
+  }, []);
+
+  // 権限チェック（useMemoでメモ化）
+  const canManageSystem = useMemo(() => {
+    const result = hasPermission(currentDemoUser, 'manage_system');
+    console.log('[Settings] currentDemoUser:', currentDemoUser);
+    console.log('[Settings] canManageSystem:', result);
+    return result;
+  }, [currentDemoUser]);
 
   // 設定の読み込み
   useEffect(() => {
@@ -324,7 +348,7 @@ export default function SimpleSettingsPage() {
       </div>
 
       <Tabs defaultValue="appearance" className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-10">
+        <TabsList className={`grid w-full ${canManageSystem ? 'grid-cols-11' : 'grid-cols-10'}`}>
           <TabsTrigger value="appearance">外観</TabsTrigger>
           <TabsTrigger value="regional">地域と言語</TabsTrigger>
           <TabsTrigger value="company">
@@ -356,6 +380,12 @@ export default function SimpleSettingsPage() {
             SaaS管理
           </TabsTrigger>
           <TabsTrigger value="data">データ</TabsTrigger>
+          {canManageSystem && (
+            <TabsTrigger value="system">
+              <ShieldCheck className="w-4 h-4 mr-1" />
+              システム管理
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* 外観設定 */}
@@ -1992,6 +2022,130 @@ export default function SimpleSettingsPage() {
             </AlertDescription>
           </Alert>
         </TabsContent>
+
+        {/* システム管理（管理者のみ） */}
+        {canManageSystem && (
+          <TabsContent value="system" className="space-y-4">
+            <Alert>
+              <ShieldCheck className="h-4 w-4" />
+              <AlertDescription>
+                システム管理者専用の機能です。慎重に操作してください。
+              </AlertDescription>
+            </Alert>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  ユーザー管理
+                </CardTitle>
+                <CardDescription>
+                  ユーザーアカウントと権限の管理
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button variant="outline" className="w-full justify-start" asChild>
+                  <a href="/ja/users">
+                    <UserCheck className="w-4 h-4 mr-2" />
+                    ユーザー一覧を開く
+                  </a>
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  ユーザーの作成・編集・削除、役職の割り当て、退職処理などを行えます
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5" />
+                  セキュリティ設定
+                </CardTitle>
+                <CardDescription>
+                  システムのセキュリティポリシー
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <Label>パスワードポリシー</Label>
+                    <p className="text-sm text-muted-foreground">
+                      • 最小8文字以上<br />
+                      • 大文字・小文字・数字を含む<br />
+                      • 90日ごとの変更を推奨
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>セッション管理</Label>
+                    <p className="text-sm text-muted-foreground">
+                      • 30分間の非アクティブでタイムアウト<br />
+                      • 同時ログイン: 最大3セッション
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  システム分析
+                </CardTitle>
+                <CardDescription>
+                  システム利用状況の分析
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium">アクティブユーザー</p>
+                      <p className="text-sm text-muted-foreground">過去30日間のログイン</p>
+                    </div>
+                    <div className="text-2xl font-bold">42</div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium">システム稼働率</p>
+                      <p className="text-sm text-muted-foreground">過去30日間</p>
+                    </div>
+                    <div className="text-2xl font-bold">99.9%</div>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="font-medium">ストレージ使用量</p>
+                      <p className="text-sm text-muted-foreground">総容量の割合</p>
+                    </div>
+                    <div className="text-2xl font-bold">45%</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  監査ログ
+                </CardTitle>
+                <CardDescription>
+                  システムの操作履歴
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  すべてのシステム操作は自動的にログに記録されます。
+                </p>
+                <Button variant="outline" className="w-full justify-start">
+                  <FileText className="w-4 h-4 mr-2" />
+                  監査ログを表示
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

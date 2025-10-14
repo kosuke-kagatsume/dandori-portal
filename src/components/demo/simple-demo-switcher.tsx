@@ -45,10 +45,7 @@ export function SimpleDemoSwitcher() {
     switchDemoRole(role);
     setCurrentRole(role);
     setIsOpen(false);
-    // リロード
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+    // リロードは不要 - React の状態管理で自動的に更新される
   };
 
   return (
