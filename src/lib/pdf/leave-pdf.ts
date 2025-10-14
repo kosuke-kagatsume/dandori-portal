@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import type { LeaveRequest } from '@/lib/store/leave-management-store';
 import { getLeaveTypeLabel, getLeaveStatusLabel } from '@/config/labels';
+import { loadJapaneseFont } from './font-loader';
 
 /**
  * 休暇申請一覧PDF生成
@@ -12,6 +13,10 @@ export const generateLeavePDF = async (requests: LeaveRequest[]): Promise<jsPDF>
       unit: 'mm',
       format: 'a4',
     });
+
+    // 日本語フォントをロード
+    await loadJapaneseFont(doc);
+    doc.setFont('NotoSansJP', 'normal');
 
     let yPos = 20;
 
