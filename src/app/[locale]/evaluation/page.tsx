@@ -18,7 +18,6 @@ import { MountGate } from '@/components/common/MountGate';
 import { usePerformanceEvaluationStore } from '@/lib/store/performance-evaluation-store';
 import { PerformanceEvaluationForm } from '@/components/features/payroll/performance-evaluation-form';
 import { PerformanceEvaluationResult } from '@/components/features/payroll/performance-evaluation-result';
-import { downloadEvaluationPDF } from '@/lib/pdf/evaluation-pdf';
 import { exportEvaluationToCSV } from '@/lib/csv/csv-export';
 import {
   Star,
@@ -190,6 +189,8 @@ export default function EvaluationPage() {
   // PDF出力
   const handleDownloadPDF = async (evaluation: PerformanceEvaluation) => {
     try {
+      // PDFライブラリを遅延読み込み（初回クリック時のみロード）
+      const { downloadEvaluationPDF } = await import('@/lib/pdf/evaluation-pdf');
       await downloadEvaluationPDF(evaluation);
       toast({
         title: 'PDFをダウンロードしました',

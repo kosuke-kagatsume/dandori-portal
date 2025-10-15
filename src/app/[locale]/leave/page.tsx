@@ -39,7 +39,6 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { exportLeaveToCSV } from '@/lib/csv/csv-export';
-import { downloadLeavePDF } from '@/lib/pdf/leave-pdf';
 
 export default function LeavePage() {
   const t = (key: string) => {
@@ -207,6 +206,8 @@ export default function LeavePage() {
 
   const handleExportPDF = async () => {
     try {
+      // PDFライブラリを遅延読み込み（初回クリック時のみロード）
+      const { downloadLeavePDF } = await import('@/lib/pdf/leave-pdf');
       await downloadLeavePDF(userRequests);
       toast.success('PDF出力完了');
     } catch (error) {

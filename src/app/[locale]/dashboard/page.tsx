@@ -28,22 +28,23 @@ import { useUserStore } from '@/lib/store/user-store';
 import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
 import { MountGate } from '@/components/common/MountGate';
-import {
-  PersonalAttendanceChart,
-  PersonalLeaveChart,
-  PersonalWorkHoursChart,
-  TeamAttendanceChart,
-  TeamWorkloadChart,
-  ApprovalTasksChart,
-  CompanyAttendanceChart,
-  DepartmentLeaveChart,
-  DepartmentSalaryChart,
-  HeadcountTrendChart,
-  SaasCostTrendChart,
-  SaasCostByCategoryChart,
-  AssetUtilizationChart,
-  SystemHealthChart,
-} from '@/components/dashboard/role-based-charts';
+import dynamic from 'next/dynamic';
+
+// Chartコンポーネントを遅延読み込み（初回表示時のみロード）
+const PersonalAttendanceChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.PersonalAttendanceChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const PersonalLeaveChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.PersonalLeaveChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const PersonalWorkHoursChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.PersonalWorkHoursChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const TeamAttendanceChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.TeamAttendanceChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const TeamWorkloadChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.TeamWorkloadChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const ApprovalTasksChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.ApprovalTasksChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const CompanyAttendanceChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.CompanyAttendanceChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const DepartmentLeaveChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.DepartmentLeaveChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const DepartmentSalaryChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.DepartmentSalaryChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const HeadcountTrendChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.HeadcountTrendChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const SaasCostTrendChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.SaasCostTrendChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const SaasCostByCategoryChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.SaasCostByCategoryChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const AssetUtilizationChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.AssetUtilizationChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
+const SystemHealthChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.SystemHealthChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
 
 export default function DashboardPage() {
   const { currentDemoUser, switchDemoRole } = useUserStore();

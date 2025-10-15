@@ -10,7 +10,6 @@ import { usePayrollStore } from '@/lib/store/payroll-store';
 import { useToast } from '@/hooks/use-toast';
 import { PayrollDetailModal } from '@/components/features/payroll/payroll-detail-modal';
 import { MountGate } from '@/components/common/MountGate';
-import { generatePayrollPDF, generateBonusPDF } from '@/lib/pdf/payroll-pdf';
 import { exportPayrollToCSV, exportBonusToCSV } from '@/lib/csv/csv-export';
 import { YearEndAdjustmentForm } from '@/components/features/payroll/year-end-adjustment-form';
 import { YearEndAdjustmentResultDisplay } from '@/components/features/payroll/year-end-adjustment-result';
@@ -81,12 +80,19 @@ export default function PayrollPage() {
 
   // 起動時の再シード保険
   useEffect(() => {
-    const s = usePayrollStore.getState();
-    console.log('[PayrollPage] Initial check - employees:', s.salaryMasters.length);
-    if (s.salaryMasters.length < 15) {
-      console.log('[PayrollPage] Employee count < 15, resetting to seed');
-      s.resetToSeed();
-    }
+    // 非同期で実行してレンダリング中のstate更新を回避
+    const checkAndReset = async () => {
+      const s = usePayrollStore.getState();
+      console.log('[PayrollPage] Initial check - employees:', s.salaryMasters.length);
+      if (s.salaryMasters.length < 15) {
+        console.log('[PayrollPage] Employee count < 15, resetting to seed');
+        // setTimeoutで次のイベントループで実行
+        setTimeout(() => {
+          s.resetToSeed();
+        }, 0);
+      }
+    };
+    checkAndReset();
   }, []);
 
   // 計算結果を取得
@@ -107,6 +113,8 @@ export default function PayrollPage() {
   // 給与明細PDFダウンロード
   const handleDownloadPayrollPDF = async (calc: any) => {
     try {
+      // PDFライブラリを遅延読み込み（初回クリック時のみロード）
+      const { generatePayrollPDF } = await import('@/lib/pdf/payroll-pdf');
       const pdf = await generatePayrollPDF({
         employeeName: calc.employeeName,
         employeeId: calc.employeeId,
@@ -150,6 +158,8 @@ export default function PayrollPage() {
   // 賞与明細PDFダウンロード
   const handleDownloadBonusPDF = async (bonus: any) => {
     try {
+      // PDFライブラリを遅延読み込み（初回クリック時のみロード）
+      const { generateBonusPDF } = await import('@/lib/pdf/payroll-pdf');
       const pdf = await generateBonusPDF({
         employeeName: bonus.employeeName,
         employeeId: bonus.employeeId,

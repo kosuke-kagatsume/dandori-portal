@@ -216,7 +216,7 @@ export default function UsersPage() {
               position: position || '',
               hireDate: hireDate || new Date().toISOString().split('T')[0],
               status: (status as any) || 'active',
-              roles: roles ? roles.split(';') : ['employee'],
+              roles: roles ? roles.split(';') : ['user'],
               unitId: '1',
               timezone: 'Asia/Tokyo',
               avatar: '',
@@ -352,7 +352,7 @@ export default function UsersPage() {
       accessorKey: 'roles',
       header: '権限',
       cell: ({ row }) => {
-        const roles = row.original.roles;
+        const roles = row.original.roles || ['user'];
         return (
           <div className="flex flex-wrap gap-1">
             {roles.map((role) => (
@@ -549,7 +549,7 @@ export default function UsersPage() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">管理者</p>
               <p className="text-2xl font-bold">
-                {users.filter(u => u.roles.includes('admin')).length}
+                {users.filter(u => u.roles?.includes('admin')).length}
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useState, useRef, useEffect, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ColumnDef,
@@ -39,7 +39,7 @@ interface VirtualDataTableProps<TData> {
   pageSize?: number;
 }
 
-export function VirtualDataTable<TData>({
+const VirtualDataTableComponent = function VirtualDataTable<TData>({
   columns,
   data,
   searchKey = 'id',
@@ -300,4 +300,7 @@ export function VirtualDataTable<TData>({
       )}
     </div>
   );
-}
+};
+
+// React.memoでラップして不要な再レンダリングを防止
+export const VirtualDataTable = memo(VirtualDataTableComponent) as typeof VirtualDataTableComponent;
