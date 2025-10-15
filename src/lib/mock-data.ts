@@ -1,4 +1,5 @@
 import { User } from '@/types';
+import { getCachedUsers, getCachedAttendanceData, getCachedLeaveData } from './mock-data-cache';
 
 // 日本人の姓名データ
 const lastNames = ['佐藤', '鈴木', '高橋', '田中', '渡辺', '伊藤', '山本', '中村', '小林', '加藤', '吉田', '山田', '佐々木', '山口', '松本', '井上', '木村', '林', '斎藤', '清水'];
@@ -80,8 +81,8 @@ function randomPhone(): string {
   return `${prefix}-${middle}-${last}`;
 }
 
-// 50人分のユーザーデータを生成
-export function generateMockUsers(): User[] {
+// 内部生成関数（キャッシュ経由で呼ばれる）
+function _generateMockUsersInternal(): User[] {
   const users: User[] = [];
   
   for (let i = 1; i <= 50; i++) {
@@ -134,6 +135,11 @@ export function generateMockUsers(): User[] {
   };
   
   return users;
+}
+
+// 50人分のユーザーデータを生成（キャッシュ付き）
+export function generateMockUsers(): User[] {
+  return getCachedUsers(_generateMockUsersInternal);
 }
 
 // ユーザーごとの資格データを生成
@@ -212,17 +218,17 @@ export function generateUserSkills(userId: string) {
   return userSkills;
 }
 
-// 勤怠データを生成（50人分）
-export function generateAttendanceData() {
+// 内部：勤怠データを生成（50人分）
+function _generateAttendanceDataInternal() {
   const users = generateMockUsers();
   const today = new Date();
   const attendanceData = [];
-  
+
   for (const user of users) {
     const isPresent = Math.random() > 0.15; // 85%出勤
     const checkIn = isPresent ? `09:${Math.floor(Math.random() * 30).toString().padStart(2, '0')}` : null;
     const checkOut = isPresent && Math.random() > 0.3 ? `${17 + Math.floor(Math.random() * 3)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}` : null;
-    
+
     attendanceData.push({
       userId: user.id,
       userName: user.name,
@@ -231,27 +237,32 @@ export function generateAttendanceData() {
       checkIn,
       checkOut,
       status: !isPresent ? '休暇' : checkOut ? '退勤済' : '勤務中',
-      workHours: checkIn && checkOut ? 
-        `${Math.floor(Math.random() * 3 + 8)}時間${Math.floor(Math.random() * 60)}分` : 
+      workHours: checkIn && checkOut ?
+        `${Math.floor(Math.random() * 3 + 8)}時間${Math.floor(Math.random() * 60)}分` :
         null
     });
   }
-  
+
   return attendanceData;
 }
 
-// 休暇データを生成（50人分の集計）
-export function generateLeaveData() {
+// 勤怠データを生成（キャッシュ付き）
+export function generateAttendanceData() {
+  return getCachedAttendanceData(_generateAttendanceDataInternal);
+}
+
+// 内部：休暇データを生成（50人分の集計）
+function _generateLeaveDataInternal() {
   const users = generateMockUsers();
   const leaveData = [];
-  
+
   for (const user of users) {
     const totalDays = 20; // 年間有給日数
     const usedDays = Math.floor(Math.random() * 15); // 0～14日使用
     const pendingDays = Math.floor(Math.random() * 3); // 0～2日申請中
     const remainingDays = totalDays - usedDays;
     const expiringDays = Math.random() > 0.7 ? Math.floor(Math.random() * 5) : 0;
-    
+
     leaveData.push({
       userId: user.id,
       userName: user.name,
@@ -264,8 +275,13 @@ export function generateLeaveData() {
       lastUsed: usedDays > 0 ? randomDate(new Date(2024, 0, 1), new Date()) : null
     });
   }
-  
+
   return leaveData;
+}
+
+// 休暇データを生成（キャッシュ付き）
+export function generateLeaveData() {
+  return getCachedLeaveData(_generateLeaveDataInternal);
 }
 
 // ダッシュボードの統計データ

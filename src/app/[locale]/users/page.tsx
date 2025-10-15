@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
@@ -38,12 +39,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { VirtualDataTable } from '@/components/ui/common/virtual-data-table';
-import { UserFormDialog } from '@/features/users/user-form-dialog';
-import { RetireUserDialog } from '@/features/users/retire-user-dialog';
 import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
 import type { User } from '@/types';
 import { exportUsersToCSV } from '@/lib/csv/csv-export';
+
+// ダイアログの遅延読み込み
+const UserFormDialog = dynamic(() => import('@/features/users/user-form-dialog').then(mod => ({ default: mod.UserFormDialog })), { ssr: false });
+const RetireUserDialog = dynamic(() => import('@/features/users/retire-user-dialog').then(mod => ({ default: mod.RetireUserDialog })), { ssr: false });
 
 export default function UsersPage() {
   // const t = useTranslations('users');
@@ -64,11 +67,21 @@ export default function UsersPage() {
   const router = useRouter();
   const { users, setUsers, retireUser } = useUserStore();
 
-  // フィルタリングされたユーザー一覧
-  const filteredUsers = users.filter(user => {
-    if (statusFilter === 'all') return true;
-    return user.status === statusFilter;
-  });
+  // フィルタリングされたユーザー一覧（useMemoでメモ化）
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      if (statusFilter === 'all') return true;
+      return user.status === statusFilter;
+    });
+  }, [users, statusFilter]);
+
+  // 統計情報のメモ化
+  const stats = useMemo(() => ({
+    total: users.length,
+    active: users.filter(u => u.status === 'active').length,
+    retired: users.filter(u => u.status === 'retired').length,
+    admin: users.filter(u => u.roles?.includes('admin')).length,
+  }), [users]);
 
   // Load users
   useEffect(() => {
@@ -536,7 +549,7 @@ export default function UsersPage() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">退職者</p>
               <p className="text-2xl font-bold">
-                {users.filter(u => u.status === 'retired').length}
+                {stats.retired}
               </p>
             </div>
           </div>
@@ -549,7 +562,7 @@ export default function UsersPage() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">管理者</p>
               <p className="text-2xl font-bold">
-                {users.filter(u => u.roles?.includes('admin')).length}
+                {stats.admin}
               </p>
             </div>
           </div>

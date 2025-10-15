@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { ColumnDef } from '@tanstack/react-table';
 import { useLeaveManagementStore, LeaveType, LeaveRequest } from '@/lib/store/leave-management-store';
 import {
@@ -34,11 +35,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OptimizedDataTable } from '@/components/ui/common/optimized-data-table';
-import { LeaveRequestDialog } from '@/features/leave/leave-request-dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { exportLeaveToCSV } from '@/lib/csv/csv-export';
+
+// ダイアログの遅延読み込み
+const LeaveRequestDialog = dynamic(() => import('@/features/leave/leave-request-dialog').then(mod => ({ default: mod.LeaveRequestDialog })), { ssr: false });
 
 export default function LeavePage() {
   const t = (key: string) => {
@@ -143,8 +146,9 @@ export default function LeavePage() {
     setLoading(false);
   }, []);
 
-  const userRequests = getUserRequests(currentUserId);
-  const balance = getLeaveBalance(currentUserId, currentYear);
+  // ユーザーリクエストと休暇残数のメモ化
+  const userRequests = useMemo(() => getUserRequests(currentUserId), [getUserRequests, currentUserId]);
+  const balance = useMemo(() => getLeaveBalance(currentUserId, currentYear), [getLeaveBalance, currentUserId, currentYear]);
 
   const handleCreateRequest = async (data: any) => {
     try {
@@ -373,8 +377,8 @@ export default function LeavePage() {
     },
   ];
 
-  // 統計情報の計算
-  const stats = {
+  // 統計情報の計算（useMemoでメモ化）
+  const stats = useMemo(() => ({
     remaining: balance?.paidLeave.remaining || 0,
     used: balance?.paidLeave.used || 0,
     total: balance?.paidLeave.total || 20,
@@ -384,7 +388,7 @@ export default function LeavePage() {
       const year = new Date().getFullYear();
       return new Date(r.startDate).getFullYear() === year && r.status === 'approved';
     }).reduce((sum, r) => sum + r.days, 0),
-  };
+  }), [balance, userRequests]);
 
   if (loading) {
     return (

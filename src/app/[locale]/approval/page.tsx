@@ -83,10 +83,16 @@ export default function ApprovalPage() {
   );
 
   // 全ての承認フロー（管理者向け）
-  const allFlows = useMemo(() => 
+  const allFlows = useMemo(() =>
     approvalFlows.filter(flow => flow.overallStatus !== 'draft'),
     [approvalFlows]
   );
+
+  // 統計情報のメモ化
+  const stats = useMemo(() => ({
+    approvedCount: allFlows.filter(f => f.overallStatus === 'approved').length,
+    completedCount: allFlows.filter(f => f.overallStatus === 'approved' || f.overallStatus === 'rejected').length,
+  }), [allFlows]);
 
   const handleApproval = async () => {
     if (!selectedFlow) return;
@@ -462,7 +468,7 @@ export default function ApprovalPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {allFlows.filter(f => f.overallStatus === 'approved').length}
+              {stats.approvedCount}
             </div>
             <p className="text-xs text-muted-foreground">
               承認完了
@@ -477,7 +483,7 @@ export default function ApprovalPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {allFlows.filter(f => f.overallStatus === 'approved' || f.overallStatus === 'rejected').length}
+              {stats.completedCount}
             </div>
             <p className="text-xs text-muted-foreground">
               全体の処理数

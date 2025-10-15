@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useWorkflowStore, WorkflowRequest, WorkflowType, ApproverRole } from '@/lib/workflow-store';
 import { useNotificationStore } from '@/lib/store/notification-store';
 import { useUserStore } from '@/lib/store/user-store';
@@ -60,7 +61,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -74,10 +75,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { DelegateSettingsDialog } from '@/features/workflow/delegate-settings-dialog';
 import { BulkApprovalBar } from '@/features/workflow/bulk-approval-bar';
-import { NewRequestForm } from '@/features/workflow/new-request-form';
 import { Checkbox } from '@/components/ui/checkbox';
+
+// ダイアログとフォームの遅延読み込み
+const DelegateSettingsDialog = dynamic(() => import('@/features/workflow/delegate-settings-dialog').then(mod => ({ default: mod.DelegateSettingsDialog })), { ssr: false });
+const NewRequestForm = dynamic(() => import('@/features/workflow/new-request-form').then(mod => ({ default: mod.NewRequestForm })), { ssr: false });
 
 export default function WorkflowPage() {
   const [selectedTab, setSelectedTab] = useState('pending');
@@ -488,9 +491,10 @@ export default function WorkflowPage() {
     });
   };
 
-  const filteredPendingApprovals = filterRequests(pendingApprovals);
-  const filteredMyRequests = filterRequests(myRequests);
-  const filteredDelegatedApprovals = filterRequests(delegatedApprovals);
+  // フィルター結果のメモ化
+  const filteredPendingApprovals = useMemo(() => filterRequests(pendingApprovals), [pendingApprovals, filterType, filterStatus, searchQuery]);
+  const filteredMyRequests = useMemo(() => filterRequests(myRequests), [myRequests, filterType, filterStatus, searchQuery]);
+  const filteredDelegatedApprovals = useMemo(() => filterRequests(delegatedApprovals), [delegatedApprovals, filterType, filterStatus, searchQuery]);
 
   return (
     <div className="space-y-6">
