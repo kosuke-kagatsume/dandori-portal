@@ -23,6 +23,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local env files
+.env
 .env*.local
 
 # Vercel
@@ -41,3 +42,7 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+/generated/prisma
+
+# Serena MCP cache
+.serena/cache/

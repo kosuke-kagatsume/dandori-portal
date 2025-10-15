@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, lazy, memo, useMemo } from 'react';
+import { useState, useEffect, useCallback, Suspense, lazy, memo, useMemo } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { generateAttendanceData } from '@/lib/mock-data';
@@ -191,100 +191,88 @@ export default function AttendancePage() {
     }
   };
 
-  // Load attendance data and update when attendance changes
-  useEffect(() => {
-    const loadAttendance = async () => {
-      try {
-        // APIを使わず直接モックデータを使用
-        // キャッシュされている場合は即座に返す
-        await new Promise(resolve => setTimeout(resolve, 100)); // 最小限のローディング
-        
-        // リアルな勤怠データを取得
-        const realisticData = generateRealisticAttendanceData();
-        
-        // 現在のユーザー（田中太郎）のデータをマッピング
-        const mappedRecords: AttendanceRecord[] = realisticData
-          .filter(record => record.userId === '1') // 田中太郎のデータのみ
-          .map(record => ({
-            id: record.id,
-            userId: record.userId,
-            userName: record.userName,
-            date: `2024-01-${record.date.split('/')[1]}`, // 日付形式を調整
-            dayOfWeek: record.dayOfWeek,
-            checkIn: record.checkIn,
-            checkOut: record.checkOut,
-            breakTime: record.breakTime,
-            workHours: record.workHours,
-            overtime: record.overtime,
-            status: record.status === 'normal' || record.status === 'remote' ? 'present' as const :
-                   record.status === 'late' ? 'late' as const :
-                   record.status === 'early_leave' ? 'early_leave' as const :
-                   'absent' as const,
-            workType: record.workLocation === 'home' ? 'remote' as const :
-                     record.workLocation === 'office' ? 'office' as const :
-                     'hybrid' as const,
-            note: record.memo,
-          }))
-          .reverse(); // 新しい日付を上に
-        
-        // 今日の打刻データがあれば一覧に追加
-        const todayRecord = getTodayRecord();
-        const finalRecords = todayRecord ? [todayRecord, ...mappedRecords] : mappedRecords;
-        
-        setRecords(finalRecords);
-      } catch (error) {
-        console.error('Error loading attendance data:', error);
-        // エラーメッセージを表示しない（モックデータなので）
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAttendance();
-  }, [getTodayRecord]);
-
-  // Set up callback for attendance updates
-  useEffect(() => {
-    const updateAttendanceList = () => {
+  // データ読み込み関数（useEffectの外で定義して再利用可能に）
+  const loadAttendance = useCallback(async () => {
+    try {
       setLoading(true);
-      // リアルな勤怠データを取得
-      const realisticData = generateRealisticAttendanceData();
-      
-      // 現在のユーザー（田中太郎）のデータをマッピング
-      const mappedRecords: AttendanceRecord[] = realisticData
-        .filter(record => record.userId === '1') // 田中太郎のデータのみ
-        .map(record => ({
+      // API経由で勤怠データを取得
+      const response = await fetch('/api/attendance?userId=user-1');
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch attendance data');
+      }
+
+      // APIレスポンスを画面用のフォーマットに変換
+      const mappedRecords: AttendanceRecord[] = (data.data || []).map((record: any) => {
+        // 日付オブジェクトを作成
+        const date = new Date(record.date);
+        const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
+
+        // 勤務時間を計算（分 → 時間）- number型に変換
+        const workHours = record.workMinutes ? parseFloat((record.workMinutes / 60).toFixed(1)) : 0;
+        const overtime = record.overtimeMinutes ? parseFloat((record.overtimeMinutes / 60).toFixed(1)) : 0;
+        const breakTime = record.totalBreakMinutes ? (record.totalBreakMinutes / 60).toFixed(1) : '0.0';
+
+        // 時刻フォーマット（DateTime → HH:MM）
+        const formatTime = (datetime: string | null) => {
+          if (!datetime) return '';
+          const d = new Date(datetime);
+          return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        };
+
+        return {
           id: record.id,
           userId: record.userId,
-          userName: record.userName,
-          date: `2024-01-${record.date.split('/')[1]}`, // 日付形式を調整
-          dayOfWeek: record.dayOfWeek,
-          checkIn: record.checkIn,
-          checkOut: record.checkOut,
-          breakTime: record.breakTime,
-          workHours: record.workHours,
-          overtime: record.overtime,
-          status: record.status === 'normal' || record.status === 'remote' ? 'present' as const :
+          userName: record.user?.name || '',
+          date: date.toISOString().split('T')[0],
+          dayOfWeek,
+          checkIn: formatTime(record.checkIn),
+          checkOut: formatTime(record.checkOut),
+          breakTime,
+          workHours,
+          overtime,
+          status: record.status === 'present' ? 'present' as const :
                  record.status === 'late' ? 'late' as const :
-                 record.status === 'early_leave' ? 'early_leave' as const :
+                 record.status === 'early' ? 'early_leave' as const :
+                 record.status === 'leave' ? 'absent' as const :
                  'absent' as const,
           workType: record.workLocation === 'home' ? 'remote' as const :
                    record.workLocation === 'office' ? 'office' as const :
                    'hybrid' as const,
-          note: record.memo,
-        }))
-        .reverse(); // 新しい日付を上に
-      
+          note: record.memo || '',
+        };
+      });
+
       // 今日の打刻データがあれば一覧に追加
       const todayRecord = getTodayRecord();
       const finalRecords = todayRecord ? [todayRecord, ...mappedRecords] : mappedRecords;
-      
+
       setRecords(finalRecords);
+    } catch (error) {
+      console.error('Error loading attendance data:', error);
+      toast({
+        title: 'エラー',
+        description: '勤怠データの読み込みに失敗しました',
+        variant: 'destructive',
+      });
+    } finally {
       setLoading(false);
-    };
-    
-    setOnAttendanceUpdate(updateAttendanceList);
-  }, [getTodayRecord, setOnAttendanceUpdate]);
+    }
+  }, [getTodayRecord, toast]);
+
+  // Load attendance data and update when attendance changes
+  useEffect(() => {
+    loadAttendance();
+  }, [loadAttendance]);
+
+  // Set up callback for attendance updates
+  useEffect(() => {
+    // 打刻が更新されたらデータを再読み込み
+    setOnAttendanceUpdate(() => {
+      loadAttendance();
+    });
+  }, [loadAttendance, setOnAttendanceUpdate]);
 
 
   const getStatusBadge = (status: AttendanceRecord['status']) => {

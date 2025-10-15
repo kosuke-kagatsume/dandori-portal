@@ -1,0 +1,120 @@
+// Dandori Portal Database Schema
+// HR領域特化のデータベーススキーマ
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// テナント（会社）
+model Tenant {
+  id           String   @id @default(cuid())
+  name         String
+  logo         String?
+  timezone     String   @default("Asia/Tokyo")
+  closingDay   String   @default("末") // 末, 20, 15, 任意
+  weekStartDay Int      @default(1)    // 0=日曜, 1=月曜
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  users      User[]
+  orgUnits   OrgUnit[]
+  attendance Attendance[]
+
+  @@map("tenants")
+}
+
+// 組織単位（会社、部門、部、チーム）
+model OrgUnit {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  parentId    String?
+  level       Int      @default(0)
+  headUserId  String?
+  type        String   // company, division, department, team
+  memberCount Int      @default(0)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent   OrgUnit?  @relation("OrgUnitHierarchy", fields: [parentId], references: [id])
+  children OrgUnit[] @relation("OrgUnitHierarchy")
+  users    User[]
+
+  @@map("org_units")
+  @@index([tenantId])
+  @@index([parentId])
+}
+
+// ユーザー
+model User {
+  id               String    @id @default(cuid())
+  tenantId         String
+  email            String    @unique
+  name             String
+  phone            String?
+  hireDate         DateTime
+  unitId           String
+  roles            String[]  // JSON配列: ["employee", "admin"]
+  status           String    @default("active") // active, inactive, suspended, retired
+  retiredDate      DateTime?
+  retirementReason String?   // voluntary, company, contract_end, retirement_age, other
+  timezone         String    @default("Asia/Tokyo")
+  avatar           String?
+  position         String?
+  department       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orgUnit    OrgUnit      @relation(fields: [unitId], references: [id])
+  attendance Attendance[]
+
+  @@map("users")
+  @@index([tenantId])
+  @@index([unitId])
+  @@index([email])
+}
+
+// 勤怠記録
+model Attendance {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  userId             String
+  date               DateTime  @db.Date // YYYY-MM-DD形式
+  checkIn            DateTime? // 出勤時刻
+  checkOut           DateTime? // 退勤時刻
+  breakStart         DateTime? // 休憩開始時刻
+  breakEnd           DateTime? // 休憩終了時刻
+  totalBreakMinutes  Int       @default(0)
+  workMinutes        Int       @default(0)
+  overtimeMinutes    Int       @default(0)
+  workLocation       String    @default("office") // office, home, client, other
+  status             String    @default("present") // present, absent, holiday, leave, late, early
+  memo               String?
+  approvalStatus     String?   // pending, approved, rejected
+  approvalReason     String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("attendance")
+  @@unique([userId, date]) // 1ユーザー1日1レコード
+  @@index([tenantId])
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 // import { useTranslations } from 'next-intl';
@@ -83,17 +83,22 @@ export default function UsersPage() {
     admin: users.filter(u => u.roles?.includes('admin')).length,
   }), [users]);
 
-  // Load users
+  // Load users from API
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        // ストアが空の場合のみモックデータを生成
-        if (users.length === 0) {
-          const mockUsers = generateMockUsers();
-          setUsers(mockUsers);
+        // API経由でユーザーを取得
+        const response = await fetch('/api/users');
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          setUsers(data.data);
+        } else {
+          throw new Error(data.error || 'Failed to fetch users');
         }
       } catch (error) {
-        toast.error('Failed to load users');
+        console.error('Error loading users:', error);
+        toast.error('ユーザーの読み込みに失敗しました');
       } finally {
         setLoading(false);
       }
@@ -109,31 +114,45 @@ export default function UsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      
-      if (!response.ok) throw new Error('Failed to create user');
-      
-      const newUser = await response.json();
-      setUsers(prev => [...prev, newUser]);
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+
+      // APIから返されたユーザーをストアに追加
+      setUsers(prev => [...prev, result.data]);
+      toast.success('ユーザーを作成しました');
     } catch (error) {
+      console.error('Error creating user:', error);
+      toast.error('ユーザーの作成に失敗しました');
       throw error;
     }
   };
 
   const handleEditUser = async (userData: any) => {
     if (!editingUser) return;
-    
+
     try {
       const response = await fetch(`/api/users/${editingUser.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      
-      if (!response.ok) throw new Error('Failed to update user');
-      
-      const updatedUser = await response.json();
-      setUsers(prev => prev.map(u => u.id === editingUser.id ? updatedUser : u));
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update user');
+      }
+
+      // APIから返されたユーザーでストアを更新
+      setUsers(prev => prev.map(u => u.id === editingUser.id ? result.data : u));
+      toast.success('ユーザー情報を更新しました');
     } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('ユーザーの更新に失敗しました');
       throw error;
     }
   };
@@ -142,27 +161,36 @@ export default function UsersPage() {
     if (!retiringUser) return;
 
     try {
-      // Update the user in the store
+      // API経由で退職処理
+      const response = await fetch(`/api/users/${retiringUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'retired',
+          retiredDate,
+          retirementReason: reason,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to retire user');
+      }
+
+      // ストアも更新
       retireUser(
         retiringUser.id,
         retiredDate,
         reason as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other'
       );
 
-      // Update local state
-      setUsers(prev => prev.map(u =>
-        u.id === retiringUser.id
-          ? {
-              ...u,
-              status: 'retired' as const,
-              retiredDate,
-              retirementReason: reason as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other',
-            }
-          : u
-      ));
+      // ローカルステートを更新
+      setUsers(prev => prev.map(u => u.id === retiringUser.id ? result.data : u));
 
       toast.success('退職処理が完了しました');
     } catch (error) {
+      console.error('Error retiring user:', error);
       toast.error('退職処理に失敗しました');
       throw error;
     }
