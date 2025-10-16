@@ -156,7 +156,7 @@ export default function ProfilePage() {
                   {currentUser?.name?.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+              <div className="absolute -bottom-1 -right-1">
                 {currentUser?.id && (
                   <AvatarUploadButton
                     userId={currentUser.id}

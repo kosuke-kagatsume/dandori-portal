@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, Loader2 } from 'lucide-react';
+import { Camera, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { uploadAvatar, validateImageFile } from '@/lib/storage/avatar-upload';
@@ -73,24 +73,18 @@ export function AvatarUploadButton({
         onChange={handleFileSelect}
         className="hidden"
       />
-      <Button
+      <button
         onClick={handleButtonClick}
         disabled={uploading}
-        variant="outline"
-        size="sm"
+        className="w-8 h-8 rounded-full bg-white border-2 border-gray-300 flex items-center justify-center hover:bg-blue-50 hover:border-blue-500 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        title={uploading ? 'アップロード中...' : '画像を変更'}
       >
         {uploading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            アップロード中...
-          </>
+          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
         ) : (
-          <>
-            <Upload className="mr-2 h-4 w-4" />
-            画像を変更
-          </>
+          <Camera className="h-4 w-4 text-gray-600" />
         )}
-      </Button>
+      </button>
     </>
   );
 }
