@@ -9,6 +9,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 環境変数を明示的にランタイムに公開（Vercelでのアクセス確保）
+  env: {
+    DATABASE_URL: process.env.DATABASE_URL,
+  },
+
   // React Strict Mode でパフォーマンス問題を検出
   reactStrictMode: true,
   
