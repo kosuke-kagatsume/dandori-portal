@@ -5,6 +5,7 @@ import { persist } from 'zustand/middleware';
 import { generateDemoWorkflowData } from './workflow-demo-data';
 import { useNotificationStore } from './store/notification-store';
 import { useUserStore } from './store/user-store';
+import { getBroadcast } from '@/lib/realtime/broadcast';
 
 export type WorkflowType = 
   | 'leave_request'      // 休暇申請
@@ -166,13 +167,56 @@ interface WorkflowStore {
   };
 }
 
+// Broadcast Channelのインスタンス
+const broadcast = typeof window !== 'undefined' ? getBroadcast() : null;
+
 export const useWorkflowStore = create<WorkflowStore>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      // Broadcast Channelのリスナーを設定（ブラウザ環境でのみ）
+      if (broadcast) {
+        // 承認イベント
+        broadcast.on<string>('workflow:approved', (id) => {
+          set((state) => ({
+            requests: state.requests.map((w) =>
+              w.id === id ? { ...w, status: 'approved' as const } : w
+            ),
+          }));
+        });
+
+        // 却下イベント
+        broadcast.on<string>('workflow:rejected', (id) => {
+          set((state) => ({
+            requests: state.requests.map((w) =>
+              w.id === id ? { ...w, status: 'rejected' as const } : w
+            ),
+          }));
+        });
+
+        // 差し戻しイベント
+        broadcast.on<string>('workflow:returned', (id) => {
+          set((state) => ({
+            requests: state.requests.map((w) =>
+              w.id === id ? { ...w, status: 'returned' as const } : w
+            ),
+          }));
+        });
+
+        // 更新イベント
+        broadcast.on<WorkflowRequest>('workflow:updated', (workflow) => {
+          set((state) => ({
+            requests: state.requests.map((w) =>
+              w.id === workflow.id ? workflow : w
+            ),
+          }));
+        });
+      }
+
+      return {
       requests: [],
       initialized: false,
       delegateSettings: [],
-      
+
       initializeDemoData: () => {
         const state = get();
         console.log('Initializing demo data...', { initialized: state.initialized, requestsCount: state.requests.length });
@@ -371,6 +415,14 @@ export const useWorkflowStore = create<WorkflowStore>()(
           };
         });
 
+        // 他のタブに承認を通知
+        const updatedRequest = get().requests.find(r => r.id === requestId);
+        if (updatedRequest && updatedRequest.status === 'approved') {
+          broadcast?.send('workflow:approved', requestId);
+        } else if (updatedRequest) {
+          broadcast?.send('workflow:updated', updatedRequest);
+        }
+
         // 通知を作成
         const request = get().requests.find(r => r.id === requestId);
         if (request) {
@@ -449,6 +501,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
             ),
           };
         });
+
+        // 他のタブに却下を通知
+        broadcast?.send('workflow:rejected', requestId);
 
         // 申請者に却下通知
         const request = get().requests.find(r => r.id === requestId);
@@ -598,6 +653,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
           );
           if (currentStep) {
             get().approveRequest(request.id, currentStep.id, comments || '一括承認');
+            // 各idに対してブロードキャスト送信（一括承認でも個別に通知）
+            const updatedRequest = get().requests.find(r => r.id === request.id);
+            if (updatedRequest && updatedRequest.status === 'approved') {
+              broadcast?.send('workflow:approved', request.id);
+            }
           }
         });
       },
@@ -612,6 +672,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
           );
           if (currentStep) {
             get().rejectRequest(request.id, currentStep.id, reason);
+            // 各idに対してブロードキャスト送信（一括却下でも個別に通知）
+            broadcast?.send('workflow:rejected', request.id);
           }
         });
       },
@@ -677,17 +739,18 @@ export const useWorkflowStore = create<WorkflowStore>()(
         
         return {
           totalRequests: requests.length,
-          pendingRequests: requests.filter(r => 
+          pendingRequests: requests.filter(r =>
             r.status === 'pending' || r.status === 'partially_approved'
           ).length,
           approvedRequests: approved.length,
           rejectedRequests: requests.filter(r => r.status === 'rejected').length,
-          averageApprovalTime: approved.length > 0 
-            ? totalApprovalTime / approved.length 
+          averageApprovalTime: approved.length > 0
+            ? totalApprovalTime / approved.length
             : 0,
         };
       },
-    }),
+    };
+  },
     {
       name: 'workflow-store',
       // 初期化時にデモデータを強制リセット（開発用）
