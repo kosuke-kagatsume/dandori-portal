@@ -10,5 +10,8 @@ export default createMiddleware({
 
 export const config = {
   // next-intlが処理するパスのマッチャー
-  matcher: ['/', '/(ja|en)/:path*']
+  // APIルート、静的ファイル、Next.js内部ルートを除外
+  matcher: [
+    '/((?!api|_next|_vercel|.*\\..*).*)',
+  ]
 };
