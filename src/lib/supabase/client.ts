@@ -31,6 +31,19 @@ export function createClient() {
         update: () => Promise.resolve({ data: null, error: null }),
         delete: () => Promise.resolve({ data: null, error: null }),
       }),
+      storage: {
+        from: () => ({
+          upload: () => Promise.resolve({ data: null, error: { message: 'Demo mode' } }),
+          download: () => Promise.resolve({ data: null, error: { message: 'Demo mode' } }),
+          remove: () => Promise.resolve({ data: null, error: null }),
+          getPublicUrl: () => ({ data: { publicUrl: '' } }),
+        }),
+      },
+      channel: () => ({
+        on: () => ({ subscribe: () => Promise.resolve({ data: null, error: null }) }),
+        subscribe: () => Promise.resolve({ data: null, error: null }),
+        unsubscribe: () => Promise.resolve({ data: null, error: null }),
+      }),
     } as any;
   }
 
