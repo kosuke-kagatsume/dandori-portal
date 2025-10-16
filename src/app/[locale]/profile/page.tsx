@@ -25,9 +25,10 @@ import {
   Upload
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
+import { AvatarUploadButton } from '@/features/profile/avatar-upload-button';
 
 export default function ProfilePage() {
-  const { currentUser } = useUserStore();
+  const { currentUser, updateUser } = useUserStore();
   
   // 資格・免許データ（モック）
   const certifications = [
@@ -132,18 +133,39 @@ export default function ProfilePage() {
     return diffDays;
   };
 
+  const handleAvatarUpload = (url: string) => {
+    if (currentUser?.id) {
+      updateUser(currentUser.id, { avatar: url });
+    }
+  };
+
+  const handleAvatarUploadError = (error: string) => {
+    console.error('Avatar upload error:', error);
+  };
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-8 text-white">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-6">
-            <Avatar className="h-24 w-24 border-4 border-white">
-              <AvatarImage src={currentUser?.avatar} />
-              <AvatarFallback className="text-2xl bg-white text-blue-600">
-                {currentUser?.name?.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-24 w-24 border-4 border-white">
+                <AvatarImage src={currentUser?.avatar} />
+                <AvatarFallback className="text-2xl bg-white text-blue-600">
+                  {currentUser?.name?.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
+                {currentUser?.id && (
+                  <AvatarUploadButton
+                    userId={currentUser.id}
+                    onUploadSuccess={handleAvatarUpload}
+                    onUploadError={handleAvatarUploadError}
+                  />
+                )}
+              </div>
+            </div>
             <div>
               <h1 className="text-3xl font-bold mb-2">{currentUser?.name || '山田太郎'}</h1>
               <p className="text-lg opacity-90">代表取締役 / 本社 経営企画室</p>
