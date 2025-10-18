@@ -1,6 +1,6 @@
 # Dandori Portal - 開発ドキュメント
 
-## 🎯 最終更新: 2025-10-18
+## 🎯 最終更新: 2025-10-18 (Phase 3-2完了)
 
 ---
 
@@ -177,6 +177,110 @@
 - 当初、新入社員は入社手続きのみにアクセスする簡素なレイアウトを想定
 - ユーザーフィードバックにより、新入社員も通常業務（打刻・休暇申請など）を行うことが判明
 - 一般社員ベースのメニュー構成に変更し、入社手続きメニューを追加する形に修正
+
+#### Phase 3-2: 入社手続きワークフロー完全実装（2025-10-18完了）
+
+新入社員の入社手続きとHR管理機能を完全実装しました。
+
+##### 新入社員向け機能
+- ✅ **4つのオンボーディングフォーム実装**
+  - **基本情報フォーム** (`/onboarding/[applicationId]/basic-info`)
+    - 氏名、生年月日、性別、住所、電話番号
+    - 緊急連絡先情報
+    - バリデーション機能完備
+  - **家族情報フォーム** (`/onboarding/[applicationId]/family-info`)
+    - 配偶者情報、扶養家族情報
+    - 扶養控除対象判定
+  - **給与振込口座フォーム** (`/onboarding/[applicationId]/bank-account`)
+    - 銀行名、支店名、口座種別、口座番号
+    - 口座名義人
+  - **通勤経路フォーム** (`/onboarding/[applicationId]/commute-route`)
+    - 通勤手段、出発地、到着地
+    - 経路詳細、所要時間、定期代
+- ✅ **フォーム進捗管理とステータス表示**
+  - 4フォームの進捗状況を一覧で確認
+  - ステータスバッジ表示（下書き/提出済み/差し戻し/承認済み）
+  - 次にやるべきアクションの明示
+- ✅ **自動保存機能**
+  - zustand-persistによるlocalStorage永続化
+  - フォーム入力中のデータ保護
+  - リロード後もデータ保持
+
+##### HR担当向け機能
+- ✅ **入社申請一覧画面** (`/onboarding-admin`)
+  - 5人の申請者のデモデータ管理
+  - ステータス別の統計表示（総申請数、提出済み、承認済み、期限超過）
+  - 申請者ごとのステータスバッジ表示
+  - クリックで詳細画面へ遷移
+- ✅ **個別申請詳細画面** (`/onboarding-admin/[applicationId]`)
+  - 申請者情報ヘッダー表示
+  - 4フォームのタブ切り替え表示
+  - フォーム別の承認・差し戻し機能
+  - 承認済みフォームの状態表示（承認日時・承認者）
+  - 差し戻し済みフォームの状態表示（差し戻し日時・理由）
+  - 承認履歴表示
+  - HR用メモ機能
+  - クイックアクション（全フォーム承認、催促メール送信）
+- ✅ **承認フローストア統合** (`onboarding-store.ts`)
+  - `approveForm()`: フォーム個別承認
+  - `returnForm()`: フォーム差し戻し
+  - `approveAllForms()`: 一括承認
+  - 承認日時・承認者の自動記録
+  - 差し戻し理由のコメント保存
+  - 全フォーム承認時の申請ステータス自動更新
+
+##### デモデータ (`demo-onboarding-applications.ts`)
+- ✅ **5人の申請者の完全なデモデータ作成**
+  - **新入太郎** (demo-onboarding-001): 下書き状態
+  - **山田花子** (demo-onboarding-002): 全フォーム提出済み
+  - **鈴木次郎** (demo-onboarding-003): 基本情報フォームが差し戻し済み（住所表記の誤り）
+  - **田中雪** (demo-onboarding-004): 全フォーム承認済み
+  - **佐藤明** (demo-onboarding-005): 下書き状態（未記入）
+- ✅ **各申請者に対応する4フォームのデータ作成**
+  - OnboardingApplication × 5
+  - BasicInfoForm × 5
+  - FamilyInfoForm × 5
+  - BankAccountForm × 5
+  - CommuteRouteForm × 5
+  - 合計475行のTypeScriptコード
+
+##### その他の改善
+- ✅ **ロール切り替えUIの改善**
+  - applicantロールの追加
+  - ロール切り替え時のメニュー動的表示
+  - デモユーザー「新入太郎」の追加
+- ✅ **サイドバーメニューに「入社手続き」追加**
+  - 人事担当と新入社員のみアクセス可能
+  - アイコンとバッジ表示
+- ✅ **localStorage永続化によるデータ保護**
+  - `onboarding-storage`キーでデータ永続化
+  - 承認済みデータの上書き防止
+  - app-shell.tsxでの初期化ロジック最適化
+
+##### 実装ファイル
+- **新規作成**:
+  - `src/app/[locale]/onboarding-admin/page.tsx` (269行) - HR管理一覧画面
+  - `src/app/[locale]/onboarding-admin/[applicationId]/page.tsx` (947行) - HR管理詳細画面
+  - `src/app/[locale]/onboarding/[applicationId]/bank-account/page.tsx` (254行) - 口座情報フォーム
+  - `src/app/[locale]/onboarding/[applicationId]/commute-route/page.tsx` (278行) - 通勤経路フォーム
+  - `src/app/[locale]/onboarding/[applicationId]/family-info/page.tsx` (293行) - 家族情報フォーム
+  - `src/lib/demo-onboarding-applications.ts` (475行) - 5人分のデモデータ
+  - `src/lib/demo-onboarding-data.ts` (200行) - 新入太郎のデモデータ
+- **修正**:
+  - `src/lib/store/onboarding-store.ts` - 承認フローメソッド追加
+  - `src/components/layout/app-shell.tsx` - データ初期化ロジック改善
+  - `src/features/navigation/sidebar.tsx` - 入社手続きメニュー追加
+
+##### 技術的な課題と解決
+- **問題**: 承認後にページリロードしても承認状態が反映されない
+  - **原因**: app-shell.tsxがcurrentUser変更のたびにデータを再初期化していた
+  - **解決**: localStorageの存在チェックを追加し、既存データの上書きを防止
+- **問題**: HR管理詳細画面で「申請が見つかりませんでした」エラー
+  - **原因**: 初期化関数のインポート漏れ
+  - **解決**: initializeApplication等の関数をuseOnboardingStoreからインポート
+- **問題**: フォームステータスがハードコードされていた
+  - **原因**: formStatusesがuseMemoで動的に取得されていなかった
+  - **解決**: onboarding-storeから動的にステータスを取得するように修正
 
 ---
 
