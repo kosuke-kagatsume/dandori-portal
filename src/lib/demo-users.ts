@@ -4,8 +4,10 @@ import type { DemoUser, UserRole, Permission } from '@/types';
 const rolePermissions: Record<UserRole, Permission[]> = {
   employee: ['view_own'],
   manager: ['view_own', 'view_team', 'approve_requests'],
+  executive: ['view_own', 'view_team', 'view_all', 'approve_requests'],
   hr: ['view_own', 'view_team', 'view_all', 'approve_requests'],
   admin: ['view_own', 'view_team', 'view_all', 'approve_requests', 'manage_system'],
+  applicant: [], // 新入社員は入社手続きのみアクセス可能
 };
 
 // デモユーザー定義
@@ -28,6 +30,15 @@ export const demoUsers: Record<UserRole, DemoUser> = {
     avatar: '/avatars/sato.png',
     permissions: rolePermissions.manager,
   },
+  executive: {
+    id: '5',
+    name: '鈴木社長',
+    email: 'suzuki@dandori.local',
+    role: 'executive',
+    department: '経営企画室',
+    avatar: '/avatars/suzuki.png',
+    permissions: rolePermissions.executive,
+  },
   hr: {
     id: '3',
     name: '山田人事',
@@ -46,14 +57,25 @@ export const demoUsers: Record<UserRole, DemoUser> = {
     avatar: '/avatars/admin.png',
     permissions: rolePermissions.admin,
   },
+  applicant: {
+    id: '6',
+    name: '新入太郎',
+    email: 'shinnyu@dandori.local',
+    role: 'applicant',
+    department: '入社予定',
+    avatar: '/avatars/applicant.png',
+    permissions: rolePermissions.applicant,
+  },
 };
 
 // 役割の日本語表示名
 export const roleDisplayNames: Record<UserRole, string> = {
   employee: '一般社員',
   manager: 'マネージャー',
+  executive: '経営者',
   hr: '人事担当',
   admin: 'システム管理者',
+  applicant: '新入社員',
 };
 
 // 権限チェック関数
@@ -71,13 +93,15 @@ export function hasRole(user: DemoUser | null, role: UserRole): boolean {
 // 役割以上のチェック関数（階層的権限）
 export function hasRoleOrHigher(user: DemoUser | null, minRole: UserRole): boolean {
   if (!user) return false;
-  
+
   const roleHierarchy: Record<UserRole, number> = {
-    employee: 1,
-    manager: 2,
-    hr: 3,
-    admin: 4,
+    applicant: 0,  // 新入社員（最低）
+    employee: 1,   // 一般社員
+    manager: 2,    // マネージャー
+    executive: 3,  // 経営者
+    hr: 3,         // 人事担当（経営者と同等）
+    admin: 4,      // システム管理者（最高）
   };
-  
+
   return roleHierarchy[user.role] >= roleHierarchy[minRole];
 }

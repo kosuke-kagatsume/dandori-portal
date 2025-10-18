@@ -6,6 +6,8 @@ import { Sidebar } from '@/features/navigation/sidebar';
 import { Header } from '@/features/navigation/header';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
+import { useGlobalKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { SkipLink } from '@/components/a11y/skip-link';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -14,8 +16,11 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const { theme, sidebarCollapsed, getDensityClass } = useUIStore();
   const { setTenants } = useTenantStore();
-  const { setCurrentUser, setDemoMode } = useUserStore();
+  const { setCurrentUser, setDemoMode, currentUser } = useUserStore();
   const { setNotifications } = useNotificationStore();
+
+  // キーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
 
   // Initialize user data
   useEffect(() => {
@@ -85,6 +90,9 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className={cn('min-h-screen bg-background', getDensityClass())}>
+      {/* スキップリンク - アクセシビリティ向上 */}
+      <SkipLink />
+
       {/* Sidebar */}
       <Sidebar />
 
@@ -96,8 +104,8 @@ export function AppShell({ children }: AppShellProps) {
         {/* Header */}
         <Header />
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        {/* Page Content - メインコンテンツ */}
+        <main id="main-content" className="flex-1 overflow-auto p-6" role="main">
           {children}
         </main>
       </div>

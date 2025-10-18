@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { useApprovalStore } from '@/lib/approval-store';
-import { ApprovalFlow, calculateProgress } from '@/lib/approval-system';
+import { useWorkflowStore, WorkflowRequest } from '@/lib/workflow-store';
+import { useUserStore } from '@/lib/store/user-store';
 import {
   Clock,
   CheckCircle,
@@ -45,7 +45,7 @@ import { ja } from 'date-fns/locale';
 
 export default function ApprovalPage() {
   const [loading, setLoading] = useState(true);
-  const [selectedFlow, setSelectedFlow] = useState<ApprovalFlow | null>(null);
+  const [selectedFlow, setSelectedFlow] = useState<WorkflowRequest | null>(null);
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
@@ -53,52 +53,69 @@ export default function ApprovalPage() {
   const [returnReason, setReturnReason] = useState('');
   const [activeTab, setActiveTab] = useState('pending');
 
-  const currentUserId = '1'; // 現在のユーザー（田中太郎）
+  const { currentUser } = useUserStore();
+  const currentUserId = currentUser?.id || '1'; // 現在のユーザー
 
   const {
-    approvalFlows,
+    requests,
     getPendingApprovals,
-    getUserRequests,
-    processApproval: processApprovalAction,
-    returnToSender: returnToSenderAction,
-    getNotificationCount,
-    checkOverdueApprovals,
-    escalateApproval: escalateApprovalAction
-  } = useApprovalStore();
+    getMyRequests,
+    approveRequest,
+    rejectRequest,
+  } = useWorkflowStore();
 
   useEffect(() => {
     setLoading(false);
   }, []);
 
   // 承認待ちのフロー
-  const pendingApprovals = useMemo(() => 
-    getPendingApprovals(currentUserId), 
-    [getPendingApprovals, currentUserId, approvalFlows]
+  const pendingApprovals = useMemo(() =>
+    getPendingApprovals(currentUserId),
+    [getPendingApprovals, currentUserId, requests]
   );
 
   // 自分が申請したフロー
-  const myRequests = useMemo(() => 
-    getUserRequests(currentUserId), 
-    [getUserRequests, currentUserId, approvalFlows]
+  const myRequests = useMemo(() =>
+    getMyRequests(currentUserId),
+    [getMyRequests, currentUserId, requests]
   );
 
   // 全ての承認フロー（管理者向け）
   const allFlows = useMemo(() =>
-    approvalFlows.filter(flow => flow.overallStatus !== 'draft'),
-    [approvalFlows]
+    requests.filter(req => req.status !== 'draft'),
+    [requests]
   );
 
   // 統計情報のメモ化
   const stats = useMemo(() => ({
-    approvedCount: allFlows.filter(f => f.overallStatus === 'approved').length,
-    completedCount: allFlows.filter(f => f.overallStatus === 'approved' || f.overallStatus === 'rejected').length,
+    approvedCount: allFlows.filter(f => f.status === 'approved').length,
+    completedCount: allFlows.filter(f => f.status === 'approved' || f.status === 'rejected').length,
   }), [allFlows]);
 
   const handleApproval = async () => {
     if (!selectedFlow) return;
 
+    // 現在のステップを見つける
+    const currentStep = selectedFlow.approvalSteps.find(
+      step => step.approverId === currentUserId && step.status === 'pending'
+    );
+
+    if (!currentStep) {
+      toast.error('承認権限がありません');
+      return;
+    }
+
     try {
-      processApprovalAction(selectedFlow.id, currentUserId, approvalAction, comment);
+      if (approvalAction === 'approve') {
+        approveRequest(selectedFlow.id, currentStep.id, comment);
+      } else {
+        if (!comment) {
+          toast.error('却下理由を入力してください');
+          return;
+        }
+        rejectRequest(selectedFlow.id, currentStep.id, comment);
+      }
+
       setShowApprovalDialog(false);
       setSelectedFlow(null);
       setComment('');
@@ -119,36 +136,31 @@ export default function ApprovalPage() {
     }
 
     try {
-      returnToSenderAction(selectedFlow.id, currentUserId, returnReason);
+      // TODO: 差し戻し機能の実装
+      toast.warning('差し戻し機能は現在開発中です');
       setShowReturnDialog(false);
       setSelectedFlow(null);
       setReturnReason('');
-
-      toast.success('申請を差し戻しました', {
-        description: '申請者に修正依頼が送信されました'
-      });
     } catch (error) {
       toast.error('処理に失敗しました');
     }
   };
 
-  const openApprovalDialog = (flow: ApprovalFlow, action: 'approve' | 'reject') => {
+  const openApprovalDialog = (flow: WorkflowRequest, action: 'approve' | 'reject') => {
     setSelectedFlow(flow);
     setApprovalAction(action);
     setShowApprovalDialog(true);
   };
 
-  const openReturnDialog = (flow: ApprovalFlow) => {
+  const openReturnDialog = (flow: WorkflowRequest) => {
     setSelectedFlow(flow);
     setShowReturnDialog(true);
   };
 
-  const handleEscalate = (flow: ApprovalFlow) => {
+  const handleEscalate = (flow: WorkflowRequest) => {
     try {
-      escalateApprovalAction(flow.id);
-      toast.success('承認をエスカレーションしました', {
-        description: '上位承認者に通知が送信されました'
-      });
+      // TODO: エスカレーション機能の実装
+      toast.warning('エスカレーション機能は現在開発中です');
     } catch (error) {
       toast.error('エスカレーションに失敗しました');
     }
@@ -172,14 +184,18 @@ export default function ApprovalPage() {
     return null;
   };
 
-  const getStatusBadge = (status: ApprovalFlow['overallStatus']) => {
+  const getStatusBadge = (status: WorkflowRequest['status']) => {
     const config = {
       draft: { label: '下書き', variant: 'outline' as const, icon: FileText },
       pending: { label: '承認待ち', variant: 'default' as const, icon: Clock },
+      in_review: { label: '確認中', variant: 'default' as const, icon: Clock },
+      partially_approved: { label: '一部承認', variant: 'default' as const, icon: Clock },
       approved: { label: '承認済み', variant: 'default' as const, icon: CheckCircle },
       rejected: { label: '却下', variant: 'destructive' as const, icon: XCircle },
       returned: { label: '差し戻し', variant: 'secondary' as const, icon: RotateCcw },
       cancelled: { label: 'キャンセル', variant: 'secondary' as const, icon: AlertCircle },
+      completed: { label: '完了', variant: 'default' as const, icon: CheckCircle },
+      escalated: { label: 'エスカレーション', variant: 'secondary' as const, icon: AlertCircle },
     };
 
     const { label, variant, icon: Icon } = config[status];
@@ -191,23 +207,27 @@ export default function ApprovalPage() {
     );
   };
 
-  const getRequestTypeLabel = (type: ApprovalFlow['requestType']) => {
+  const getRequestTypeLabel = (type: WorkflowRequest['type']) => {
     const labels = {
-      leave: '休暇申請',
-      overtime: '残業申請',
-      expense: '経費申請',
-      attendance_correction: '勤怠修正',
+      leave_request: '休暇申請',
+      overtime_request: '残業申請',
+      expense_claim: '経費申請',
+      business_trip: '出張申請',
+      purchase_request: '購買申請',
+      document_approval: '書類承認',
+      shift_change: 'シフト変更',
+      remote_work: 'リモートワーク',
     };
-    return labels[type];
+    return labels[type] || '申請';
   };
 
   // 承認待ちテーブルの列定義
-  const pendingColumns: ColumnDef<ApprovalFlow>[] = useMemo(() => [
+  const pendingColumns: ColumnDef<WorkflowRequest>[] = useMemo(() => [
     {
       accessorKey: 'submittedAt',
       header: '申請日',
       cell: ({ row }) => {
-        const date = new Date(row.original.submittedAt);
+        const date = row.original.submittedAt ? new Date(row.original.submittedAt) : new Date(row.original.createdAt);
         return (
           <div className="text-sm">
             {format(date, 'MM/dd HH:mm', { locale: ja })}
@@ -216,35 +236,36 @@ export default function ApprovalPage() {
       },
     },
     {
-      accessorKey: 'requestType',
+      accessorKey: 'type',
       header: '種別',
       cell: ({ row }) => (
         <Badge variant="outline">
-          {getRequestTypeLabel(row.original.requestType)}
+          {getRequestTypeLabel(row.original.type)}
         </Badge>
       ),
     },
     {
-      accessorKey: 'applicantName',
+      accessorKey: 'requesterName',
       header: '申請者',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">{row.original.applicantName}</span>
+          <span className="font-medium">{row.original.requesterName}</span>
         </div>
       ),
     },
     {
-      accessorKey: 'urgency',
-      header: '緊急度',
+      accessorKey: 'priority',
+      header: '優先度',
       cell: ({ row }) => {
-        const urgency = row.original.urgency;
+        const priority = row.original.priority;
         const config = {
           low: { label: '低', variant: 'outline' as const, color: 'text-green-600' },
-          normal: { label: '中', variant: 'outline' as const, color: 'text-blue-600' },
-          high: { label: '高', variant: 'destructive' as const, color: 'text-red-600' },
+          normal: { label: '通常', variant: 'outline' as const, color: 'text-blue-600' },
+          high: { label: '高', variant: 'destructive' as const, color: 'text-orange-600' },
+          urgent: { label: '緊急', variant: 'destructive' as const, color: 'text-red-600' },
         };
-        const { label, variant } = config[urgency];
+        const { label, variant } = config[priority];
         return <Badge variant={variant}>{label}</Badge>;
       },
     },
@@ -254,8 +275,8 @@ export default function ApprovalPage() {
       cell: ({ row }) => {
         const flow = row.original;
         const progress = calculateProgress(flow);
-        const currentStep = flow.steps.find(s => s.stepNumber === flow.currentStep);
-        const deadlineStatus = currentStep?.deadline ? getDeadlineStatus(currentStep.deadline) : null;
+        const currentStep = flow.approvalSteps[flow.currentStep];
+        const deadlineStatus = currentStep?.escalationDeadline ? getDeadlineStatus(currentStep.escalationDeadline) : null;
 
         return (
           <div className="space-y-1">
@@ -316,16 +337,13 @@ export default function ApprovalPage() {
             </div>
             {currentStep && (
               <p className="text-xs text-muted-foreground">
-                ステップ {currentStep.stepNumber}: {currentStep.approverName}
-                {currentStep.addedByRule && (
-                  <span className="text-blue-500 ml-1">(条件追加)</span>
-                )}
-                {currentStep.escalatedTo && (
-                  <span className="text-purple-600 ml-1">(エスカレーション済)</span>
+                ステップ {flow.currentStep + 1}: {currentStep.approverName}
+                {currentStep.delegatedTo && (
+                  <span className="text-purple-600 ml-1">(委任: {currentStep.delegatedTo.name})</span>
                 )}
               </p>
             )}
-            {deadlineStatus?.status === 'overdue' && flow.overallStatus === 'pending' && (
+            {deadlineStatus?.status === 'overdue' && flow.status === 'pending' && (
               <p className="text-xs text-red-600 font-medium">
                 エスカレーション推奨
               </p>
@@ -339,14 +357,12 @@ export default function ApprovalPage() {
       header: '操作',
       cell: ({ row }) => {
         const flow = row.original;
-        const canApprove = flow.steps.some(step =>
-          step.stepNumber === flow.currentStep &&
-          step.approverUserId === currentUserId &&
-          step.status === 'pending'
-        );
-        const currentStep = flow.steps.find(s => s.stepNumber === flow.currentStep);
-        const deadlineStatus = currentStep?.deadline ? getDeadlineStatus(currentStep.deadline) : null;
-        const isOverdue = deadlineStatus?.status === 'overdue' && flow.overallStatus === 'pending';
+        const currentStep = flow.approvalSteps[flow.currentStep];
+        const canApprove = currentStep &&
+          currentStep.approverId === currentUserId &&
+          currentStep.status === 'pending';
+        const deadlineStatus = currentStep?.escalationDeadline ? getDeadlineStatus(currentStep.escalationDeadline) : null;
+        const isOverdue = deadlineStatus?.status === 'overdue' && flow.status === 'pending';
 
         return canApprove ? (
           <div className="flex items-center gap-2">
@@ -522,7 +538,7 @@ export default function ApprovalPage() {
                 <OptimizedDataTable
                   columns={pendingColumns}
                   data={pendingApprovals}
-                  searchKey="applicantName"
+                  searchKey="requesterName"
                   searchPlaceholder="申請者名で検索..."
                   pageSize={10}
                 />
@@ -556,12 +572,12 @@ export default function ApprovalPage() {
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
                             <Badge variant="outline">
-                              {getRequestTypeLabel(flow.requestType)}
+                              {getRequestTypeLabel(flow.type)}
                             </Badge>
-                            {getStatusBadge(flow.overallStatus)}
+                            {getStatusBadge(flow.status)}
                           </div>
                           <span className="text-sm text-muted-foreground">
-                            {format(new Date(flow.submittedAt), 'MM/dd HH:mm', { locale: ja })}
+                            {format(new Date(flow.submittedAt || flow.createdAt), 'MM/dd HH:mm', { locale: ja })}
                           </span>
                         </div>
                         <div className="space-y-2">
@@ -569,10 +585,10 @@ export default function ApprovalPage() {
                           <div className="flex justify-between text-sm text-muted-foreground">
                             <span>進捗: {calculateProgress(flow).toFixed(0)}%</span>
                             <span>
-                              {flow.overallStatus === 'pending' 
-                                ? `ステップ ${flow.currentStep}/${flow.steps.length}`
-                                : flow.overallStatus === 'approved' ? '承認完了'
-                                : flow.overallStatus === 'rejected' ? '却下'
+                              {flow.status === 'pending' || flow.status === 'partially_approved'
+                                ? `ステップ ${flow.currentStep + 1}/${flow.approvalSteps.length}`
+                                : flow.status === 'approved' ? '承認完了'
+                                : flow.status === 'rejected' ? '却下'
                                 : 'キャンセル'
                               }
                             </span>
@@ -607,7 +623,7 @@ export default function ApprovalPage() {
               <OptimizedDataTable
                 columns={pendingColumns}
                 data={allFlows}
-                searchKey="applicantName"
+                searchKey="requesterName"
                 searchPlaceholder="申請者名で検索..."
                 pageSize={15}
               />
@@ -626,9 +642,9 @@ export default function ApprovalPage() {
             <DialogDescription>
               {selectedFlow && (
                 <div className="space-y-2 text-left">
-                  <p>申請者: {selectedFlow.applicantName}</p>
-                  <p>申請種別: {getRequestTypeLabel(selectedFlow.requestType)}</p>
-                  <p>申請日: {format(new Date(selectedFlow.submittedAt), 'yyyy/MM/dd HH:mm', { locale: ja })}</p>
+                  <p>申請者: {selectedFlow.requesterName}</p>
+                  <p>申請種別: {getRequestTypeLabel(selectedFlow.type)}</p>
+                  <p>申請日: {format(new Date(selectedFlow.submittedAt || selectedFlow.createdAt), 'yyyy/MM/dd HH:mm', { locale: ja })}</p>
                 </div>
               )}
             </DialogDescription>
@@ -674,9 +690,9 @@ export default function ApprovalPage() {
             <DialogDescription>
               {selectedFlow && (
                 <div className="space-y-2 text-left">
-                  <p>申請者: {selectedFlow.applicantName}</p>
-                  <p>申請種別: {getRequestTypeLabel(selectedFlow.requestType)}</p>
-                  <p>申請日: {format(new Date(selectedFlow.submittedAt), 'yyyy/MM/dd HH:mm', { locale: ja })}</p>
+                  <p>申請者: {selectedFlow.requesterName}</p>
+                  <p>申請種別: {getRequestTypeLabel(selectedFlow.type)}</p>
+                  <p>申請日: {format(new Date(selectedFlow.submittedAt || selectedFlow.createdAt), 'yyyy/MM/dd HH:mm', { locale: ja })}</p>
                   <p className="text-sm text-muted-foreground mt-2">
                     差し戻し理由を入力してください。申請者に修正依頼が送信されます。
                   </p>
@@ -716,4 +732,17 @@ export default function ApprovalPage() {
       </Dialog>
     </div>
   );
+}
+
+// ヘルパー関数：進捗率を計算
+function calculateProgress(request: WorkflowRequest): number {
+  if (request.status === 'completed' || request.status === 'approved') return 100;
+  if (request.status === 'rejected' || request.status === 'cancelled') return 0;
+
+  const totalSteps = request.approvalSteps.length;
+  const completedSteps = request.approvalSteps.filter(
+    s => s.status === 'approved' || s.status === 'skipped'
+  ).length;
+
+  return totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
 }

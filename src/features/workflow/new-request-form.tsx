@@ -131,6 +131,16 @@ export function NewRequestForm({
     required: boolean;
   }>>([]);
 
+  // ダイアログが閉じられた時に状態をリセット
+  React.useEffect(() => {
+    if (!open) {
+      setStep(1);
+      setAttachments([]);
+      setApprovalFlow([]);
+      form.reset();
+    }
+  }, [open]);
+
   // フォーム初期化
   const getSchema = () => {
     switch (requestType) {
@@ -224,57 +234,25 @@ export function NewRequestForm({
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
+  // 承認者ロール→ユーザーIDのマッピング（デモ用）
+  const getApproverIdByRole = (role: ApproverRole): string => {
+    const roleToUserIdMap: Record<ApproverRole, string> = {
+      direct_manager: '2',      // 佐藤部長（manager）
+      department_head: '2',     // 佐藤部長（manager）
+      hr_manager: '3',          // 山田人事（hr）
+      finance_manager: '3',     // 山田人事（hr）- デモ用に人事が兼任
+      general_manager: '4',     // システム管理者（admin）
+    };
+    return roleToUserIdMap[role] || '2'; // デフォルトはmanager
+  };
+
   const handleSubmit = async (data: any) => {
     try {
-      // Supabaseに保存するためのデータを準備
-      const workflowService = (await import('@/lib/supabase/workflow-service')).workflowService;
-      
-      // 仮のユーザーIDと組織ID（本番では認証から取得）
+      // 仮のユーザーID（本番では認証から取得）
       const userId = currentUserId || 'demo-user-id';
-      const organizationId = 'demo-org-id';
-      
-      // 申請データを作成
-      const requestData = {
-        organization_id: organizationId,
-        type: requestType!,
-        title: getRequestTitle(requestType!, data),
-        description: data.reason || data.purpose || '',
-        requester_id: userId,
-        department: '営業部',
-        status: 'draft',
-        priority: getPriority(requestType!, data),
-        details: data,
-      };
-      
-      // Supabaseに保存
-      const result = await workflowService.createRequest(requestData);
-      
-      if (!result.success) {
-        throw new Error('申請の作成に失敗しました');
-      }
-      
-      // 承認ステップを作成
-      if (result.data && approvalFlow.length > 0) {
-        const steps = approvalFlow.map((step, index) => ({
-          approverRole: step.role,
-          approverId: `user-${step.role}`,
-          approverName: step.name,
-          isOptional: !step.required,
-        }));
-        
-        await workflowService.createApprovalSteps(result.data.id, steps);
-        
-        // タイムラインイベントを追加
-        await workflowService.addTimelineEvent(
-          result.data.id,
-          '申請書を作成しました',
-          userId
-        );
-      }
-      
-      // ローカルのWorkflowStoreにも追加（互換性のため）
+
+      // ローカルのWorkflowStoreに直接追加
       const request: Partial<WorkflowRequest> = {
-        id: result.data?.id,
         type: requestType!,
         title: getRequestTitle(requestType!, data),
         description: data.reason || data.purpose || '',
@@ -288,7 +266,7 @@ export function NewRequestForm({
           id: `step-${index}`,
           order: index,
           approverRole: step.role,
-          approverId: `user-${step.role}`,
+          approverId: getApproverIdByRole(step.role),
           approverName: step.name,
           status: 'pending',
           isOptional: !step.required,
@@ -303,16 +281,16 @@ export function NewRequestForm({
         })),
         timeline: [],
       };
-      
+
       onSubmit(request);
-      
+
       // 申請作成完了後に通知を表示
       setTimeout(() => {
         toast.success('申請を作成しました', {
           description: '承認者に通知が送信されました'
         });
       }, 100);
-      
+
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to create request:', error);
@@ -320,7 +298,7 @@ export function NewRequestForm({
         description: 'もう一度お試しください'
       });
     }
-  };;
+  };
 
   const getRequestTitle = (type: WorkflowType, data: any): string => {
     switch (type) {
@@ -549,11 +527,23 @@ export function NewRequestForm({
             </Button>
           )}
           {step < 3 ? (
-            <Button onClick={() => setStep(step + 1)}>
+            <Button onClick={() => {
+              const nextStep = step + 1;
+              setStep(nextStep);
+
+              // ステップ3に進む時に承認フローを設定
+              if (nextStep === 3 && requestType) {
+                const formData = form.getValues();
+                setupApprovalFlow(requestType, formData);
+              }
+            }}>
               次へ
             </Button>
           ) : (
-            <Button onClick={form.handleSubmit(handleSubmit)}>
+            <Button
+              onClick={form.handleSubmit(handleSubmit)}
+              disabled={approvalFlow.length === 0}
+            >
               申請を作成
             </Button>
           )}

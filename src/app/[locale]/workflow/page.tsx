@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useWorkflowStore, WorkflowRequest, WorkflowType, ApproverRole } from '@/lib/workflow-store';
 import { useNotificationStore } from '@/lib/store/notification-store';
 import { useUserStore } from '@/lib/store/user-store';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import {
   GitBranch,
   FileText,
@@ -83,6 +84,7 @@ const DelegateSettingsDialog = dynamic(() => import('@/features/workflow/delegat
 const NewRequestForm = dynamic(() => import('@/features/workflow/new-request-form').then(mod => ({ default: mod.NewRequestForm })), { ssr: false });
 
 export default function WorkflowPage() {
+  const isMounted = useIsMounted();
   const [selectedTab, setSelectedTab] = useState('pending');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
@@ -100,7 +102,7 @@ export default function WorkflowPage() {
   const [comment, setComment] = useState('');
   const [delegateUserId, setDelegateUserId] = useState('');
   const [delegateReason, setDelegateReason] = useState('');
-  
+
   const { currentUser } = useUserStore();
   const { addNotification } = useNotificationStore();
   // デモデータに合わせてユーザーIDを設定（田中太郎: 営業部マネージャー）
@@ -120,6 +122,11 @@ export default function WorkflowPage() {
     delegateApproval,
     getStatistics,
   } = useWorkflowStore();
+
+  // Zustand persistのhydration（SSR対応）
+  useEffect(() => {
+    useWorkflowStore.persist.rehydrate();
+  }, []);
 
   // デモデータの初期化
   useEffect(() => {
@@ -518,64 +525,66 @@ export default function WorkflowPage() {
       </div>
 
       {/* 統計カード */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">承認待ち</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{pendingApprovals.length}</div>
-            <p className="text-xs text-muted-foreground">要対応</p>
-          </CardContent>
-        </Card>
+      {isMounted && (
+        <div className="grid gap-4 md:grid-cols-5">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">承認待ち</CardTitle>
+              <Clock className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{pendingApprovals.length}</div>
+              <p className="text-xs text-muted-foreground">要対応</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">代理承認</CardTitle>
-            <UserCheck className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{delegatedApprovals.length}</div>
-            <p className="text-xs text-muted-foreground">委任済み</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">代理承認</CardTitle>
+              <UserCheck className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">{delegatedApprovals.length}</div>
+              <p className="text-xs text-muted-foreground">委任済み</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">申請中</CardTitle>
-            <User className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.pendingRequests}</div>
-            <p className="text-xs text-muted-foreground">処理中</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">申請中</CardTitle>
+              <User className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{stats.pendingRequests}</div>
+              <p className="text-xs text-muted-foreground">処理中</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">承認済み</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.approvedRequests}</div>
-            <p className="text-xs text-muted-foreground">完了</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">承認済み</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.approvedRequests}</div>
+              <p className="text-xs text-muted-foreground">完了</p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">平均処理時間</CardTitle>
-            <Timer className="h-4 w-4 text-indigo-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">
-              {stats.averageApprovalTime.toFixed(1)}
-            </div>
-            <p className="text-xs text-muted-foreground">日</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均処理時間</CardTitle>
+              <Timer className="h-4 w-4 text-indigo-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-indigo-600">
+                {stats.averageApprovalTime.toFixed(1)}
+              </div>
+              <p className="text-xs text-muted-foreground">日</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* フィルター */}
       <div className="flex gap-4">

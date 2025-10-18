@@ -13,6 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
+import { memo, useMemo, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -45,7 +46,7 @@ interface DataTableProps<TData> {
   searchPlaceholder?: string;
 }
 
-export function DataTable<TData>({
+function DataTableComponent<TData>({
   columns,
   data,
   searchKey,
@@ -237,3 +238,6 @@ export function DataTable<TData>({
     </div>
   );
 }
+
+// React.memoでコンポーネントをメモ化してエクスポート
+export const DataTable = memo(DataTableComponent) as typeof DataTableComponent;

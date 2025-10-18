@@ -202,6 +202,19 @@ export const useWorkflowStore = create<WorkflowStore>()(
           }));
         });
 
+        // 新規申請イベント
+        broadcast.on<WorkflowRequest>('workflow:new', (workflow) => {
+          set((state) => {
+            // 既に存在しない場合のみ追加
+            const exists = state.requests.some(w => w.id === workflow.id);
+            if (exists) return state;
+
+            return {
+              requests: [...state.requests, workflow],
+            };
+          });
+        });
+
         // 更新イベント
         broadcast.on<WorkflowRequest>('workflow:updated', (workflow) => {
           set((state) => ({
@@ -293,7 +306,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         set((state) => ({
           requests: state.requests.map((req) => {
             if (req.id !== id) return req;
-            
+
             return {
               ...req,
               status: 'pending',
@@ -316,6 +329,28 @@ export const useWorkflowStore = create<WorkflowStore>()(
             };
           }),
         }));
+
+        // 他のタブに新規申請を通知
+        const request = get().requests.find(r => r.id === id);
+        if (request) {
+          broadcast?.send('workflow:new', request);
+
+          // 最初の承認者に通知
+          const firstStep = request.approvalSteps[0];
+          if (firstStep) {
+            useNotificationStore.getState().addNotification({
+              id: `notif-${Date.now()}-${Math.random()}`,
+              type: 'info',
+              title: '新しい承認依頼',
+              message: `${request.requesterName}さんから${request.title}の承認依頼があります`,
+              timestamp: now,
+              read: false,
+              important: true,
+              actionUrl: `/ja/approval`,
+              userId: firstStep.approverId,
+            });
+          }
+        }
       },
       
       cancelRequest: (id, reason) => {
@@ -753,11 +788,49 @@ export const useWorkflowStore = create<WorkflowStore>()(
   },
     {
       name: 'workflow-store',
+      skipHydration: true, // SSR対応: クライアント側でのみhydration
       // 初期化時にデモデータを強制リセット（開発用）
       onRehydrateStorage: () => (state) => {
-        if (state && (!state.initialized || state.requests.length === 0)) {
-          console.log('Rehydrating and initializing demo data...');
-          state.initializeDemoData();
+        if (state) {
+          // マイグレーション: 古いプレースホルダー形式のapproverIdを実際のユーザーIDに変換
+          const roleToUserIdMap: Record<ApproverRole, string> = {
+            direct_manager: '2',      // 佐藤部長（manager）
+            department_head: '2',     // 佐藤部長（manager）
+            hr_manager: '3',          // 山田人事（hr）
+            finance_manager: '3',     // 山田人事（hr）
+            general_manager: '4',     // システム管理者（admin）
+            ceo: '4',                 // システム管理者（admin）
+          };
+
+          const migratedRequests = state.requests.map(req => {
+            const needsMigration = req.approvalSteps.some(step =>
+              step.approverId.startsWith('user-')
+            );
+
+            if (!needsMigration) return req;
+
+            console.log(`Migrating approver IDs for request ${req.id}`);
+            return {
+              ...req,
+              approvalSteps: req.approvalSteps.map(step => ({
+                ...step,
+                approverId: step.approverId.startsWith('user-')
+                  ? roleToUserIdMap[step.approverRole] || '2'
+                  : step.approverId,
+              })),
+            };
+          });
+
+          if (migratedRequests.some((req, i) => req !== state.requests[i])) {
+            console.log('Applied approver ID migration');
+            state.requests = migratedRequests;
+          }
+
+          // デモデータの初期化
+          if (!state.initialized || state.requests.length === 0) {
+            console.log('Rehydrating and initializing demo data...');
+            state.initializeDemoData();
+          }
         }
       },
     }

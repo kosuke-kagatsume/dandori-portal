@@ -125,8 +125,29 @@ const createUserStore = () => {
       // デモ役割切り替え機能
       switchDemoRole: (role: UserRole) => {
         const demoUser = demoUsers[role];
+        // currentUserも同時に更新（サイドバーのRBACチェック用）
+        const currentUser: User = {
+          id: demoUser.id,
+          name: demoUser.name,
+          email: demoUser.email,
+          phone: '090-1234-5678',
+          hireDate: '2020-04-01',
+          unitId: '1',
+          roles: [role], // ロールを配列で設定
+          status: 'active',
+          timezone: 'Asia/Tokyo',
+          avatar: demoUser.avatar || '',
+          position: demoUser.role === 'admin' ? 'システム管理者' :
+                    demoUser.role === 'manager' ? 'マネージャー' :
+                    demoUser.role === 'executive' ? '社長' :
+                    demoUser.role === 'hr' ? '人事担当' :
+                    demoUser.role === 'applicant' ? '新入社員' : 'スタッフ',
+          department: demoUser.department,
+        };
+
         set({
           currentDemoUser: demoUser,
+          currentUser,
           isDemoMode: true
         });
       },

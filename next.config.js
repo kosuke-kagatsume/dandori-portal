@@ -48,6 +48,10 @@ const nextConfig = {
       '@radix-ui/react-dialog',
       '@radix-ui/react-select',
       '@radix-ui/react-tabs',
+      '@radix-ui/react-scroll-area',
+      '@radix-ui/react-toast',
+      // @tanstack/react-table は既に最適化済みのため除外
+      'zustand',
     ],
   },
   

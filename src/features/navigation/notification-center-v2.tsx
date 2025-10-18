@@ -48,58 +48,30 @@ interface ExtendedNotification {
 
 export function NotificationCenterV2({ children }: NotificationCenterV2Props) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'important'>('all');
+  const [localActiveTab, setLocalActiveTab] = useState<'all' | 'unread' | 'important'>('all');
 
-  // Mock notifications data
-  const mockNotifications: ExtendedNotification[] = [
-    {
-      id: '1',
-      title: '新規申請',
-      message: '新しい申請が届きました',
-      type: 'application',
-      status: 'accepted',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5分前
-      read: false,
-      important: false,
-    },
-    {
-      id: '2',
-      title: '新しい休暇申請',
-      message: '田中太郎さんから休暇申請が届いています (12/25-12/28)',
-      type: 'vacation',
-      status: 'update',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30分前
-      read: false,
-      important: true,
-    },
-    {
-      id: '3',
-      title: '経費精算申請',
-      message: '佐藤花子さんから出張費精算の申請があります (¥45,000)',
-      type: 'expense',
-      status: 'processing',
-      timestamp: new Date(Date.now() - 1000 * 60 * 52), // 52分前
-      read: false,
-      important: false,
-    },
-    {
-      id: '4',
-      title: '残業申請承認済み',
-      message: 'あなたの残業申請（12月分）が承認されました',
-      type: 'security',
-      timestamp: new Date(Date.now() - 1000 * 60 * 32), // 32分前
-      read: true,
-      important: false,
-    },
-  ];
+  // 実際の通知データを取得
+  const { notifications, unreadCount, importantCount, markAsRead, markAllAsRead } = useNotificationStore();
+
+  // Notification型をExtendedNotification型に変換
+  const convertedNotifications: ExtendedNotification[] = notifications.map(n => ({
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    type: 'application' as NotificationType, // デフォルトタイプ
+    timestamp: new Date(n.timestamp),
+    read: n.read,
+    important: n.important,
+    actionUrl: n.actionUrl,
+  }));
 
   const getFilteredNotifications = () => {
-    let filtered = [...mockNotifications];
+    let filtered = [...convertedNotifications];
 
     // Filter by tab
-    if (activeTab === 'unread') {
+    if (localActiveTab === 'unread') {
       filtered = filtered.filter(n => !n.read);
-    } else if (activeTab === 'important') {
+    } else if (localActiveTab === 'important') {
       filtered = filtered.filter(n => n.important);
     }
 
@@ -115,8 +87,6 @@ export function NotificationCenterV2({ children }: NotificationCenterV2Props) {
   };
 
   const filteredNotifications = getFilteredNotifications();
-  const unreadCount = mockNotifications.filter(n => !n.read).length;
-  const importantCount = mockNotifications.filter(n => n.important).length;
 
   const getNotificationIcon = (type: NotificationType) => {
     const iconClass = 'w-8 h-8';
@@ -189,17 +159,22 @@ export function NotificationCenterV2({ children }: NotificationCenterV2Props) {
         <SheetHeader className="p-4 pb-2 border-b">
           <SheetTitle className="text-lg font-medium">通知センター</SheetTitle>
           <div className="flex items-center justify-end">
-            <Button variant="link" size="sm" className="text-blue-600 hover:text-blue-700 p-0 h-auto">
+            <Button
+              variant="link"
+              size="sm"
+              className="text-blue-600 hover:text-blue-700 p-0 h-auto"
+              onClick={markAllAsRead}
+            >
               すべて既読にする
             </Button>
           </div>
         </SheetHeader>
 
         <div className="px-4 py-3">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'unread' | 'important')}>
+          <Tabs value={localActiveTab} onValueChange={(value) => setLocalActiveTab(value as 'all' | 'unread' | 'important')}>
             <TabsList className="grid w-full grid-cols-3 h-9">
               <TabsTrigger value="all" className="text-xs">
-                すべて ({mockNotifications.length})
+                すべて ({notifications.length})
               </TabsTrigger>
               <TabsTrigger value="unread" className="text-xs">
                 未読 ({unreadCount})
@@ -238,11 +213,11 @@ export function NotificationCenterV2({ children }: NotificationCenterV2Props) {
             <div className="flex flex-col items-center justify-center p-8 text-center">
               <Bell className="w-12 h-12 text-gray-300 mb-2" />
               <p className="text-sm text-gray-500">
-                {searchQuery 
+                {searchQuery
                   ? '検索結果が見つかりません'
-                  : activeTab === 'unread' 
-                  ? '未読の通知はありません' 
-                  : activeTab === 'important' 
+                  : localActiveTab === 'unread'
+                  ? '未読の通知はありません'
+                  : localActiveTab === 'important'
                   ? '重要な通知はありません'
                   : '通知はありません'
                 }
@@ -257,6 +232,14 @@ export function NotificationCenterV2({ children }: NotificationCenterV2Props) {
                     'flex items-start space-x-3 py-3 border-b last:border-b-0 hover:bg-gray-50 transition-colors cursor-pointer',
                     !notification.read && 'bg-blue-50/30'
                   )}
+                  onClick={() => {
+                    if (!notification.read) {
+                      markAsRead(notification.id);
+                    }
+                    if (notification.actionUrl) {
+                      window.location.href = notification.actionUrl;
+                    }
+                  }}
                 >
                   <div className="flex-shrink-0">
                     {getNotificationIcon(notification.type)}
@@ -294,7 +277,7 @@ export function NotificationCenterV2({ children }: NotificationCenterV2Props) {
 
         <div className="px-4 py-3 border-t">
           <Button variant="link" size="sm" className="text-blue-600 hover:text-blue-700 p-0 h-auto text-xs w-full">
-            すべて表示 ({mockNotifications.length})
+            すべて表示 ({notifications.length})
           </Button>
         </div>
       </SheetContent>

@@ -43,6 +43,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { BackupPanel } from '@/components/backup/backup-panel';
+import { ColorContrastChecker } from '@/components/a11y/color-contrast-checker';
 
 // シンプルな設定の型定義
 interface SimpleSettings {
@@ -546,6 +547,9 @@ export default function SimpleSettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* アクセシビリティ: カラーコントラスト検証 */}
+          <ColorContrastChecker />
         </TabsContent>
 
         {/* 地域と言語 */}

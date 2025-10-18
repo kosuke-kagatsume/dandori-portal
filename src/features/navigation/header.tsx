@@ -4,13 +4,12 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams, usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useAuth } from '@/hooks/use-auth';
-import { 
+import {
   Search,
   Bell,
   User,
   LogOut,
   Settings,
-  Building2,
   Palette,
   Globe,
   Moon,
@@ -220,10 +219,6 @@ export function Header() {
                 <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/profile`)}>
                   <User className="mr-2 h-4 w-4" />
                   <span>{t('profile')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/organization`)}>
-                  <Building2 className="mr-2 h-4 w-4" />
-                  <span>組織管理</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/settings`)}>
                   <Settings className="mr-2 h-4 w-4" />

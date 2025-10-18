@@ -20,24 +20,32 @@ import {
   Car,
   Cloud,
   Star,
+  Building2,
+  UserPlus,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { useUIStore, useUserStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { hasMenuAccess, type MenuKey, type UserRole } from '@/lib/rbac';
 
 const getNavigation = (locale: string) => [
-  { key: 'dashboard', href: `/${locale}/dashboard`, icon: LayoutDashboard, adminOnly: false },
-  { key: 'users', href: `/${locale}/users`, icon: Users, adminOnly: false },
-  { key: 'members', href: `/${locale}/members`, icon: UserCheck, adminOnly: false },
-  { key: 'attendance', href: `/${locale}/attendance`, icon: Clock, adminOnly: false },
-  { key: 'leave', href: `/${locale}/leave`, icon: Calendar, adminOnly: false },
-  { key: 'workflows', href: `/${locale}/workflow`, icon: GitBranch, adminOnly: false },
-  { key: 'payroll', href: `/${locale}/payroll`, icon: Calculator, adminOnly: false },
-  { key: 'evaluation', href: `/${locale}/evaluation`, icon: Star, adminOnly: false },
-  { key: 'assets', href: `/${locale}/assets`, icon: Car, adminOnly: false },
-  { key: 'saas', href: `/${locale}/saas`, icon: Cloud, adminOnly: false },
-  // { key: 'sites', href: `/${locale}/sites`, icon: MapPin, adminOnly: false }, // 未実装
+  { key: 'dashboard', href: `/${locale}/dashboard`, icon: LayoutDashboard, menuKey: 'dashboard' as MenuKey },
+  { key: 'users', href: `/${locale}/users`, icon: Users, menuKey: 'users' as MenuKey },
+  { key: 'members', href: `/${locale}/members`, icon: UserCheck, menuKey: 'members' as MenuKey },
+  { key: 'attendance', href: `/${locale}/attendance`, icon: Clock, menuKey: 'attendance' as MenuKey },
+  { key: 'leave', href: `/${locale}/leave`, icon: Calendar, menuKey: 'leave' as MenuKey },
+  { key: 'workflows', href: `/${locale}/workflow`, icon: GitBranch, menuKey: 'workflow' as MenuKey },
+  { key: 'approval', href: `/${locale}/approval`, icon: ClipboardCheck, menuKey: 'approval' as MenuKey },
+  { key: 'payroll', href: `/${locale}/payroll`, icon: Calculator, menuKey: 'payroll' as MenuKey },
+  { key: 'evaluation', href: `/${locale}/evaluation`, icon: Star, menuKey: 'evaluation' as MenuKey },
+  { key: 'organization', href: `/${locale}/organization`, icon: Building2, menuKey: 'organization' as MenuKey },
+  { key: 'assets', href: `/${locale}/assets`, icon: Car, menuKey: 'assets' as MenuKey },
+  { key: 'saas', href: `/${locale}/saas`, icon: Cloud, menuKey: 'saas' as MenuKey },
+  { key: 'onboarding', href: `/${locale}/onboarding`, icon: UserPlus, menuKey: 'onboarding' as MenuKey },
+  { key: 'audit', href: `/${locale}/audit`, icon: ShieldCheck, menuKey: 'audit' as MenuKey },
+  { key: 'settings', href: `/${locale}/settings`, icon: FileText, menuKey: 'settings' as MenuKey },
 ];
 
 export function Sidebar() {
@@ -49,12 +57,15 @@ export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const { currentUser } = useUserStore();
 
-  const isAdmin = currentUser?.roles?.includes('admin');
   const navigation = getNavigation(currentLocale);
 
-  const filteredNavigation = navigation.filter(item => 
-    !item.adminOnly || isAdmin
-  );
+  // RBAC-based filtering: show menu if user has at least one role with access
+  const filteredNavigation = navigation.filter(item => {
+    const userRoles = currentUser?.roles || [];
+    return userRoles.some(role =>
+      hasMenuAccess(role as UserRole, item.menuKey)
+    );
+  });
 
   return (
     <TooltipProvider>
