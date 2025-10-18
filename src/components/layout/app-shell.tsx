@@ -2,12 +2,14 @@
 
 import { useEffect } from 'react';
 import { useUIStore, useTenantStore, useUserStore, useNotificationStore } from '@/lib/store';
+import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import { Sidebar } from '@/features/navigation/sidebar';
 import { Header } from '@/features/navigation/header';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import { useGlobalKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { SkipLink } from '@/components/a11y/skip-link';
+import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -18,70 +20,46 @@ export function AppShell({ children }: AppShellProps) {
   const { setTenants } = useTenantStore();
   const { setCurrentUser, setDemoMode, currentUser } = useUserStore();
   const { setNotifications } = useNotificationStore();
+  const {
+    initializeApplication,
+    initializeBasicInfoForm,
+    initializeFamilyInfoForm,
+    initializeBankAccountForm,
+    initializeCommuteRouteForm,
+  } = useOnboardingStore();
 
   // キーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
 
-  // Initialize user data
+  // Initialize onboarding data for applicant role (only once if no data exists)
   useEffect(() => {
-    // デモモードを有効化
-    setDemoMode(true);
+    // 新入社員の場合のみ、onboardingデモデータを初期化
+    // ただし、既にデータが存在する場合はスキップ（承認後のデータを保護）
+    if (currentUser?.roles?.includes('applicant')) {
+      // localStorageをチェック（zustand-persistが保存している）
+      const existingData = localStorage.getItem('onboarding-storage');
 
-    // demo_session Cookieからユーザー情報を取得
-    const getDemoUserFromCookie = () => {
-      try {
-        const value = document.cookie
-          .split('; ')
-          .find(row => row.startsWith('demo_session='));
-
-        if (value) {
-          const cookieValue = value.split('=')[1];
-          return JSON.parse(decodeURIComponent(cookieValue));
-        }
-        return null;
-      } catch (error) {
-        console.error('Failed to parse demo session cookie:', error);
-        return null;
+      if (!existingData) {
+        // データが存在しない場合のみ初期化
+        const onboardingData = getDemoOnboardingData();
+        console.log('[Demo] Initializing onboarding data for applicant (first time)');
+        initializeApplication(onboardingData.application);
+        initializeBasicInfoForm(onboardingData.basicInfoForm);
+        initializeFamilyInfoForm(onboardingData.familyInfoForm);
+        initializeBankAccountForm(onboardingData.bankAccountForm);
+        initializeCommuteRouteForm(onboardingData.commuteRouteForm);
+      } else {
+        console.log('[Demo] Onboarding data already exists, skipping initialization');
       }
-    };
-
-    const demoUser = getDemoUserFromCookie();
-
-    if (demoUser && demoUser.user_metadata) {
-      console.log('Setting current user from cookie:', demoUser);
-      setCurrentUser({
-        id: demoUser.id || 'demo-user-1',
-        name: demoUser.user_metadata.name || '田中太郎',
-        email: demoUser.email || 'tanaka@demo.com',
-        phone: '090-1234-5678',
-        hireDate: '2020-04-01',
-        unitId: '1',
-        roles: demoUser.user_metadata.roles || [demoUser.user_metadata.role || 'manager'],
-        status: 'active',
-        timezone: 'Asia/Tokyo',
-        avatar: '',
-        position: demoUser.user_metadata.role === 'admin' ? '管理者' : demoUser.user_metadata.role === 'manager' ? 'マネージャー' : 'スタッフ',
-        department: demoUser.user_metadata.department || '営業部',
-      });
-    } else {
-      console.log('No demo session cookie found, using fallback user');
-      // Fallback to default user
-      setCurrentUser({
-        id: '1',
-        name: '田中太郎',
-        email: 'tanaka@example.com',
-        phone: '090-1234-5678',
-        hireDate: '2020-04-01',
-        unitId: '1',
-        roles: ['employee'],
-        status: 'active',
-        timezone: 'Asia/Tokyo',
-        avatar: '',
-        position: 'エンジニア',
-        department: '開発部',
-      });
     }
-  }, [setCurrentUser, setDemoMode]);
+  }, [
+    currentUser,
+    initializeApplication,
+    initializeBasicInfoForm,
+    initializeFamilyInfoForm,
+    initializeBankAccountForm,
+    initializeCommuteRouteForm,
+  ]);
 
   // Apply theme to document
   useEffect(() => {

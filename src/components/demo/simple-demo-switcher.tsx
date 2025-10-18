@@ -21,31 +21,24 @@ export function SimpleDemoSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('employee');
 
-  // 初期化時にローカルストレージから読み込み
+  // 初期化時にzustandから現在のロールを取得
   useEffect(() => {
     // デモモードを有効化
     if (!isDemoMode) {
       setDemoMode(true);
     }
-    
-    // ローカルストレージから現在の役割を取得
-    const storedRole = localStorage.getItem('demo-role') as UserRole;
-    if (storedRole && demoUsers[storedRole]) {
-      setCurrentRole(storedRole);
-      switchDemoRole(storedRole);
-    } else if (currentDemoUser) {
+
+    // zustandから現在のロールを取得
+    if (currentDemoUser) {
       setCurrentRole(currentDemoUser.role);
     }
-  }, []);
+  }, [currentDemoUser, isDemoMode, setDemoMode]);
 
   const handleRoleSwitch = (role: UserRole) => {
-    // ローカルストレージに保存
-    localStorage.setItem('demo-role', role);
-    // storeを更新
+    // storeを更新（zustand-persistが自動的にlocalStorageに保存）
     switchDemoRole(role);
     setCurrentRole(role);
     setIsOpen(false);
-    // リロードは不要 - React の状態管理で自動的に更新される
   };
 
   return (

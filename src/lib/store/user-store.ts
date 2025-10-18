@@ -26,12 +26,33 @@ interface UserState {
   setLoading: (loading: boolean) => void;
   error: string | null;
   setError: (error: string | null) => void;
+
+  // localStorageからの読み込み完了フラグ
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
 }
 
 // SSR対応: サーバーではpersistを無効化
 const createUserStore = () => {
+  // 初期デモユーザー（employee）のcurrentUser形式を作成
+  const initialDemoUser = demoUsers.employee;
+  const initialCurrentUser: User = {
+    id: initialDemoUser.id,
+    name: initialDemoUser.name,
+    email: initialDemoUser.email,
+    phone: '090-1234-5678',
+    hireDate: '2020-04-01',
+    unitId: '1',
+    roles: ['employee'],
+    status: 'active',
+    timezone: 'Asia/Tokyo',
+    avatar: initialDemoUser.avatar || '',
+    position: 'スタッフ',
+    department: initialDemoUser.department,
+  };
+
   const storeCreator = (set: (partial: Partial<UserState> | ((state: UserState) => Partial<UserState>)) => void, get: () => UserState): UserState => ({
-      currentUser: null,
+      currentUser: initialCurrentUser,
       users: [],
       isLoading: false,
       error: null,
@@ -39,6 +60,12 @@ const createUserStore = () => {
       // デモモードの初期状態（デフォルトで有効）
       isDemoMode: true,
       currentDemoUser: demoUsers.employee,
+
+      // ハイドレーション状態（初期はfalse）
+      _hasHydrated: false,
+      setHasHydrated: (state: boolean) => {
+        set({ _hasHydrated: state });
+      },
 
       setCurrentUser: (user: User) => {
         set({ currentUser: user });
@@ -168,9 +195,12 @@ const createUserStore = () => {
       },
   });
 
-  // SSR時はpersistを使わない
+  // SSR時はpersistを使わない（ハイドレーション完了扱いにする）
   if (typeof window === 'undefined') {
-    return create<UserState>()(storeCreator);
+    const store = create<UserState>()(storeCreator);
+    // SSR時は即座にハイドレーション完了にする
+    store.getState().setHasHydrated(true);
+    return store;
   }
 
   // クライアントサイドではpersistを使用
@@ -184,6 +214,10 @@ const createUserStore = () => {
         isDemoMode: state.isDemoMode,
         currentDemoUser: state.currentDemoUser,
       }),
+      onRehydrateStorage: () => (state) => {
+        // localStorageからの読み込み完了時に呼ばれる
+        state?.setHasHydrated(true);
+      },
     })
   );
 };

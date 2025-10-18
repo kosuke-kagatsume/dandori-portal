@@ -583,55 +583,59 @@ export const basicInfoFormInputSchema = basicInfoFormSchema.partial({
 
 /**
  * Family Info Form Input Schema
+ * TODO: Define familyInfoFormSchema first
  */
-export const familyInfoFormInputSchema = familyInfoFormSchema.partial({
-  id: true,
-  applicationId: true,
-  status: true,
-  savedAt: true,
-  submittedAt: true,
-  reviewComment: true,
-  returnedAt: true,
-  approvedAt: true,
-  approvedBy: true,
-});
+// export const familyInfoFormInputSchema = familyInfoFormSchema.partial({
+//   id: true,
+//   applicationId: true,
+//   status: true,
+//   savedAt: true,
+//   submittedAt: true,
+//   reviewComment: true,
+//   returnedAt: true,
+//   approvedAt: true,
+//   approvedBy: true,
+// });
 
 /**
  * Bank Account Form Input Schema
+ * TODO: Define bankAccountFormSchema first
  */
-export const bankAccountFormInputSchema = bankAccountFormSchema.partial({
-  id: true,
-  applicationId: true,
-  status: true,
-  savedAt: true,
-  submittedAt: true,
-  reviewComment: true,
-  returnedAt: true,
-  approvedAt: true,
-  approvedBy: true,
-});
+// export const bankAccountFormInputSchema = bankAccountFormSchema.partial({
+//   id: true,
+//   applicationId: true,
+//   status: true,
+//   savedAt: true,
+//   submittedAt: true,
+//   reviewComment: true,
+//   returnedAt: true,
+//   approvedAt: true,
+//   approvedBy: true,
+// });
 
 /**
  * Commute Route Form Input Schema
+ * TODO: Define commuteRouteFormSchema first
  */
-export const commuteRouteFormInputSchema = commuteRouteFormSchema.partial({
-  id: true,
-  applicationId: true,
-  status: true,
-  savedAt: true,
-  submittedAt: true,
-  reviewComment: true,
-  returnedAt: true,
-  approvedAt: true,
-  approvedBy: true,
-});
+// export const commuteRouteFormInputSchema = commuteRouteFormSchema.partial({
+//   id: true,
+//   applicationId: true,
+//   status: true,
+//   savedAt: true,
+//   submittedAt: true,
+//   reviewComment: true,
+//   returnedAt: true,
+//   approvedAt: true,
+//   approvedBy: true,
+// });
 
 // ============================================================================
 // TYPE EXPORTS (for use with React Hook Form)
 // ============================================================================
 
 export type BasicInfoFormInput = z.infer<typeof basicInfoFormInputSchema>;
-export type FamilyInfoFormInput = z.infer<typeof familyInfoFormInputSchema>;
-export type BankAccountFormInput = z.infer<typeof bankAccountFormInputSchema>;
-export type CommuteRouteFormInput = z.infer<typeof commuteRouteFormInputSchema>;
+// TODO: Define these types after creating the schemas
+// export type FamilyInfoFormInput = z.infer<typeof familyInfoFormInputSchema>;
+// export type BankAccountFormInput = z.infer<typeof bankAccountFormInputSchema>;
+// export type CommuteRouteFormInput = z.infer<typeof commuteRouteFormInputSchema>;
 export type OnboardingApplicationInput = z.infer<typeof onboardingApplicationSchema>;

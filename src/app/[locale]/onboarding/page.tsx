@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
+import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 import { ProgressIndicator } from '@/features/onboarding/components/ProgressIndicator';
 import { FormCard } from '@/features/onboarding/components/FormCard';
 import { NextActionCard } from '@/features/onboarding/components/NextActionCard';
@@ -27,9 +28,34 @@ export default function OnboardingDashboard() {
     startAutoSave,
     stopAutoSave,
     lastSavedAt,
+    initializeApplication,
+    initializeBasicInfoForm,
+    initializeFamilyInfoForm,
+    initializeBankAccountForm,
+    initializeCommuteRouteForm,
   } = useOnboardingStore();
 
   const [progress, setProgress] = useState(getProgress());
+
+  // Initialize demo data if no application exists
+  useEffect(() => {
+    if (!application) {
+      console.log('[Onboarding] No application found, initializing demo data');
+      const demoData = getDemoOnboardingData();
+      initializeApplication(demoData.application);
+      initializeBasicInfoForm(demoData.basicInfoForm);
+      initializeFamilyInfoForm(demoData.familyInfoForm);
+      initializeBankAccountForm(demoData.bankAccountForm);
+      initializeCommuteRouteForm(demoData.commuteRouteForm);
+    }
+  }, [
+    application,
+    initializeApplication,
+    initializeBasicInfoForm,
+    initializeFamilyInfoForm,
+    initializeBankAccountForm,
+    initializeCommuteRouteForm,
+  ]);
 
   // Initialize auto-save on mount
   useEffect(() => {
@@ -45,17 +71,17 @@ export default function OnboardingDashboard() {
     setProgress(getProgress());
   }, [getProgress, application]);
 
-  // If no application, show loading or redirect to login
+  // If no application, show loading (it will be initialized by useEffect)
   if (!application) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <DocumentTextIcon className="mx-auto h-16 w-16 text-gray-400" />
+          <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
           <h2 className="mt-4 text-xl font-semibold text-gray-900">
-            入社手続きにアクセスするには招待リンクが必要です
+            読み込み中...
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            人事部から送られた招待メールのリンクをクリックしてください。
+            入社手続きデータを初期化しています
           </p>
         </div>
       </div>

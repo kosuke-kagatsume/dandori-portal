@@ -337,6 +337,90 @@ export default function BasicInfoFormPage() {
             />
           </FormSection>
 
+          {/* Section 5: 社会保険 */}
+          <FormSection>
+            <SectionHeader title="社会保険情報" />
+            <InputField
+              label="基礎年金番号"
+              name="socialInsurance.pensionNumber"
+              required
+              placeholder="1234567890"
+              helpText="10桁、ハイフンなし"
+              register={register}
+              errors={errors}
+            />
+            <InputField
+              label="雇用保険被保険者番号（任意）"
+              name="socialInsurance.employmentInsuranceNumber"
+              placeholder="12345678901"
+              helpText="11桁、前職がある方のみ"
+              register={register}
+              errors={errors}
+            />
+            <CheckboxField
+              label="前職がある"
+              name="socialInsurance.hasPreviousEmployer"
+              register={register}
+              errors={errors}
+            />
+            <CheckboxField
+              label="マイナンバーカードで健康保険に加入する"
+              name="socialInsurance.myNumberCardInsurance"
+              helpText="マイナ保険証を利用する場合はチェック"
+              register={register}
+              errors={errors}
+            />
+          </FormSection>
+
+          {/* Section 6: マイナンバー */}
+          <FormSection>
+            <SectionHeader title="マイナンバー" />
+            <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4">
+              <p className="text-sm text-yellow-800">
+                マイナンバーは別途、人事担当者に直接提出してください。
+                <br />
+                提出済みの場合は下記にチェックを入れてください。
+              </p>
+            </div>
+            <CheckboxField
+              label="マイナンバーを提出済み"
+              name="myNumberSubmitted"
+              register={register}
+              errors={errors}
+            />
+          </FormSection>
+
+          {/* Section 7: 提出書類 */}
+          <FormSection>
+            <SectionHeader title="その他提出書類" />
+            <CheckboxField
+              label="入社年に他社からの給与・賞与収入がある"
+              name="documents.currentYearIncome"
+              helpText="ある場合は源泉徴収票の提出が必要です"
+              register={register}
+              errors={errors}
+            />
+            <SelectField
+              label="住民税の徴収方法"
+              name="documents.residentTax"
+              required
+              options={[
+                { value: 'withholding', label: '特別徴収（給与天引き）' },
+                { value: 'no_withholding', label: '普通徴収（自分で納付）' },
+                { value: 'exempt', label: '徴収なし（新卒等）' },
+              ]}
+              register={register}
+              errors={errors}
+            />
+            <CheckboxField
+              label="1年以内の健康診断結果を持っている"
+              name="documents.healthCheckup"
+              helpText="ある場合は結果票のコピーを提出してください"
+              register={register}
+              errors={errors}
+            />
+          </FormSection>
+
           {/* Submit Button */}
           <div className="flex justify-end gap-4">
             <button

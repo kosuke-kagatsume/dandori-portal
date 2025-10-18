@@ -86,6 +86,11 @@ interface OnboardingActions {
   // Progress tracking
   getProgress: () => OnboardingProgress;
 
+  // HR Admin actions (approval/return)
+  approveForm: (formType: string, approvedBy: string) => void;
+  returnForm: (formType: string, comment: string, returnedBy: string) => void;
+  approveAllForms: (approvedBy: string) => void;
+
   // Utility actions
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -626,6 +631,216 @@ export const useOnboardingStore = create<OnboardingStore>()(
       resetStore: () => {
         get().stopAutoSave();
         set({ ...initialState });
+      },
+
+      // ========================================================================
+      // HR Admin Actions (Approval/Return)
+      // ========================================================================
+
+      approveForm: (formType, approvedBy) => {
+        const now = new Date().toISOString();
+
+        switch (formType) {
+          case 'basic_info':
+            const basicInfo = get().basicInfoForm;
+            if (basicInfo) {
+              set({
+                basicInfoForm: {
+                  ...basicInfo,
+                  status: 'approved',
+                  approvedAt: now,
+                  approvedBy,
+                },
+              });
+            }
+            break;
+          case 'family_info':
+            const familyInfo = get().familyInfoForm;
+            if (familyInfo) {
+              set({
+                familyInfoForm: {
+                  ...familyInfo,
+                  status: 'approved',
+                  approvedAt: now,
+                  approvedBy,
+                },
+              });
+            }
+            break;
+          case 'bank_account':
+            const bankAccount = get().bankAccountForm;
+            if (bankAccount) {
+              set({
+                bankAccountForm: {
+                  ...bankAccount,
+                  status: 'approved',
+                  approvedAt: now,
+                  approvedBy,
+                },
+              });
+            }
+            break;
+          case 'commute_route':
+            const commuteRoute = get().commuteRouteForm;
+            if (commuteRoute) {
+              set({
+                commuteRouteForm: {
+                  ...commuteRoute,
+                  status: 'approved',
+                  approvedAt: now,
+                  approvedBy,
+                },
+              });
+            }
+            break;
+        }
+
+        // Check if all forms are approved
+        const state = get();
+        const allApproved =
+          state.basicInfoForm?.status === 'approved' &&
+          state.familyInfoForm?.status === 'approved' &&
+          state.bankAccountForm?.status === 'approved' &&
+          state.commuteRouteForm?.status === 'approved';
+
+        if (allApproved && state.application) {
+          set({
+            application: {
+              ...state.application,
+              status: 'approved',
+              updatedAt: now,
+            },
+          });
+        }
+      },
+
+      returnForm: (formType, comment, returnedBy) => {
+        const now = new Date().toISOString();
+
+        switch (formType) {
+          case 'basic_info':
+            const basicInfo = get().basicInfoForm;
+            if (basicInfo) {
+              set({
+                basicInfoForm: {
+                  ...basicInfo,
+                  status: 'returned',
+                  returnedAt: now,
+                  reviewComment: comment,
+                },
+              });
+            }
+            break;
+          case 'family_info':
+            const familyInfo = get().familyInfoForm;
+            if (familyInfo) {
+              set({
+                familyInfoForm: {
+                  ...familyInfo,
+                  status: 'returned',
+                  returnedAt: now,
+                  reviewComment: comment,
+                },
+              });
+            }
+            break;
+          case 'bank_account':
+            const bankAccount = get().bankAccountForm;
+            if (bankAccount) {
+              set({
+                bankAccountForm: {
+                  ...bankAccount,
+                  status: 'returned',
+                  returnedAt: now,
+                  reviewComment: comment,
+                },
+              });
+            }
+            break;
+          case 'commute_route':
+            const commuteRoute = get().commuteRouteForm;
+            if (commuteRoute) {
+              set({
+                commuteRouteForm: {
+                  ...commuteRoute,
+                  status: 'returned',
+                  returnedAt: now,
+                  reviewComment: comment,
+                },
+              });
+            }
+            break;
+        }
+
+        // Update application status to 'returned'
+        const state = get();
+        if (state.application) {
+          set({
+            application: {
+              ...state.application,
+              status: 'returned',
+              updatedAt: now,
+            },
+          });
+        }
+      },
+
+      approveAllForms: (approvedBy) => {
+        const now = new Date().toISOString();
+        const state = get();
+
+        // Approve all forms
+        if (state.basicInfoForm) {
+          set({
+            basicInfoForm: {
+              ...state.basicInfoForm,
+              status: 'approved',
+              approvedAt: now,
+              approvedBy,
+            },
+          });
+        }
+        if (state.familyInfoForm) {
+          set({
+            familyInfoForm: {
+              ...state.familyInfoForm,
+              status: 'approved',
+              approvedAt: now,
+              approvedBy,
+            },
+          });
+        }
+        if (state.bankAccountForm) {
+          set({
+            bankAccountForm: {
+              ...state.bankAccountForm,
+              status: 'approved',
+              approvedAt: now,
+              approvedBy,
+            },
+          });
+        }
+        if (state.commuteRouteForm) {
+          set({
+            commuteRouteForm: {
+              ...state.commuteRouteForm,
+              status: 'approved',
+              approvedAt: now,
+              approvedBy,
+            },
+          });
+        }
+
+        // Update application status
+        if (state.application) {
+          set({
+            application: {
+              ...state.application,
+              status: 'approved',
+              updatedAt: now,
+            },
+          });
+        }
       },
     }),
     {

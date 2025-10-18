@@ -29,24 +29,33 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { useUIStore, useUserStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { hasMenuAccess, type MenuKey, type UserRole } from '@/lib/rbac';
+import type { User } from '@/types';
 
-const getNavigation = (locale: string) => [
-  { key: 'dashboard', href: `/${locale}/dashboard`, icon: LayoutDashboard, menuKey: 'dashboard' as MenuKey },
-  { key: 'users', href: `/${locale}/users`, icon: Users, menuKey: 'users' as MenuKey },
-  { key: 'members', href: `/${locale}/members`, icon: UserCheck, menuKey: 'members' as MenuKey },
-  { key: 'attendance', href: `/${locale}/attendance`, icon: Clock, menuKey: 'attendance' as MenuKey },
-  { key: 'leave', href: `/${locale}/leave`, icon: Calendar, menuKey: 'leave' as MenuKey },
-  { key: 'workflows', href: `/${locale}/workflow`, icon: GitBranch, menuKey: 'workflow' as MenuKey },
-  { key: 'approval', href: `/${locale}/approval`, icon: ClipboardCheck, menuKey: 'approval' as MenuKey },
-  { key: 'payroll', href: `/${locale}/payroll`, icon: Calculator, menuKey: 'payroll' as MenuKey },
-  { key: 'evaluation', href: `/${locale}/evaluation`, icon: Star, menuKey: 'evaluation' as MenuKey },
-  { key: 'organization', href: `/${locale}/organization`, icon: Building2, menuKey: 'organization' as MenuKey },
-  { key: 'assets', href: `/${locale}/assets`, icon: Car, menuKey: 'assets' as MenuKey },
-  { key: 'saas', href: `/${locale}/saas`, icon: Cloud, menuKey: 'saas' as MenuKey },
-  { key: 'onboarding', href: `/${locale}/onboarding`, icon: UserPlus, menuKey: 'onboarding' as MenuKey },
-  { key: 'audit', href: `/${locale}/audit`, icon: ShieldCheck, menuKey: 'audit' as MenuKey },
-  { key: 'settings', href: `/${locale}/settings`, icon: FileText, menuKey: 'settings' as MenuKey },
-];
+const getNavigation = (locale: string, currentUser: User | null) => {
+  // 入社手続きのリンク先をロールに応じて変更
+  const userRoles = currentUser?.roles || [];
+  const onboardingHref = userRoles.includes('hr' as UserRole)
+    ? `/${locale}/onboarding-admin`
+    : `/${locale}/onboarding`;
+
+  return [
+    { key: 'dashboard', href: `/${locale}/dashboard`, icon: LayoutDashboard, menuKey: 'dashboard' as MenuKey },
+    { key: 'users', href: `/${locale}/users`, icon: Users, menuKey: 'users' as MenuKey },
+    { key: 'members', href: `/${locale}/members`, icon: UserCheck, menuKey: 'members' as MenuKey },
+    { key: 'attendance', href: `/${locale}/attendance`, icon: Clock, menuKey: 'attendance' as MenuKey },
+    { key: 'leave', href: `/${locale}/leave`, icon: Calendar, menuKey: 'leave' as MenuKey },
+    { key: 'workflows', href: `/${locale}/workflow`, icon: GitBranch, menuKey: 'workflow' as MenuKey },
+    { key: 'approval', href: `/${locale}/approval`, icon: ClipboardCheck, menuKey: 'approval' as MenuKey },
+    { key: 'payroll', href: `/${locale}/payroll`, icon: Calculator, menuKey: 'payroll' as MenuKey },
+    { key: 'evaluation', href: `/${locale}/evaluation`, icon: Star, menuKey: 'evaluation' as MenuKey },
+    { key: 'organization', href: `/${locale}/organization`, icon: Building2, menuKey: 'organization' as MenuKey },
+    { key: 'assets', href: `/${locale}/assets`, icon: Car, menuKey: 'assets' as MenuKey },
+    { key: 'saas', href: `/${locale}/saas`, icon: Cloud, menuKey: 'saas' as MenuKey },
+    { key: 'onboarding', href: onboardingHref, icon: UserPlus, menuKey: 'onboarding' as MenuKey },
+    { key: 'audit', href: `/${locale}/audit`, icon: ShieldCheck, menuKey: 'audit' as MenuKey },
+    { key: 'settings', href: `/${locale}/settings`, icon: FileText, menuKey: 'settings' as MenuKey },
+  ];
+};
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -55,9 +64,15 @@ export function Sidebar() {
   const tNav = useTranslations('navigation');
   const tCommon = useTranslations('common');
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
-  const { currentUser } = useUserStore();
+  const currentUser = useUserStore(state => state.currentUser);
+  const _hasHydrated = useUserStore(state => state._hasHydrated);
 
-  const navigation = getNavigation(currentLocale);
+  // クライアントサイドでのマウント完了まで待つ
+  if (!_hasHydrated) {
+    return null;
+  }
+
+  const navigation = getNavigation(currentLocale, currentUser);
 
   // RBAC-based filtering: show menu if user has at least one role with access
   const filteredNavigation = navigation.filter(item => {
