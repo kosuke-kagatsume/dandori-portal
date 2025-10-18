@@ -2,6 +2,18 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, DemoUser, UserRole } from '@/types';
 import { demoUsers } from '@/lib/demo-users';
+import {
+  login as apiLogin,
+  logout as apiLogout,
+  getCurrentUser as apiGetCurrentUser,
+} from '@/lib/api/auth';
+import { apiClient, APIError } from '@/lib/api/client';
+import {
+  saveTokenData,
+  clearTokenData,
+  startTokenRefreshTimer,
+  stopTokenRefreshTimer,
+} from '@/lib/auth/token-manager';
 
 interface UserState {
   currentUser: User | null;
@@ -11,6 +23,17 @@ interface UserState {
   currentDemoUser: DemoUser | null;
   switchDemoRole: (role: UserRole) => void;
   setDemoMode: (enabled: boolean) => void;
+
+  // 認証トークン管理
+  accessToken: string | null;
+  refreshToken: string | null;
+  setTokens: (accessToken: string | null, refreshToken: string | null) => void;
+
+  // 認証アクション
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  fetchCurrentUser: () => Promise<void>;
+  isAuthenticated: () => boolean;
 
   setCurrentUser: (user: User) => void;
   setUsers: (users: User[]) => void;
@@ -61,10 +84,192 @@ const createUserStore = () => {
       isDemoMode: true,
       currentDemoUser: demoUsers.employee,
 
+      // 認証トークン
+      accessToken: null,
+      refreshToken: null,
+
       // ハイドレーション状態（初期はfalse）
       _hasHydrated: false,
       setHasHydrated: (state: boolean) => {
         set({ _hasHydrated: state });
+      },
+
+      // トークン設定
+      setTokens: (accessToken, refreshToken) => {
+        set({ accessToken, refreshToken });
+        // apiClientにもトークンを設定
+        apiClient.setToken(accessToken);
+      },
+
+      // ログイン
+      login: async (email: string, password: string) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            // デモモード: ハードコードされたユーザーを使用
+            set({
+              currentUser: initialCurrentUser,
+              isDemoMode: true,
+              currentDemoUser: demoUsers.employee,
+              isLoading: false,
+            });
+
+            // デモモード用のCookie保存（middleware用）
+            if (typeof window !== 'undefined') {
+              const userRole = initialCurrentUser.roles[0] || 'employee';
+              document.cookie = `user_role=${userRole}; path=/; SameSite=Lax`;
+            }
+
+            return;
+          }
+
+          // プロダクションモード: API呼び出し
+          const { user, accessToken, refreshToken: refreshTokenValue, expiresIn } = await apiLogin({ email, password });
+
+          set({
+            currentUser: user,
+            accessToken,
+            refreshToken: refreshTokenValue,
+            isDemoMode: false,
+            currentDemoUser: null,
+            isLoading: false,
+          });
+
+          // apiClientにトークンを設定
+          apiClient.setToken(accessToken);
+
+          // トークンデータを保存（Cookie含む）
+          saveTokenData(accessToken, refreshTokenValue, expiresIn);
+
+          // ユーザーロールをCookieに保存（middleware用）
+          if (typeof window !== 'undefined' && user.roles.length > 0) {
+            const userRole = user.roles[0];
+            const expiresDate = new Date(Date.now() + expiresIn * 1000);
+            document.cookie = `user_role=${userRole}; path=/; expires=${expiresDate.toUTCString()}; SameSite=Lax; Secure`;
+          }
+
+          // トークンリフレッシュタイマーを開始
+          startTokenRefreshTimer(
+            (newAccessToken, newRefreshToken) => {
+              // リフレッシュ成功時: ストアを更新
+              set({
+                accessToken: newAccessToken,
+                refreshToken: newRefreshToken,
+              });
+            },
+            () => {
+              // リフレッシュ失敗時: ログアウト
+              const logoutFn = get().logout;
+              logoutFn();
+            }
+          );
+        } catch (error) {
+          const errorMessage = error instanceof APIError
+            ? error.message
+            : error instanceof Error
+            ? error.message
+            : 'ログインに失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // ログアウト
+      logout: async () => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+            // プロダクションモード: API呼び出し
+            await apiLogout();
+          }
+
+          // トークンリフレッシュタイマーを停止
+          stopTokenRefreshTimer();
+
+          // トークンデータをクリア
+          clearTokenData();
+
+          // ユーザーロールCookieもクリア
+          if (typeof window !== 'undefined') {
+            document.cookie = 'user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          }
+
+          // トークンとユーザー情報をクリア
+          set({
+            currentUser: null,
+            accessToken: null,
+            refreshToken: null,
+            isDemoMode: false,
+            currentDemoUser: null,
+            isLoading: false,
+          });
+
+          // apiClientのトークンもクリア
+          apiClient.setToken(null);
+        } catch (error) {
+          const errorMessage = error instanceof APIError
+            ? error.message
+            : error instanceof Error
+            ? error.message
+            : 'ログアウトに失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // 現在のユーザー情報を取得
+      fetchCurrentUser: async () => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            // デモモード: 既存のユーザーを返す
+            set({ isLoading: false });
+            return;
+          }
+
+          // プロダクションモード: API呼び出し
+          const user = await apiGetCurrentUser();
+
+          set({
+            currentUser: user,
+            isLoading: false,
+          });
+        } catch (error) {
+          const errorMessage = error instanceof APIError
+            ? error.message
+            : error instanceof Error
+            ? error.message
+            : 'ユーザー情報の取得に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+            currentUser: null,
+            accessToken: null,
+            refreshToken: null,
+          });
+          throw error;
+        }
+      },
+
+      // 認証状態チェック
+      isAuthenticated: () => {
+        const state = get();
+        return state.isDemoMode || (state.currentUser !== null && state.accessToken !== null);
       },
 
       setCurrentUser: (user: User) => {
@@ -172,6 +377,11 @@ const createUserStore = () => {
           department: demoUser.department,
         };
 
+        // ロールCookieも更新（middleware用）
+        if (typeof window !== 'undefined') {
+          document.cookie = `user_role=${role}; path=/; SameSite=Lax`;
+        }
+
         set({
           currentDemoUser: demoUser,
           currentUser,
@@ -213,10 +423,18 @@ const createUserStore = () => {
         users: state.users, // ユーザー配列も永続化
         isDemoMode: state.isDemoMode,
         currentDemoUser: state.currentDemoUser,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
       }),
       onRehydrateStorage: () => (state) => {
         // localStorageからの読み込み完了時に呼ばれる
-        state?.setHasHydrated(true);
+        if (state) {
+          state.setHasHydrated(true);
+          // トークンがある場合、apiClientにも設定
+          if (state.accessToken) {
+            apiClient.setToken(state.accessToken);
+          }
+        }
       },
     })
   );
