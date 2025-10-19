@@ -7,7 +7,7 @@ import { Sidebar } from '@/features/navigation/sidebar';
 import { Header } from '@/features/navigation/header';
 import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
-import { useGlobalKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useGlobalShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { SkipLink } from '@/components/a11y/skip-link';
 import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 
@@ -29,7 +29,7 @@ export function AppShell({ children }: AppShellProps) {
   } = useOnboardingStore();
 
   // キーボードショートカットを有効化
-  useGlobalKeyboardShortcuts();
+  useGlobalShortcuts();
 
   // Initialize onboarding data for applicant role (only once if no data exists)
   useEffect(() => {

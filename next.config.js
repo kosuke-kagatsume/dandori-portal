@@ -50,9 +50,18 @@ const nextConfig = {
       '@radix-ui/react-tabs',
       '@radix-ui/react-scroll-area',
       '@radix-ui/react-toast',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-label',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-separator',
       // @tanstack/react-table は既に最適化済みのため除外
       'zustand',
+      'recharts',
+      'react-day-picker',
     ],
+    // メモリ使用量の最適化
+    webpackBuildWorker: true,
   },
   
   // Vercel対応のための設定（本番では削除予定）
@@ -65,6 +74,53 @@ const nextConfig = {
   
   // Webpack設定のカスタマイズ
   webpack: (config, { isServer }) => {
+    // プロダクションビルドでの最適化
+    if (!isServer) {
+      // クライアント側のコード分割最適化
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            // 共通のvendorライブラリを分割
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              priority: 10,
+              reuseExistingChunk: true,
+            },
+            // React関連を別チャンクに
+            react: {
+              test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+              name: 'react',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            // UI系ライブラリを分割
+            ui: {
+              test: /[\\/]node_modules[\\/](@radix-ui|lucide-react)[\\/]/,
+              name: 'ui',
+              priority: 15,
+              reuseExistingChunk: true,
+            },
+            // チャートライブラリを分割
+            charts: {
+              test: /[\\/]node_modules[\\/](recharts|d3-.*)[\\/]/,
+              name: 'charts',
+              priority: 15,
+              reuseExistingChunk: true,
+            },
+            // 共通コンポーネント
+            common: {
+              minChunks: 2,
+              priority: 5,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      };
+    }
+
     // Tree Shakingはデフォルトで有効なので追加設定不要
     return config;
   },
