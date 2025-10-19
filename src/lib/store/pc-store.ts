@@ -142,6 +142,9 @@ const initialState = {
   pcs: [] as PCAsset[],
 };
 
+// Counter to ensure unique IDs
+let idCounter = 0;
+
 const createPCStore = () => {
   const storeCreator = (set: any, get: any) => ({
     ...initialState,
@@ -151,7 +154,7 @@ const createPCStore = () => {
       const now = new Date().toISOString();
       const newPC: PCAsset = {
         ...pc,
-        id: `pc-${Date.now()}`,
+        id: `pc-${Date.now()}-${idCounter++}`,
         createdAt: now,
         updatedAt: now,
       };
@@ -184,7 +187,7 @@ const createPCStore = () => {
     addLicense: (pcId: string, license: Omit<SoftwareLicense, 'id'>) => {
       const newLicense: SoftwareLicense = {
         ...license,
-        id: `lic-${Date.now()}`,
+        id: `lic-${Date.now()}-${idCounter++}`,
       };
 
       set((state: PCState) => ({

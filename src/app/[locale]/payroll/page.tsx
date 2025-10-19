@@ -78,7 +78,7 @@ export default function PayrollPage() {
     resetToSeed,
   } = usePayrollStore();
 
-  // 起動時の再シード保険
+  // 起動時の再シード保険 & 自動給与計算
   useEffect(() => {
     // 非同期で実行してレンダリング中のstate更新を回避
     const checkAndReset = async () => {
@@ -91,9 +91,20 @@ export default function PayrollPage() {
           s.resetToSeed();
         }, 0);
       }
+
+      // 給与計算データがない場合、自動計算を実行
+      const calculations = s.calculations || [];
+      const currentPeriodCalcs = calculations.filter((c: any) => c.period === selectedPeriod);
+      if (currentPeriodCalcs.length === 0) {
+        console.log('[PayrollPage] No calculations found for', selectedPeriod, ', auto-running payroll...');
+        setTimeout(async () => {
+          await s.runPayroll(selectedPeriod);
+          console.log('[PayrollPage] Auto payroll calculation completed');
+        }, 100);
+      }
     };
     checkAndReset();
-  }, []);
+  }, [selectedPeriod]);
 
   // 計算結果を取得
   const calculationResults = getCalculationsByPeriod(selectedPeriod);

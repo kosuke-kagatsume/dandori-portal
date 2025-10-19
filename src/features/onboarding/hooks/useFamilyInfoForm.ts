@@ -58,22 +58,15 @@ export function useFamilyInfoForm() {
     }
   }, [familyInfoForm, reset]);
 
-  // Handle form submission
-  const onSubmit = async (data: FamilyInfoFormInput) => {
-    try {
-      updateFamilyInfoForm(data);
-      await submitFamilyInfoForm();
-    } catch (error) {
-      console.error('Failed to submit form:', error);
-    }
-  };
-
   return {
     register,
-    handleSubmit: handleSubmit(onSubmit),
+    handleSubmit,
     errors,
     formState: form.formState,
     watch,
     control, // For react-hook-form Controller
+    // Expose store methods for use in page-level onSubmit
+    updateForm: updateFamilyInfoForm,
+    submitForm: submitFamilyInfoForm,
   };
 }

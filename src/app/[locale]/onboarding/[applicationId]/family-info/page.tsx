@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useFieldArray } from 'react-hook-form';
 import Link from 'next/link';
 import {
   SectionHeader,
   FormSection,
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { useOnboardingStore } from '@/lib/store/onboarding-store';
+import { useFamilyInfoForm } from '@/features/onboarding/hooks/useFamilyInfoForm';
 
 /**
  * Family Info Form Page
@@ -25,43 +25,46 @@ export default function FamilyInfoFormPage() {
   const locale = params?.locale as string;
   const applicationId = params?.applicationId as string;
 
-  const { familyInfoForm } = useOnboardingStore();
-  const [hasSpouse, setHasSpouse] = useState(familyInfoForm?.hasSpouse || false);
-  const [familyMembers, setFamilyMembers] = useState(familyInfoForm?.familyMembers || []);
+  const { register, handleSubmit, errors, watch, control, updateForm, submitForm } = useFamilyInfoForm();
+
+  // 動的フィールド配列の管理
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'familyMembers',
+  });
+
+  // 配偶者の有無を監視
+  const hasSpouse = watch('hasSpouse');
 
   // 家族メンバーを追加
   const addFamilyMember = () => {
-    if (familyMembers.length >= 6) {
+    if (fields.length >= 6) {
       alert('家族メンバーは最大6名までです');
       return;
     }
 
-    setFamilyMembers([
-      ...familyMembers,
-      {
-        nameKanji: '',
-        nameKana: '',
-        relationship: '',
-        birthDate: '',
-        liveTogether: true,
-        isSameHouseholdSpouse: false,
-        incomeTaxDependent: false,
-        healthInsuranceDependent: false,
-        occupation: '',
-        annualIncome: 0,
-      },
-    ]);
+    append({
+      nameKanji: '',
+      nameKana: '',
+      relationship: '',
+      birthDate: '',
+      liveTogether: true,
+      isSameHouseholdSpouse: false,
+      incomeTaxDependent: false,
+      healthInsuranceDependent: false,
+      occupation: '',
+      annualIncome: 0,
+    });
   };
 
-  // 家族メンバーを削除
-  const removeFamilyMember = (index: number) => {
-    setFamilyMembers(familyMembers.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: フォーム送信処理
-    router.push(`/${locale}/onboarding`);
+  const onSubmit = async (data: any) => {
+    try {
+      updateForm(data);
+      await submitForm();
+      router.push(`/${locale}/onboarding/${applicationId}`);
+    } catch (error) {
+      console.error('Failed to submit form:', error);
+    }
   };
 
   return (
@@ -82,7 +85,7 @@ export default function FamilyInfoFormPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Section 1: 基本情報（自動入力） */}
           <FormSection>
             <SectionHeader title="基本情報" />
@@ -94,7 +97,7 @@ export default function FamilyInfoFormPage() {
                 <input
                   type="email"
                   name="email"
-                  defaultValue={familyInfoForm?.email || ''}
+                  defaultValue=""
                   disabled
                   className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                 />
@@ -106,7 +109,7 @@ export default function FamilyInfoFormPage() {
                 <input
                   type="text"
                   name="employeeNumber"
-                  defaultValue={familyInfoForm?.employeeNumber || '-'}
+                  defaultValue="-"
                   disabled
                   className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                 />
@@ -120,7 +123,7 @@ export default function FamilyInfoFormPage() {
                 <input
                   type="text"
                   name="lastNameKanji"
-                  defaultValue={familyInfoForm?.lastNameKanji || ''}
+                  defaultValue=""
                   disabled
                   className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                 />
@@ -132,7 +135,7 @@ export default function FamilyInfoFormPage() {
                 <input
                   type="text"
                   name="firstNameKanji"
-                  defaultValue={familyInfoForm?.firstNameKanji || ''}
+                  defaultValue=""
                   disabled
                   className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                 />
@@ -146,9 +149,7 @@ export default function FamilyInfoFormPage() {
             <div className="flex items-start gap-2">
               <input
                 type="checkbox"
-                name="hasSpouse"
-                defaultChecked={hasSpouse}
-                onChange={(e) => setHasSpouse(e.target.checked)}
+                {...register('hasSpouse')}
                 className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <label className="text-sm text-gray-700">
@@ -167,10 +168,12 @@ export default function FamilyInfoFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="spouse.nameKanji"
-                      required
+                      {...register('spouse.nameKanji')}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.spouse?.nameKanji && (
+                      <p className="mt-1 text-xs text-red-600">{errors.spouse.nameKanji.message}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -179,11 +182,13 @@ export default function FamilyInfoFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="spouse.nameKana"
-                      required
+                      {...register('spouse.nameKana')}
                       placeholder="ヤマダ ハナコ"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.spouse?.nameKana && (
+                      <p className="mt-1 text-xs text-red-600">{errors.spouse.nameKana.message}</p>
+                    )}
                   </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -194,10 +199,12 @@ export default function FamilyInfoFormPage() {
                     </label>
                     <input
                       type="date"
-                      name="spouse.birthDate"
-                      required
+                      {...register('spouse.birthDate')}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.spouse?.birthDate && (
+                      <p className="mt-1 text-xs text-red-600">{errors.spouse.birthDate.message}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -206,11 +213,13 @@ export default function FamilyInfoFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="spouse.occupation"
-                      required
+                      {...register('spouse.occupation')}
                       placeholder="会社員"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.spouse?.occupation && (
+                      <p className="mt-1 text-xs text-red-600">{errors.spouse.occupation.message}</p>
+                    )}
                   </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -221,16 +230,18 @@ export default function FamilyInfoFormPage() {
                     </label>
                     <input
                       type="number"
-                      name="spouse.annualIncome"
-                      required
+                      {...register('spouse.annualIncome', { valueAsNumber: true })}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <p className="mt-1 text-xs text-gray-500">円</p>
+                    {errors.spouse?.annualIncome && (
+                      <p className="mt-1 text-xs text-red-600">{errors.spouse.annualIncome.message}</p>
+                    )}
                   </div>
                   <div className="flex items-start gap-2">
                     <input
                       type="checkbox"
-                      name="spouse.liveTogether"
+                      {...register('spouse.liveTogether')}
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <label className="text-sm text-gray-700">
@@ -243,7 +254,7 @@ export default function FamilyInfoFormPage() {
                   <div className="flex items-start gap-2">
                     <input
                       type="checkbox"
-                      name="spouse.incomeTaxDependent"
+                      {...register('spouse.incomeTaxDependent')}
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <div>
@@ -256,7 +267,7 @@ export default function FamilyInfoFormPage() {
                   <div className="flex items-start gap-2">
                     <input
                       type="checkbox"
-                      name="spouse.healthInsuranceDependent"
+                      {...register('spouse.healthInsuranceDependent')}
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <div>
@@ -278,7 +289,7 @@ export default function FamilyInfoFormPage() {
               <button
                 type="button"
                 onClick={addFamilyMember}
-                disabled={familyMembers.length >= 6}
+                disabled={fields.length >= 6}
                 className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 <PlusIcon className="h-4 w-4" />
@@ -286,7 +297,7 @@ export default function FamilyInfoFormPage() {
               </button>
             </div>
 
-            {familyMembers.length === 0 ? (
+            {fields.length === 0 ? (
               <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
                 <p className="text-sm text-gray-500">
                   「家族を追加」ボタンをクリックして、家族メンバーを追加してください
@@ -296,16 +307,16 @@ export default function FamilyInfoFormPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {familyMembers.map((member, index) => (
+                {fields.map((field, index) => (
                   <div
-                    key={index}
+                    key={field.id}
                     className="rounded-lg border border-gray-200 bg-white p-4"
                   >
                     <div className="mb-3 flex items-center justify-between">
                       <h4 className="font-medium text-gray-900">家族{index + 1}</h4>
                       <button
                         type="button"
-                        onClick={() => removeFamilyMember(index)}
+                        onClick={() => remove(index)}
                         className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
                       >
                         <TrashIcon className="h-4 w-4" />
@@ -322,10 +333,14 @@ export default function FamilyInfoFormPage() {
                           </label>
                           <input
                             type="text"
-                            name={`familyMembers.${index}.nameKanji`}
-                            required
+                            {...register(`familyMembers.${index}.nameKanji` as const)}
                             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
+                          {errors.familyMembers?.[index]?.nameKanji && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {errors.familyMembers[index]?.nameKanji?.message}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -334,11 +349,15 @@ export default function FamilyInfoFormPage() {
                           </label>
                           <input
                             type="text"
-                            name={`familyMembers.${index}.nameKana`}
-                            required
+                            {...register(`familyMembers.${index}.nameKana` as const)}
                             placeholder="ヤマダ イチロウ"
                             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
+                          {errors.familyMembers?.[index]?.nameKana && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {errors.familyMembers[index]?.nameKana?.message}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="grid gap-4 md:grid-cols-3">
@@ -349,11 +368,15 @@ export default function FamilyInfoFormPage() {
                           </label>
                           <input
                             type="text"
-                            name={`familyMembers.${index}.relationship`}
-                            required
+                            {...register(`familyMembers.${index}.relationship` as const)}
                             placeholder="長男、次女など"
                             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
+                          {errors.familyMembers?.[index]?.relationship && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {errors.familyMembers[index]?.relationship?.message}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -362,10 +385,14 @@ export default function FamilyInfoFormPage() {
                           </label>
                           <input
                             type="date"
-                            name={`familyMembers.${index}.birthDate`}
-                            required
+                            {...register(`familyMembers.${index}.birthDate` as const)}
                             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
+                          {errors.familyMembers?.[index]?.birthDate && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {errors.familyMembers[index]?.birthDate?.message}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -374,11 +401,15 @@ export default function FamilyInfoFormPage() {
                           </label>
                           <input
                             type="text"
-                            name={`familyMembers.${index}.occupation`}
-                            required
+                            {...register(`familyMembers.${index}.occupation` as const)}
                             placeholder="学生、会社員など"
                             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
+                          {errors.familyMembers?.[index]?.occupation && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {errors.familyMembers[index]?.occupation?.message}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
@@ -389,16 +420,20 @@ export default function FamilyInfoFormPage() {
                           </label>
                           <input
                             type="number"
-                            name={`familyMembers.${index}.annualIncome`}
-                            required
+                            {...register(`familyMembers.${index}.annualIncome` as const, { valueAsNumber: true })}
                             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                           <p className="mt-1 text-xs text-gray-500">円</p>
+                          {errors.familyMembers?.[index]?.annualIncome && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {errors.familyMembers[index]?.annualIncome?.message}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-start gap-2">
                           <input
                             type="checkbox"
-                            name={`familyMembers.${index}.liveTogether`}
+                            {...register(`familyMembers.${index}.liveTogether` as const)}
                             className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
                           <label className="text-sm text-gray-700">
@@ -411,7 +446,7 @@ export default function FamilyInfoFormPage() {
                         <div className="flex items-start gap-2">
                           <input
                             type="checkbox"
-                            name={`familyMembers.${index}.incomeTaxDependent`}
+                            {...register(`familyMembers.${index}.incomeTaxDependent` as const)}
                             className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
                           <label className="text-sm text-gray-700">
@@ -421,7 +456,7 @@ export default function FamilyInfoFormPage() {
                         <div className="flex items-start gap-2">
                           <input
                             type="checkbox"
-                            name={`familyMembers.${index}.healthInsuranceDependent`}
+                            {...register(`familyMembers.${index}.healthInsuranceDependent` as const)}
                             className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
                           <label className="text-sm text-gray-700">

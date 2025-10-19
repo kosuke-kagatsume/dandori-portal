@@ -408,6 +408,9 @@ const initialState = {
   vendors: [] as Vendor[],
 };
 
+// Counter to ensure unique IDs
+let idCounter = 0;
+
 const createVehicleStore = () => {
   const storeCreator = (set: any, get: any) => ({
     ...initialState,
@@ -417,7 +420,7 @@ const createVehicleStore = () => {
       const now = new Date().toISOString();
       const newVehicle: Vehicle = {
         ...vehicle,
-        id: `vehicle-${Date.now()}`,
+        id: `vehicle-${Date.now()}-${idCounter++}`,
         createdAt: now,
         updatedAt: now,
       };
@@ -454,7 +457,7 @@ const createVehicleStore = () => {
       const now = new Date().toISOString();
       const newMileage: MonthlyMileage = {
         ...mileage,
-        id: `mileage-${Date.now()}`,
+        id: `mileage-${Date.now()}-${idCounter++}`,
         recordedAt: now,
       };
 
@@ -513,7 +516,7 @@ const createVehicleStore = () => {
       const now = new Date().toISOString();
       const newRecord: MaintenanceRecord = {
         ...record,
-        id: `maint-${Date.now()}`,
+        id: `maint-${Date.now()}-${idCounter++}`,
         createdAt: now,
         updatedAt: now,
       };
@@ -588,7 +591,7 @@ const createVehicleStore = () => {
       const now = new Date().toISOString();
       const newVendor: Vendor = {
         ...vendor,
-        id: `vendor-${Date.now()}`,
+        id: `vendor-${Date.now()}-${idCounter++}`,
         workCount: 0,
         createdAt: now,
         updatedAt: now,

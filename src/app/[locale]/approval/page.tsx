@@ -62,11 +62,20 @@ export default function ApprovalPage() {
     getMyRequests,
     approveRequest,
     rejectRequest,
+    initializeDemoData,
   } = useWorkflowStore();
 
   useEffect(() => {
+    // デモデータの自動初期化
+    if (requests.length === 0) {
+      console.log('[ApprovalPage] No requests found, initializing demo data...');
+      setTimeout(() => {
+        initializeDemoData();
+        console.log('[ApprovalPage] Demo data initialized');
+      }, 100);
+    }
     setLoading(false);
-  }, []);
+  }, [requests.length, initializeDemoData]);
 
   // 承認待ちのフロー
   const pendingApprovals = useMemo(() =>

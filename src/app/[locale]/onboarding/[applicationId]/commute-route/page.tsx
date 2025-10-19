@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -8,7 +7,7 @@ import {
   FormSection,
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { useOnboardingStore } from '@/lib/store/onboarding-store';
+import { useCommuteRouteForm } from '@/features/onboarding/hooks/useCommuteRouteForm';
 
 /**
  * Commute Route Form Page
@@ -26,18 +25,20 @@ export default function CommuteRouteFormPage() {
   const locale = params?.locale as string;
   const applicationId = params?.applicationId as string;
 
-  const { commuteRouteForm } = useOnboardingStore();
-  const [commuteStatus, setCommuteStatus] = useState(
-    commuteRouteForm?.commuteStatus || 'commute'
-  );
-  const [transportMethod, setTransportMethod] = useState<
-    'public' | 'private' | null
-  >(null);
+  const { register, handleSubmit, errors, watch, updateForm, submitForm } = useCommuteRouteForm();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: フォーム送信処理
-    router.push(`/${locale}/onboarding`);
+  // Watch dynamic field values for conditional rendering
+  const commuteStatus = watch('commuteStatus') as 'commute' | 'remote' | 'no-office';
+  const transportMethod = watch('transportMethod') as 'public' | 'private' | '';
+
+  const onSubmit = async (data: any) => {
+    try {
+      updateForm(data);
+      await submitForm();
+      router.push(`/${locale}/onboarding/${applicationId}`);
+    } catch (error) {
+      console.error('Failed to submit form:', error);
+    }
   };
 
   return (
@@ -58,7 +59,7 @@ export default function CommuteRouteFormPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Section 1: 確認事項 */}
           <FormSection>
             <SectionHeader title="確認事項" />
@@ -70,8 +71,7 @@ export default function CommuteRouteFormPage() {
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
-                    name="confirmations.transportAllowanceCompliance"
-                    required
+                    {...register('confirmations.transportAllowanceCompliance')}
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <label className="text-sm text-gray-700">
@@ -82,8 +82,7 @@ export default function CommuteRouteFormPage() {
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
-                    name="confirmations.remoteWorkDailyCalculation"
-                    required
+                    {...register('confirmations.remoteWorkDailyCalculation')}
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <label className="text-sm text-gray-700">
@@ -94,8 +93,7 @@ export default function CommuteRouteFormPage() {
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
-                    name="confirmations.expenseDeadline"
-                    required
+                    {...register('confirmations.expenseDeadline')}
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <label className="text-sm text-gray-700">
@@ -106,8 +104,7 @@ export default function CommuteRouteFormPage() {
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
-                    name="confirmations.bicycleProhibition"
-                    required
+                    {...register('confirmations.bicycleProhibition')}
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <label className="text-sm text-gray-700">
@@ -129,8 +126,7 @@ export default function CommuteRouteFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="name"
-                  defaultValue={commuteRouteForm?.name || ''}
+                  {...register('name')}
                   disabled
                   className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                 />
@@ -141,8 +137,7 @@ export default function CommuteRouteFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="employeeNumber"
-                  defaultValue={commuteRouteForm?.employeeNumber || '-'}
+                  {...register('employeeNumber')}
                   disabled
                   className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                 />
@@ -154,14 +149,15 @@ export default function CommuteRouteFormPage() {
                 <span className="text-red-500 ml-1">*</span>
               </label>
               <select
-                name="applicationType"
-                required
-                defaultValue={commuteRouteForm?.applicationType || 'new'}
+                {...register('applicationType')}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="new">新規登録</option>
                 <option value="change">変更</option>
               </select>
+              {errors.applicationType && (
+                <p className="mt-1 text-xs text-red-600">{errors.applicationType.message}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -170,12 +166,14 @@ export default function CommuteRouteFormPage() {
               </label>
               <input
                 type="text"
-                name="address"
-                required
+                {...register('address')}
                 placeholder="東京都渋谷区..."
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <p className="mt-1 text-xs text-gray-500">現住所と同じ住所を入力してください</p>
+              {errors.address && (
+                <p className="mt-1 text-xs text-red-600">{errors.address.message}</p>
+              )}
             </div>
           </FormSection>
 
@@ -188,20 +186,16 @@ export default function CommuteRouteFormPage() {
                 <span className="text-red-500 ml-1">*</span>
               </label>
               <select
-                name="commuteStatus"
-                required
-                defaultValue={commuteStatus}
-                onChange={(e) =>
-                  setCommuteStatus(
-                    e.target.value as 'commute' | 'remote' | 'no-office'
-                  )
-                }
+                {...register('commuteStatus')}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="commute">通勤する</option>
                 <option value="remote">在宅勤務のみ</option>
                 <option value="no-office">出社不要</option>
               </select>
+              {errors.commuteStatus && (
+                <p className="mt-1 text-xs text-red-600">{errors.commuteStatus.message}</p>
+              )}
             </div>
 
             {commuteStatus === 'remote' && (
@@ -234,19 +228,16 @@ export default function CommuteRouteFormPage() {
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
-                    name="transportMethod"
-                    required
-                    onChange={(e) =>
-                      setTransportMethod(
-                        e.target.value as 'public' | 'private' | null
-                      )
-                    }
+                    {...register('transportMethod')}
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="">選択してください</option>
                     <option value="public">公共交通機関</option>
                     <option value="private">自家用車</option>
                   </select>
+                  {errors.transportMethod && (
+                    <p className="mt-1 text-xs text-red-600">{errors.transportMethod.message}</p>
+                  )}
                 </div>
               </FormSection>
 
@@ -271,11 +262,13 @@ export default function CommuteRouteFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="publicTransit.departure"
-                      required
+                      {...register('publicTransit.departure')}
                       placeholder="例: 自宅最寄り駅"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.publicTransit?.departure && (
+                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.departure.message}</p>
+                    )}
                   </div>
 
                   <div>
@@ -285,11 +278,13 @@ export default function CommuteRouteFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="publicTransit.arrival"
-                      required
+                      {...register('publicTransit.arrival')}
                       placeholder="例: オフィス最寄り駅"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.publicTransit?.arrival && (
+                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.arrival.message}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -298,12 +293,14 @@ export default function CommuteRouteFormPage() {
                       <span className="text-red-500 ml-1">*</span>
                     </label>
                     <textarea
-                      name="publicTransit.routeDetails"
-                      required
+                      {...register('publicTransit.routeDetails')}
                       rows={4}
                       placeholder="使用する路線と駅を順番に記入してください&#10;例: 自宅 → 新宿駅（JR山手線）→ 渋谷駅 → 徒歩 → オフィス"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.publicTransit?.routeDetails && (
+                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.routeDetails.message}</p>
+                    )}
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -314,12 +311,14 @@ export default function CommuteRouteFormPage() {
                       </label>
                       <input
                         type="number"
-                        name="publicTransit.oneWayFare"
-                        required
+                        {...register('publicTransit.oneWayFare', { valueAsNumber: true })}
                         placeholder="500"
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <p className="mt-1 text-xs text-gray-500">円</p>
+                      {errors.publicTransit?.oneWayFare && (
+                        <p className="mt-1 text-xs text-red-600">{errors.publicTransit.oneWayFare.message}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -328,12 +327,14 @@ export default function CommuteRouteFormPage() {
                       </label>
                       <input
                         type="number"
-                        name="publicTransit.travelTime"
-                        required
+                        {...register('publicTransit.travelTime', { valueAsNumber: true })}
                         placeholder="45"
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <p className="mt-1 text-xs text-gray-500">分</p>
+                      {errors.publicTransit?.travelTime && (
+                        <p className="mt-1 text-xs text-red-600">{errors.publicTransit.travelTime.message}</p>
+                      )}
                     </div>
                   </div>
 
@@ -343,14 +344,16 @@ export default function CommuteRouteFormPage() {
                       <span className="text-red-500 ml-1">*</span>
                     </label>
                     <select
-                      name="publicTransit.passType"
-                      required
+                      {...register('publicTransit.passType')}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="1month">1ヶ月定期</option>
                       <option value="3months">3ヶ月定期</option>
                       <option value="6months">6ヶ月定期</option>
                     </select>
+                    {errors.publicTransit?.passType && (
+                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.passType.message}</p>
+                    )}
                   </div>
 
                   <div>
@@ -360,12 +363,14 @@ export default function CommuteRouteFormPage() {
                     </label>
                     <input
                       type="number"
-                      name="publicTransit.passFare"
-                      required
+                      {...register('publicTransit.passFare', { valueAsNumber: true })}
                       placeholder="15000"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     <p className="mt-1 text-xs text-gray-500">選択した定期券種類の金額を入力</p>
+                    {errors.publicTransit?.passFare && (
+                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.passFare.message}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -377,7 +382,7 @@ export default function CommuteRouteFormPage() {
                     </p>
                     <input
                       type="file"
-                      name="publicTransit.routeMap"
+                      {...register('publicTransit.routeMap')}
                       accept="image/*"
                       className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
                     />
@@ -407,11 +412,13 @@ export default function CommuteRouteFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="privateCar.departure"
-                      required
+                      {...register('privateCar.departure')}
                       placeholder="例: 自宅"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.privateCar?.departure && (
+                      <p className="mt-1 text-xs text-red-600">{errors.privateCar.departure.message}</p>
+                    )}
                   </div>
 
                   <div>
@@ -421,11 +428,13 @@ export default function CommuteRouteFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="privateCar.arrival"
-                      required
+                      {...register('privateCar.arrival')}
                       placeholder="例: オフィス駐車場"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.privateCar?.arrival && (
+                      <p className="mt-1 text-xs text-red-600">{errors.privateCar.arrival.message}</p>
+                    )}
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -436,13 +445,15 @@ export default function CommuteRouteFormPage() {
                       </label>
                       <input
                         type="number"
-                        name="privateCar.distance"
-                        required
+                        {...register('privateCar.distance', { valueAsNumber: true })}
                         placeholder="15"
                         step="0.1"
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <p className="mt-1 text-xs text-gray-500">km（小数点1桁まで）</p>
+                      {errors.privateCar?.distance && (
+                        <p className="mt-1 text-xs text-red-600">{errors.privateCar.distance.message}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -451,12 +462,14 @@ export default function CommuteRouteFormPage() {
                       </label>
                       <input
                         type="number"
-                        name="privateCar.travelTime"
-                        required
+                        {...register('privateCar.travelTime', { valueAsNumber: true })}
                         placeholder="30"
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <p className="mt-1 text-xs text-gray-500">分</p>
+                      {errors.privateCar?.travelTime && (
+                        <p className="mt-1 text-xs text-red-600">{errors.privateCar.travelTime.message}</p>
+                      )}
                     </div>
                   </div>
 
@@ -467,11 +480,13 @@ export default function CommuteRouteFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="privateCar.carModel"
-                      required
+                      {...register('privateCar.carModel')}
                       placeholder="例: トヨタ プリウス"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.privateCar?.carModel && (
+                      <p className="mt-1 text-xs text-red-600">{errors.privateCar.carModel.message}</p>
+                    )}
                   </div>
 
                   <div>
@@ -481,11 +496,13 @@ export default function CommuteRouteFormPage() {
                     </label>
                     <input
                       type="text"
-                      name="privateCar.licensePlate"
-                      required
+                      {...register('privateCar.licensePlate')}
                       placeholder="例: 品川 500 あ 12-34"
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
+                    {errors.privateCar?.licensePlate && (
+                      <p className="mt-1 text-xs text-red-600">{errors.privateCar.licensePlate.message}</p>
+                    )}
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
@@ -495,8 +512,7 @@ export default function CommuteRouteFormPage() {
                         <span className="text-red-500 ml-1">*</span>
                       </label>
                       <select
-                        name="privateCar.fuelType"
-                        required
+                        {...register('privateCar.fuelType')}
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       >
                         <option value="gasoline">ガソリン</option>
@@ -504,6 +520,9 @@ export default function CommuteRouteFormPage() {
                         <option value="hybrid">ハイブリッド</option>
                         <option value="electric">電気</option>
                       </select>
+                      {errors.privateCar?.fuelType && (
+                        <p className="mt-1 text-xs text-red-600">{errors.privateCar.fuelType.message}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -512,20 +531,22 @@ export default function CommuteRouteFormPage() {
                       </label>
                       <input
                         type="number"
-                        name="privateCar.fuelEfficiency"
-                        required
+                        {...register('privateCar.fuelEfficiency', { valueAsNumber: true })}
                         placeholder="20"
                         step="0.1"
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <p className="mt-1 text-xs text-gray-500">km/L（電気の場合はkm/kWh）</p>
+                      {errors.privateCar?.fuelEfficiency && (
+                        <p className="mt-1 text-xs text-red-600">{errors.privateCar.fuelEfficiency.message}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2">
                     <input
                       type="checkbox"
-                      name="privateCar.needParking"
+                      {...register('privateCar.needParking')}
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <div>
@@ -545,7 +566,7 @@ export default function CommuteRouteFormPage() {
                     </p>
                     <input
                       type="file"
-                      name="privateCar.routeMap"
+                      {...register('privateCar.routeMap')}
                       accept="image/*"
                       className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
                     />

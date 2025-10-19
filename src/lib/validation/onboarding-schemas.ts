@@ -123,7 +123,7 @@ export const addressSchema = z.object({
  * Resident Address Schema (住民票住所)
  */
 export const residentAddressSchema = z.object({
-  sameAsCurrent: z.boolean(),
+  sameAsCurrent: z.boolean().optional().default(true),
   postalCode: postalCodeSchema.optional(),
   prefecture: z.string().optional(),
   city: z.string().optional(),
@@ -131,7 +131,9 @@ export const residentAddressSchema = z.object({
   building: z.string().optional(),
 }).refine(
   (data) => {
-    if (data.sameAsCurrent) return true;
+    // デフォルトでtrueとして扱う
+    const isSame = data.sameAsCurrent ?? true;
+    if (isSame) return true;
     return !!(data.postalCode && data.prefecture && data.city && data.street);
   },
   {
@@ -139,6 +141,19 @@ export const residentAddressSchema = z.object({
     path: ['postalCode'],
   }
 );
+
+/**
+ * Resident Address Input Schema (入力フォーム用 - refineなし)
+ * 入力中はバリデーションを緩くして、すべてのフィールドをoptionalにする
+ */
+export const residentAddressInputSchema = z.object({
+  sameAsCurrent: z.boolean().optional().default(true),
+  postalCode: z.string().optional().or(z.literal('')),
+  prefecture: z.string().optional().or(z.literal('')),
+  city: z.string().optional().or(z.literal('')),
+  street: z.string().optional().or(z.literal('')),
+  building: z.string().optional().or(z.literal('')),
+});
 
 /**
  * Emergency Contact Schema (緊急連絡先)
@@ -153,50 +168,19 @@ export const emergencyContactSchema = z.object({
  * Social Insurance Schema (社会保険)
  */
 export const socialInsuranceSchema = z.object({
-  hasPensionBook: z.boolean(),
-  pensionNumber: z.string().optional(),
-  hasEmploymentInsurance: z.boolean(),
-  employmentInsuranceNumber: z.string().optional(),
-}).refine(
-  (data) => {
-    if (data.hasPensionBook && !data.pensionNumber) {
-      return false;
-    }
-    if (data.pensionNumber) {
-      return /^\d{10}$/.test(data.pensionNumber);
-    }
-    return true;
-  },
-  {
-    message: '年金手帳を持っている場合は、基礎年金番号を入力してください',
-    path: ['pensionNumber'],
-  }
-).refine(
-  (data) => {
-    if (data.hasEmploymentInsurance && !data.employmentInsuranceNumber) {
-      return false;
-    }
-    if (data.employmentInsuranceNumber) {
-      return /^\d{11}$/.test(data.employmentInsuranceNumber);
-    }
-    return true;
-  },
-  {
-    message: '雇用保険被保険者証を持っている場合は、被保険者番号を入力してください',
-    path: ['employmentInsuranceNumber'],
-  }
-);
+  pensionNumber: pensionNumberSchema,
+  employmentInsuranceNumber: employmentInsuranceSchema.optional().or(z.literal('')),
+  hasPreviousEmployer: z.boolean().optional(),
+  myNumberCardInsurance: z.boolean().optional(),
+});
 
 /**
  * Document Submission Schema (提出書類)
  */
 export const documentSubmissionSchema = z.object({
-  pensionBook: z.boolean(),
-  employmentInsuranceCard: z.boolean(),
-  withholding: z.boolean(),
-  myNumberCard: z.boolean(),
-  commuteCertificate: z.boolean(),
-  other: z.string().optional(),
+  currentYearIncome: z.boolean().optional(),
+  residentTax: z.enum(['withholding', 'no_withholding', 'exempt']),
+  healthCheckup: z.boolean().optional(),
 });
 
 /**
@@ -349,8 +333,9 @@ export const basicInfoFormSchema = z.object({
 
 /**
  * Family Info Form Schema (家族情報フォーム)
+ * Base schema without refinements
  */
-export const familyInfoFormSchema = z.object({
+const familyInfoFormBaseSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
   status: z.enum(['draft', 'submitted', 'returned', 'approved']),
@@ -371,7 +356,12 @@ export const familyInfoFormSchema = z.object({
   returnedAt: z.string().optional(),
   approvedAt: z.string().optional(),
   approvedBy: z.string().optional(),
-}).refine(
+});
+
+/**
+ * Family Info Form Schema with validation
+ */
+export const familyInfoFormSchema = familyInfoFormBaseSchema.refine(
   (data) => {
     if (data.hasSpouse && !data.spouse) {
       return false;
@@ -418,8 +408,9 @@ export const bankAccountFormSchema = z.object({
 
 /**
  * Commute Route Form Schema (通勤経路申請フォーム - 27+ items)
+ * Base schema without refinements
  */
-export const commuteRouteFormSchema = z.object({
+const commuteRouteFormBaseSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
   status: z.enum(['draft', 'submitted', 'returned', 'approved']),
@@ -471,7 +462,12 @@ export const commuteRouteFormSchema = z.object({
   returnedAt: z.string().optional(),
   approvedAt: z.string().optional(),
   approvedBy: z.string().optional(),
-}).refine(
+});
+
+/**
+ * Commute Route Form Schema with validation
+ */
+export const commuteRouteFormSchema = commuteRouteFormBaseSchema.refine(
   (data) => {
     // If commute status is 'commute', route is required
     if (data.commuteStatus === 'commute' && !data.route) {
@@ -568,23 +564,29 @@ export const onboardingApplicationSchema = z.object({
 /**
  * Basic Info Form Input Schema (for form validation during editing)
  */
-export const basicInfoFormInputSchema = basicInfoFormSchema.partial({
-  id: true,
-  applicationId: true,
-  status: true,
-  savedAt: true,
-  submittedAt: true,
-  reviewComment: true,
-  returnedAt: true,
-  approvedAt: true,
-  approvedBy: true,
-  myNumberEncrypted: true,
-});
+export const basicInfoFormInputSchema = basicInfoFormSchema
+  .omit({ residentAddress: true })
+  .extend({
+    // 入力フォーム用のスキーマを使用（refineなし）
+    residentAddress: residentAddressInputSchema.optional(),
+  })
+  .partial({
+    id: true,
+    applicationId: true,
+    status: true,
+    savedAt: true,
+    submittedAt: true,
+    reviewComment: true,
+    returnedAt: true,
+    approvedAt: true,
+    approvedBy: true,
+    myNumberEncrypted: true,
+  });
 
 /**
  * Family Info Form Input Schema
  */
-export const familyInfoFormInputSchema = familyInfoFormSchema.partial({
+export const familyInfoFormInputSchema = familyInfoFormBaseSchema.partial({
   id: true,
   applicationId: true,
   status: true,
@@ -614,7 +616,7 @@ export const bankAccountFormInputSchema = bankAccountFormSchema.partial({
 /**
  * Commute Route Form Input Schema
  */
-export const commuteRouteFormInputSchema = commuteRouteFormSchema.partial({
+export const commuteRouteFormInputSchema = commuteRouteFormBaseSchema.partial({
   id: true,
   applicationId: true,
   status: true,

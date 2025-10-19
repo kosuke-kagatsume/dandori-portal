@@ -189,11 +189,15 @@ export function Header() {
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                <Button
+                  variant="ghost"
+                  className="relative h-9 w-9 rounded-full"
+                  data-testid="user-menu-trigger"
+                >
                   <Avatar className="h-8 w-8">
-                    <AvatarImage 
-                      src={currentUser?.avatar} 
-                      alt={currentUser?.name || 'User'} 
+                    <AvatarImage
+                      src={currentUser?.avatar}
+                      alt={currentUser?.name || 'User'}
                     />
                     <AvatarFallback>
                       {currentUser?.name?.charAt(0) || 'U'}
@@ -234,6 +238,7 @@ export function Header() {
                       await signOut();
                     }
                   }}
+                  data-testid="logout-button"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>{t('logout')}</span>

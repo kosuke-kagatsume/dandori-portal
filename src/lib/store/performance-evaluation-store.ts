@@ -149,6 +149,9 @@ const generateSampleEvaluations = (): PerformanceEvaluation[] => {
   return evaluations;
 };
 
+// Counter to ensure unique IDs
+let idCounter = 0;
+
 export const usePerformanceEvaluationStore = create<PerformanceEvaluationStore>()(
   persist(
     (set, get) => ({
@@ -161,7 +164,7 @@ export const usePerformanceEvaluationStore = create<PerformanceEvaluationStore>(
       createEvaluation: (evaluation) => {
         const newEvaluation: PerformanceEvaluation = {
           ...evaluation,
-          id: `eval-${Date.now()}`,
+          id: `eval-${Date.now()}-${idCounter++}`,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -260,7 +263,7 @@ export const usePerformanceEvaluationStore = create<PerformanceEvaluationStore>(
       createBonusEvaluation: (evaluation) => {
         const newEvaluation: BonusEvaluation = {
           ...evaluation,
-          id: `bonus-eval-${Date.now()}`,
+          id: `bonus-eval-${Date.now()}-${idCounter++}`,
           createdAt: new Date().toISOString(),
         };
 

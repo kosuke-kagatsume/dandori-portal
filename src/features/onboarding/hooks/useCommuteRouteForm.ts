@@ -57,21 +57,14 @@ export function useCommuteRouteForm() {
     }
   }, [commuteRouteForm, reset]);
 
-  // Handle form submission
-  const onSubmit = async (data: CommuteRouteFormInput) => {
-    try {
-      updateCommuteRouteForm(data);
-      await submitCommuteRouteForm();
-    } catch (error) {
-      console.error('Failed to submit form:', error);
-    }
-  };
-
   return {
     register,
-    handleSubmit: handleSubmit(onSubmit),
+    handleSubmit,
     errors,
     formState: form.formState,
     watch,
+    // Expose store methods for use in page-level onSubmit
+    updateForm: updateCommuteRouteForm,
+    submitForm: submitCommuteRouteForm,
   };
 }

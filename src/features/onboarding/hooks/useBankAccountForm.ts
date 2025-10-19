@@ -57,21 +57,14 @@ export function useBankAccountForm() {
     }
   }, [bankAccountForm, reset]);
 
-  // Handle form submission
-  const onSubmit = async (data: BankAccountFormInput) => {
-    try {
-      updateBankAccountForm(data);
-      await submitBankAccountForm();
-    } catch (error) {
-      console.error('Failed to submit form:', error);
-    }
-  };
-
   return {
     register,
-    handleSubmit: handleSubmit(onSubmit),
+    handleSubmit,
     errors,
     formState: form.formState,
     watch,
+    // Expose store methods for use in page-level onSubmit
+    updateForm: updateBankAccountForm,
+    submitForm: submitBankAccountForm,
   };
 }

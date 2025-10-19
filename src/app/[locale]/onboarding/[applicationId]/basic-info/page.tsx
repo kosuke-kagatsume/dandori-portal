@@ -80,7 +80,7 @@ export default function BasicInfoFormPage() {
   const locale = params?.locale as string;
   const applicationId = params?.applicationId as string;
 
-  const { register, handleSubmit, errors, formState, watch } =
+  const { register, handleSubmit, errors, formState, watch, updateForm, submitForm } =
     useBasicInfoForm();
 
   const hasPensionBook = watch('socialInsurance.hasPensionBook');
@@ -89,9 +89,27 @@ export default function BasicInfoFormPage() {
   );
   const sameAsCurrent = watch('residentAddress.sameAsCurrent');
 
-  const onSubmit = async () => {
-    await handleSubmit();
-    router.push(`/${locale}/onboarding`);
+  const onSubmit = async (data: any) => {
+    try {
+      console.log('[BasicInfoForm] Submitting with data:', data);
+      console.log('[BasicInfoForm] Validation errors:', errors);
+      updateForm(data);
+      await submitForm();
+      console.log('[BasicInfoForm] Form submitted successfully');
+      router.push(`/${locale}/onboarding/${applicationId}`);
+    } catch (error) {
+      console.error('[BasicInfoForm] Failed to submit form:', error);
+      // バリデーションエラーの詳細をログに出力
+      if (errors && Object.keys(errors).length > 0) {
+        console.error('[BasicInfoForm] Validation errors:', errors);
+        // 最初のエラーフィールドにスクロール
+        const firstErrorField = Object.keys(errors)[0];
+        const element = document.querySelector(`[name="${firstErrorField}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
   };
 
   return (
@@ -112,7 +130,7 @@ export default function BasicInfoFormPage() {
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Section 1: 基本情報 */}
           <FormSection>
             <SectionHeader title="基本情報" />
@@ -420,6 +438,22 @@ export default function BasicInfoFormPage() {
               errors={errors}
             />
           </FormSection>
+
+          {/* バリデーションエラー表示 */}
+          {Object.keys(errors).length > 0 && (
+            <div className="rounded-lg bg-red-50 border border-red-200 p-4 mb-4">
+              <h3 className="text-sm font-medium text-red-800 mb-2">
+                入力エラーがあります（{Object.keys(errors).length}件）
+              </h3>
+              <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                {Object.entries(errors).map(([key, error]: [string, any]) => (
+                  <li key={key}>
+                    {key}: {error.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Submit Button */}
           <div className="flex justify-end gap-4">

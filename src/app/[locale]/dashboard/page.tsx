@@ -75,7 +75,14 @@ export default function DashboardPage() {
       }
     }
   }, []); // 依存配列を空にして初回のみ実行
-  
+
+  // currentDemoUserの変更を監視してeffectiveDemoUserを同期
+  useEffect(() => {
+    if (mounted && currentDemoUser) {
+      setEffectiveDemoUser(currentDemoUser);
+    }
+  }, [currentDemoUser, mounted]);
+
   // 固定の日本語翻訳関数
   const t = (key: string) => {
     const translations: Record<string, string> = {

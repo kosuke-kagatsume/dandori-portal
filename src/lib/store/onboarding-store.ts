@@ -8,6 +8,7 @@
  * - LocalStorage persistence (dev) / Supabase (prod)
  * - Progress tracking
  * - Form submission/approval flow
+ * - API integration for production mode
  */
 
 import { create } from 'zustand';
@@ -22,6 +23,30 @@ import type {
   FormStatus,
   OnboardingProgress,
 } from '@/types/onboarding';
+import {
+  getApplication,
+  getBasicInfoForm,
+  getFamilyInfoForm,
+  getBankAccountForm,
+  getCommuteRouteForm,
+  submitBasicInfoForm as apiSubmitBasicInfoForm,
+  submitFamilyInfoForm as apiSubmitFamilyInfoForm,
+  submitBankAccountForm as apiSubmitBankAccountForm,
+  submitCommuteRouteForm as apiSubmitCommuteRouteForm,
+  updateBasicInfoForm as apiUpdateBasicInfoForm,
+  updateFamilyInfoForm as apiUpdateFamilyInfoForm,
+  updateBankAccountForm as apiUpdateBankAccountForm,
+  updateCommuteRouteForm as apiUpdateCommuteRouteForm,
+  approveBasicInfoForm as apiApproveBasicInfoForm,
+  approveFamilyInfoForm as apiApproveFamilyInfoForm,
+  approveBankAccountForm as apiApproveBankAccountForm,
+  approveCommuteRouteForm as apiApproveCommuteRouteForm,
+  returnBasicInfoForm as apiReturnBasicInfoForm,
+  returnFamilyInfoForm as apiReturnFamilyInfoForm,
+  returnBankAccountForm as apiReturnBankAccountForm,
+  returnCommuteRouteForm as apiReturnCommuteRouteForm,
+} from '@/lib/api/onboarding';
+import { APIError } from '@/lib/api/client';
 
 // ============================================================================
 // STORE STATE INTERFACE
@@ -176,32 +201,60 @@ function calculateDaysUntilDeadline(deadline: string): number {
 }
 
 /**
- * API call to save form data (placeholder)
- * TODO: Replace with actual API call to Supabase
+ * Check if running in demo mode
+ */
+function isDemoMode(): boolean {
+  return process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+}
+
+/**
+ * API call to save form data
+ * Demo mode: Save to localStorage
+ * Production mode: Save to API
  */
 async function saveFormToAPI(formType: string, formData: any): Promise<void> {
-  // Development: Save to localStorage
-  if (process.env.NODE_ENV === 'development') {
+  if (isDemoMode()) {
+    // Demo mode: Save to localStorage
     localStorage.setItem(`onboarding_${formType}_${formData.id}`, JSON.stringify(formData));
     return;
   }
 
-  // Production: Save to Supabase
-  // const response = await fetch(`/api/onboarding/${formType}/${formData.id}`, {
-  //   method: 'PUT',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(formData),
-  // });
-  // if (!response.ok) throw new Error('Failed to save form');
+  // Production mode: Save to API
+  try {
+    const applicationId = formData.applicationId;
+
+    switch (formType) {
+      case 'basic_info':
+        await apiUpdateBasicInfoForm(applicationId, formData);
+        break;
+      case 'family_info':
+        await apiUpdateFamilyInfoForm(applicationId, formData);
+        break;
+      case 'bank_account':
+        await apiUpdateBankAccountForm(applicationId, formData);
+        break;
+      case 'commute_route':
+        await apiUpdateCommuteRouteForm(applicationId, formData);
+        break;
+      default:
+        throw new Error(`Unknown form type: ${formType}`);
+    }
+  } catch (error) {
+    if (error instanceof APIError) {
+      console.error(`API Error [${error.status}]: ${error.message}`, error.details);
+    }
+    throw error;
+  }
 }
 
 /**
- * API call to submit form (placeholder)
- * TODO: Replace with actual API call
+ * API call to submit form
+ * Demo mode: Update localStorage
+ * Production mode: Submit to API
  */
-async function submitFormToAPI(formType: string, formId: string): Promise<void> {
-  // Development: Update localStorage
-  if (process.env.NODE_ENV === 'development') {
+async function submitFormToAPI(formType: string, formId: string, formData: any): Promise<void> {
+  if (isDemoMode()) {
+    // Demo mode: Update localStorage
     const key = `onboarding_${formType}_${formId}`;
     const data = localStorage.getItem(key);
     if (data) {
@@ -213,11 +266,32 @@ async function submitFormToAPI(formType: string, formId: string): Promise<void> 
     return;
   }
 
-  // Production: Submit to API
-  // const response = await fetch(`/api/onboarding/${formType}/${formId}/submit`, {
-  //   method: 'POST',
-  // });
-  // if (!response.ok) throw new Error('Failed to submit form');
+  // Production mode: Submit to API
+  try {
+    const applicationId = formData.applicationId;
+
+    switch (formType) {
+      case 'basic_info':
+        await apiSubmitBasicInfoForm(applicationId, formData);
+        break;
+      case 'family_info':
+        await apiSubmitFamilyInfoForm(applicationId, formData);
+        break;
+      case 'bank_account':
+        await apiSubmitBankAccountForm(applicationId, formData);
+        break;
+      case 'commute_route':
+        await apiSubmitCommuteRouteForm(applicationId, formData);
+        break;
+      default:
+        throw new Error(`Unknown form type: ${formType}`);
+    }
+  } catch (error) {
+    if (error instanceof APIError) {
+      console.error(`API Error [${error.status}]: ${error.message}`, error.details);
+    }
+    throw error;
+  }
 }
 
 // ============================================================================
@@ -241,8 +315,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          // Development: Load from localStorage
-          if (process.env.NODE_ENV === 'development') {
+          if (isDemoMode()) {
+            // Demo mode: Load from localStorage
             const appData = localStorage.getItem(`onboarding_application_${applicationId}`);
             const basicData = localStorage.getItem(`onboarding_basic_info_${applicationId}`);
             const familyData = localStorage.getItem(`onboarding_family_info_${applicationId}`);
@@ -260,21 +334,34 @@ export const useOnboardingStore = create<OnboardingStore>()(
             return;
           }
 
-          // Production: Load from API
-          // const response = await fetch(`/api/onboarding/${applicationId}`);
-          // if (!response.ok) throw new Error('Failed to load application');
-          // const data = await response.json();
-          // set({
-          //   application: data.application,
-          //   basicInfoForm: data.basicInfoForm,
-          //   familyInfoForm: data.familyInfoForm,
-          //   bankAccountForm: data.bankAccountForm,
-          //   commuteRouteForm: data.commuteRouteForm,
-          //   isLoading: false,
-          // });
-        } catch (error) {
+          // Production mode: Load from API
+          const application = await getApplication(applicationId);
+
+          // Load all forms in parallel
+          const [basicInfo, familyInfo, bankAccount, commuteRoute] = await Promise.allSettled([
+            getBasicInfoForm(applicationId),
+            getFamilyInfoForm(applicationId),
+            getBankAccountForm(applicationId),
+            getCommuteRouteForm(applicationId),
+          ]);
+
           set({
-            error: error instanceof Error ? error.message : 'Unknown error',
+            application,
+            basicInfoForm: basicInfo.status === 'fulfilled' ? basicInfo.value : null,
+            familyInfoForm: familyInfo.status === 'fulfilled' ? familyInfo.value : null,
+            bankAccountForm: bankAccount.status === 'fulfilled' ? bankAccount.value : null,
+            commuteRouteForm: commuteRoute.status === 'fulfilled' ? commuteRoute.value : null,
+            isLoading: false,
+          });
+        } catch (error) {
+          const errorMessage = error instanceof APIError
+            ? `API Error: ${error.message}`
+            : error instanceof Error
+            ? error.message
+            : 'Failed to load application';
+
+          set({
+            error: errorMessage,
             isLoading: false,
           });
         }
@@ -326,7 +413,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set({ isSubmitting: true, error: null });
 
         try {
-          await submitFormToAPI('basic_info', basicInfoForm.id);
+          await submitFormToAPI('basic_info', basicInfoForm.id, basicInfoForm);
+
+          // Update local state
           set({
             basicInfoForm: {
               ...basicInfoForm,
@@ -336,10 +425,17 @@ export const useOnboardingStore = create<OnboardingStore>()(
             isSubmitting: false,
           });
         } catch (error) {
+          const errorMessage = error instanceof APIError
+            ? `API Error: ${error.message}`
+            : error instanceof Error
+            ? error.message
+            : 'Failed to submit form';
+
           set({
-            error: error instanceof Error ? error.message : 'Failed to submit form',
+            error: errorMessage,
             isSubmitting: false,
           });
+          throw error;
         }
       },
 
@@ -371,7 +467,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set({ isSubmitting: true, error: null });
 
         try {
-          await submitFormToAPI('family_info', familyInfoForm.id);
+          await submitFormToAPI('family_info', familyInfoForm.id, familyInfoForm);
+
+          // Update local state
           set({
             familyInfoForm: {
               ...familyInfoForm,
@@ -381,10 +479,17 @@ export const useOnboardingStore = create<OnboardingStore>()(
             isSubmitting: false,
           });
         } catch (error) {
+          const errorMessage = error instanceof APIError
+            ? `API Error: ${error.message}`
+            : error instanceof Error
+            ? error.message
+            : 'Failed to submit form';
+
           set({
-            error: error instanceof Error ? error.message : 'Failed to submit form',
+            error: errorMessage,
             isSubmitting: false,
           });
+          throw error;
         }
       },
 
@@ -416,7 +521,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set({ isSubmitting: true, error: null });
 
         try {
-          await submitFormToAPI('bank_account', bankAccountForm.id);
+          await submitFormToAPI('bank_account', bankAccountForm.id, bankAccountForm);
+
+          // Update local state
           set({
             bankAccountForm: {
               ...bankAccountForm,
@@ -426,10 +533,17 @@ export const useOnboardingStore = create<OnboardingStore>()(
             isSubmitting: false,
           });
         } catch (error) {
+          const errorMessage = error instanceof APIError
+            ? `API Error: ${error.message}`
+            : error instanceof Error
+            ? error.message
+            : 'Failed to submit form';
+
           set({
-            error: error instanceof Error ? error.message : 'Failed to submit form',
+            error: errorMessage,
             isSubmitting: false,
           });
+          throw error;
         }
       },
 
@@ -461,7 +575,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set({ isSubmitting: true, error: null });
 
         try {
-          await submitFormToAPI('commute_route', commuteRouteForm.id);
+          await submitFormToAPI('commute_route', commuteRouteForm.id, commuteRouteForm);
+
+          // Update local state
           set({
             commuteRouteForm: {
               ...commuteRouteForm,
@@ -471,10 +587,17 @@ export const useOnboardingStore = create<OnboardingStore>()(
             isSubmitting: false,
           });
         } catch (error) {
+          const errorMessage = error instanceof APIError
+            ? `API Error: ${error.message}`
+            : error instanceof Error
+            ? error.message
+            : 'Failed to submit form';
+
           set({
-            error: error instanceof Error ? error.message : 'Failed to submit form',
+            error: errorMessage,
             isSubmitting: false,
           });
+          throw error;
         }
       },
 

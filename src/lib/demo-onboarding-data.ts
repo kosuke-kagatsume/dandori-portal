@@ -86,17 +86,17 @@ export const demoBasicInfoForm: BasicInfoForm = {
     postalCode: '',
     prefecture: '',
     city: '',
-    streetAddress: '',
+    street: '',
     building: '',
   },
 
-  // 住民票住所（未入力）
+  // 住民票住所（現住所と同じ）
   residentAddress: {
-    sameAsCurrent: false,
+    sameAsCurrent: true,
     postalCode: '',
     prefecture: '',
     city: '',
-    streetAddress: '',
+    street: '',
     building: '',
   },
 

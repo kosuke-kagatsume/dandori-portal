@@ -35,7 +35,7 @@ import { TransferHistoryPanel } from '@/components/organization/transfer-history
 import { AddTransferDialog } from '@/components/organization/add-transfer-dialog';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { useUserStore } from '@/lib/store';
-import { demoOrganizationTree, demoMembers } from '@/lib/demo-organization';
+import { demoOrganizationTree, demoMembers, demoTransferHistories } from '@/lib/demo-organization';
 import { hasPermission } from '@/lib/demo-users';
 import type { OrganizationNode, OrganizationMember } from '@/types';
 
@@ -56,7 +56,8 @@ export default function OrganizationPage() {
     setViewMode,
     addMember,
     updateMember,
-    removeMember
+    removeMember,
+    initializeTransferHistories
   } = useOrganizationStore();
 
   // 初期データの設定
@@ -64,7 +65,9 @@ export default function OrganizationPage() {
     if (!organizationTree) {
       setOrganizationTree(demoOrganizationTree);
     }
-  }, [organizationTree, setOrganizationTree]);
+    // 異動履歴データの初期化
+    initializeTransferHistories(demoTransferHistories);
+  }, [organizationTree, setOrganizationTree, initializeTransferHistories]);
 
   // 権限チェック
   const canManageOrganization = currentDemoUser && hasPermission(currentDemoUser, 'manage_system');

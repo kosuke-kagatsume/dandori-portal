@@ -57,21 +57,14 @@ export function useBasicInfoForm() {
     }
   }, [basicInfoForm, reset]);
 
-  // Handle form submission
-  const onSubmit = async (data: BasicInfoFormInput) => {
-    try {
-      updateBasicInfoForm(data);
-      await submitBasicInfoForm();
-    } catch (error) {
-      console.error('Failed to submit form:', error);
-    }
-  };
-
   return {
     register,
-    handleSubmit: handleSubmit(onSubmit),
+    handleSubmit,
     errors,
     formState: form.formState,
     watch,
+    // Expose store methods for use in page-level onSubmit
+    updateForm: updateBasicInfoForm,
+    submitForm: submitBasicInfoForm,
   };
 }

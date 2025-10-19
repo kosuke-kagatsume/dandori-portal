@@ -18,6 +18,24 @@ interface SelectFieldProps extends Omit<InputFieldProps, 'type'> {
 }
 
 /**
+ * ネストしたフィールドパスからエラーを取得するヘルパー関数
+ * 例: "currentAddress.postalCode" -> errors.currentAddress.postalCode
+ */
+function getNestedError(errors: FieldErrors | undefined, path: string) {
+  if (!errors) return undefined;
+
+  const keys = path.split('.');
+  let current: any = errors;
+
+  for (const key of keys) {
+    if (current?.[key] === undefined) return undefined;
+    current = current[key];
+  }
+
+  return current;
+}
+
+/**
  * Text Input Field
  */
 export function InputField({
@@ -30,7 +48,7 @@ export function InputField({
   errors,
   helpText,
 }: InputFieldProps) {
-  const error = errors?.[name];
+  const error = getNestedError(errors, name);
 
   return (
     <div className="mb-4">
@@ -69,7 +87,7 @@ export function SelectField({
   errors,
   helpText,
 }: SelectFieldProps) {
-  const error = errors?.[name];
+  const error = getNestedError(errors, name);
 
   return (
     <div className="mb-4">
@@ -111,7 +129,7 @@ export function CheckboxField({
   errors,
   helpText,
 }: Omit<InputFieldProps, 'type' | 'placeholder' | 'required'>) {
-  const error = errors?.[name];
+  const error = getNestedError(errors, name);
 
   return (
     <div className="mb-4">

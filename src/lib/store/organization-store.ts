@@ -38,6 +38,7 @@ interface OrganizationStore {
   
   // Transfer History management
   addTransferHistory: (transfer: TransferHistory) => void;
+  initializeTransferHistories: (histories: TransferHistory[]) => void;
   getTransferHistoriesByUser: (userId: string) => TransferHistory[];
   getAllTransferHistories: () => TransferHistory[];
   getTransferHistoriesByUnit: (unitId: string) => TransferHistory[];
@@ -331,6 +332,10 @@ export const useOrganizationStore = create<OrganizationStore>()(
       // Transfer History management
       addTransferHistory: (transfer) => set((state) => ({
         transferHistories: [transfer, ...state.transferHistories]
+      })),
+
+      initializeTransferHistories: (histories) => set((state) => ({
+        transferHistories: state.transferHistories.length > 0 ? state.transferHistories : histories
       })),
 
       getTransferHistoriesByUser: (userId) => {

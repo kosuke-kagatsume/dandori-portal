@@ -1,33 +1,38 @@
+/**
+ * グローバルキーボードショートカット
+ *
+ * アプリケーション全体で使えるキーボードショートカットを提供
+ */
+
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface KeyboardShortcut {
+export interface KeyboardShortcut {
   key: string;
-  ctrlKey?: boolean;
-  shiftKey?: boolean;
-  altKey?: boolean;
-  metaKey?: boolean;
-  handler: () => void;
+  ctrl?: boolean;
+  alt?: boolean;
+  shift?: boolean;
+  action: () => void;
   description: string;
 }
 
 export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const shortcut = shortcuts.find(
-        (s) =>
-          s.key.toLowerCase() === event.key.toLowerCase() &&
-          (s.ctrlKey === undefined || s.ctrlKey === event.ctrlKey) &&
-          (s.shiftKey === undefined || s.shiftKey === event.shiftKey) &&
-          (s.altKey === undefined || s.altKey === event.altKey) &&
-          (s.metaKey === undefined || s.metaKey === (event.metaKey || event.ctrlKey))
-      );
+      const matchingShortcut = shortcuts.find((shortcut) => {
+        const keyMatches = event.key.toLowerCase() === shortcut.key.toLowerCase();
+        const ctrlMatches = shortcut.ctrl ? event.ctrlKey || event.metaKey : !event.ctrlKey && !event.metaKey;
+        const altMatches = shortcut.alt ? event.altKey : !event.altKey;
+        const shiftMatches = shortcut.shift ? event.shiftKey : !event.shiftKey;
 
-      if (shortcut) {
+        return keyMatches && ctrlMatches && altMatches && shiftMatches;
+      });
+
+      if (matchingShortcut) {
         event.preventDefault();
-        shortcut.handler();
+        matchingShortcut.action();
       }
     };
 
@@ -37,55 +42,51 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
 }
 
 /**
- * グローバルキーボードショートカット
+ * デフォルトのグローバルショートカット
  */
-export function useGlobalKeyboardShortcuts() {
+export function useGlobalShortcuts() {
   const router = useRouter();
 
   const shortcuts: KeyboardShortcut[] = [
     {
-      key: 'k',
-      metaKey: true, // Cmd/Ctrl + K
-      handler: () => {
-        // 検索モーダルを開く（実装されている場合）
-        const searchButton = document.querySelector('[data-search-trigger]') as HTMLElement;
-        searchButton?.click();
-      },
-      description: '検索を開く',
-    },
-    {
-      key: 'd',
-      metaKey: true, // Cmd/Ctrl + D
-      handler: () => {
-        router.push('/ja/dashboard');
-      },
-      description: 'ダッシュボードに移動',
-    },
-    {
       key: 'h',
-      metaKey: true, // Cmd/Ctrl + H
-      handler: () => {
-        router.push('/ja');
-      },
-      description: 'ホームに移動',
+      ctrl: true,
+      description: 'ダッシュボードへ',
+      action: () => router.push('/ja/dashboard'),
+    },
+    {
+      key: 'u',
+      ctrl: true,
+      description: 'ユーザー管理へ',
+      action: () => router.push('/ja/users'),
+    },
+    {
+      key: 'a',
+      ctrl: true,
+      description: '勤怠管理へ',
+      action: () => router.push('/ja/attendance'),
+    },
+    {
+      key: 'w',
+      ctrl: true,
+      description: 'ワークフローへ',
+      action: () => router.push('/ja/workflow'),
     },
     {
       key: '/',
-      handler: () => {
-        // フォーカスを検索フィールドに移動
-        const searchInput = document.querySelector('input[type="search"], input[placeholder*="検索"]') as HTMLElement;
-        searchInput?.focus();
+      ctrl: true,
+      description: 'ショートカット一覧表示',
+      action: () => {
+        // ショートカット一覧を表示するモーダル
+        alert(`
+キーボードショートカット:
+Ctrl+H: ダッシュボードへ
+Ctrl+U: ユーザー管理へ
+Ctrl+A: 勤怠管理へ
+Ctrl+W: ワークフローへ
+Ctrl+/: このヘルプを表示
+        `);
       },
-      description: '検索にフォーカス',
-    },
-    {
-      key: 'Escape',
-      handler: () => {
-        // 開いているモーダルやダイアログを閉じる
-        const closeButton = document.querySelector('[data-state="open"] button[aria-label*="閉じる"], [data-state="open"] button[aria-label*="Close"]') as HTMLElement;
-        closeButton?.click();
-      },
-      description: 'モーダルを閉じる',
     },
   ];
 

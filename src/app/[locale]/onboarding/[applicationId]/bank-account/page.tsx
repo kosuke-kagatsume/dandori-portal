@@ -7,7 +7,7 @@ import {
   FormSection,
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { useOnboardingStore } from '@/lib/store/onboarding-store';
+import { useBankAccountForm } from '@/features/onboarding/hooks/useBankAccountForm';
 
 /**
  * Bank Account Form Page
@@ -25,12 +25,16 @@ export default function BankAccountFormPage() {
   const locale = params?.locale as string;
   const applicationId = params?.applicationId as string;
 
-  const { bankAccountForm } = useOnboardingStore();
+  const { register, handleSubmit, errors, updateForm, submitForm } = useBankAccountForm();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: フォーム送信処理
-    router.push(`/${locale}/onboarding`);
+  const onSubmit = async (data: any) => {
+    try {
+      updateForm(data);
+      await submitForm();
+      router.push(`/${locale}/onboarding/${applicationId}`);
+    } catch (error) {
+      console.error('Failed to submit form:', error);
+    }
   };
 
   return (
@@ -53,8 +57,8 @@ export default function BankAccountFormPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Section 1: 基本情報（自動入力） */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Section 1: 基本情報（自動入力） - disabled fields remain unchanged */}
           <FormSection>
             <SectionHeader title="基本情報" />
             <div className="grid gap-4 md:grid-cols-2">
@@ -64,8 +68,7 @@ export default function BankAccountFormPage() {
                 </label>
                 <input
                   type="email"
-                  name="email"
-                  defaultValue={bankAccountForm?.email || ''}
+                  {...register('email')}
                   disabled
                   className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                 />
@@ -76,8 +79,7 @@ export default function BankAccountFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="employeeNumber"
-                  defaultValue={bankAccountForm?.employeeNumber || '-'}
+                  {...register('employeeNumber')}
                   disabled
                   className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
                 />
@@ -89,8 +91,7 @@ export default function BankAccountFormPage() {
               </label>
               <input
                 type="text"
-                name="fullName"
-                defaultValue={bankAccountForm?.fullName || ''}
+                {...register('fullName')}
                 disabled
                 className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm"
               />
@@ -107,14 +108,15 @@ export default function BankAccountFormPage() {
                 <span className="text-red-500 ml-1">*</span>
               </label>
               <select
-                name="applicationType"
-                required
-                defaultValue={bankAccountForm?.applicationType || 'new'}
+                {...register('applicationType')}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="new">新規登録</option>
                 <option value="change">変更</option>
               </select>
+              {errors.applicationType && (
+                <p className="mt-1 text-xs text-red-600">{errors.applicationType.message}</p>
+              )}
             </div>
           </FormSection>
 
@@ -142,11 +144,13 @@ export default function BankAccountFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="bankName"
-                  required
+                  {...register('bankName')}
                   placeholder="例: 三菱UFJ銀行"
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
+                {errors.bankName && (
+                  <p className="mt-1 text-xs text-red-600">{errors.bankName.message}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -155,13 +159,15 @@ export default function BankAccountFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="bankCode"
-                  required
+                  {...register('bankCode')}
                   placeholder="0005"
                   maxLength={4}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">4桁の数字</p>
+                {errors.bankCode && (
+                  <p className="mt-1 text-xs text-red-600">{errors.bankCode.message}</p>
+                )}
               </div>
             </div>
 
@@ -173,11 +179,13 @@ export default function BankAccountFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="branchName"
-                  required
+                  {...register('branchName')}
                   placeholder="例: 新宿支店"
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
+                {errors.branchName && (
+                  <p className="mt-1 text-xs text-red-600">{errors.branchName.message}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -186,13 +194,15 @@ export default function BankAccountFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="branchCode"
-                  required
+                  {...register('branchCode')}
                   placeholder="123"
                   maxLength={3}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">3桁の数字</p>
+                {errors.branchCode && (
+                  <p className="mt-1 text-xs text-red-600">{errors.branchCode.message}</p>
+                )}
               </div>
             </div>
 
@@ -204,13 +214,15 @@ export default function BankAccountFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="accountNumber"
-                  required
+                  {...register('accountNumber')}
                   placeholder="1234567"
                   maxLength={7}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">7桁の数字</p>
+                {errors.accountNumber && (
+                  <p className="mt-1 text-xs text-red-600">{errors.accountNumber.message}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -219,12 +231,14 @@ export default function BankAccountFormPage() {
                 </label>
                 <input
                   type="text"
-                  name="accountHolderKana"
-                  required
+                  {...register('accountHolderKana')}
                   placeholder="ヤマダ タロウ"
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">名字と名前の間に全角スペース</p>
+                {errors.accountHolderKana && (
+                  <p className="mt-1 text-xs text-red-600">{errors.accountHolderKana.message}</p>
+                )}
               </div>
             </div>
           </FormSection>
@@ -267,8 +281,7 @@ export default function BankAccountFormPage() {
             <div className="flex items-start gap-2">
               <input
                 type="checkbox"
-                name="consent"
-                required
+                {...register('consent')}
                 className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               <label className="text-sm text-gray-700">
@@ -276,6 +289,9 @@ export default function BankAccountFormPage() {
                 <span className="text-red-500 ml-1">*</span>
               </label>
             </div>
+            {errors.consent && (
+              <p className="mt-1 text-xs text-red-600">{errors.consent.message}</p>
+            )}
           </FormSection>
 
           {/* Submit Button */}

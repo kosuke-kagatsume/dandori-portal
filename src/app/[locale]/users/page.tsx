@@ -65,7 +65,7 @@ export default function UsersPage() {
   const [importInputRef, setImportInputRef] = useState<HTMLInputElement | null>(null);
 
   const router = useRouter();
-  const { users, setUsers, retireUser } = useUserStore();
+  const { users, setUsers, addUser, updateUser, retireUser } = useUserStore();
 
   // フィルタリングされたユーザー一覧（useMemoでメモ化）
   const filteredUsers = useMemo(() => {
@@ -83,46 +83,27 @@ export default function UsersPage() {
     admin: users.filter(u => u.roles?.includes('admin')).length,
   }), [users]);
 
-  // Load users from API
+  // Load users from store (already loaded via zustand persist)
   useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        // API経由でユーザーを取得
-        const response = await fetch('/api/users');
-        const data = await response.json();
-
-        if (data.success && data.data) {
-          setUsers(data.data);
-        } else {
-          throw new Error(data.error || 'Failed to fetch users');
-        }
-      } catch (error) {
-        console.error('Error loading users:', error);
-        toast.error('ユーザーの読み込みに失敗しました');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUsers();
+    // ユーザーストアが空の場合、デモデータを生成
+    if (users.length === 0) {
+      console.log('[Demo] Generating initial user data...');
+      const mockUsers = generateMockUsers(15); // 15人のデモユーザーを生成
+      setUsers(mockUsers);
+    }
+    setLoading(false);
   }, [users.length, setUsers]);
 
-  const handleCreateUser = async (userData: any) => {
+  const handleCreateUser = (userData: any) => {
     try {
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create user');
-      }
-
-      // APIから返されたユーザーをストアに追加
-      setUsers(prev => [...prev, result.data]);
+      // ストアに直接追加
+      const newUser = {
+        ...userData,
+        id: `user-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      addUser(newUser as User);
       toast.success('ユーザーを作成しました');
     } catch (error) {
       console.error('Error creating user:', error);
@@ -131,25 +112,16 @@ export default function UsersPage() {
     }
   };
 
-  const handleEditUser = async (userData: any) => {
+  const handleEditUser = (userData: any) => {
     if (!editingUser) return;
 
     try {
-      const response = await fetch(`/api/users/${editingUser.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
+      // ストアを直接更新
+      updateUser(editingUser.id, {
+        ...userData,
+        updatedAt: new Date().toISOString(),
       });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to update user');
-      }
-
-      // APIから返されたユーザーでストアを更新
-      setUsers(prev => prev.map(u => u.id === editingUser.id ? result.data : u));
-      toast.success('ユーザー情報を更新しました');
+      toast.success('ユーザーを更新しました');
     } catch (error) {
       console.error('Error updating user:', error);
       toast.error('ユーザーの更新に失敗しました');

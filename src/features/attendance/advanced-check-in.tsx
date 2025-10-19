@@ -238,6 +238,7 @@ export function AdvancedCheckIn() {
                 onClick={handleCheckIn}
                 size="lg"
                 className="w-full h-16 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                data-testid="check-in-button"
               >
                 <CheckCircle className="mr-2 h-5 w-5" />
                 出勤する
@@ -260,6 +261,7 @@ export function AdvancedCheckIn() {
                     onClick={handleCheckOut}
                     size="lg"
                     className="h-14 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600"
+                    data-testid="check-out-button"
                   >
                     <XCircle className="mr-2 h-4 w-4" />
                     退勤する
@@ -349,7 +351,7 @@ export function AdvancedCheckIn() {
             <Button variant="outline" onClick={() => setShowLocationDialog(false)}>
               キャンセル
             </Button>
-            <Button onClick={confirmCheckIn}>
+            <Button onClick={confirmCheckIn} data-testid="confirm-check-in-button">
               出勤する
             </Button>
           </DialogFooter>
@@ -398,7 +400,7 @@ export function AdvancedCheckIn() {
             <Button variant="outline" onClick={() => setShowMemoDialog(false)}>
               キャンセル
             </Button>
-            <Button onClick={confirmCheckOut} className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600">
+            <Button onClick={confirmCheckOut} className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600" data-testid="confirm-check-out-button">
               退勤する
             </Button>
           </DialogFooter>
