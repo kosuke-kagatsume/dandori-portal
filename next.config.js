@@ -79,74 +79,9 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  // Webpack設定のカスタマイズ
-  webpack: (config, { isServer, dev }) => {
-    // プロダクションビルドでの最適化
-    if (!isServer) {
-      // クライアント側のコード分割最適化
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          maxSize: 244000, // 244KB以上のチャンクは分割
-          cacheGroups: {
-            // React関連を別チャンクに（最高優先度）
-            react: {
-              test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
-              name: 'react-vendor',
-              priority: 30,
-              reuseExistingChunk: true,
-              enforce: true,
-            },
-            // チャートライブラリを完全分離（高優先度）
-            charts: {
-              test: /[\\/]node_modules[\\/](recharts|d3-.*|victory-.*)[\\/]/,
-              name: 'charts-vendor',
-              priority: 25,
-              reuseExistingChunk: true,
-              enforce: true,
-            },
-            // PDF生成ライブラリを分離
-            pdf: {
-              test: /[\\/]node_modules[\\/](jspdf|html2canvas)[\\/]/,
-              name: 'pdf-vendor',
-              priority: 25,
-              reuseExistingChunk: true,
-              enforce: true,
-            },
-            // UI系ライブラリを分割
-            ui: {
-              test: /[\\/]node_modules[\\/](@radix-ui|lucide-react)[\\/]/,
-              name: 'ui-vendor',
-              priority: 20,
-              reuseExistingChunk: true,
-            },
-            // Zustand & 状態管理
-            state: {
-              test: /[\\/]node_modules[\\/](zustand|immer)[\\/]/,
-              name: 'state-vendor',
-              priority: 20,
-              reuseExistingChunk: true,
-            },
-            // その他のvendor（低優先度）
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              priority: 10,
-              reuseExistingChunk: true,
-            },
-            // 共通コンポーネント
-            common: {
-              minChunks: 2,
-              priority: 5,
-              reuseExistingChunk: true,
-            },
-          },
-        },
-      };
-    }
-
-    // Tree Shakingはデフォルトで有効なので追加設定不要
+  // Webpack設定のカスタマイズ（Vercel対応のため簡略化）
+  webpack: (config, { isServer }) => {
+    // Vercelデプロイの安定性のため、デフォルト設定を使用
     return config;
   },
   
