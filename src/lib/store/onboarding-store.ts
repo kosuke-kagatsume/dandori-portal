@@ -49,6 +49,12 @@ import {
 import { APIError } from '@/lib/api/client';
 
 // ============================================================================
+// TYPE ALIASES
+// ============================================================================
+
+type OnboardingFormData = BasicInfoForm | FamilyInfoForm | BankAccountForm | CommuteRouteForm;
+
+// ============================================================================
 // STORE STATE INTERFACE
 // ============================================================================
 
@@ -150,11 +156,11 @@ const initialState: OnboardingState = {
 /**
  * Calculate form completion percentage
  */
-function calculateFormProgress(form: any, totalFields: number): number {
+function calculateFormProgress(form: OnboardingFormData | null, totalFields: number): number {
   if (!form) return 0;
 
   let completedFields = 0;
-  const checkField = (value: any): boolean => {
+  const checkField = (value: unknown): boolean => {
     if (value === null || value === undefined || value === '') return false;
     if (typeof value === 'boolean') return true;
     if (Array.isArray(value)) return value.length > 0;
@@ -184,7 +190,7 @@ function calculateFormProgress(form: any, totalFields: number): number {
 /**
  * Get form status
  */
-function getFormStatus(form: any): FormStatus {
+function getFormStatus(form: OnboardingFormData | null): FormStatus {
   if (!form) return 'draft';
   return form.status || 'draft';
 }
@@ -212,7 +218,7 @@ function isDemoMode(): boolean {
  * Demo mode: Save to localStorage
  * Production mode: Save to API
  */
-async function saveFormToAPI(formType: string, formData: any): Promise<void> {
+async function saveFormToAPI(formType: string, formData: OnboardingFormData): Promise<void> {
   if (isDemoMode()) {
     // Demo mode: Save to localStorage
     localStorage.setItem(`onboarding_${formType}_${formData.id}`, JSON.stringify(formData));
@@ -252,7 +258,7 @@ async function saveFormToAPI(formType: string, formData: any): Promise<void> {
  * Demo mode: Update localStorage
  * Production mode: Submit to API
  */
-async function submitFormToAPI(formType: string, formId: string, formData: any): Promise<void> {
+async function submitFormToAPI(formType: string, formId: string, formData: OnboardingFormData): Promise<void> {
   if (isDemoMode()) {
     // Demo mode: Update localStorage
     const key = `onboarding_${formType}_${formId}`;

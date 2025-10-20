@@ -18,7 +18,7 @@ export const demoUsers: Record<UserRole, DemoUser> = {
     email: 'tanaka@dandori.local',
     role: 'employee',
     department: '営業部',
-    avatar: '/avatars/tanaka.png',
+    avatar: '/avatars/default.png',
     permissions: rolePermissions.employee,
   },
   manager: {
@@ -27,7 +27,7 @@ export const demoUsers: Record<UserRole, DemoUser> = {
     email: 'sato@dandori.local',
     role: 'manager',
     department: '営業部',
-    avatar: '/avatars/sato.png',
+    avatar: '/avatars/default.png',
     permissions: rolePermissions.manager,
   },
   executive: {
@@ -36,7 +36,7 @@ export const demoUsers: Record<UserRole, DemoUser> = {
     email: 'suzuki@dandori.local',
     role: 'executive',
     department: '経営企画室',
-    avatar: '/avatars/suzuki.png',
+    avatar: '/avatars/default.png',
     permissions: rolePermissions.executive,
   },
   hr: {
@@ -45,7 +45,7 @@ export const demoUsers: Record<UserRole, DemoUser> = {
     email: 'yamada@dandori.local',
     role: 'hr',
     department: '人事部',
-    avatar: '/avatars/yamada.png',
+    avatar: '/avatars/default.png',
     permissions: rolePermissions.hr,
   },
   admin: {
@@ -54,7 +54,7 @@ export const demoUsers: Record<UserRole, DemoUser> = {
     email: 'admin@dandori.local',
     role: 'admin',
     department: 'IT部',
-    avatar: '/avatars/admin.png',
+    avatar: '/avatars/default.png',
     permissions: rolePermissions.admin,
   },
   applicant: {
@@ -63,7 +63,7 @@ export const demoUsers: Record<UserRole, DemoUser> = {
     email: 'shinnyu@dandori.local',
     role: 'applicant',
     department: '入社予定',
-    avatar: '/avatars/applicant.png',
+    avatar: '/avatars/default.png',
     permissions: rolePermissions.applicant,
   },
 };

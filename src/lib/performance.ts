@@ -6,6 +6,21 @@ interface PerformanceMetric {
   timestamp: number;
 }
 
+interface PerformanceMetricReport {
+  count: number;
+  min: number;
+  max: number;
+  avg: number;
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
+interface LayoutShiftEntry extends PerformanceEntry {
+  hadRecentInput?: boolean;
+  value: number;
+}
+
 class PerformanceMonitor {
   private metrics: Map<string, PerformanceMetric[]> = new Map();
   private enabled: boolean = process.env.NODE_ENV === 'development';
@@ -73,8 +88,8 @@ class PerformanceMonitor {
   }
 
   // パフォーマンスレポートを生成
-  generateReport(): Record<string, any> {
-    const report: Record<string, any> = {};
+  generateReport(): Record<string, PerformanceMetricReport> {
+    const report: Record<string, PerformanceMetricReport> = {};
 
     this.metrics.forEach((metrics, name) => {
       if (metrics.length === 0) return;
@@ -137,7 +152,7 @@ class PerformanceMonitor {
     let clsValue = 0;
     const clsObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
-        const layoutShift = entry as any;
+        const layoutShift = entry as LayoutShiftEntry;
         if (!layoutShift.hadRecentInput) {
           clsValue += layoutShift.value;
           this.recordMetric('web_vitals_cls', clsValue);

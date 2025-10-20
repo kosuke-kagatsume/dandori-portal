@@ -1,14 +1,14 @@
 'use client';
 
 import React, { memo, useMemo, useState, useCallback } from 'react';
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable, getPaginationRowModel, getFilteredRowModel } from '@tanstack/react-table';
+import { ColumnDef, flexRender, getCoreRowModel, useReactTable, getPaginationRowModel, getFilteredRowModel, Row, Cell, HeaderGroup, Header } from '@tanstack/react-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface OptimizedDataTableProps<TData> {
-  columns: ColumnDef<TData, any>[];
+  columns: ColumnDef<TData, unknown>[];
   data: TData[];
   searchKey?: string;
   searchPlaceholder?: string;
@@ -16,9 +16,9 @@ interface OptimizedDataTableProps<TData> {
 }
 
 // メモ化されたテーブル行コンポーネント
-const TableRowMemo = memo(({ row, columns }: { row: any; columns: any[] }) => (
+const TableRowMemo = memo(({ row, columns }: { row: Row<unknown>; columns: ColumnDef<unknown, unknown>[] }) => (
   <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-    {row.getVisibleCells().map((cell: any) => (
+    {row.getVisibleCells().map((cell: Cell<unknown, unknown>) => (
       <TableCell key={cell.id}>
         {flexRender(cell.column.columnDef.cell, cell.getContext())}
       </TableCell>
@@ -29,11 +29,11 @@ const TableRowMemo = memo(({ row, columns }: { row: any; columns: any[] }) => (
 TableRowMemo.displayName = 'TableRowMemo';
 
 // メモ化されたテーブルヘッダーコンポーネント
-const TableHeaderMemo = memo(({ headerGroups }: { headerGroups: any[] }) => (
+const TableHeaderMemo = memo(({ headerGroups }: { headerGroups: HeaderGroup<unknown>[] }) => (
   <TableHeader>
     {headerGroups.map((headerGroup) => (
       <TableRow key={headerGroup.id}>
-        {headerGroup.headers.map((header: any) => (
+        {headerGroup.headers.map((header: Header<unknown, unknown>) => (
           <TableHead key={header.id}>
             {header.isPlaceholder
               ? null

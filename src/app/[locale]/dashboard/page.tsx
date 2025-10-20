@@ -574,7 +574,7 @@ export default function DashboardPage() {
             
             {/* 承認権限 */}
             {canApprove && (
-              <Link href="/ja/approval">
+              <Link href="/ja/workflow">
                 <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
                   <AlertCircle className="h-5 w-5" />
                   <span className="text-sm">承認待ち</span>

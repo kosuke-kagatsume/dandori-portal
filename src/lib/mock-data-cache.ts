@@ -3,12 +3,12 @@
  * 初回生成後はキャッシュから返すことでパフォーマンスを向上
  */
 
-import { User } from '@/types';
+import { User, AttendanceRecord, LeaveRequest } from '@/types';
 
 // グローバルキャッシュ
 let usersCache: User[] | null = null;
-let attendanceDataCache: any[] | null = null;
-let leaveDataCache: any[] | null = null;
+let attendanceDataCache: AttendanceRecord[] | null = null;
+let leaveDataCache: LeaveRequest[] | null = null;
 
 /**
  * ユーザーキャッシュを取得または生成
@@ -24,7 +24,7 @@ export function getCachedUsers(generator: () => User[]): User[] {
 /**
  * 勤怠データキャッシュを取得または生成
  */
-export function getCachedAttendanceData(generator: () => any[]): any[] {
+export function getCachedAttendanceData(generator: () => AttendanceRecord[]): AttendanceRecord[] {
   if (!attendanceDataCache) {
     console.log('[MockDataCache] Generating attendance data for the first time...');
     attendanceDataCache = generator();
@@ -35,7 +35,7 @@ export function getCachedAttendanceData(generator: () => any[]): any[] {
 /**
  * 休暇データキャッシュを取得または生成
  */
-export function getCachedLeaveData(generator: () => any[]): any[] {
+export function getCachedLeaveData(generator: () => LeaveRequest[]): LeaveRequest[] {
   if (!leaveDataCache) {
     console.log('[MockDataCache] Generating leave data for the first time...');
     leaveDataCache = generator();

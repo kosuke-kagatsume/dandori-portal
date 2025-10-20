@@ -100,7 +100,7 @@ function Dashboard() {
   value={8}
   icon={AlertCircle}
   gradient="from-amber-50 to-amber-100"
-  onClick={() => router.push('/approvals')}
+  onClick={() => router.push('/workflow')}
 />
 ```
 

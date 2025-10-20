@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { generateMockUsers } from '@/lib/mock-data';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import {
   MoreHorizontal,
   Plus,
@@ -49,6 +50,8 @@ const UserFormDialog = dynamic(() => import('@/features/users/user-form-dialog')
 const RetireUserDialog = dynamic(() => import('@/features/users/retire-user-dialog').then(mod => ({ default: mod.RetireUserDialog })), { ssr: false });
 
 export default function UsersPage() {
+  const mounted = useIsMounted();
+
   // const t = useTranslations('users');
   const t = (key: string) => {
     const translations: Record<string, string> = {
@@ -88,7 +91,7 @@ export default function UsersPage() {
     // ユーザーストアが空の場合、デモデータを生成
     if (users.length === 0) {
       console.log('[Demo] Generating initial user data...');
-      const mockUsers = generateMockUsers(15); // 15人のデモユーザーを生成
+      const mockUsers = generateMockUsers(50); // 50人のデモユーザーを生成
       setUsers(mockUsers);
     }
     setLoading(false);
@@ -458,6 +461,11 @@ export default function UsersPage() {
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  // SSR時は何も表示しない
+  if (!mounted) {
+    return null;
   }
 
   return (

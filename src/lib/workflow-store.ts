@@ -346,7 +346,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
               timestamp: now,
               read: false,
               important: true,
-              actionUrl: `/ja/approval`,
+              actionUrl: `/ja/workflow`,
               userId: firstStep.approverId,
             });
           }

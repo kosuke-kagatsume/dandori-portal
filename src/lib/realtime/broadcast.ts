@@ -13,7 +13,7 @@ export type BroadcastEventType =
   | 'workflow:returned'
   | 'workflow:updated';
 
-export interface BroadcastEvent<T = any> {
+export interface BroadcastEvent<T = unknown> {
   type: BroadcastEventType;
   data: T;
   timestamp: number;
@@ -21,7 +21,7 @@ export interface BroadcastEvent<T = any> {
 
 export class RealtimeBroadcast {
   private channel: BroadcastChannel | null = null;
-  private listeners: Map<BroadcastEventType, Set<(data: any) => void>> = new Map();
+  private listeners: Map<BroadcastEventType, Set<(data: unknown) => void>> = new Map();
 
   constructor(channelName: string = 'dandori-portal') {
     // SSR対応: ブラウザ環境でのみBroadcastChannelを使用
@@ -67,7 +67,7 @@ export class RealtimeBroadcast {
   /**
    * 特定のイベントリスナーを削除
    */
-  off(type: BroadcastEventType, callback: (data: any) => void) {
+  off(type: BroadcastEventType, callback: (data: unknown) => void) {
     const callbacks = this.listeners.get(type);
     if (callbacks) {
       callbacks.delete(callback);

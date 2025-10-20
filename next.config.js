@@ -16,9 +16,16 @@ const nextConfig = {
 
   // React Strict Mode でパフォーマンス問題を検出
   reactStrictMode: true,
-  
+
   // SWC による高速ビルドとミニファイ
   swcMinify: true,
+
+  // Production環境でconsole.logを自動削除
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'], // errorとwarnは残す
+    } : false,
+  },
   
   // gzip/brotli 圧縮を有効化
   compress: true,
@@ -73,7 +80,7 @@ const nextConfig = {
   },
   
   // Webpack設定のカスタマイズ
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // プロダクションビルドでの最適化
     if (!isServer) {
       // クライアント側のコード分割最適化
@@ -81,33 +88,51 @@ const nextConfig = {
         ...config.optimization,
         splitChunks: {
           chunks: 'all',
+          maxSize: 244000, // 244KB以上のチャンクは分割
           cacheGroups: {
-            // 共通のvendorライブラリを分割
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              priority: 10,
-              reuseExistingChunk: true,
-            },
-            // React関連を別チャンクに
+            // React関連を別チャンクに（最高優先度）
             react: {
-              test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-              name: 'react',
-              priority: 20,
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+              name: 'react-vendor',
+              priority: 30,
               reuseExistingChunk: true,
+              enforce: true,
+            },
+            // チャートライブラリを完全分離（高優先度）
+            charts: {
+              test: /[\\/]node_modules[\\/](recharts|d3-.*|victory-.*)[\\/]/,
+              name: 'charts-vendor',
+              priority: 25,
+              reuseExistingChunk: true,
+              enforce: true,
+            },
+            // PDF生成ライブラリを分離
+            pdf: {
+              test: /[\\/]node_modules[\\/](jspdf|html2canvas)[\\/]/,
+              name: 'pdf-vendor',
+              priority: 25,
+              reuseExistingChunk: true,
+              enforce: true,
             },
             // UI系ライブラリを分割
             ui: {
               test: /[\\/]node_modules[\\/](@radix-ui|lucide-react)[\\/]/,
-              name: 'ui',
-              priority: 15,
+              name: 'ui-vendor',
+              priority: 20,
               reuseExistingChunk: true,
             },
-            // チャートライブラリを分割
-            charts: {
-              test: /[\\/]node_modules[\\/](recharts|d3-.*)[\\/]/,
-              name: 'charts',
-              priority: 15,
+            // Zustand & 状態管理
+            state: {
+              test: /[\\/]node_modules[\\/](zustand|immer)[\\/]/,
+              name: 'state-vendor',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            // その他のvendor（低優先度）
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              priority: 10,
               reuseExistingChunk: true,
             },
             // 共通コンポーネント

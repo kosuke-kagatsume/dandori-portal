@@ -45,7 +45,6 @@ const getNavigation = (locale: string, currentUser: User | null) => {
     { key: 'attendance', href: `/${locale}/attendance`, icon: Clock, menuKey: 'attendance' as MenuKey },
     { key: 'leave', href: `/${locale}/leave`, icon: Calendar, menuKey: 'leave' as MenuKey },
     { key: 'workflows', href: `/${locale}/workflow`, icon: GitBranch, menuKey: 'workflow' as MenuKey },
-    { key: 'approval', href: `/${locale}/approval`, icon: ClipboardCheck, menuKey: 'approval' as MenuKey },
     { key: 'payroll', href: `/${locale}/payroll`, icon: Calculator, menuKey: 'payroll' as MenuKey },
     { key: 'evaluation', href: `/${locale}/evaluation`, icon: Star, menuKey: 'evaluation' as MenuKey },
     { key: 'organization', href: `/${locale}/organization`, icon: Building2, menuKey: 'organization' as MenuKey },

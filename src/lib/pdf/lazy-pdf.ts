@@ -3,22 +3,25 @@
  * jsPDFは大きなライブラリなので、使用時のみロードする
  */
 
-export async function generatePayrollPDFLazy(data: any) {
+import type { PayrollData, BonusData } from '@/types/pdf';
+import type { LeaveRequest, PerformanceEvaluation } from '@/types';
+
+export async function generatePayrollPDFLazy(data: PayrollData) {
   const { generatePayrollPDF } = await import('./payroll-pdf');
   return generatePayrollPDF(data);
 }
 
-export async function generateBonusPDFLazy(data: any) {
+export async function generateBonusPDFLazy(data: BonusData) {
   const { generateBonusPDF } = await import('./payroll-pdf');
   return generateBonusPDF(data);
 }
 
-export async function generateLeavePDFLazy(data: any) {
+export async function generateLeavePDFLazy(data: LeaveRequest[]) {
   const { generateLeavePDF } = await import('./leave-pdf');
   return generateLeavePDF(data);
 }
 
-export async function generateEvaluationPDFLazy(data: any) {
+export async function generateEvaluationPDFLazy(data: PerformanceEvaluation) {
   const { generateEvaluationPDF } = await import('./evaluation-pdf');
   return generateEvaluationPDF(data);
 }

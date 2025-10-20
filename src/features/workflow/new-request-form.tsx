@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { WorkflowType, WorkflowRequest, ApproverRole } from '@/lib/workflow-store';
@@ -115,6 +115,19 @@ const remoteWorkSchema = z.object({
   securityMeasures: z.string().min(10, 'セキュリティ対策を入力してください'),
 });
 
+// 各スキーマの型を推論
+type LeaveRequestFormData = z.infer<typeof leaveRequestSchema>;
+type ExpenseClaimFormData = z.infer<typeof expenseClaimSchema>;
+type OvertimeRequestFormData = z.infer<typeof overtimeRequestSchema>;
+type BusinessTripFormData = z.infer<typeof businessTripSchema>;
+type RemoteWorkFormData = z.infer<typeof remoteWorkSchema>;
+
+// フォームコンポーネントのprops型
+interface FormComponentProps<T = Record<string, unknown>> {
+  form: UseFormReturn<T>;
+  onFlowUpdate: (type: WorkflowType, details: Record<string, unknown>) => void;
+}
+
 export function NewRequestForm({
   open,
   onOpenChange,
@@ -164,7 +177,7 @@ export function NewRequestForm({
   });
 
   // 承認フローの自動設定
-  const setupApprovalFlow = (type: WorkflowType, details: any) => {
+  const setupApprovalFlow = (type: WorkflowType, details: Record<string, unknown>) => {
     const flow: Array<{ role: ApproverRole; name: string; required: boolean }> = [];
     
     // 直属上司は必須
@@ -246,7 +259,7 @@ export function NewRequestForm({
     return roleToUserIdMap[role] || '2'; // デフォルトはmanager
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: Record<string, unknown>) => {
     try {
       // 仮のユーザーID（本番では認証から取得）
       const userId = currentUserId || 'demo-user-id';
@@ -300,7 +313,7 @@ export function NewRequestForm({
     }
   };
 
-  const getRequestTitle = (type: WorkflowType, data: any): string => {
+  const getRequestTitle = (type: WorkflowType, data: Record<string, unknown>): string => {
     switch (type) {
       case 'leave_request':
         return `${data.leaveType === 'paid_leave' ? '有給' : ''}休暇申請（${format(data.startDate, 'MM/dd')}〜${format(data.endDate, 'MM/dd')}）`;
@@ -317,7 +330,7 @@ export function NewRequestForm({
     }
   };
 
-  const getPriority = (type: WorkflowType, data: any): 'low' | 'normal' | 'high' | 'urgent' => {
+  const getPriority = (type: WorkflowType, data: Record<string, unknown>): 'low' | 'normal' | 'high' | 'urgent' => {
     switch (type) {
       case 'leave_request':
         const daysUntilLeave = differenceInDays(data.startDate, new Date());
@@ -554,7 +567,7 @@ export function NewRequestForm({
 }
 
 // 休暇申請フォーム
-function LeaveRequestForm({ form, onFlowUpdate }: any) {
+function LeaveRequestForm({ form, onFlowUpdate }: FormComponentProps<LeaveRequestFormData>) {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -703,7 +716,7 @@ function LeaveRequestForm({ form, onFlowUpdate }: any) {
 }
 
 // 経費申請フォーム
-function ExpenseClaimForm({ form, onFlowUpdate }: any) {
+function ExpenseClaimForm({ form, onFlowUpdate }: FormComponentProps<ExpenseClaimFormData>) {
   const [expenseDate, setExpenseDate] = useState<Date>();
   const [amount, setAmount] = useState<number>(0);
 
@@ -834,7 +847,7 @@ function ExpenseClaimForm({ form, onFlowUpdate }: any) {
 }
 
 // 残業申請フォーム
-function OvertimeRequestForm({ form, onFlowUpdate }: any) {
+function OvertimeRequestForm({ form, onFlowUpdate }: FormComponentProps<OvertimeRequestFormData>) {
   const [overtimeDate, setOvertimeDate] = useState<Date>();
   const [hours, setHours] = useState<number>(0);
 
@@ -947,7 +960,7 @@ function OvertimeRequestForm({ form, onFlowUpdate }: any) {
 }
 
 // 出張申請フォーム
-function BusinessTripForm({ form, onFlowUpdate }: any) {
+function BusinessTripForm({ form, onFlowUpdate }: FormComponentProps<BusinessTripFormData>) {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [estimatedCost, setEstimatedCost] = useState<number>(0);
@@ -1090,7 +1103,7 @@ function BusinessTripForm({ form, onFlowUpdate }: any) {
 }
 
 // 購買申請フォーム
-function PurchaseRequestForm({ form, onFlowUpdate }: any) {
+function PurchaseRequestForm({ form, onFlowUpdate }: FormComponentProps) {
   const [estimatedCost, setEstimatedCost] = useState<number>(0);
 
   return (
@@ -1176,7 +1189,7 @@ function PurchaseRequestForm({ form, onFlowUpdate }: any) {
 }
 
 // 書類承認フォーム
-function DocumentApprovalForm({ form, onFlowUpdate }: any) {
+function DocumentApprovalForm({ form, onFlowUpdate }: FormComponentProps) {
   return (
     <Card>
       <CardHeader>
@@ -1235,7 +1248,7 @@ function DocumentApprovalForm({ form, onFlowUpdate }: any) {
 }
 
 // デフォルトフォーム
-function DefaultRequestForm({ form }: any) {
+function DefaultRequestForm({ form }: { form: UseFormReturn }) {
   return (
     <Card>
       <CardHeader>
@@ -1266,7 +1279,7 @@ function DefaultRequestForm({ form }: any) {
 }
 
 // リモートワーク申請フォーム
-function RemoteWorkForm({ form, onFlowUpdate }: any) {
+function RemoteWorkForm({ form, onFlowUpdate }: FormComponentProps<RemoteWorkFormData>) {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
 

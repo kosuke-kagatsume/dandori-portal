@@ -88,3 +88,63 @@ export function getContrastInfo(foreground: string, background: string): Contras
     passAAA_large: meetsWCAG_AAA(foreground, background, true),
   };
 }
+
+/**
+ * コントラスト検証結果
+ */
+export interface ContrastResult {
+  ratio: number;
+  wcagAA: {
+    normal: boolean;
+    large: boolean;
+  };
+  wcagAAA: {
+    normal: boolean;
+    large: boolean;
+  };
+  foreground: string;
+  background: string;
+}
+
+/**
+ * Dandori Portalの色の組み合わせを検証
+ */
+export function validateDandoriColors(): Record<string, ContrastResult> {
+  // ブラウザ環境でのみ実行
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  // Dandori Portalのカラーパレット
+  const colorPairs = {
+    'Primary on Background': { fg: '#0f172a', bg: '#ffffff' },
+    'Secondary on Background': { fg: '#64748b', bg: '#ffffff' },
+    'Accent on Background': { fg: '#3b82f6', bg: '#ffffff' },
+    'Primary on Card': { fg: '#0f172a', bg: '#f8fafc' },
+    'Link on Background': { fg: '#2563eb', bg: '#ffffff' },
+    'Success on Background': { fg: '#16a34a', bg: '#ffffff' },
+    'Warning on Background': { fg: '#ea580c', bg: '#ffffff' },
+    'Error on Background': { fg: '#dc2626', bg: '#ffffff' },
+  };
+
+  const results: Record<string, ContrastResult> = {};
+
+  for (const [name, colors] of Object.entries(colorPairs)) {
+    const ratio = getContrastRatio(colors.fg, colors.bg);
+    results[name] = {
+      ratio: Math.round(ratio * 100) / 100,
+      wcagAA: {
+        normal: meetsWCAG_AA(colors.fg, colors.bg, false),
+        large: meetsWCAG_AA(colors.fg, colors.bg, true),
+      },
+      wcagAAA: {
+        normal: meetsWCAG_AAA(colors.fg, colors.bg, false),
+        large: meetsWCAG_AAA(colors.fg, colors.bg, true),
+      },
+      foreground: colors.fg,
+      background: colors.bg,
+    };
+  }
+
+  return results;
+}

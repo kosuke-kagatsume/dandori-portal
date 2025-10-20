@@ -17,22 +17,36 @@ import { useOrganizationStore } from '@/lib/store/organization-store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { useAuditStore } from '@/lib/store/audit-store';
 
+// 各ストアの型を推論
+type UserStoreState = ReturnType<typeof useUserStore.getState>;
+type AttendanceStoreState = ReturnType<typeof useAttendanceHistoryStore.getState>;
+type LeaveStoreState = ReturnType<typeof useLeaveManagementStore.getState>;
+type PayrollStoreState = ReturnType<typeof usePayrollStore.getState>;
+type WorkflowStoreState = ReturnType<typeof useWorkflowStore.getState>;
+type SaaSStoreState = ReturnType<typeof useSaaSStore.getState>;
+type PCStoreState = ReturnType<typeof usePCStore.getState>;
+type VehicleStoreState = ReturnType<typeof useVehicleStore.getState>;
+type EvaluationStoreState = ReturnType<typeof usePerformanceEvaluationStore.getState>;
+type OrganizationStoreState = ReturnType<typeof useOrganizationStore.getState>;
+type SettingsStoreState = ReturnType<typeof useCompanySettingsStore.getState>;
+type AuditStoreState = ReturnType<typeof useAuditStore.getState>;
+
 export interface BackupData {
   version: string;
   timestamp: string;
   stores: {
-    users: any;
-    attendance: any;
-    leave: any;
-    payroll: any;
-    workflow: any;
-    saas: any;
-    pc: any;
-    vehicle: any;
-    evaluation: any;
-    organization: any;
-    settings: any;
-    audit: any;
+    users: UserStoreState;
+    attendance: AttendanceStoreState;
+    leave: LeaveStoreState;
+    payroll: PayrollStoreState;
+    workflow: WorkflowStoreState;
+    saas: SaaSStoreState;
+    pc: PCStoreState;
+    vehicle: VehicleStoreState;
+    evaluation: EvaluationStoreState;
+    organization: OrganizationStoreState;
+    settings: SettingsStoreState;
+    audit: AuditStoreState;
   };
 }
 
@@ -220,20 +234,29 @@ export function downloadAllDataAsCSV() {
 /**
  * バックアップデータの検証
  */
-export function validateBackup(backup: any): { valid: boolean; errors: string[] } {
+export function validateBackup(backup: unknown): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (!backup.version) {
+  // 型ガード: backupがオブジェクトかチェック
+  if (typeof backup !== 'object' || backup === null) {
+    errors.push('バックアップデータが不正です');
+    return { valid: false, errors };
+  }
+
+  const data = backup as Record<string, unknown>;
+
+  if (!data.version) {
     errors.push('バージョン情報が見つかりません');
   }
 
-  if (!backup.timestamp) {
+  if (!data.timestamp) {
     errors.push('タイムスタンプが見つかりません');
   }
 
-  if (!backup.stores) {
+  if (!data.stores || typeof data.stores !== 'object') {
     errors.push('ストアデータが見つかりません');
   } else {
+    const stores = data.stores as Record<string, unknown>;
     const requiredStores = [
       'users',
       'attendance',
@@ -250,7 +273,7 @@ export function validateBackup(backup: any): { valid: boolean; errors: string[] 
     ];
 
     requiredStores.forEach((store) => {
-      if (!backup.stores[store]) {
+      if (!stores[store]) {
         errors.push(`${store}データが見つかりません`);
       }
     });

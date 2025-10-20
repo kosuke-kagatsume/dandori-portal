@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import type { User, Session } from '@supabase/supabase-js';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -46,7 +46,7 @@ export function useAuth() {
               department: demoUser.user_metadata.department,
               role: demoUser.user_metadata.role,
             },
-          } as any);
+          } as User);
         }
       } else {
         // 本番モードの場合のみSupabaseを使用
@@ -55,7 +55,7 @@ export function useAuth() {
         setUser(user);
 
         // 認証状態の変更を監視
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: any) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
           setUser(session?.user ?? null);
 
           if (!session?.user) {

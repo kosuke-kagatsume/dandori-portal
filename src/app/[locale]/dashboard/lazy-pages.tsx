@@ -35,7 +35,6 @@ export const LazyUsersPage = lazy(() => import('../users/page'));
 export const LazyMembersPage = lazy(() => import('../members/page'));
 export const LazyAttendancePage = lazy(() => import('../attendance/page'));
 export const LazyLeavePage = lazy(() => import('../leave/page'));
-export const LazyApprovalPage = lazy(() => import('../approval/page'));
 export const LazyWorkflowPage = lazy(() => import('../workflow/page'));
 export const LazySettingsPage = lazy(() => import('../settings/page'));
 
@@ -87,14 +86,6 @@ export function LazyLeavePageWrapper() {
   return (
     <SuspenseWrapper>
       <LazyLeavePage />
-    </SuspenseWrapper>
-  );
-}
-
-export function LazyApprovalPageWrapper() {
-  return (
-    <SuspenseWrapper>
-      <LazyApprovalPage />
     </SuspenseWrapper>
   );
 }

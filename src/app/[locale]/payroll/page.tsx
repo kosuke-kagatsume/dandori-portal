@@ -13,7 +13,8 @@ import { MountGate } from '@/components/common/MountGate';
 import { exportPayrollToCSV, exportBonusToCSV } from '@/lib/csv/csv-export';
 import { YearEndAdjustmentForm } from '@/components/features/payroll/year-end-adjustment-form';
 import { YearEndAdjustmentResultDisplay } from '@/components/features/payroll/year-end-adjustment-result';
-import type { YearEndAdjustmentDeductions } from '@/lib/payroll/year-end-adjustment-types';
+import type { YearEndAdjustmentDeductions, YearEndAdjustmentResult } from '@/lib/payroll/year-end-adjustment-types';
+import type { PayrollCalculation, BonusCalculation } from '@/lib/payroll/types';
 import {
   Table,
   TableBody,
@@ -49,18 +50,18 @@ function ResetPayrollDataButton() {
 
 export default function PayrollPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('2025-01');
-  const [selectedCalculation, setSelectedCalculation] = useState<any>(null);
+  const [selectedCalculation, setSelectedCalculation] = useState<PayrollCalculation | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // 賞与関連のstate
   const [selectedBonusPeriod, setSelectedBonusPeriod] = useState('2024-12');
   const [selectedBonusType, setSelectedBonusType] = useState<'summer' | 'winter' | 'special'>('winter');
-  const [selectedBonusCalculation, setSelectedBonusCalculation] = useState<any>(null);
+  const [selectedBonusCalculation, setSelectedBonusCalculation] = useState<BonusCalculation | null>(null);
 
   // 年末調整関連のstate
   const [selectedYear, setSelectedYear] = useState(2024);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('demo-user-1');
-  const [yearEndResult, setYearEndResult] = useState<any>(null);
+  const [yearEndResult, setYearEndResult] = useState<YearEndAdjustmentResult | null>(null);
 
   const { toast } = useToast();
 
@@ -94,7 +95,7 @@ export default function PayrollPage() {
 
       // 給与計算データがない場合、自動計算を実行
       const calculations = s.calculations || [];
-      const currentPeriodCalcs = calculations.filter((c: any) => c.period === selectedPeriod);
+      const currentPeriodCalcs = calculations.filter((c) => c.period === selectedPeriod);
       if (currentPeriodCalcs.length === 0) {
         console.log('[PayrollPage] No calculations found for', selectedPeriod, ', auto-running payroll...');
         setTimeout(async () => {
@@ -116,13 +117,13 @@ export default function PayrollPage() {
   const averageSalary = calculationResults.length > 0 ? totalGross / calculationResults.length : 0;
 
   // 詳細表示
-  const handleViewDetails = (calculation: any) => {
+  const handleViewDetails = (calculation: PayrollCalculation) => {
     setSelectedCalculation(calculation);
     setIsDetailModalOpen(true);
   };
 
   // 給与明細PDFダウンロード
-  const handleDownloadPayrollPDF = async (calc: any) => {
+  const handleDownloadPayrollPDF = async (calc: PayrollCalculation) => {
     try {
       // PDFライブラリを遅延読み込み（初回クリック時のみロード）
       const { generatePayrollPDF } = await import('@/lib/pdf/payroll-pdf');
@@ -167,7 +168,7 @@ export default function PayrollPage() {
   };
 
   // 賞与明細PDFダウンロード
-  const handleDownloadBonusPDF = async (bonus: any) => {
+  const handleDownloadBonusPDF = async (bonus: BonusCalculation) => {
     try {
       // PDFライブラリを遅延読み込み（初回クリック時のみロード）
       const { generateBonusPDF } = await import('@/lib/pdf/payroll-pdf');
