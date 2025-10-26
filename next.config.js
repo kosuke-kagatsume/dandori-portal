@@ -2,18 +2,8 @@
 const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
-// Bundle Analyzer設定
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-})
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 環境変数を明示的にランタイムに公開（Vercelでのアクセス確保）
-  env: {
-    DATABASE_URL: process.env.DATABASE_URL,
-  },
-
   // React Strict Mode でパフォーマンス問題を検出
   reactStrictMode: true,
 
@@ -84,40 +74,7 @@ const nextConfig = {
     // Vercelデプロイの安定性のため、デフォルト設定を使用
     return config;
   },
-  
-  // セキュリティとキャッシュヘッダー
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-        ],
-      },
-      // 静的ファイルの長期キャッシュ
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-    ];
-  },
 };
 
 // next-intl有効化
-module.exports = withNextIntl(withBundleAnalyzer(nextConfig));
+module.exports = withNextIntl(nextConfig);
