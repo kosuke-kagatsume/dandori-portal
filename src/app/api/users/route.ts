@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const tenantId = searchParams.get('tenantId');
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (status && status !== 'all') {
       where.status = status;

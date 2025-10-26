@@ -2,13 +2,13 @@
 
 import { UseFormRegister, FieldErrors } from 'react-hook-form';
 
-interface InputFieldProps {
+interface InputFieldProps<T = Record<string, unknown>> {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
   placeholder?: string;
-  register: UseFormRegister<any>;
+  register: UseFormRegister<T>;
   errors?: FieldErrors;
   helpText?: string;
 }
@@ -25,14 +25,14 @@ function getNestedError(errors: FieldErrors | undefined, path: string) {
   if (!errors) return undefined;
 
   const keys = path.split('.');
-  let current: any = errors;
+  let current: Record<string, unknown> = errors as Record<string, unknown>;
 
   for (const key of keys) {
     if (current?.[key] === undefined) return undefined;
-    current = current[key];
+    current = current[key] as Record<string, unknown>;
   }
 
-  return current;
+  return current as { message?: string };
 }
 
 /**

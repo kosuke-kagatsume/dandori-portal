@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate');
     const status = searchParams.get('status');
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (userId) {
       where.userId = userId;

@@ -194,7 +194,7 @@ export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProp
             </div>
 
             {/* タイプフィルター */}
-            <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
+            <Select value={filterType} onValueChange={(value) => setFilterType(value as 'all' | 'transfer' | 'promotion' | 'demotion' | 'role_change')}>
               <SelectTrigger>
                 <SelectValue placeholder="異動タイプ" />
               </SelectTrigger>
@@ -208,7 +208,7 @@ export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProp
             </Select>
 
             {/* 期間フィルター */}
-            <Select value={filterPeriod} onValueChange={(value: any) => setFilterPeriod(value)}>
+            <Select value={filterPeriod} onValueChange={(value) => setFilterPeriod(value as 'all' | '1month' | '3months' | '6months' | '1year')}>
               <SelectTrigger>
                 <SelectValue placeholder="期間" />
               </SelectTrigger>

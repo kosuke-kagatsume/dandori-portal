@@ -73,7 +73,7 @@ export async function PATCH(
     }
 
     // 更新データの準備
-    const updateData: any = { ...body };
+    const updateData: Record<string, unknown> = { ...body };
 
     // DateTime フィールドの変換
     if (body.date) {

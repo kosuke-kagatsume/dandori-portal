@@ -333,7 +333,7 @@ export function NotificationPanel({
           </div>
         </SheetHeader>
 
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="h-full">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as 'all' | 'unread' | 'archived')} className="h-full">
           <TabsList className="w-full rounded-none bg-gray-100 dark:bg-gray-800 p-1">
             <TabsTrigger value="all" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               すべて

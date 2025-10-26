@@ -2,6 +2,8 @@
  * PDF生成用の型定義
  */
 
+import type { jsPDF } from 'jspdf';
+
 // 給与明細データ
 export interface PayrollData {
   employeeName: string;
@@ -59,7 +61,7 @@ export interface WithholdingSlipData {
 export interface PDFGenerationResult {
   success: boolean;
   error?: string;
-  pdf?: any; // jsPDF instance
+  pdf?: jsPDF;
 }
 
 // 共通PDFセクション

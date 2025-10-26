@@ -161,7 +161,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       );
 
       if (matchedCommand) {
-        router.push(matchedCommand.href as any);
+        router.push(matchedCommand.href);
         setShortcutBuffer('');
         return;
       }
@@ -186,9 +186,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   const runCommand = (command: typeof navigationCommands[0] | typeof actionCommands[0]) => {
     onOpenChange(false);
-    
+
     if ('href' in command) {
-      router.push(command.href as any);
+      router.push(command.href);
     } else if ('action' in command) {
       command.action();
     }

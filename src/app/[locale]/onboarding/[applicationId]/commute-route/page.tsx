@@ -7,7 +7,7 @@ import {
   FormSection,
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { useCommuteRouteForm } from '@/features/onboarding/hooks/useCommuteRouteForm';
+import { useCommuteRouteForm, type CommuteRouteFormInput } from '@/features/onboarding/hooks/useCommuteRouteForm';
 
 /**
  * Commute Route Form Page
@@ -31,7 +31,7 @@ export default function CommuteRouteFormPage() {
   const commuteStatus = watch('commuteStatus') as 'commute' | 'remote' | 'no-office';
   const transportMethod = watch('transportMethod') as 'public' | 'private' | '';
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: CommuteRouteFormInput) => {
     try {
       updateForm(data);
       await submitForm();

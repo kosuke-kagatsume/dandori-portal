@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useBasicInfoForm } from '@/features/onboarding/hooks/useBasicInfoForm';
+import { useBasicInfoForm, type BasicInfoFormInput } from '@/features/onboarding/hooks/useBasicInfoForm';
 import {
   InputField,
   SelectField,
@@ -89,7 +89,7 @@ export default function BasicInfoFormPage() {
   );
   const sameAsCurrent = watch('residentAddress.sameAsCurrent');
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: BasicInfoFormInput) => {
     try {
       console.log('[BasicInfoForm] Submitting with data:', data);
       console.log('[BasicInfoForm] Validation errors:', errors);

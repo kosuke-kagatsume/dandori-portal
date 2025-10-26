@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  Users, 
-  UserCheck, 
-  Clock, 
+import {
+  Users,
+  UserCheck,
+  Clock,
   AlertCircle,
   Calendar,
   TrendingUp,
@@ -22,6 +22,7 @@ import {
   FileText,
   BarChart3,
   Settings,
+  type LucideIcon,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
@@ -46,7 +47,7 @@ const KPICard = memo(({
   title: string;
   value: string | number;
   trend?: string;
-  icon: any;
+  icon: LucideIcon;
   gradient: string;
   trendValue?: string;
 }) => (

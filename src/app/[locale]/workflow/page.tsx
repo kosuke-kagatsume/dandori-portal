@@ -39,6 +39,7 @@ import {
   Home,
   Building2,
   Laptop,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1231,7 +1232,7 @@ function WorkflowCard({
 
 // 空状態コンポーネント
 function EmptyState({ icon: Icon, title, description }: {
-  icon: any;
+  icon: LucideIcon;
   title: string;
   description: string;
 }) {

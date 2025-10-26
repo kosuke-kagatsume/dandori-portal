@@ -269,8 +269,8 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
                 ステータス
               </Label>
               <div className="col-span-3">
-                <Select 
-                  onValueChange={(value) => setValue('status', value as any)}
+                <Select
+                  onValueChange={(value) => setValue('status', value as 'active' | 'inactive' | 'suspended' | 'retired')}
                   defaultValue={user?.status || 'active'}
                 >
                   <SelectTrigger>

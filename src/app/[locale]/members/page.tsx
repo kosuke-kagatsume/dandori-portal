@@ -329,7 +329,7 @@ export default function MembersPage() {
             />
           </div>
           
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as MemberStatus | 'all')}>
             <SelectTrigger className="w-32">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="ステータス" />
@@ -361,7 +361,7 @@ export default function MembersPage() {
           <span className="text-sm text-muted-foreground">
             最終更新: {lastUpdated.toLocaleTimeString('ja-JP')}
           </span>
-          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as any)}>
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'card' | 'table')}>
             <TabsList>
               <TabsTrigger value="card" className="px-3">
                 <LayoutGrid className="h-4 w-4" />

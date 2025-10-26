@@ -8,7 +8,7 @@ import {
   FormSection,
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { useFamilyInfoForm } from '@/features/onboarding/hooks/useFamilyInfoForm';
+import { useFamilyInfoForm, type FamilyInfoFormInput } from '@/features/onboarding/hooks/useFamilyInfoForm';
 
 /**
  * Family Info Form Page
@@ -57,7 +57,7 @@ export default function FamilyInfoFormPage() {
     });
   };
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: FamilyInfoFormInput) => {
     try {
       updateForm(data);
       await submitForm();

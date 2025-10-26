@@ -7,7 +7,7 @@ import {
   FormSection,
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
-import { useBankAccountForm } from '@/features/onboarding/hooks/useBankAccountForm';
+import { useBankAccountForm, type BankAccountFormInput } from '@/features/onboarding/hooks/useBankAccountForm';
 
 /**
  * Bank Account Form Page
@@ -27,7 +27,7 @@ export default function BankAccountFormPage() {
 
   const { register, handleSubmit, errors, updateForm, submitForm } = useBankAccountForm();
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: BankAccountFormInput) => {
     try {
       updateForm(data);
       await submitForm();
