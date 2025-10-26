@@ -7,6 +7,9 @@ import {
   type BankAccountFormInput,
 } from '@/lib/validation/onboarding-schemas';
 
+// Re-export type for external use
+export type { BankAccountFormInput };
+
 /**
  * useBankAccountForm Hook
  *

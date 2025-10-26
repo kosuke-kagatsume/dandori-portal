@@ -12,7 +12,6 @@ import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGlobalShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { SkipLink } from '@/components/a11y/skip-link';
-import { PageTransition } from '@/components/motion/page-transition';
 import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 
 interface AppShellProps {
@@ -111,9 +110,7 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Page Content - メインコンテンツ */}
         <main id="main-content" className="flex-1 overflow-auto p-6" role="main">
-          <PageTransition>
-            {children}
-          </PageTransition>
+          {children}
         </main>
       </div>
 

@@ -21,10 +21,6 @@ import { PerformanceEvaluationResult } from '@/components/features/payroll/perfo
 import { exportEvaluationToCSV } from '@/lib/csv/csv-export';
 import {
   Star,
-  TrendingUp,
-  Users,
-  Award,
-  Target,
   Filter,
   Plus,
   Eye,
@@ -82,11 +78,7 @@ export default function EvaluationPage() {
     evaluations,
     createEvaluation,
     updateEvaluation,
-    submitEvaluation,
     approveEvaluation,
-    getEvaluationsByDepartment,
-    getEvaluationsByPeriod,
-    getEvaluationsByStatus,
     getEvaluationStats,
     initializeSampleData,
   } = usePerformanceEvaluationStore();
@@ -142,7 +134,7 @@ export default function EvaluationPage() {
       });
       setIsCreating(false);
       setActiveTab('list');
-    } catch (error) {
+    } catch {
       toast({
         title: 'エラー',
         description: '評価の作成中にエラーが発生しました。',
@@ -166,7 +158,7 @@ export default function EvaluationPage() {
       });
       setSelectedEvaluation(null);
       setActiveTab('list');
-    } catch (error) {
+    } catch {
       toast({
         title: 'エラー',
         description: '評価の更新中にエラーが発生しました。',
@@ -196,7 +188,7 @@ export default function EvaluationPage() {
         title: 'PDFをダウンロードしました',
         description: `${evaluation.employeeName}さんの評価結果PDFをダウンロードしました。`,
       });
-    } catch (error) {
+    } catch {
       toast({
         title: 'エラー',
         description: 'PDFのダウンロードに失敗しました。',

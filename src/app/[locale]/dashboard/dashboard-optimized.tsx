@@ -1,10 +1,8 @@
 'use client';
 
 import { Suspense, lazy, memo, useMemo, useCallback } from 'react';
-import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,23 +11,16 @@ import { StaggerContainer, StaggerItem } from '@/components/motion/page-transiti
 import {
   Users,
   UserCheck,
-  Clock,
   AlertCircle,
   Calendar,
   TrendingUp,
-  Activity,
-  Wifi,
-  WifiOff,
   ShieldCheck,
-  FileText,
-  BarChart3,
-  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import { useCachedData } from '@/lib/cache-service';
-import { performanceMonitor, usePerformanceTracking } from '@/lib/performance';
+import { usePerformanceTracking } from '@/lib/performance';
 import type { UserRole } from '@/types';
 
 // 重いコンポーネントを動的インポート
@@ -44,14 +35,12 @@ const KPICard = memo(({
   trend,
   icon: Icon,
   gradient,
-  trendValue
 }: {
   title: string;
   value: string | number;
   trend?: string;
   icon: LucideIcon;
   gradient: string;
-  trendValue?: string;
 }) => (
   <HoverCard hoverScale={1.03}>
     <Card className={`relative overflow-hidden border-0 shadow-lg transition-all duration-300 bg-gradient-to-br ${gradient}`}>

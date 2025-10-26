@@ -7,6 +7,9 @@ import {
   type FamilyInfoFormInput,
 } from '@/lib/validation/onboarding-schemas';
 
+// Re-export type for external use
+export type { FamilyInfoFormInput };
+
 /**
  * useFamilyInfoForm Hook
  *

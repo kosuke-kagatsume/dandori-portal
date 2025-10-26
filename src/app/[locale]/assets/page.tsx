@@ -20,14 +20,9 @@ import {
   Plus,
   AlertTriangle,
   Wrench,
-  Users,
-  TrendingUp,
-  Calendar,
   DollarSign,
-  Filter,
   Search,
   Trash2,
-  Monitor,
   Download,
 } from 'lucide-react';
 import type { Vehicle, DeadlineWarning, PCAsset, Vendor } from '@/types/asset';

@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense, lazy, memo, useMemo } from 'react';
+import { useState, useEffect, Suspense, lazy, memo, useMemo } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
-import { generateAttendanceData } from '@/lib/mock-data';
-import { generateRealisticAttendanceData, employees } from '@/lib/realistic-mock-data';
+import { generateRealisticAttendanceData } from '@/lib/realistic-mock-data';
 import { useAttendanceStore } from '@/lib/attendance-store';
 import {
   Clock,
@@ -32,13 +31,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { OptimizedDataTable } from '@/components/ui/common/optimized-data-table';
-import { CheckInButton } from '@/features/attendance/check-in-button';
-import { AdvancedCheckIn } from '@/features/attendance/advanced-check-in';
-import { AttendanceCalendar } from '@/features/attendance/attendance-calendar';
 import { StatCardsLoadingSkeleton, TableLoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { toast } from 'sonner';
 import { exportAttendanceToCSV } from '@/lib/csv/csv-export';
@@ -451,7 +446,7 @@ export default function AttendancePage() {
     {
       id: 'actions',
       header: '操作',
-      cell: ({ row }) => (
+      cell: () => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">

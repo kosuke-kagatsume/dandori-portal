@@ -7,6 +7,9 @@ import {
   type BasicInfoFormInput,
 } from '@/lib/validation/onboarding-schemas';
 
+// Re-export type for external use
+export type { BasicInfoFormInput };
+
 /**
  * useBasicInfoForm Hook
  *

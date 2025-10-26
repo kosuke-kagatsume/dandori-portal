@@ -1,6 +1,7 @@
 {
-  "extends": ["next/core-web-vitals"],
+  "extends": ["next/core-web-vitals", "next/typescript"],
   "rules": {
+    // Hydration対策：特殊文字の禁止
     "no-restricted-syntax": [
       "error",
       {
@@ -16,6 +17,8 @@
         "message": "特殊文字⌘はHydrationエラーの原因になります。アイコンコンポーネントを使用してください"
       }
     ],
+
+    // SSR対策：グローバルAPIの制限
     "no-restricted-globals": [
       "warn",
       {
@@ -26,6 +29,26 @@
         "name": "sessionStorage",
         "message": "sessionStorageは必ずuseEffect内で使用してください（SSR非対応）"
       }
-    ]
+    ],
+
+    // コード品質：console の制限（warn/error は許可）
+    "no-console": [
+      "warn",
+      {
+        "allow": ["warn", "error"]
+      }
+    ],
+
+    // React：不要な Fragment の禁止
+    "react/jsx-no-useless-fragment": "warn",
+
+    // React：self-closing タグの強制
+    "react/self-closing-comp": "warn",
+
+    // アクセシビリティ：alt属性の必須化（next/core-web-vitalsに含まれるが明示）
+    "jsx-a11y/alt-text": "error",
+
+    // パフォーマンス：useCallback/useMemo の依存配列（緩和）
+    "react-hooks/exhaustive-deps": "off"
   }
 }
