@@ -146,9 +146,9 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-8 text-white">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-6">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 sm:p-8 text-white">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
             <div className="relative">
               <Avatar className="h-24 w-24 border-4 border-white">
                 <AvatarImage src={currentUser?.avatar} />
@@ -166,26 +166,26 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{currentUser?.name || '山田太郎'}</h1>
-              <p className="text-lg opacity-90">代表取締役 / 本社 経営企画室</p>
-              <div className="flex items-center space-x-4 mt-3 text-sm">
-                <span className="flex items-center">
+            <div className="text-center sm:text-left">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">{currentUser?.name || '山田太郎'}</h1>
+              <p className="text-base sm:text-lg opacity-90">代表取締役 / 本社 経営企画室</p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3 text-sm">
+                <span className="flex items-center justify-center sm:justify-start">
                   <Mail className="w-4 h-4 mr-1" />
-                  {currentUser?.email || 'admin@demo.com'}
+                  <span className="truncate">{currentUser?.email || 'admin@demo.com'}</span>
                 </span>
-                <span className="flex items-center">
+                <span className="flex items-center justify-center sm:justify-start">
                   <Phone className="w-4 h-4 mr-1" />
                   090-1234-5678
                 </span>
-                <span className="flex items-center">
+                <span className="flex items-center justify-center sm:justify-start">
                   <Calendar className="w-4 h-4 mr-1" />
                   入社日: 2015-04-01
                 </span>
               </div>
             </div>
           </div>
-          <Button variant="secondary" className="bg-white text-blue-600 hover:bg-gray-100">
+          <Button variant="secondary" className="w-full sm:w-auto bg-white text-blue-600 hover:bg-gray-100">
             管理者
           </Button>
         </div>
@@ -236,23 +236,26 @@ export default function ProfilePage() {
       </div>
 
       {/* タブコンテンツ */}
-      <Tabs defaultValue="certifications" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="certifications" className="flex items-center">
-            <Award className="w-4 h-4 mr-2" />
-            資格・免許・認定
+      <Tabs defaultValue="certifications" className="space-y-4 w-full">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+          <TabsTrigger value="certifications" className="flex items-center gap-1 sm:gap-2">
+            <Award className="w-4 h-4" />
+            <span className="hidden sm:inline">資格・免許・認定</span>
+            <span className="sm:hidden">資格</span>
           </TabsTrigger>
-          <TabsTrigger value="skills" className="flex items-center">
-            <BookOpen className="w-4 h-4 mr-2" />
-            スキル・専門性
+          <TabsTrigger value="skills" className="flex items-center gap-1 sm:gap-2">
+            <BookOpen className="w-4 h-4" />
+            <span className="hidden sm:inline">スキル・専門性</span>
+            <span className="sm:hidden">スキル</span>
           </TabsTrigger>
-          <TabsTrigger value="experience" className="flex items-center">
-            <Briefcase className="w-4 h-4 mr-2" />
-            経歴
+          <TabsTrigger value="experience" className="flex items-center gap-1 sm:gap-2">
+            <Briefcase className="w-4 h-4" />
+            <span>経歴</span>
           </TabsTrigger>
-          <TabsTrigger value="achievements" className="flex items-center">
-            <FileText className="w-4 h-4 mr-2" />
-            実績・成果
+          <TabsTrigger value="achievements" className="flex items-center gap-1 sm:gap-2">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">実績・成果</span>
+            <span className="sm:hidden">実績</span>
           </TabsTrigger>
         </TabsList>
 

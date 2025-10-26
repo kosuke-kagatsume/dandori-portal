@@ -308,7 +308,7 @@ export default function AssetsPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">資産管理</h1>
           <p className="text-muted-foreground mt-1">
@@ -320,6 +320,7 @@ export default function AssetsPage() {
             setEditingVehicle(null);
             setFormModalOpen(true);
           }}
+          className="w-full sm:w-auto"
         >
           <Plus className="mr-2 h-4 w-4" />
           新規登録
@@ -378,45 +379,49 @@ export default function AssetsPage() {
       </div>
 
       {/* メインコンテンツ */}
-      <Tabs defaultValue="vehicles" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="vehicles">車両一覧</TabsTrigger>
-          <TabsTrigger value="pcs">PC一覧</TabsTrigger>
-          <TabsTrigger value="warnings">
-            期限警告
+      <Tabs defaultValue="vehicles" className="space-y-4 w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <TabsTrigger value="vehicles">車両</TabsTrigger>
+          <TabsTrigger value="pcs">PC</TabsTrigger>
+          <TabsTrigger value="warnings" className="relative">
+            <span className="hidden sm:inline">期限警告</span>
+            <span className="sm:hidden">警告</span>
             {mounted && stats.criticalWarningsCount > 0 && (
-              <Badge variant="destructive" className="ml-2">
+              <Badge variant="destructive" className="ml-1 sm:ml-2 text-xs">
                 {stats.criticalWarningsCount}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="maintenance">メンテナンス</TabsTrigger>
-          <TabsTrigger value="vendors">業者管理</TabsTrigger>
-          <TabsTrigger value="costs">費用集計</TabsTrigger>
+          <TabsTrigger value="maintenance">
+            <span className="hidden sm:inline">メンテナンス</span>
+            <span className="sm:hidden">整備</span>
+          </TabsTrigger>
+          <TabsTrigger value="vendors">業者</TabsTrigger>
+          <TabsTrigger value="costs">費用</TabsTrigger>
         </TabsList>
 
         {/* 車両一覧タブ */}
         <TabsContent value="vehicles" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-4">
                 <div>
                   <CardTitle>車両一覧</CardTitle>
                   <CardDescription>登録されている全車両の管理</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <div className="relative">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="車両番号、ナンバーで検索..."
-                      className="pl-8 pr-4 py-2 border rounded-md w-64"
+                      className="pl-8 pr-4 py-2 border rounded-md w-full"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </div>
                   <select
-                    className="px-3 py-2 border rounded-md"
+                    className="px-3 py-2 border rounded-md w-full sm:w-auto"
                     value={filterStatus}
                     onChange={(e) =>
                       setFilterStatus(e.target.value as typeof filterStatus)
@@ -427,7 +432,7 @@ export default function AssetsPage() {
                     <option value="maintenance">整備中</option>
                     <option value="retired">廃車</option>
                   </select>
-                  <Button variant="outline" size="sm" onClick={handleExportVehiclesCSV}>
+                  <Button variant="outline" size="sm" onClick={handleExportVehiclesCSV} className="w-full sm:w-auto">
                     <Download className="mr-2 h-4 w-4" />
                     CSV出力
                   </Button>

@@ -121,11 +121,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
         <div>
-          <h1 className="text-3xl font-bold">設定</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold">設定</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             アプリケーションの設定を管理します
           </p>
         </div>
@@ -133,47 +133,47 @@ export default function SettingsPage() {
 
       {hasChanges && (
         <Alert>
-          <AlertDescription>
+          <AlertDescription className="text-sm">
             設定が変更されています。保存するには各タブの「保存」ボタンをクリックしてください。
           </AlertDescription>
         </Alert>
       )}
 
       <Tabs defaultValue="appearance" className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-9">
-          <TabsTrigger value="appearance">
-            <Sun className="w-4 h-4 mr-1" />
-            外観
+        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-1">
+          <TabsTrigger value="appearance" className="flex-1 sm:flex-none min-w-[100px]">
+            <Sun className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">外観</span>
           </TabsTrigger>
-          <TabsTrigger value="regional">
-            <Languages className="w-4 h-4 mr-1" />
-            地域
+          <TabsTrigger value="regional" className="flex-1 sm:flex-none min-w-[100px]">
+            <Languages className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">地域</span>
           </TabsTrigger>
-          <TabsTrigger value="company">
-            <Building2 className="w-4 h-4 mr-1" />
-            会社
+          <TabsTrigger value="company" className="flex-1 sm:flex-none min-w-[100px]">
+            <Building2 className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">会社</span>
           </TabsTrigger>
-          <TabsTrigger value="payroll">
-            <DollarSign className="w-4 h-4 mr-1" />
-            給与
+          <TabsTrigger value="payroll" className="flex-1 sm:flex-none min-w-[100px]">
+            <DollarSign className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">給与</span>
           </TabsTrigger>
-          <TabsTrigger value="year-end">
-            <FileText className="w-4 h-4 mr-1" />
-            年末調整
+          <TabsTrigger value="year-end" className="flex-1 sm:flex-none min-w-[100px]">
+            <FileText className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">年末調整</span>
           </TabsTrigger>
-          <TabsTrigger value="attendance">
-            <Clock className="w-4 h-4 mr-1" />
-            勤怠
+          <TabsTrigger value="attendance" className="flex-1 sm:flex-none min-w-[100px]">
+            <Clock className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">勤怠</span>
           </TabsTrigger>
-          <TabsTrigger value="workflow">
-            <GitBranch className="w-4 h-4 mr-1" />
-            ワークフロー
+          <TabsTrigger value="workflow" className="flex-1 sm:flex-none min-w-[100px]">
+            <GitBranch className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">ワークフロー</span>
           </TabsTrigger>
-          <TabsTrigger value="data">データ</TabsTrigger>
+          <TabsTrigger value="data" className="flex-1 sm:flex-none min-w-[100px]">データ</TabsTrigger>
           {canManageSystem && (
-            <TabsTrigger value="system">
-              <ShieldCheck className="w-4 h-4 mr-1" />
-              システム
+            <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
+              <ShieldCheck className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">システム</span>
             </TabsTrigger>
           )}
         </TabsList>

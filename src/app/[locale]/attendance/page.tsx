@@ -490,7 +490,7 @@ export default function AttendancePage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-muted-foreground">
@@ -519,23 +519,27 @@ export default function AttendancePage() {
       </div>
 
       {/* Tabs Content */}
-      <Tabs defaultValue="list" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="list" className="space-y-4 w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
           <TabsTrigger value="list" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            {t('attendanceList')}
+            <span className="hidden sm:inline">{t('attendanceList')}</span>
+            <span className="sm:hidden">一覧</span>
           </TabsTrigger>
           <TabsTrigger value="team" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
-            {t('teamAttendance')}
+            <span className="hidden sm:inline">{t('teamAttendance')}</span>
+            <span className="sm:hidden">チーム</span>
           </TabsTrigger>
           <TabsTrigger value="calendar" className="flex items-center gap-2">
             <CalendarIcon className="h-4 w-4" />
-            {t('calendar')}
+            <span className="hidden sm:inline">{t('calendar')}</span>
+            <span className="sm:hidden">カレンダー</span>
           </TabsTrigger>
           <TabsTrigger value="analytics" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            {t('statistics')}
+            <span className="hidden sm:inline">{t('statistics')}</span>
+            <span className="sm:hidden">統計</span>
           </TabsTrigger>
         </TabsList>
 

@@ -507,18 +507,18 @@ export default function WorkflowPage() {
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">ワークフロー</h1>
           <p className="text-muted-foreground">
             申請の作成・承認・進捗管理を行います
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={resetDemoData}>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={resetDemoData} className="w-full sm:w-auto">
             デモデータリセット
           </Button>
-          <Button onClick={() => setShowNewRequestDialog(true)}>
+          <Button onClick={() => setShowNewRequestDialog(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             新規申請
           </Button>
@@ -588,7 +588,7 @@ export default function WorkflowPage() {
       )}
 
       {/* フィルター */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -599,7 +599,7 @@ export default function WorkflowPage() {
           />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="ステータス" />
           </SelectTrigger>
           <SelectContent>
@@ -612,7 +612,7 @@ export default function WorkflowPage() {
           </SelectContent>
         </Select>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="種類" />
           </SelectTrigger>
           <SelectContent>
@@ -761,7 +761,7 @@ export default function WorkflowPage() {
               作成する申請の種類を選択してください
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-3 gap-4 py-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
             <Button
               variant="outline"
               className="h-24 flex-col gap-2"
@@ -941,7 +941,7 @@ export default function WorkflowPage() {
             <ScrollArea className="h-[60vh] pr-4">
               <div className="space-y-6">
                 {/* 基本情報 */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm text-muted-foreground">申請者</Label>
                     <p className="font-medium">{selectedRequest.requesterName}</p>

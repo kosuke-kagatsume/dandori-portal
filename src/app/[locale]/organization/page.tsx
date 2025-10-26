@@ -138,16 +138,16 @@ export default function OrganizationPage() {
   return (
     <div className="container mx-auto py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">組織管理</h1>
           <p className="text-muted-foreground mt-1">
             組織構造とメンバーの管理、権限設定を行います
           </p>
         </div>
-        
+
         {canManageOrganization && (
-          <Button>
+          <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             新規追加
           </Button>
@@ -201,12 +201,12 @@ export default function OrganizationPage() {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <TabsTrigger value="overview">組織図</TabsTrigger>
-          <TabsTrigger value="members">メンバー管理</TabsTrigger>
-          <TabsTrigger value="transfers">異動履歴</TabsTrigger>
+          <TabsTrigger value="members">メンバー</TabsTrigger>
+          <TabsTrigger value="transfers">異動</TabsTrigger>
           <TabsTrigger value="permissions" disabled={!canManageOrganization}>
-            権限管理
+            権限
           </TabsTrigger>
           <TabsTrigger value="analytics">分析</TabsTrigger>
         </TabsList>
@@ -272,7 +272,7 @@ export default function OrganizationPage() {
               </CardHeader>
               <CardContent>
                 {selectedMember ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">氏名</p>
                       <p className="font-medium">{selectedMember.name}</p>
@@ -293,7 +293,7 @@ export default function OrganizationPage() {
                     </div>
                   </div>
                 ) : selectedNode ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">組織名</p>
                       <p className="font-medium">{selectedNode.name}</p>
