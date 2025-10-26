@@ -1,6 +1,6 @@
 # Dandori Portal - 開発ドキュメント
 
-## 🎯 最終更新: 2025-10-19 (Phase 6-2完了 - E2Eテスト100%成功)
+## 🎯 最終更新: 2025-10-26 (Phase 8完了 - コード品質向上とUI改善)
 
 ---
 
@@ -681,7 +681,109 @@ await expect(formHeadings.first()).toBeVisible();
 
 ---
 
-## 🚀 次の開発フェーズオプション（2025-10-19時点）
+## 🎨 Phase 8: コード品質向上とUI改善（2025-10-26完了）
+
+ESLint設定の強化、TypeScript strict mode有効化、未使用コード削除、UI改善を実施しました。
+
+### Phase 8-1: ESLint設定の強化 ✅
+
+#### 新規追加ルール
+- ✅ **next/typescript**: TypeScript特有の問題を検出
+- ✅ **no-console**: console.log禁止（warn/errorは許可）
+- ✅ **react/jsx-no-useless-fragment**: 不要なFragmentを警告
+- ✅ **react/self-closing-comp**: 自己終了タグを推奨
+- ✅ **jsx-a11y/alt-text**: 画像のalt属性を必須化
+
+#### 既存ルール（維持）
+- Hydration防止ルール（特殊文字禁止）
+- SSRグローバルAPI制限（localStorage等）
+
+### Phase 8-2: TypeScript strict mode有効化 ✅
+
+#### コンパイラオプション追加
+- ✅ **noImplicitReturns**: 関数の戻り値を明示
+- ✅ **noFallthroughCasesInSwitch**: switch文のフォールスルー防止
+- ✅ **forceConsistentCasingInFileNames**: ファイル名の大文字小文字を統一
+
+#### 型エラー修正
+- ✅ オンボーディングフック4つの型エクスポート修正
+  - `useBasicInfoForm.ts`
+  - `useBankAccountForm.ts`
+  - `useFamilyInfoForm.ts`
+  - `useCommuteRouteForm.ts`
+- ✅ `lazy-components.ts` → `.tsx`にリネーム（JSX構文対応）
+
+### Phase 8-3: 未使用コードの削除 ✅
+
+#### 修正ファイル
+- ✅ **assets/page.tsx**: 未使用アイコン5個削除（Users, TrendingUp, Calendar, Filter, Monitor）
+- ✅ **attendance/page.tsx**: 未使用インポート・変数8個削除
+  - useCallback, generateAttendanceData, employees
+  - DropdownMenuSeparator, CheckInButton, AdvancedCheckIn, AttendanceCalendar
+  - row変数
+- ✅ **dashboard-optimized.tsx**: 未使用インポート9個削除
+  - Link, Button, Clock, Activity, Wifi, WifiOff, FileText, BarChart3, Settings
+  - performanceMonitor, trendValue変数
+- ✅ **evaluation/page.tsx**: 未使用変数・メソッド11個削除
+  - error変数3箇所（catch句）
+  - submitEvaluation, getEvaluationsByDepartment, getEvaluationsByPeriod, getEvaluationsByStatus
+  - TrendingUp, Users, Award, Target アイコン
+
+### Phase 8-4: パフォーマンス最適化 ✅
+
+#### 依存関係追加
+- ✅ **jszip**: PDF一括出力機能（pdf-batch.ts）で必要
+- ✅ バンドルサイズ確認: 全ページ244kB以下
+
+### Phase 8-5: UI改善 - ページ遷移最適化 ✅
+
+#### 実装試行
+1. **PageLoadingBar作成**: トップの青いプログレスバー → ❌ 削除（目立ちすぎる）
+2. **PageTransitionアニメーション**: フェード効果 → ❌ 削除（画面が消える）
+3. **最終解決策**: アニメーションなしの即座切り替え → ✅ 採用
+
+#### 成果
+- ページ遷移が瞬時に完了
+- ユーザーフィードバックで最適化完了
+
+### 実装ファイル
+
+**修正**:
+- `.eslintrc.json` - ESLint設定強化
+- `tsconfig.json` - TypeScript strict mode有効化
+- `src/app/[locale]/assets/page.tsx` - 未使用コード削除
+- `src/app/[locale]/attendance/page.tsx` - 未使用コード削除
+- `src/app/[locale]/dashboard/dashboard-optimized.tsx` - 未使用コード削除
+- `src/app/[locale]/evaluation/page.tsx` - 未使用コード削除
+- `src/components/layout/app-shell.tsx` - PageTransition削除
+- `src/components/motion/page-transition.tsx` - アニメーション削除
+- `src/features/onboarding/hooks/*` - 型エクスポート追加（4ファイル）
+- `package.json` - jszip追加
+
+**新規作成**:
+- `src/components/ui/page-loading-bar.tsx` (未使用)
+
+**リネーム**:
+- `src/lib/performance/lazy-components.ts` → `.tsx`
+
+### 期待される効果
+
+1. **コード品質向上**
+   - ESLintによる自動検出強化
+   - TypeScriptの型安全性向上
+   - 未使用コードの削減
+
+2. **パフォーマンス改善**
+   - バンドルサイズの適正化
+   - ビルド時間の短縮
+
+3. **UI/UX改善**
+   - 瞬時のページ切り替え
+   - シンプルで高速な体験
+
+---
+
+## 🚀 次の開発フェーズオプション（2025-10-26更新）
 
 Phase 3-2完了後、以下の開発オプションから選択可能です。
 
@@ -759,16 +861,49 @@ Phase 3-2完了後、以下の開発オプションから選択可能です。
    - マイクロインタラクション追加
    - スムーズスクロール実装
 
-3. **コード品質向上**
+3. **コード品質向上** ← ✅ Phase 8で完了
    - ESLint設定強化
    - TypeScript strict mode
    - 未使用コードの削除
    - パフォーマンス監視の継続
 
+### Phase 9: レスポンシブデザイン完全対応 ⭐️ 次回推奨
+
+全ページのレスポンシブ対応を完璧にする。
+
+#### 対象ページ（優先順）
+1. **workflow/page.tsx** - 最優先 ⚠️⚠️⚠️
+   - レスポンシブクラス: 1個 / レイアウトクラス: 47個
+   - ワークフロー申請・承認画面（使用頻度が高い）
+
+2. **attendance/page.tsx** - 高優先 ⚠️⚠️
+   - レスポンシブクラス: 2個 / レイアウトクラス: 27個
+   - 勤怠管理画面（毎日使う機能）
+
+3. **organization/page.tsx** - 高優先 ⚠️⚠️
+   - レスポンシブクラス: 2個 / レイアウトクラス: 29個
+   - 組織図（横幅が重要）
+
+4. **profile/page.tsx** - 中優先 ⚠️
+   - レスポンシブクラス: 1個 / レイアウトクラス: 26個
+
+5. **assets/page.tsx** - 中優先 ⚠️
+   - レスポンシブクラス: 1個 / レイアウトクラス: 23個
+
+6. その他（leave, evaluation, saas, users）
+
+#### 実装内容
+- グリッドレイアウトのレスポンシブ対応（`md:grid-cols-*`）
+- 統計カードの配置調整（モバイル: 1列、タブレット: 2列、デスクトップ: 4列）
+- テーブルの横スクロール対応
+- フォームの入力フィールド幅調整
+- ボタン配置の最適化
+
 ### 推奨順序
-1. **Phase 3-3** (最優先) - ユーザー体験の完成
-2. **Phase 6** - バックエンド統合・テスト
-3. **Phase 7** - UI/UX改善（レスポンシブデザイン等）
+1. **Phase 9** (最優先) - レスポンシブデザイン完全対応 ← NEW!
+2. **Phase 3-3** - オンボーディングフォーム実装（オプション）
+3. **Phase 6** - バックエンド統合・テスト
+4. **最終リリース** - AWSデプロイ
 
 ### 現在の状態
 - Phase 1 ✅ 完了（基本構造）
@@ -776,9 +911,12 @@ Phase 3-2完了後、以下の開発オプションから選択可能です。
 - Phase 2.5 ✅ 完了（HR管理画面）
 - Phase 3-1 ✅ 完了（新入社員ダッシュボード）
 - Phase 3-2 ✅ 完了（承認フロー統合）
-- Phase 3-3 ⏳ 未着手
+- Phase 3-3 ⏳ 未着手（オプション）
 - Phase 4 ✅ 完了（データ連携強化）
 - Phase 5 ✅ 完了（アクセシビリティ&パフォーマンス最適化）
+- Phase 6-2 ✅ 完了（E2Eテスト100%成功）
+- Phase 8 ✅ 完了（コード品質向上とUI改善） ← NEW!
+- Phase 9 ⏳ 次回実施（レスポンシブデザイン完全対応） ← NEW!
 
 ---
 
