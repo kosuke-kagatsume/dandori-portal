@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Activity } from 'lucide-react';
 import { useCachedData } from '@/lib/cache-service';
+import { StaggerContainer, StaggerItem } from '@/components/motion/page-transition';
+import { motion } from 'framer-motion';
 
 interface ActivityFeedProps {
   permissions: {
@@ -84,19 +86,27 @@ const ActivityFeed = memo(({ permissions, t }: ActivityFeedProps) => {
           </div>
         ) : (
           <>
-            <div className="space-y-3">
-              {filteredActivity.map((activity) => (
-                <div key={activity.id} className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{activity.user}</p>
-                    <p className="text-xs text-muted-foreground">{activity.action}</p>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {activity.time}
-                  </Badge>
-                </div>
-              ))}
-            </div>
+            <StaggerContainer>
+              <div className="space-y-3">
+                {filteredActivity.map((activity) => (
+                  <StaggerItem key={activity.id}>
+                    <motion.div
+                      className="flex items-center justify-between"
+                      whileHover={{ x: 4 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                    >
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">{activity.user}</p>
+                        <p className="text-xs text-muted-foreground">{activity.action}</p>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {activity.time}
+                      </Badge>
+                    </motion.div>
+                  </StaggerItem>
+                ))}
+              </div>
+            </StaggerContainer>
             <Button
               variant="outline"
               size="sm"
@@ -118,33 +128,38 @@ const ActivityFeed = memo(({ permissions, t }: ActivityFeedProps) => {
               {permissions.canViewAll ? '全社の活動履歴' : permissions.canViewTeam ? 'チームの活動履歴' : '自分の活動履歴'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 mt-4">
-            {allActivities
-              .filter((activity, index) => {
-                if (permissions.canViewAll) return true;
-                if (permissions.canViewTeam) return index < 8;
-                return index < 4;
-              })
-              .map((activity) => (
-                <div
-                  key={activity.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-primary/10">
-                      <Activity className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{activity.user}</p>
-                      <p className="text-xs text-muted-foreground">{activity.action}</p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {activity.time}
-                  </Badge>
-                </div>
-              ))}
-          </div>
+          <StaggerContainer>
+            <div className="space-y-3 mt-4">
+              {allActivities
+                .filter((activity, index) => {
+                  if (permissions.canViewAll) return true;
+                  if (permissions.canViewTeam) return index < 8;
+                  return index < 4;
+                })
+                .map((activity) => (
+                  <StaggerItem key={activity.id}>
+                    <motion.div
+                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                      whileHover={{ scale: 1.01, x: 4 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-primary/10">
+                          <Activity className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">{activity.user}</p>
+                          <p className="text-xs text-muted-foreground">{activity.action}</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {activity.time}
+                      </Badge>
+                    </motion.div>
+                  </StaggerItem>
+                ))}
+            </div>
+          </StaggerContainer>
         </DialogContent>
       </Dialog>
     </Card>

@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { HoverCard } from '@/components/motion/hover-card';
+import { StaggerContainer, StaggerItem } from '@/components/motion/page-transition';
 import {
   Users,
   UserCheck,
@@ -36,13 +38,13 @@ const SystemStatus = lazy(() => import('./components/system-status'));
 const QuickActions = lazy(() => import('./components/quick-actions'));
 
 // KPIカードをメモ化
-const KPICard = memo(({ 
-  title, 
-  value, 
-  trend, 
-  icon: Icon, 
+const KPICard = memo(({
+  title,
+  value,
+  trend,
+  icon: Icon,
   gradient,
-  trendValue 
+  trendValue
 }: {
   title: string;
   value: string | number;
@@ -51,26 +53,28 @@ const KPICard = memo(({
   gradient: string;
   trendValue?: string;
 }) => (
-  <Card className={`relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br ${gradient}`}>
-    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/10 to-transparent rounded-full -mr-16 -mt-16" />
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm font-medium">
-        {title}
-      </CardTitle>
-      <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-        <Icon className="h-4 w-4" />
-      </div>
-    </CardHeader>
-    <CardContent>
-      <div className="text-3xl font-bold">{value}</div>
-      {trend && (
-        <div className="flex items-center gap-1 mt-1">
-          <TrendingUp className="h-3 w-3 text-green-600" />
-          <p className="text-xs">{trend}</p>
+  <HoverCard hoverScale={1.03}>
+    <Card className={`relative overflow-hidden border-0 shadow-lg transition-all duration-300 bg-gradient-to-br ${gradient}`}>
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/10 to-transparent rounded-full -mr-16 -mt-16" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">
+          {title}
+        </CardTitle>
+        <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+          <Icon className="h-4 w-4" />
         </div>
-      )}
-    </CardContent>
-  </Card>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold">{value}</div>
+        {trend && (
+          <div className="flex items-center gap-1 mt-1">
+            <TrendingUp className="h-3 w-3 text-green-600" />
+            <p className="text-xs">{trend}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  </HoverCard>
 ));
 
 KPICard.displayName = 'KPICard';
@@ -248,22 +252,26 @@ export default function OptimizedDashboard() {
       </div>
 
       {/* KPI Cards with Loading State */}
-      <div className={`grid gap-4 md:grid-cols-2 ${
-        effectiveDemoUser?.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
-      }`}>
-        {kpiLoading ? (
-          <>
-            <CardSkeleton />
-            <CardSkeleton />
-            {(permissions.canViewAll || permissions.canViewTeam) && <CardSkeleton />}
-            {permissions.canApprove && <CardSkeleton />}
-          </>
-        ) : (
-          kpiCards.map((card, index) => (
-            <KPICard key={index} {...card} />
-          ))
-        )}
-      </div>
+      <StaggerContainer>
+        <div className={`grid gap-4 md:grid-cols-2 ${
+          effectiveDemoUser?.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
+        }`}>
+          {kpiLoading ? (
+            <>
+              <CardSkeleton />
+              <CardSkeleton />
+              {(permissions.canViewAll || permissions.canViewTeam) && <CardSkeleton />}
+              {permissions.canApprove && <CardSkeleton />}
+            </>
+          ) : (
+            kpiCards.map((card, index) => (
+              <StaggerItem key={index}>
+                <KPICard {...card} />
+              </StaggerItem>
+            ))
+          )}
+        </div>
+      </StaggerContainer>
 
       {/* Employee Notice */}
       {effectiveDemoUser?.role === 'employee' && (

@@ -115,15 +115,18 @@ export function Header() {
   return (
     <>
       <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center px-6">
+        <div className="flex h-16 items-center pl-16 pr-4 md:px-6">
           {/* Left Section - Tenant Switcher & Search */}
           <div className="flex items-center space-x-4 flex-1">
-            <TenantSwitcher />
-            
-            <Separator orientation="vertical" className="h-6" />
-            
-            {/* Global Search */}
-            <div className="relative flex-1 max-w-sm">
+            {/* Tenant Switcher - Hidden on mobile */}
+            <div className="hidden sm:block">
+              <TenantSwitcher />
+            </div>
+
+            <Separator orientation="vertical" className="h-6 hidden sm:block" />
+
+            {/* Global Search - Hidden on mobile */}
+            <div className="relative flex-1 max-w-sm hidden sm:block">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder={`${t('search')}...`}
@@ -135,24 +138,36 @@ export function Header() {
                 <Command className="w-3 h-3" />K
               </kbd>
             </div>
+
+            {/* Mobile: Search Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCommandPaletteOpen(true)}
+              className="sm:hidden"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
           </div>
 
           {/* Right Section - Actions & User Menu */}
           <div className="flex items-center space-x-2">
-            {/* Last Updated */}
+            {/* Last Updated - Hidden on mobile and tablet */}
             <div className="hidden lg:flex items-center text-xs text-muted-foreground">
-              最終更新: {lastUpdated.toLocaleTimeString('ja-JP', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
+              最終更新: {lastUpdated.toLocaleTimeString('ja-JP', {
+                hour: '2-digit',
+                minute: '2-digit'
               })}
             </div>
 
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-6 hidden lg:block" />
 
-            {/* Demo Role Switcher */}
-            <SimpleDemoSwitcher />
+            {/* Demo Role Switcher - Hidden on mobile */}
+            <div className="hidden md:block">
+              <SimpleDemoSwitcher />
+            </div>
 
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-6 hidden md:block" />
 
             {/* Notifications */}
             <NotificationCenterV2>
@@ -169,14 +184,15 @@ export function Header() {
               </Button>
             </NotificationCenterV2>
 
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
-            {/* Language Switcher */}
+            {/* Language Switcher - Hidden on mobile */}
             <Button
               variant="ghost"
               size="icon"
               onClick={switchLanguage}
               title={currentLocale === 'ja' ? 'Switch to English' : '日本語に切り替え'}
+              className="hidden sm:flex"
             >
               <Globe className="h-5 w-5" />
               <span className="ml-1 text-xs font-medium">
@@ -184,7 +200,7 @@ export function Header() {
               </span>
             </Button>
 
-            <Separator orientation="vertical" className="h-6" />
+            <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
             {/* User Menu */}
             <DropdownMenu>

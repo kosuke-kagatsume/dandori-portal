@@ -9,28 +9,31 @@ interface UIState {
   density: Density;
   animationsEnabled: boolean;
   sidebarCollapsed: boolean;
-  
+  mobileSidebarOpen: boolean;
+
   // View preferences
   defaultViewMode: ViewMode;
   itemsPerPage: number;
-  
+
   // Modal & Dialog states
   commandPaletteOpen: boolean;
-  
+
   // Loading states
   globalLoading: boolean;
-  
+
   // Actions
   setTheme: (theme: Theme) => void;
   setLocale: (locale: Locale) => void;
   setDensity: (density: Density) => void;
   toggleAnimations: () => void;
   toggleSidebar: () => void;
+  toggleMobileSidebar: () => void;
+  setMobileSidebarOpen: (open: boolean) => void;
   setViewMode: (mode: ViewMode) => void;
   setItemsPerPage: (count: number) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setGlobalLoading: (loading: boolean) => void;
-  
+
   // Computed
   getThemeClass: () => string;
   getDensityClass: () => string;
@@ -45,6 +48,7 @@ const createUIStore = () => {
       density: 'standard' as Density,
       animationsEnabled: true,
       sidebarCollapsed: false,
+      mobileSidebarOpen: false,
       defaultViewMode: 'table' as ViewMode,
       itemsPerPage: 10,
       commandPaletteOpen: false,
@@ -73,6 +77,14 @@ const createUIStore = () => {
 
       toggleSidebar: () => {
         set((state: UIState) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
+      },
+
+      toggleMobileSidebar: () => {
+        set((state: UIState) => ({ mobileSidebarOpen: !state.mobileSidebarOpen }));
+      },
+
+      setMobileSidebarOpen: (open: boolean) => {
+        set({ mobileSidebarOpen: open });
       },
 
       setViewMode: (mode: ViewMode) => {
