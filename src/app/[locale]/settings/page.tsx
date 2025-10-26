@@ -32,6 +32,7 @@ import {
   YearEndTab,
   AttendanceTab,
   WorkflowTab,
+  ApprovalFlowTab,
 } from '@/features/settings/tabs';
 
 export default function SettingsPage() {
@@ -140,7 +141,7 @@ export default function SettingsPage() {
       )}
 
       <Tabs defaultValue="appearance" className="space-y-4 w-full">
-        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-1">
+        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-1">
           <TabsTrigger value="appearance" className="flex-1 sm:flex-none min-w-[100px]">
             <Sun className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">外観</span>
@@ -168,6 +169,10 @@ export default function SettingsPage() {
           <TabsTrigger value="workflow" className="flex-1 sm:flex-none min-w-[100px]">
             <GitBranch className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">ワークフロー</span>
+          </TabsTrigger>
+          <TabsTrigger value="approval-flow" className="flex-1 sm:flex-none min-w-[100px]">
+            <GitBranch className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">承認フロー</span>
           </TabsTrigger>
           <TabsTrigger value="data" className="flex-1 sm:flex-none min-w-[100px]">データ</TabsTrigger>
           {canManageSystem && (
@@ -204,6 +209,10 @@ export default function SettingsPage() {
 
         <TabsContent value="workflow">
           <WorkflowTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
+        </TabsContent>
+
+        <TabsContent value="approval-flow">
+          <ApprovalFlowTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
         </TabsContent>
 
         <TabsContent value="data">

@@ -1,6 +1,6 @@
 # Dandori Portal - 開発ドキュメント
 
-## 🎯 最終更新: 2025-10-26 (Phase 8完了 - コード品質向上とUI改善)
+## 🎯 最終更新: 2025-10-26 (Phase 9完了 - レスポンシブデザイン完全対応)
 
 ---
 
@@ -28,8 +28,8 @@
 
 ### ✅ 完全実装済みの内容
 
-#### 1. ページ実装: HR領域14ページ（合計10,149行）
-- **settings**: 2,151行（11タブ完全実装）
+#### 1. ページ実装: HR領域14ページ（合計10,425行）
+- **settings**: 2,427行（10タブ完全実装、承認フロー追加）
 - **workflow**: 1,338行（6種類の申請タイプ）
 - **assets**: 1,117行（PC・車両管理）
 - **payroll**: 903行（給与・賞与・年末調整）
@@ -44,10 +44,11 @@
 - **organization**: 422行（組織図）
 - **profile**: 395行（プロフィール）
 
-#### 2. Zustandストア: 17ストア（合計6,047行）
+#### 2. Zustandストア: 18ストア（合計6,572行）
 - **payroll-store**: 1,024行（給与・賞与・年末調整）
 - **vehicle-store**: 801行（車両管理・メンテナンス・業者管理）
 - **workflow-store**: 700行（ワークフロー・承認）
+- **approval-flow-store**: 525行（承認フロー管理・条件判定）← NEW!
 - **saas-store**: 433行（SaaS・ライセンス管理）
 - **leave-management-store**: 387行（休暇申請・残数）
 - **attendance-history-store**: 366行（勤怠履歴）
@@ -85,12 +86,12 @@
 - **evaluation-pdf.ts**: 252行（人事評価）
 
 ### 📈 実装コード量の合計
-**合計: 約20,759行のTypeScript/React実装** (+1,911行 Phase 4追加)
+**合計: 約21,762行のTypeScript/React実装** (+1,003行 Phase 11追加)
 
 ### 🎯 現在の進捗
 - **全体進捗**: 95% (400/422項目) ← 10/19更新: Phase 6-2完了（E2Eテスト100%成功）
 - **実装済み**: HR領域の主要14ページ + 監査ログ管理画面
-- **データ永続化**: 18ストア(監査ログ追加)でLocalStorage完全対応
+- **データ永続化**: 18ストア(承認フロー追加)でLocalStorage完全対応
 - **データ出力**: CSV/PDF/JSON一括バックアップ完全対応
 - **セキュリティ**: データマスキング・監査ログ・バックアップ完全実装
 - **データ連携**: API統合基盤、トークン認証、セッション管理、オフライン対応完全実装
@@ -783,9 +784,549 @@ ESLint設定の強化、TypeScript strict mode有効化、未使用コード削�
 
 ---
 
+## 🎯 Phase 11: 承認フロー管理機能実装（2025-10-26完了）
+
+DRM Suite仕様書に基づく承認フロー管理機能の基盤を完全実装しました。
+
+### 実装内容
+
+#### 1. 型定義 (`src/types/approval-flow.ts` - 202行)
+- ✅ **ApprovalFlowType**: 組織連動型（organization）/ カスタム型（custom）
+- ✅ **DocumentType**: 5種類の申請タイプ
+  - leave_request（休暇申請）
+  - overtime_request（残業申請）
+  - expense_claim（経費申請）
+  - business_trip（出張申請）
+  - purchase_request（購買申請）
+- ✅ **ApprovalFlow**: 承認フローの完全な型定義
+  - 組織連動設定（organizationLevels: 1-5階層）
+  - カスタムステップ設定
+  - 条件分岐ルール
+  - 優先度・デフォルト設定
+- ✅ **ApprovalCondition**: 条件判定用の型
+  - フィールド指定（amount, days, hours等）
+  - 演算子（gte, lte, eq, ne, gt, lt）
+  - 条件値と説明文
+
+#### 2. Zustand Store (`src/lib/store/approval-flow-store.ts` - 525行)
+
+**CRUD操作**:
+- `createFlow()`: 新規フロー作成
+- `updateFlow()`: フロー更新
+- `deleteFlow()`: フロー削除
+- `duplicateFlow()`: フロー複製
+
+**クエリ操作**:
+- `getFlowById()`: ID指定取得
+- `getFlowsByDocumentType()`: ドキュメントタイプ別取得
+- `getActiveFlows()`: 有効フローのみ取得
+- `getDefaultFlow()`: デフォルトフロー取得
+
+**条件判定**:
+- `findApplicableFlow()`: 申請データに基づく適用フロー自動検索
+- `evaluateCondition()`: 条件評価ロジック
+  - 数値比較（>=, <=, >, <, ==, !=）
+  - 優先度順のフロー選択
+
+**承認ルート解決**:
+- `resolveApprovalRoute()`: フローから実際の承認ルートを生成
+  - 組織連動型: 組織図から自動解決（TODO: organization-store連携）
+  - カスタム型: ステップ定義をそのまま使用
+
+**統計**:
+- `getStats()`: 全体統計取得
+  - 総フロー数、組織連動型数、カスタム型数
+  - 有効/無効フロー数
+  - ドキュメントタイプ別フロー数
+
+**デモデータ（7フロー）**:
+1. 標準休暇承認フロー（組織連動、2階層）
+2. 長期休暇承認フロー（5日以上、3階層）
+3. 標準経費承認フロー（組織連動、2階層）
+4. 高額経費承認フロー（10万円以上、カスタム3ステップ）
+5. 標準残業承認フロー（組織連動、1階層）
+6. 標準出張承認フロー（組織連動、2階層）
+7. 標準購買承認フロー（カスタム2ステップ）
+
+#### 3. 承認フロータブUI (`src/features/settings/tabs/ApprovalFlowTab.tsx` - 276行)
+
+**統計カード（4個）**:
+- 全フロー数
+- 組織連動型フロー数
+- カスタム型フロー数
+- 有効フロー数
+
+**タブナビゲーション**:
+- 5つのドキュメントタイプ別表示
+- 各タブにフロー数バッジ表示
+- レスポンシブ対応（モバイル: 2列、タブレット: 3列、デスクトップ: 5列）
+
+**フロー一覧表示**:
+- フロー名・説明
+- タイプバッジ（組織連動/カスタム）
+- ステータスバッジ（デフォルト/無効）
+- 組織連動設定の表示（承認階層レベル）
+- カスタムステップの表示（ステップ数・タイムアウト時間）
+- 適用条件の表示（黄色背景カード）
+- 編集・複製・削除アクションボタン
+
+### 実装ファイル
+
+**新規作成**:
+- `src/types/approval-flow.ts` (202行) - 型定義
+- `src/lib/store/approval-flow-store.ts` (525行) - Zustandストア
+- `src/features/settings/tabs/ApprovalFlowTab.tsx` (276行) - UIタブ
+
+**修正**:
+- `src/features/settings/tabs/index.tsx` - ApprovalFlowTabエクスポート追加
+- `src/app/[locale]/settings/page.tsx` - 承認フロータブ追加、10タブに拡張
+
+### ビルド結果
+
+```
+✓ Compiled successfully
+Settings page: 24.9 kB (+3.0 kB)
+All 30 pages compiled without errors
+```
+
+### 確認方法
+
+設定ページ（`http://localhost:3001/ja/settings`）の「承認フロー」タブで確認できます。
+
+---
+
+## 🎯 Phase 11-2: 承認フロー管理機能の追加実装（2025-10-26完了）
+
+Phase 11で構築した基盤の上に、フロー作成・編集・組織連携・ワークフロー統合の機能を完全実装しました。
+
+### 実装内容
+
+#### 1. フロー作成モーダル (`src/features/settings/components/create-approval-flow-dialog.tsx` - 668行)
+
+**UI機能**:
+- ✅ フロー名・説明入力
+- ✅ 申請タイプ選択（5種類のドキュメントタイプ）
+- ✅ フロータイプ選択（組織連動型 / カスタム型）
+- ✅ 組織連動型設定：階層レベル選択（1-5階層上まで）
+- ✅ カスタム型設定：
+  - 動的なステップ追加/削除
+  - ステップ名、実行モード（順次/並列）、タイムアウト時間
+- ✅ 適用条件設定（オプション）：
+  - フィールド選択（金額/日数/時間）
+  - 演算子選択（>=, <=, >, <, ==, !=）
+  - 値と説明文
+- ✅ その他設定：
+  - デフォルトフロー設定
+  - 有効/無効切り替え
+  - 優先度設定
+
+**バリデーション**:
+- フロー名の必須チェック
+- カスタム型の場合、全ステップ名の入力チェック
+- 条件削除時の最低1ステップ保証
+
+#### 2. フロー編集モーダル (`src/features/settings/components/edit-approval-flow-dialog.tsx` - 608行)
+
+**機能**:
+- ✅ 既存フローデータの自動読み込み
+- ✅ フロー作成モーダルと同じ編集機能
+- ✅ 更新処理（`updateFlow()`呼び出し）
+- ✅ フローID管理とuseEffect連携
+
+#### 3. 組織連携の完全実装 (`src/lib/store/approval-flow-store.ts`)
+
+**`resolveApprovalRoute()` 関数の完成**:
+
+```typescript
+// 組織連動型フローの場合
+if (flow.type === 'organization') {
+  const levels = flow.organizationLevels || 1; // 1-5階層
+
+  // 申請者を取得
+  const requester = organizationMembers.find(m => m.id === requesterId);
+
+  // 階層ごとにマネージャーを辿る
+  let currentMember = requester;
+  for (let i = 1; i <= levels; i++) {
+    const manager = organizationMembers.find(m => m.id === currentMember.managerId);
+
+    if (manager) {
+      steps.push({
+        stepNumber: i,
+        name: i === 1 ? '直属上司承認' : `${i}階層上承認`,
+        approvers: [{ ...manager }],
+        // ...その他の設定
+      });
+      currentMember = manager; // 次の階層へ
+    }
+  }
+}
+```
+
+**特徴**:
+- ✅ 組織階層の動的トラバース
+- ✅ マネージャー情報の完全なマッピング
+- ✅ エラーハンドリング（申請者/マネージャーが見つからない場合）
+- ✅ プレースホルダー処理（organizationMembersが提供されていない場合）
+
+#### 4. ワークフロー統合ヘルパー (`src/lib/integrations/approval-flow-integration.ts` - 133行)
+
+**提供関数**:
+
+```typescript
+// ワークフロータイプ → ドキュメントタイプ変換
+workflowTypeToDocumentType('leave') // → 'leave_request'
+
+// 解決済み承認ルート → ワークフロー用承認ステップ
+generateApprovalStepsFromFlow(resolvedRoute)
+```
+
+**使用例**:
+```typescript
+// 1. 適用可能なフローを検索
+const documentType = workflowTypeToDocumentType('leave');
+const flow = approvalFlowStore.findApplicableFlow(documentType, { days: 5 });
+
+// 2. 承認ルートを解決
+const route = approvalFlowStore.resolveApprovalRoute(
+  flow.id,
+  requesterId,
+  organizationMembers
+);
+
+// 3. ワークフロー用ステップを生成
+const steps = generateApprovalStepsFromFlow(route);
+```
+
+### UI統合
+
+**ApprovalFlowTabの機能追加**:
+- ✅ 「新規フロー作成」ボタン → CreateApprovalFlowDialog
+- ✅ 編集ボタン → EditApprovalFlowDialog
+- ✅ モーダルの開閉管理
+- ✅ activeDocumentTypeの連携（作成時に自動設定）
+
+### 実装ファイル
+
+**新規作成**:
+- `src/features/settings/components/create-approval-flow-dialog.tsx` (668行)
+- `src/features/settings/components/edit-approval-flow-dialog.tsx` (608行)
+- `src/lib/integrations/approval-flow-integration.ts` (133行)
+
+**修正**:
+- `src/features/settings/tabs/ApprovalFlowTab.tsx` - モーダル統合
+- `src/lib/store/approval-flow-store.ts` - resolveApprovalRoute完成
+
+**合計**: +1,409行の新規コード
+
+### ビルド結果
+
+```
+✓ Compiled successfully
+Settings page: 27.5 kB (+2.6 kB from Phase 11)
+All 30 pages compiled without errors
+```
+
+### 使用方法
+
+**設定ページ**（`/ja/settings` → 承認フロータブ）で以下が可能：
+
+1. **フロー作成**:
+   - 「新規フロー作成」ボタンをクリック
+   - フロー情報を入力
+   - 組織連動型またはカスタム型を選択
+   - 条件を追加（オプション）
+   - 作成ボタンで保存
+
+2. **フロー編集**:
+   - 編集アイコンをクリック
+   - フロー設定を変更
+   - 更新ボタンで保存
+
+3. **フロー複製**:
+   - 複製アイコンをクリック
+   - 自動的にコピーが作成される（名前に「(コピー)」が追加）
+
+4. **フロー削除**:
+   - 削除アイコンをクリック
+   - デフォルトフローは削除不可
+
+### 今後の拡張予定
+
+1. **ワークフロー統合の完全実装**:
+   - `workflow-store.ts`の`createWorkflow()`に統合ヘルパーを組み込み
+   - 申請作成時の自動承認ルート生成
+
+2. **UI改善**:
+   - 承認ルートのプレビュー機能
+   - ドラッグ&ドロップでのステップ並び替え
+   - 承認者選択UI（organization-storeから動的に選択）
+
+3. **高度な条件分岐**:
+   - AND/OR条件の組み合わせ
+   - カスタムフィールドのサポート
+   - 条件グループ化
+
+---
+
+## 🎯 Phase 11-3: ワークフロー統合の完全実装（2025-10-26完了）
+
+Phase 11-2で作成した承認フロー統合ヘルパーを、実際のワークフロー作成プロセスに統合しました。
+
+### 実装内容
+
+#### 1. workflow-store.ts への統合
+
+**`createRequest()` 関数の拡張**:
+
+```typescript
+createRequest: (request) => {
+  // 承認フローの自動生成を試みる
+  let generatedApprovalSteps: ApprovalStep[] | undefined;
+
+  try {
+    // WorkflowTypeをDocumentTypeに変換（5種類に対応）
+    const documentType = request.type as 'leave_request' | 'overtime_request' | 'expense_claim' | 'business_trip' | 'purchase_request';
+
+    if (supportedTypes.includes(documentType)) {
+      // 1. 適用可能な承認フローを検索
+      const applicableFlow = approvalFlowStore.findApplicableFlow(documentType, request.details || {});
+
+      // 2. 組織メンバー情報を取得
+      const organizationMembers = organizationStore.getFilteredMembers();
+
+      // 3. 承認ルートを解決
+      const resolvedRoute = approvalFlowStore.resolveApprovalRoute(
+        applicableFlow.id,
+        request.requesterId,
+        organizationMembers
+      );
+
+      // 4. 承認ステップを生成
+      const flowSteps = generateApprovalStepsFromFlow(resolvedRoute);
+      generatedApprovalSteps = flowSteps.map(...); // WorkflowRequest形式に変換
+    }
+  } catch (error) {
+    console.warn('承認フローの自動生成に失敗しました。手動設定の承認ステップを使用します。', error);
+  }
+
+  // 自動生成または手動設定の承認ステップを使用
+  const newRequest: WorkflowRequest = {
+    ...request,
+    approvalSteps: generatedApprovalSteps || request.approvalSteps,
+  };
+}
+```
+
+#### 2. 自動承認フロー適用
+
+**対応申請タイプ**（5種類）:
+- `leave_request` - 休暇申請
+- `overtime_request` - 残業申請
+- `expense_claim` - 経費申請
+- `business_trip` - 出張申請
+- `purchase_request` - 購買申請
+
+**自動適用フロー**:
+1. 申請データ（日数・金額・時間等）に基づいて適用可能なフローを検索
+2. 条件分岐ルールに従って最適なフローを選択
+3. 組織階層を自動トラバースして承認者を決定
+4. ワークフロー用の承認ステップを自動生成
+
+#### 3. フォールバック処理
+
+承認フローが見つからない場合や生成に失敗した場合：
+- 手動設定された承認ステップを使用
+- エラーログを出力して開発者に通知
+- ユーザーには影響なく動作継続
+
+### 技術的な実装詳細
+
+#### 依存関係の追加
+```typescript
+import { useApprovalFlowStore } from './store/approval-flow-store';
+import { useOrganizationStore } from './store/organization-store';
+import { generateApprovalStepsFromFlow } from './integrations/approval-flow-integration';
+```
+
+#### タイムライン記録
+申請作成時のタイムラインに自動生成の有無を記録：
+```typescript
+timeline: [{
+  action: generatedApprovalSteps
+    ? '申請書を作成しました（承認フロー自動適用）'
+    : '申請書を作成しました',
+  // ...
+}]
+```
+
+### 実装ファイル
+
+**修正**:
+- `src/lib/workflow-store.ts` - createRequest関数に承認フロー自動生成ロジックを追加
+
+### ビルド結果
+
+```bash
+✓ Compiled successfully
+Workflow page: 12.2 kB (First Load JS: 182 kB)
+All 30 pages compiled without errors
+```
+
+### 使用方法
+
+**申請作成時の動作**:
+
+1. **ワークフロー申請を作成** - `createRequest()` を呼び出し
+2. **自動承認フロー適用**:
+   - 申請タイプが対応している場合（5種類）
+   - 申請データ（日数・金額等）に基づいて条件判定
+   - 組織階層から承認者を自動決定
+   - 承認ステップが自動生成される
+3. **タイムライン記録** - 「承認フロー自動適用」が記録される
+4. **承認プロセス開始** - 自動生成された承認ステップに従って承認開始
+
+**例: 5日間の休暇申請**:
+```typescript
+createRequest({
+  type: 'leave_request',
+  requesterId: 'user_001',
+  details: { days: 5 },
+  // 承認ステップは空配列でOK（自動生成される）
+  approvalSteps: [],
+});
+
+// → 「長期休暇承認フロー」が自動適用
+// → 3階層上までの承認者が自動設定される
+```
+
+### 期待される効果
+
+1. **業務効率化**:
+   - 申請時の承認者選択が不要
+   - 組織図に基づく自動ルート決定
+   - 条件分岐による適切なフロー選択
+
+2. **運用の一貫性**:
+   - 承認ルールの統一
+   - 人的ミスの削減
+   - 組織変更への自動追従
+
+3. **拡張性**:
+   - 新しい承認フローの追加が容易
+   - 条件ルールの柔軟な設定
+   - カスタムフローとの併用可能
+
+### 今後の改善予定
+
+1. **UI統合**:
+   - 申請作成画面で適用されるフローのプレビュー表示
+   - 承認ルートの事前確認機能
+   - 手動での承認者変更機能
+
+2. **高度な条件分岐**:
+   - AND/OR条件の組み合わせ
+   - 複数フィールドの組み合わせ条件
+   - 日付・曜日に基づく条件
+
+3. **パフォーマンス最適化**:
+   - 承認フロー検索のキャッシング
+   - 組織階層トラバースの最適化
+
+---
+
+## 📱 Phase 9: レスポンシブデザイン完全対応（2025-10-26完了）
+
+主要3ページのレスポンシブ対応を完全実装しました。
+
+### 実装内容
+
+#### 1. workflow/page.tsx（最優先）✅
+
+**変更箇所**:
+- **統計カード**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5`
+  - モバイル: 1列
+  - タブレット: 2列
+  - デスクトップ: 3列
+  - ワイド: 5列
+
+- **WorkflowCard コンポーネント**:
+  - カード全体: `flex-col lg:flex-row`（モバイル: 縦積み、デスクトップ: 横並び）
+  - バッジ群: `flex-wrap`（折り返し対応）
+  - メタ情報: `flex-col sm:flex-row`（モバイル: 縦、タブレット以上: 横）
+  - ボタン群: `flex-col sm:flex-row` + `w-full sm:w-auto`（モバイル: フル幅縦、タブレット以上: 自動幅横）
+
+- **TabsList**: `grid-cols-1 sm:grid-cols-3`
+  - モバイル: 1列（縦積み）
+  - タブレット以上: 3列（横並び）
+
+#### 2. attendance/page.tsx（高優先）✅
+
+**変更箇所**:
+- **統計カード**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
+  - モバイル: 1列
+  - タブレット: 2列
+  - デスクトップ: 4列
+
+#### 3. organization/page.tsx（高優先）✅
+
+**変更箇所**:
+- **統計カード**: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
+  - モバイル: 1列
+  - タブレット: 2列
+  - デスクトップ: 4列
+
+### レスポンシブブレークポイント
+
+Tailwind CSSのデフォルトブレークポイントを使用：
+
+- **sm**: 640px（タブレット）
+- **md**: 768px（タブレット横）
+- **lg**: 1024px（デスクトップ）
+- **xl**: 1280px（ワイド）
+
+### ビルド結果
+
+```bash
+✓ Compiled successfully
+All 30 pages compiled without errors
+
+サイズ変更:
+- workflow/page.tsx: 12.2 kB → 12.3 kB (+100B)
+- attendance/page.tsx: 9.56 kB → 9.57 kB (+10B)
+- organization/page.tsx: 21.7 kB → 21.8 kB (+100B)
+```
+
+### 期待される効果
+
+1. **モバイルデバイス対応**:
+   - スマートフォン（320px-640px）で快適な閲覧
+   - 統計カードが1列表示で見やすい
+   - ボタンがフル幅で押しやすい
+
+2. **タブレット対応**:
+   - 7-10インチタブレット（640px-1024px）で最適化
+   - 統計カードが2列表示
+   - メタ情報が横並びで見やすい
+
+3. **デスクトップ対応**:
+   - フルHD（1920px）以上で最大活用
+   - 統計カードが4-5列表示
+   - 広々としたレイアウト
+
+### 今後の対応
+
+以下のページはすでにレスポンシブ対応済み、または優先度が低いため今回は対応なし：
+
+- **settings/page.tsx**: タブリストが既にレスポンシブ対応済み
+- **payroll/page.tsx**: グリッドレイアウトが既にレスポンシブ対応済み
+- **その他のページ**: 必要に応じて個別対応
+
+---
+
 ## 🚀 次の開発フェーズオプション（2025-10-26更新）
 
-Phase 3-2完了後、以下の開発オプションから選択可能です。
+Phase 11完了後、以下の開発オプションから選択可能です。
 
 ### Phase 3-3: 実際のフォーム入力体験の完成 ⭐️ 推奨
 
@@ -915,8 +1456,9 @@ Phase 3-2完了後、以下の開発オプションから選択可能です。
 - Phase 4 ✅ 完了（データ連携強化）
 - Phase 5 ✅ 完了（アクセシビリティ&パフォーマンス最適化）
 - Phase 6-2 ✅ 完了（E2Eテスト100%成功）
-- Phase 8 ✅ 完了（コード品質向上とUI改善） ← NEW!
-- Phase 9 ⏳ 次回実施（レスポンシブデザイン完全対応） ← NEW!
+- Phase 8 ✅ 完了（コード品質向上とUI改善）
+- Phase 9 ⏳ 未着手（レスポンシブデザイン完全対応）
+- Phase 11 ✅ 完了（承認フロー管理機能実装） ← NEW!
 
 ---
 

@@ -6,6 +6,9 @@ import { generateDemoWorkflowData } from './workflow-demo-data';
 import { useNotificationStore } from './store/notification-store';
 import { useUserStore } from './store/user-store';
 import { getBroadcast } from '@/lib/realtime/broadcast';
+import { useApprovalFlowStore } from './store/approval-flow-store';
+import { useOrganizationStore } from './store/organization-store';
+import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration';
 
 export type WorkflowType = 
   | 'leave_request'      // 休暇申請
@@ -268,26 +271,81 @@ export const useWorkflowStore = create<WorkflowStore>()(
       createRequest: (request) => {
         const id = `WF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const now = new Date().toISOString();
-        
+
+        // 承認フローの自動生成を試みる
+        let generatedApprovalSteps: ApprovalStep[] | undefined;
+
+        try {
+          // WorkflowTypeをDocumentTypeに変換（直接対応する5種類のみ）
+          const documentType = request.type as 'leave_request' | 'overtime_request' | 'expense_claim' | 'business_trip' | 'purchase_request';
+          const supportedTypes: string[] = ['leave_request', 'overtime_request', 'expense_claim', 'business_trip', 'purchase_request'];
+
+          if (supportedTypes.includes(documentType)) {
+            // 承認フローストアから適用可能なフローを検索
+            const approvalFlowStore = useApprovalFlowStore.getState();
+            const applicableFlow = approvalFlowStore.findApplicableFlow(documentType, request.details || {});
+
+            if (applicableFlow) {
+              // 組織メンバー情報を取得
+              const organizationStore = useOrganizationStore.getState();
+              const organizationMembers = organizationStore.getFilteredMembers();
+
+              // 承認ルートを解決
+              const resolvedRoute = approvalFlowStore.resolveApprovalRoute(
+                applicableFlow.id,
+                request.requesterId,
+                organizationMembers
+              );
+
+              if (resolvedRoute && resolvedRoute.steps.length > 0) {
+                // 承認ステップを生成
+                const flowSteps = generateApprovalStepsFromFlow(resolvedRoute);
+
+                // WorkflowRequest形式のApprovalStepに変換
+                generatedApprovalSteps = flowSteps.map((step, index) => {
+                  const approver = step.approvers[0]; // 最初の承認者を使用
+                  return {
+                    id: step.id,
+                    order: step.order,
+                    approverRole: 'direct_manager' as ApproverRole, // デフォルトロール
+                    approverId: approver?.userId || '',
+                    approverName: approver?.name || '',
+                    status: step.status as 'pending' | 'approved' | 'rejected' | 'skipped',
+                    isOptional: false,
+                  };
+                });
+
+                console.log(`承認フローを自動生成しました: ${applicableFlow.name} (${generatedApprovalSteps.length}ステップ)`);
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('承認フローの自動生成に失敗しました。手動設定の承認ステップを使用します。', error);
+        }
+
         const newRequest: WorkflowRequest = {
           ...request,
           id,
           createdAt: now,
           updatedAt: now,
           currentStep: 0,
+          // 自動生成された承認ステップ、または手動設定された承認ステップを使用
+          approvalSteps: generatedApprovalSteps || request.approvalSteps,
           timeline: [{
             id: `TL-${Date.now()}`,
-            action: '申請書を作成しました',
+            action: generatedApprovalSteps
+              ? '申請書を作成しました（承認フロー自動適用）'
+              : '申請書を作成しました',
             userId: request.requesterId,
             userName: request.requesterName,
             timestamp: now,
           }],
         };
-        
+
         set((state) => ({
           requests: [...state.requests, newRequest],
         }));
-        
+
         return id;
       },
       

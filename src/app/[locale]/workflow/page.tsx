@@ -527,7 +527,7 @@ export default function WorkflowPage() {
 
       {/* 統計カード */}
       {isMounted && (
-        <div className="grid gap-4 md:grid-cols-5">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">承認待ち</CardTitle>
@@ -627,8 +627,8 @@ export default function WorkflowPage() {
       </div>
 
       {/* タブコンテンツ */}
-      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
           <TabsTrigger value="pending" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             承認待ち ({pendingApprovals.length})
@@ -1139,8 +1139,8 @@ function WorkflowCard({
   return (
     <Card className={isSelected ? 'ring-2 ring-blue-500' : ''}>
       <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex gap-4">
+        <div className="flex flex-col lg:flex-row items-start lg:items-start justify-between gap-4">
+          <div className="flex gap-4 w-full lg:w-auto">
             {showCheckbox && (
               <Checkbox
                 checked={isSelected}
@@ -1148,11 +1148,11 @@ function WorkflowCard({
                 className="mt-3"
               />
             )}
-            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 flex items-center justify-center">
+            <div className="h-12 w-12 flex-shrink-0 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 flex items-center justify-center">
               <Icon className="h-6 w-6 text-blue-600" />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
+            <div className="space-y-2 flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-semibold">{request.title}</h3>
                 <Badge className={getPriorityColor(request.priority)}>
                   {getPriorityLabel(request.priority)}
@@ -1172,7 +1172,7 @@ function WorkflowCard({
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <User className="h-3 w-3" />
                   {request.requesterName}
@@ -1202,21 +1202,21 @@ function WorkflowCard({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onDetail}>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto">
+            <Button variant="outline" size="sm" onClick={onDetail} className="w-full sm:w-auto">
               <Eye className="h-4 w-4 mr-1" />
               詳細
             </Button>
             {canApprove && onApprove && onReject && (
               <>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={onApprove}>
+                <Button size="sm" className="bg-green-600 hover:bg-green-700 w-full sm:w-auto" onClick={onApprove}>
                   承認
                 </Button>
-                <Button size="sm" variant="outline" onClick={onReject}>
+                <Button size="sm" variant="outline" onClick={onReject} className="w-full sm:w-auto">
                   却下
                 </Button>
                 {onDelegate && (
-                  <Button size="sm" variant="outline" onClick={onDelegate}>
+                  <Button size="sm" variant="outline" onClick={onDelegate} className="w-full sm:w-auto">
                     <UserCheck className="h-4 w-4 mr-1" />
                     委任
                   </Button>
