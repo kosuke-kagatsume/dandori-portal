@@ -7,8 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Activity, TrendingUp, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 
+interface PerformanceMetricReport {
+  count: number;
+  min: number;
+  max: number;
+  avg: number;
+  p50: number;
+  p95: number;
+  p99: number;
+}
+
 export function PerformanceMonitor() {
-  const [metrics, setMetrics] = useState<Record<string, any>>({});
+  const [metrics, setMetrics] = useState<Record<string, PerformanceMetricReport>>({});
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -237,7 +247,7 @@ export function PerformanceMonitor() {
             <div>
               <span className="text-muted-foreground">総測定数:</span>{' '}
               <span className="font-medium">
-                {Object.values(metrics).reduce((acc: number, m: any) => acc + (m.count || 0), 0)}
+                {Object.values(metrics).reduce((acc: number, m: PerformanceMetricReport) => acc + (m.count || 0), 0)}
               </span>
             </div>
             <div>

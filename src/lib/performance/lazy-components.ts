@@ -81,7 +81,7 @@ export const LazyCalendar = lazyLoad(
  * テーブルコンポーネントの遅延読み込み
  */
 export const LazyDataTable = lazyLoad(
-  () => import('@tanstack/react-table').then(mod => ({ default: mod.useReactTable as any })),
+  () => import('@tanstack/react-table').then(mod => ({ default: mod.useReactTable })),
   SkeletonFallback,
   false
 );
@@ -91,7 +91,7 @@ export const LazyDataTable = lazyLoad(
  *
  * ユーザーがボタンにホバーした時などに事前に読み込む
  */
-export function preloadComponent(importFunc: () => Promise<any>) {
+export function preloadComponent(importFunc: () => Promise<unknown>) {
   // Next.jsのdynamicは自動的にprefetchを行うため、
   // ここでは明示的にimport関数を実行するだけ
   importFunc().catch(() => {

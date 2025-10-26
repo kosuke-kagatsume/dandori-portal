@@ -1,8 +1,8 @@
 // Performance cache for expensive operations
 class PerformanceCache {
-  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
-  
-  set(key: string, data: any, ttlMinutes: number = 30) {
+  private cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>();
+
+  set(key: string, data: unknown, ttlMinutes: number = 30) {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
