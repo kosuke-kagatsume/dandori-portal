@@ -135,7 +135,7 @@ export default function EvaluationPage() {
   const handleCreateEvaluation = (evaluation: Partial<PerformanceEvaluation>) => {
     setIsSubmitting(true);
     try {
-      const newEval = createEvaluation(evaluation as any);
+      const newEval = createEvaluation(evaluation as PerformanceEvaluation);
       toast({
         title: '評価を作成しました',
         description: `${evaluation.employeeName}さんの評価を作成しました。`,
@@ -364,7 +364,7 @@ export default function EvaluationPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">期間</label>
-                  <Select value={selectedPeriod} onValueChange={(v: any) => setSelectedPeriod(v)}>
+                  <Select value={selectedPeriod} onValueChange={(v: string) => setSelectedPeriod(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -398,7 +398,7 @@ export default function EvaluationPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">ステータス</label>
-                  <Select value={selectedStatus} onValueChange={(v: any) => setSelectedStatus(v)}>
+                  <Select value={selectedStatus} onValueChange={(v: string) => setSelectedStatus(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

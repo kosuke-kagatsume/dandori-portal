@@ -97,7 +97,7 @@ export default function UsersPage() {
     setLoading(false);
   }, [users.length, setUsers]);
 
-  const handleCreateUser = (userData: any) => {
+  const handleCreateUser = (userData: Partial<User>) => {
     try {
       // ストアに直接追加
       const newUser = {
@@ -115,7 +115,7 @@ export default function UsersPage() {
     }
   };
 
-  const handleEditUser = (userData: any) => {
+  const handleEditUser = (userData: Partial<User>) => {
     if (!editingUser) return;
 
     try {
@@ -231,7 +231,7 @@ export default function UsersPage() {
               department: department || '',
               position: position || '',
               hireDate: hireDate || new Date().toISOString().split('T')[0],
-              status: (status as any) || 'active',
+              status: (status as 'active' | 'inactive' | 'suspended' | 'retired') || 'active',
               roles: roles ? roles.split(';') : ['user'],
               unitId: '1',
               timezone: 'Asia/Tokyo',

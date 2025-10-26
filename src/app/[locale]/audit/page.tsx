@@ -215,7 +215,7 @@ export default function AuditPage() {
               />
             </div>
 
-            <Select value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as any)}>
+            <Select value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as AuditCategory | 'all')}>
               <SelectTrigger>
                 <SelectValue placeholder="カテゴリ" />
               </SelectTrigger>
@@ -234,7 +234,7 @@ export default function AuditPage() {
               </SelectContent>
             </Select>
 
-            <Select value={selectedAction} onValueChange={(v) => setSelectedAction(v as any)}>
+            <Select value={selectedAction} onValueChange={(v) => setSelectedAction(v as AuditAction | 'all')}>
               <SelectTrigger>
                 <SelectValue placeholder="操作" />
               </SelectTrigger>
@@ -253,7 +253,7 @@ export default function AuditPage() {
               </SelectContent>
             </Select>
 
-            <Select value={selectedSeverity} onValueChange={(v) => setSelectedSeverity(v as any)}>
+            <Select value={selectedSeverity} onValueChange={(v) => setSelectedSeverity(v as 'all' | 'info' | 'warning' | 'error' | 'critical')}>
               <SelectTrigger>
                 <SelectValue placeholder="重要度" />
               </SelectTrigger>
