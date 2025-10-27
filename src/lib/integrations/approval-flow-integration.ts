@@ -10,7 +10,21 @@ import type { WorkflowType } from '@/types';
 /**
  * ワークフロータイプを承認フローのドキュメントタイプに変換
  */
-export function workflowTypeToDocumentType(workflowType: WorkflowType): DocumentType | null {
+export function workflowTypeToDocumentType(workflowType: WorkflowType | DocumentType): DocumentType | undefined {
+  // 既にDocumentType形式の場合はそのまま返す
+  const documentTypes: DocumentType[] = [
+    'leave_request',
+    'overtime_request',
+    'expense_claim',
+    'business_trip',
+    'purchase_request',
+  ];
+
+  if (documentTypes.includes(workflowType as DocumentType)) {
+    return workflowType as DocumentType;
+  }
+
+  // WorkflowType形式の場合は変換
   const mapping: Record<string, DocumentType> = {
     leave: 'leave_request',
     overtime: 'overtime_request',
@@ -19,7 +33,7 @@ export function workflowTypeToDocumentType(workflowType: WorkflowType): Document
     purchase: 'purchase_request',
   };
 
-  return mapping[workflowType] || null;
+  return mapping[workflowType];
 }
 
 /**
@@ -70,7 +84,7 @@ export function generateApprovalStepsFromFlow(resolvedRoute: any): any[] {
     order: index + 1,
     name: step.name,
     approvers: step.approvers.map((approver: any) => ({
-      userId: approver.id,
+      userId: approver.userId || approver.id, // userId優先、なければidを使用
       name: approver.name,
       email: approver.email,
       role: approver.role,
