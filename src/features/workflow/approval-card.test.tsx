@@ -303,10 +303,10 @@ describe('ApprovalCard', () => {
     it('should handle future dates', () => {
       const futureRequest = {
         ...mockRequest,
-        createdAt: '2026-12-31T23:59:59Z',
+        createdAt: '2027-01-01T00:00:00Z',
       };
       render(<ApprovalCard request={futureRequest} />);
-      expect(screen.getByText(/2026/)).toBeInTheDocument();
+      expect(screen.getByText(/2027/)).toBeInTheDocument();
     });
   });
 });

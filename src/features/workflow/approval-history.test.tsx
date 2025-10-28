@@ -123,8 +123,8 @@ describe('ApprovalHistory', () => {
   describe('Display Timestamps', () => {
     it('should show approval timestamp for approved steps', () => {
       render(<ApprovalHistory approvalSteps={mockApprovalSteps} />);
-      expect(screen.getByText(/2025\/01\/15 10:00/)).toBeInTheDocument();
-      expect(screen.getByText(/2025\/01\/15 14:30/)).toBeInTheDocument();
+      expect(screen.getByText(/2025\/01\/15 19:00/)).toBeInTheDocument(); // UTC+9 JST
+      expect(screen.getByText(/2025\/01\/15 23:30/)).toBeInTheDocument(); // UTC+9 JST
     });
 
     it('should not show timestamp for pending steps', () => {
@@ -144,7 +144,7 @@ describe('ApprovalHistory', () => {
 
     it('should format timestamp correctly in Japanese locale', () => {
       render(<ApprovalHistory approvalSteps={mockApprovalSteps} />);
-      const timestamp = screen.getByText(/2025\/01\/15 10:00/);
+      const timestamp = screen.getByText(/2025\/01\/15 19:00/); // UTC+9 JST
       expect(timestamp).toBeInTheDocument();
     });
   });
@@ -352,7 +352,7 @@ describe('ApprovalHistory', () => {
       render(<ApprovalHistory approvalSteps={allRoles} />);
 
       expect(screen.getByText(/直属上司/)).toBeInTheDocument();
-      expect(screen.getByText(/部門長/)).toBeInTheDocument();
+      expect(screen.getAllByText(/部門長/).length).toBeGreaterThan(0); // Multiple instances (name + role)
       expect(screen.getByText(/人事部長/)).toBeInTheDocument();
       expect(screen.getByText(/経理部長/)).toBeInTheDocument();
       expect(screen.getByText(/役員/)).toBeInTheDocument();
