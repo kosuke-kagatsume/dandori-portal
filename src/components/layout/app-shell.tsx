@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 import { useUIStore, useTenantStore, useUserStore, useNotificationStore } from '@/lib/store';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
+import { useLegalUpdatesStore } from '@/lib/store/legal-updates-store';
+import { useAnnouncementsStore } from '@/lib/store/announcements-store';
 import { Sidebar } from '@/features/navigation/sidebar';
 import { Header } from '@/features/navigation/header';
 import { Toaster } from '@/components/ui/sonner';
@@ -13,6 +15,9 @@ import { cn } from '@/lib/utils';
 import { useGlobalShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { SkipLink } from '@/components/a11y/skip-link';
 import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
+import { initializeLegalUpdatesDemo } from '@/lib/demo-legal-updates';
+import { initializeAnnouncementsDemo } from '@/lib/demo-announcements';
+import { useScheduledChangesNotifications } from '@/hooks/use-scheduled-changes-notifications';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -30,9 +35,14 @@ export function AppShell({ children }: AppShellProps) {
     initializeBankAccountForm,
     initializeCommuteRouteForm,
   } = useOnboardingStore();
+  const { addUpdate, getLegalUpdates } = useLegalUpdatesStore();
+  const { createAnnouncement, getAnnouncements } = useAnnouncementsStore();
 
   // キーボードショートカットを有効化
   useGlobalShortcuts();
+
+  // 予約管理の通知チェックを有効化
+  useScheduledChangesNotifications();
 
   // Initialize onboarding data for applicant role (only once if no data exists)
   useEffect(() => {
@@ -63,6 +73,28 @@ export function AppShell({ children }: AppShellProps) {
     initializeBankAccountForm,
     initializeCommuteRouteForm,
   ]);
+
+  // Initialize legal updates demo data (only once if no data exists)
+  useEffect(() => {
+    const existingUpdates = getLegalUpdates();
+    if (existingUpdates.length === 0) {
+      console.log('[Demo] Initializing legal updates demo data');
+      initializeLegalUpdatesDemo(addUpdate);
+    } else {
+      console.log('[Demo] Legal updates data already exists, skipping initialization');
+    }
+  }, [addUpdate, getLegalUpdates]);
+
+  // Initialize announcements demo data (only once if no data exists)
+  useEffect(() => {
+    const existingAnnouncements = getAnnouncements();
+    if (existingAnnouncements.length === 0) {
+      console.log('[Demo] Initializing announcements demo data');
+      initializeAnnouncementsDemo(createAnnouncement);
+    } else {
+      console.log('[Demo] Announcements data already exists, skipping initialization');
+    }
+  }, [createAnnouncement, getAnnouncements]);
 
   // Apply theme to document
   useEffect(() => {

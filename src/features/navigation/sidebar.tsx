@@ -23,6 +23,8 @@ import {
   Building2,
   UserPlus,
   ShieldCheck,
+  Scale,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -48,6 +50,9 @@ const getNavigation = (locale: string, currentUser: User | null) => {
     { key: 'payroll', href: `/${locale}/payroll`, icon: Calculator, menuKey: 'payroll' as MenuKey },
     { key: 'evaluation', href: `/${locale}/evaluation`, icon: Star, menuKey: 'evaluation' as MenuKey },
     { key: 'organization', href: `/${locale}/organization`, icon: Building2, menuKey: 'organization' as MenuKey },
+    { key: 'scheduledChanges', href: `/${locale}/scheduled-changes`, icon: ClipboardCheck, menuKey: 'scheduledChanges' as MenuKey },
+    { key: 'legalUpdates', href: `/${locale}/legal-updates`, icon: Scale, menuKey: 'legalUpdates' as MenuKey },
+    { key: 'announcementsAdmin', href: `/${locale}/announcements-admin`, icon: Bell, menuKey: 'announcementsAdmin' as MenuKey },
     { key: 'assets', href: `/${locale}/assets`, icon: Car, menuKey: 'assets' as MenuKey },
     { key: 'saas', href: `/${locale}/saas`, icon: Cloud, menuKey: 'saas' as MenuKey },
     { key: 'onboarding', href: onboardingHref, icon: UserPlus, menuKey: 'onboarding' as MenuKey },

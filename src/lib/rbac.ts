@@ -34,6 +34,9 @@ export const MENU_PERMISSIONS = {
   payroll: ['executive', 'hr'],
   evaluation: ['manager', 'executive', 'hr'],
   organization: ['executive', 'hr', 'admin'],
+  scheduledChanges: ['hr'], // 予約管理（HR権限のみ）
+  legalUpdates: ['hr', 'admin'], // 法令・制度更新（HR・管理者のみ）
+  announcementsAdmin: ['hr', 'admin'], // アナウンス管理（HR・管理者のみ）
   assets: ['executive', 'hr', 'admin'],
   saas: ['executive', 'hr', 'admin'],
   onboarding: ['hr', 'applicant'], // 人事担当と新入社員がアクセス可能

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useForm, UseFormReturn } from 'react-hook-form';
+import { useForm, UseFormReturn, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { WorkflowType, WorkflowRequest, ApproverRole } from '@/lib/workflow-store';
@@ -50,6 +50,7 @@ import {
   Coffee,
   Package,
   Calendar,
+  UserCheck,
 } from 'lucide-react';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -325,6 +326,12 @@ export function NewRequestForm({
         return `出張申請（${data.destination}）`;
       case 'remote_work':
         return `リモートワーク申請（${format(data.startDate, 'MM/dd')}〜${format(data.endDate, 'MM/dd')}）`;
+      case 'bank_account_change':
+        return `給与振込口座変更申請（${data.bankName || ''}）`;
+      case 'family_info_change':
+        return `家族情報変更申請`;
+      case 'commute_route_change':
+        return `通勤経路変更申請`;
       default:
         return '新規申請';
     }
@@ -366,6 +373,12 @@ export function NewRequestForm({
         return <PurchaseRequestForm form={form} onFlowUpdate={setupApprovalFlow} />;
       case 'document_approval':
         return <DocumentApprovalForm form={form} onFlowUpdate={setupApprovalFlow} />;
+      case 'bank_account_change':
+        return <BankAccountChangeForm form={form} onFlowUpdate={setupApprovalFlow} />;
+      case 'family_info_change':
+        return <FamilyInfoChangeForm form={form} onFlowUpdate={setupApprovalFlow} />;
+      case 'commute_route_change':
+        return <CommuteRouteChangeForm form={form} onFlowUpdate={setupApprovalFlow} />;
       default:
         return <DefaultRequestForm form={form} onFlowUpdate={setupApprovalFlow} />;
     }
@@ -1389,6 +1402,926 @@ function RemoteWorkForm({ form, onFlowUpdate }: FormComponentProps<RemoteWorkFor
             )}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}// 給与振込口座変更フォーム
+function BankAccountChangeForm({ form, onFlowUpdate }: FormComponentProps) {
+  const [consent, setConsent] = useState(false);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-blue-600" />
+          給与振込口座変更
+        </CardTitle>
+        <CardDescription>
+          給与振込先の口座情報を変更します
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* 注意書きブルーボックス */}
+        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+          <p className="text-sm text-blue-800">
+            <strong>ご注意：</strong>
+            <br />
+            ・普通預金口座のみ登録可能です（当座預金は登録できません）
+            <br />
+            ・銀行コード・支店コードは4桁・3桁の数字です
+            <br />
+            ・口座名義は必ず全角カナで入力してください
+          </p>
+        </div>
+
+        {/* 銀行情報 */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="bankName">
+              銀行名
+              <span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="bankName"
+              placeholder="例：三菱UFJ銀行"
+              {...form.register('bankName')}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="bankCode">
+              銀行コード
+              <span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="bankCode"
+              placeholder="0005"
+              maxLength={4}
+              {...form.register('bankCode')}
+            />
+            <p className="text-xs text-muted-foreground">4桁の数字</p>
+          </div>
+        </div>
+
+        {/* 支店情報 */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="branchName">
+              支店名
+              <span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="branchName"
+              placeholder="例：新宿支店"
+              {...form.register('branchName')}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="branchCode">
+              支店コード
+              <span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="branchCode"
+              placeholder="123"
+              maxLength={3}
+              {...form.register('branchCode')}
+            />
+            <p className="text-xs text-muted-foreground">3桁の数字</p>
+          </div>
+        </div>
+
+        {/* 口座情報 */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="accountNumber">
+              口座番号
+              <span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="accountNumber"
+              placeholder="1234567"
+              maxLength={7}
+              {...form.register('accountNumber')}
+            />
+            <p className="text-xs text-muted-foreground">7桁の数字</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="accountHolderKana">
+              口座名義（全角カナ）
+              <span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Input
+              id="accountHolderKana"
+              placeholder="ヤマダ タロウ"
+              {...form.register('accountHolderKana')}
+            />
+            <p className="text-xs text-muted-foreground">名字と名前の間に全角スペース</p>
+          </div>
+        </div>
+
+        {/* 変更理由 */}
+        <div className="space-y-2">
+          <Label htmlFor="changeReason">
+            変更理由
+            <span className="text-red-500 ml-1">*</span>
+          </Label>
+          <Textarea
+            id="changeReason"
+            placeholder="口座変更の理由を入力してください"
+            {...form.register('changeReason')}
+            rows={3}
+          />
+        </div>
+
+        {/* 同意事項 */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <h4 className="font-medium text-gray-900 mb-2">
+            口座振込に関する同意事項
+          </h4>
+          <ul className="space-y-2 text-sm text-gray-700 mb-3">
+            <li className="flex gap-2">
+              <span className="text-blue-600">•</span>
+              <span>
+                給与等の支払いは、指定された口座への振込により行われます
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-blue-600">•</span>
+              <span>
+                口座情報に誤りがあった場合、振込が遅延する場合があります
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-blue-600">•</span>
+              <span>
+                口座情報を変更する場合は、事前に人事部に連絡してください
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-blue-600">•</span>
+              <span>
+                振込手数料は会社が負担します
+              </span>
+            </li>
+          </ul>
+          <div className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="consent"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+            />
+            <Label htmlFor="consent" className="text-sm text-gray-700 cursor-pointer">
+              上記の同意事項を確認し、同意します
+              <span className="text-red-500 ml-1">*</span>
+            </Label>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// 家族情報変更フォーム
+function FamilyInfoChangeForm({ form, onFlowUpdate }: FormComponentProps) {
+  const [hasSpouse, setHasSpouse] = useState(false);
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'familyMembers',
+  });
+
+  const addFamilyMember = () => {
+    if (fields.length >= 6) {
+      toast.error('家族メンバーは最大6名までです');
+      return;
+    }
+
+    append({
+      nameKanji: '',
+      nameKana: '',
+      relationship: '',
+      birthDate: '',
+      occupation: '',
+      annualIncome: 0,
+      liveTogether: true,
+      incomeTaxDependent: false,
+      healthInsuranceDependent: false,
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-green-600" />
+          家族情報変更
+        </CardTitle>
+        <CardDescription>
+          家族構成や扶養家族の情報を変更します
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* 配偶者情報セクション */}
+        <div className="space-y-4">
+          <div className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="hasSpouse"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              checked={hasSpouse}
+              onChange={(e) => setHasSpouse(e.target.checked)}
+            />
+            <Label htmlFor="hasSpouse" className="cursor-pointer">
+              配偶者がいる
+            </Label>
+          </div>
+
+          {hasSpouse && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-4">
+              <p className="text-sm font-medium text-gray-700">配偶者の詳細情報</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="spouseNameKanji">
+                    氏名（漢字）
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="spouseNameKanji"
+                    {...form.register('spouse.nameKanji')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="spouseNameKana">
+                    氏名（カナ）
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="spouseNameKana"
+                    placeholder="ヤマダ ハナコ"
+                    {...form.register('spouse.nameKana')}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="spouseBirthDate">
+                    生年月日
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="spouseBirthDate"
+                    type="date"
+                    {...form.register('spouse.birthDate')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="spouseOccupation">
+                    職業
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="spouseOccupation"
+                    placeholder="会社員"
+                    {...form.register('spouse.occupation')}
+                  />
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="spouseAnnualIncome">
+                    年間収入（見込み）
+                    <span className="text-red-500 ml-1">*</span>
+                  </Label>
+                  <Input
+                    id="spouseAnnualIncome"
+                    type="number"
+                    {...form.register('spouse.annualIncome', { valueAsNumber: true })}
+                  />
+                  <p className="text-xs text-muted-foreground">円</p>
+                </div>
+                <div className="flex items-start gap-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="spouseLiveTogether"
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    {...form.register('spouse.liveTogether')}
+                  />
+                  <Label htmlFor="spouseLiveTogether" className="cursor-pointer">
+                    同居している
+                  </Label>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">税額控除・扶養</p>
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="spouseIncomeTaxDependent"
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    {...form.register('spouse.incomeTaxDependent')}
+                  />
+                  <div>
+                    <Label htmlFor="spouseIncomeTaxDependent" className="cursor-pointer">
+                      所得税上の扶養に入れる（年間所得48万円以下）
+                    </Label>
+                    <p className="text-xs text-muted-foreground">年間所得が48万円以下の場合、所得税の配偶者控除が適用されます</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    id="spouseHealthInsuranceDependent"
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    {...form.register('spouse.healthInsuranceDependent')}
+                  />
+                  <div>
+                    <Label htmlFor="spouseHealthInsuranceDependent" className="cursor-pointer">
+                      健康保険の扶養に入れる（年間所得130万円未満）
+                    </Label>
+                    <p className="text-xs text-muted-foreground">年間所得が130万円未満の場合、健康保険の扶養に入れます</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* その他の家族メンバー */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-base font-medium">その他の家族</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addFamilyMember}
+              disabled={fields.length >= 6}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              家族を追加
+            </Button>
+          </div>
+
+          {fields.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                「家族を追加」ボタンをクリックして、家族メンバーを追加してください
+                <br />
+                （最大6名まで）
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <div
+                  key={field.id}
+                  className="rounded-lg border border-gray-200 bg-white p-4 space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900">家族{index + 1}</h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => remove(index)}
+                    >
+                      <X className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor={`familyMembers.${index}.nameKanji`}>
+                        氏名（漢字）
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <Input
+                        id={`familyMembers.${index}.nameKanji`}
+                        {...form.register(`familyMembers.${index}.nameKanji` as const)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`familyMembers.${index}.nameKana`}>
+                        氏名（カナ）
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <Input
+                        id={`familyMembers.${index}.nameKana`}
+                        placeholder="ヤマダ イチロウ"
+                        {...form.register(`familyMembers.${index}.nameKana` as const)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor={`familyMembers.${index}.relationship`}>
+                        続柄
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <Input
+                        id={`familyMembers.${index}.relationship`}
+                        placeholder="長男、次女など"
+                        {...form.register(`familyMembers.${index}.relationship` as const)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`familyMembers.${index}.birthDate`}>
+                        生年月日
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <Input
+                        id={`familyMembers.${index}.birthDate`}
+                        type="date"
+                        {...form.register(`familyMembers.${index}.birthDate` as const)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`familyMembers.${index}.occupation`}>
+                        職業
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <Input
+                        id={`familyMembers.${index}.occupation`}
+                        placeholder="学生、会社員など"
+                        {...form.register(`familyMembers.${index}.occupation` as const)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor={`familyMembers.${index}.annualIncome`}>
+                        年間収入（見込み）
+                        <span className="text-red-500 ml-1">*</span>
+                      </Label>
+                      <Input
+                        id={`familyMembers.${index}.annualIncome`}
+                        type="number"
+                        {...form.register(`familyMembers.${index}.annualIncome` as const, { valueAsNumber: true })}
+                      />
+                      <p className="text-xs text-muted-foreground">円</p>
+                    </div>
+                    <div className="flex items-start gap-2 pt-6">
+                      <input
+                        type="checkbox"
+                        id={`familyMembers.${index}.liveTogether`}
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        {...form.register(`familyMembers.${index}.liveTogether` as const)}
+                      />
+                      <Label htmlFor={`familyMembers.${index}.liveTogether`} className="cursor-pointer">
+                        同居している
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-700">税額控除・扶養</p>
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        id={`familyMembers.${index}.incomeTaxDependent`}
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        {...form.register(`familyMembers.${index}.incomeTaxDependent` as const)}
+                      />
+                      <Label htmlFor={`familyMembers.${index}.incomeTaxDependent`} className="cursor-pointer">
+                        所得税上の扶養に入れる
+                      </Label>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="checkbox"
+                        id={`familyMembers.${index}.healthInsuranceDependent`}
+                        className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        {...form.register(`familyMembers.${index}.healthInsuranceDependent` as const)}
+                      />
+                      <Label htmlFor={`familyMembers.${index}.healthInsuranceDependent`} className="cursor-pointer">
+                        健康保険の扶養に入れる
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 変更理由 */}
+        <div className="space-y-2">
+          <Label htmlFor="changeReason">
+            変更理由
+            <span className="text-red-500 ml-1">*</span>
+          </Label>
+          <Textarea
+            id="changeReason"
+            placeholder="変更の理由を詳しく入力してください"
+            {...form.register('changeReason')}
+            rows={3}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// 通勤経路変更フォーム
+function CommuteRouteChangeForm({ form, onFlowUpdate }: FormComponentProps) {
+  const [transportMethod, setTransportMethod] = useState<'public' | 'private' | ''>('');
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <UserCheck className="h-5 w-5 text-orange-600" />
+          通勤経路変更
+        </CardTitle>
+        <CardDescription>
+          通勤経路や通勤手段を変更します
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* 確認事項 */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <h4 className="font-medium text-gray-900 mb-3">
+            以下の項目を必ずお読みいただき、チェックしてください
+          </h4>
+          <div className="space-y-3">
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="confirmation1"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                {...form.register('confirmations.transportAllowanceCompliance')}
+              />
+              <Label htmlFor="confirmation1" className="text-sm cursor-pointer">
+                交通費は、社会通念上最も経済的かつ合理的と認められる経路および方法により算出された金額を支給します
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+            </div>
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="confirmation2"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                {...form.register('confirmations.remoteWorkDailyCalculation')}
+              />
+              <Label htmlFor="confirmation2" className="text-sm cursor-pointer">
+                在宅勤務制度を利用する場合、交通費は日割り計算となります
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+            </div>
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="confirmation3"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                {...form.register('confirmations.expenseDeadline')}
+              />
+              <Label htmlFor="confirmation3" className="text-sm cursor-pointer">
+                交通費の精算は毎月末日までに申請してください
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+            </div>
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="confirmation4"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                {...form.register('confirmations.bicycleProhibition')}
+              />
+              <Label htmlFor="confirmation4" className="text-sm cursor-pointer">
+                自転車通勤は原則禁止です（特別な事情がある場合は人事部に相談してください）
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+            </div>
+          </div>
+        </div>
+
+        {/* 通勤方法 */}
+        <div className="space-y-2">
+          <Label htmlFor="transportMethod">
+            通勤方法
+            <span className="text-red-500 ml-1">*</span>
+          </Label>
+          <Select onValueChange={(value) => {
+            setTransportMethod(value as 'public' | 'private');
+            form.setValue('transportMethod', value);
+          }}>
+            <SelectTrigger>
+              <SelectValue placeholder="選択してください" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="public">公共交通機関</SelectItem>
+              <SelectItem value="private">自家用車</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* 公共交通機関の場合 */}
+        {transportMethod === 'public' && (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+              <p className="text-sm text-blue-800">
+                <strong>入力例：</strong>
+                <br />
+                自宅 → 新宿駅（JR山手線）→ 渋谷駅（東急東横線）→ 中目黒駅
+                → 徒歩5分 → オフィス
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="publicDeparture">
+                  出発地
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="publicDeparture"
+                  placeholder="例：自宅最寄り駅"
+                  {...form.register('publicTransit.departure')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="publicArrival">
+                  到着地
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="publicArrival"
+                  placeholder="例：オフィス最寄り駅"
+                  {...form.register('publicTransit.arrival')}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="publicRouteDetails">
+                経路詳細
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <Textarea
+                id="publicRouteDetails"
+                placeholder="使用する路線と駅を順番に記入してください&#10;例：自宅 → 新宿駅（JR山手線）→ 渋谷駅 → 徒歩 → オフィス"
+                {...form.register('publicTransit.routeDetails')}
+                rows={4}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="publicOneWayFare">
+                  片道運賃
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    ¥
+                  </span>
+                  <Input
+                    id="publicOneWayFare"
+                    type="number"
+                    className="pl-8"
+                    placeholder="500"
+                    {...form.register('publicTransit.oneWayFare', { valueAsNumber: true })}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">円</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="publicTravelTime">
+                  所要時間
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="publicTravelTime"
+                  type="number"
+                  placeholder="45"
+                  {...form.register('publicTransit.travelTime', { valueAsNumber: true })}
+                />
+                <p className="text-xs text-muted-foreground">分</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="publicPassType">
+                定期券種類
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <Select onValueChange={(value) => form.setValue('publicTransit.passType', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="選択してください" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1month">1ヶ月定期</SelectItem>
+                  <SelectItem value="3months">3ヶ月定期</SelectItem>
+                  <SelectItem value="6months">6ヶ月定期</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="publicPassFare">
+                定期券代金
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  ¥
+                </span>
+                <Input
+                  id="publicPassFare"
+                  type="number"
+                  className="pl-8"
+                  placeholder="15000"
+                  {...form.register('publicTransit.passFare', { valueAsNumber: true })}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">選択した定期券種類の金額を入力</p>
+            </div>
+          </div>
+        )}
+
+        {/* 自家用車の場合 */}
+        {transportMethod === 'private' && (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4">
+              <p className="text-sm text-yellow-800">
+                <strong>ご注意：</strong>
+                <br />
+                自家用車通勤には会社の承認が必要です。
+                <br />
+                駐車場代は自己負担となります。ガソリン代のみ支給対象です。
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="privateDeparture">
+                  出発地
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="privateDeparture"
+                  placeholder="例：自宅"
+                  {...form.register('privateCar.departure')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="privateArrival">
+                  到着地
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="privateArrival"
+                  placeholder="例：オフィス駐車場"
+                  {...form.register('privateCar.arrival')}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="privateDistance">
+                  片道距離
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="privateDistance"
+                  type="number"
+                  step="0.1"
+                  placeholder="15"
+                  {...form.register('privateCar.distance', { valueAsNumber: true })}
+                />
+                <p className="text-xs text-muted-foreground">km（小数点1桁まで）</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="privateTravelTime">
+                  所要時間
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="privateTravelTime"
+                  type="number"
+                  placeholder="30"
+                  {...form.register('privateCar.travelTime', { valueAsNumber: true })}
+                />
+                <p className="text-xs text-muted-foreground">分</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="privateCarModel">
+                車種
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <Input
+                id="privateCarModel"
+                placeholder="例：トヨタ プリウス"
+                {...form.register('privateCar.carModel')}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="privateLicensePlate">
+                ナンバープレート
+                <span className="text-red-500 ml-1">*</span>
+              </Label>
+              <Input
+                id="privateLicensePlate"
+                placeholder="例：品川 500 あ 12-34"
+                {...form.register('privateCar.licensePlate')}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="privateFuelType">
+                  燃料タイプ
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Select onValueChange={(value) => form.setValue('privateCar.fuelType', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="選択してください" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gasoline">ガソリン</SelectItem>
+                    <SelectItem value="diesel">ディーゼル</SelectItem>
+                    <SelectItem value="hybrid">ハイブリッド</SelectItem>
+                    <SelectItem value="electric">電気</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="privateFuelEfficiency">
+                  燃費
+                  <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="privateFuelEfficiency"
+                  type="number"
+                  step="0.1"
+                  placeholder="20"
+                  {...form.register('privateCar.fuelEfficiency', { valueAsNumber: true })}
+                />
+                <p className="text-xs text-muted-foreground">km/L（電気の場合はkm/kWh）</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="privateNeedParking"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                {...form.register('privateCar.needParking')}
+              />
+              <div>
+                <Label htmlFor="privateNeedParking" className="cursor-pointer">
+                  駐車場を会社で手配してほしい
+                </Label>
+                <p className="text-xs text-muted-foreground">会社が駐車場を手配する場合、駐車場代は自己負担となります</p>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+              <h4 className="font-medium text-gray-900 mb-2">
+                必要書類
+              </h4>
+              <ul className="space-y-1 text-sm text-gray-700">
+                <li className="flex gap-2">
+                  <span className="text-blue-600">•</span>
+                  <span>運転免許証のコピー</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-blue-600">•</span>
+                  <span>自動車保険証券のコピー</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-blue-600">•</span>
+                  <span>車検証のコピー</span>
+                </li>
+              </ul>
+              <p className="text-xs text-muted-foreground mt-2">
+                ※ 上記書類は人事部に直接提出してください
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 変更理由 */}
+        <div className="space-y-2">
+          <Label htmlFor="changeReason">
+            変更理由
+            <span className="text-red-500 ml-1">*</span>
+          </Label>
+          <Textarea
+            id="changeReason"
+            placeholder="通勤経路変更の理由を入力してください"
+            {...form.register('changeReason')}
+            rows={3}
+          />
+        </div>
       </CardContent>
     </Card>
   );

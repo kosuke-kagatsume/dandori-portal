@@ -28,6 +28,7 @@ import { useUserStore } from '@/lib/store/user-store';
 import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
 import { MountGate } from '@/components/common/MountGate';
+import { AnnouncementCard } from '@/features/announcements/announcement-card';
 import dynamic from 'next/dynamic';
 
 // Chartコンポーネントを遅延読み込み（初回表示時のみロード）
@@ -198,6 +199,11 @@ export default function DashboardPage() {
           </Badge>
         </div>
       </div>
+
+      {/* アナウンス・掲示板 */}
+      <MountGate>
+        <AnnouncementCard />
+      </MountGate>
 
       {/* Role-based KPI Cards */}
       <div className={`grid gap-4 md:grid-cols-2 ${

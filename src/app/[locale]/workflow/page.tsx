@@ -99,6 +99,7 @@ export default function WorkflowPage() {
   const [showDelegateDialog, setShowDelegateDialog] = useState(false);
   const [showNewRequestDialog, setShowNewRequestDialog] = useState(false);
   const [showNewRequestFormDialog, setShowNewRequestFormDialog] = useState(false);
+  const [showChangeRequestDialog, setShowChangeRequestDialog] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject'>('approve');
   const [comment, setComment] = useState('');
   const [delegateUserId, setDelegateUserId] = useState('');
@@ -810,6 +811,64 @@ export default function WorkflowPage() {
               <Package className="h-8 w-8 text-pink-600" />
               <span>購買申請</span>
             </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex-col gap-2"
+              onClick={() => {
+                setShowNewRequestDialog(false);
+                setShowChangeRequestDialog(true);
+              }}
+            >
+              <ClipboardList className="h-8 w-8 text-teal-600" />
+              <span>各種変更</span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 各種変更選択ダイアログ */}
+      <Dialog open={showChangeRequestDialog} onOpenChange={setShowChangeRequestDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>変更申請の種類を選択</DialogTitle>
+            <DialogDescription>
+              変更する項目を選択してください
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-4">
+            <Button
+              variant="outline"
+              className="h-24 flex-col gap-2"
+              onClick={() => {
+                setShowChangeRequestDialog(false);
+                handleNewRequest('bank_account_change');
+              }}
+            >
+              <Building2 className="h-8 w-8 text-blue-600" />
+              <span>給与振込口座変更</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex-col gap-2"
+              onClick={() => {
+                setShowChangeRequestDialog(false);
+                handleNewRequest('family_info_change');
+              }}
+            >
+              <Users className="h-8 w-8 text-green-600" />
+              <span>家族情報変更</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-24 flex-col gap-2"
+              onClick={() => {
+                setShowChangeRequestDialog(false);
+                handleNewRequest('commute_route_change');
+              }}
+            >
+              <UserCheck className="h-8 w-8 text-orange-600" />
+              <span>通勤経路変更</span>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1260,6 +1319,9 @@ function getWorkflowTypeIcon(type: WorkflowType) {
     document_approval: FileText,
     shift_change: Users,
     remote_work: Home,
+    bank_account_change: Building2,
+    family_info_change: Users,
+    commute_route_change: UserCheck,
   };
   return icons[type] || FileText;
 }
@@ -1274,6 +1336,9 @@ function getWorkflowTypeLabel(type: WorkflowType): string {
     document_approval: '書類承認',
     shift_change: 'シフト変更',
     remote_work: 'リモートワーク申請',
+    bank_account_change: '給与振込口座変更',
+    family_info_change: '家族情報変更',
+    commute_route_change: '通勤経路変更',
   };
   return labels[type] || '申請';
 }

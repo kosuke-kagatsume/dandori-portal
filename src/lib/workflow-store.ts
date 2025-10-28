@@ -10,7 +10,7 @@ import { useApprovalFlowStore } from './store/approval-flow-store';
 import { useOrganizationStore } from './store/organization-store';
 import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration';
 
-export type WorkflowType = 
+export type WorkflowType =
   | 'leave_request'      // 休暇申請
   | 'overtime_request'   // 残業申請
   | 'expense_claim'      // 経費申請
@@ -18,7 +18,10 @@ export type WorkflowType =
   | 'purchase_request'   // 購買申請
   | 'document_approval'  // 書類承認
   | 'shift_change'       // シフト変更
-  | 'remote_work';       // リモートワーク申請
+  | 'remote_work'        // リモートワーク申請
+  | 'bank_account_change'  // 給与振込口座変更
+  | 'family_info_change'   // 家族情報変更
+  | 'commute_route_change'; // 通勤経路変更
 
 export type WorkflowStatus =
   | 'draft'              // 下書き
