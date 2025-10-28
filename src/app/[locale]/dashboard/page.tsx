@@ -206,7 +206,7 @@ export default function DashboardPage() {
       </MountGate>
 
       {/* Role-based KPI Cards */}
-      <div className={`grid gap-4 md:grid-cols-2 ${
+      <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 ${
         effectiveDemoUser.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
       }`}>
         {/* Card 1: 従業員数/チームメンバー数 */}

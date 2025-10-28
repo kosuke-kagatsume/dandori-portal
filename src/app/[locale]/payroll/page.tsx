@@ -348,7 +348,7 @@ export default function PayrollPage() {
 
       {/* 統計カード */}
       <MountGate fallback={
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">従業員数</CardTitle>
@@ -391,7 +391,7 @@ export default function PayrollPage() {
           </Card>
         </div>
       }>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">従業員数</CardTitle>
@@ -565,7 +565,7 @@ export default function PayrollPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                   <div className="grid gap-2">
                     <label className="text-sm font-medium">計算対象期間</label>
                     <select
@@ -617,7 +617,7 @@ export default function PayrollPage() {
 
         <TabsContent value="bonus" className="space-y-4">
           {/* 賞与概要カード */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">夏季賞与</CardTitle>
@@ -682,7 +682,7 @@ export default function PayrollPage() {
             <CardContent>
               <div className="space-y-4">
                 {/* 賞与設定 */}
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                   <div className="grid gap-2">
                     <label className="text-sm font-medium">支給期間</label>
                     <select
@@ -820,7 +820,7 @@ export default function PayrollPage() {
         </TabsContent>
 
         <TabsContent value="yearEnd" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             <Card className="md:col-span-1">
               <CardHeader>
                 <CardTitle>年末調整対象者</CardTitle>
@@ -890,7 +890,7 @@ export default function PayrollPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                   <div className="grid gap-2">
                     <label className="text-sm font-medium">支給日</label>
                     <select className="w-full p-2 border rounded-md">

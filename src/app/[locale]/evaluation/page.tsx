@@ -244,7 +244,7 @@ export default function EvaluationPage() {
 
       {/* 統計カード */}
       <MountGate>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">総評価数</CardTitle>
@@ -339,7 +339,7 @@ export default function EvaluationPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-5">
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">年度</label>
                   <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>

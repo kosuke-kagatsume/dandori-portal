@@ -524,7 +524,7 @@ export default function UsersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center space-x-2">
             <div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
