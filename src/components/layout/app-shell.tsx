@@ -55,14 +55,11 @@ export function AppShell({ children }: AppShellProps) {
       if (!existingData) {
         // データが存在しない場合のみ初期化
         const onboardingData = getDemoOnboardingData();
-        console.log('[Demo] Initializing onboarding data for applicant (first time)');
         initializeApplication(onboardingData.application);
         initializeBasicInfoForm(onboardingData.basicInfoForm);
         initializeFamilyInfoForm(onboardingData.familyInfoForm);
         initializeBankAccountForm(onboardingData.bankAccountForm);
         initializeCommuteRouteForm(onboardingData.commuteRouteForm);
-      } else {
-        console.log('[Demo] Onboarding data already exists, skipping initialization');
       }
     }
   }, [
@@ -78,10 +75,7 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     const existingUpdates = getLegalUpdates();
     if (existingUpdates.length === 0) {
-      console.log('[Demo] Initializing legal updates demo data');
       initializeLegalUpdatesDemo(addUpdate);
-    } else {
-      console.log('[Demo] Legal updates data already exists, skipping initialization');
     }
   }, [addUpdate, getLegalUpdates]);
 
@@ -89,10 +83,7 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     const existingAnnouncements = getAnnouncements();
     if (existingAnnouncements.length === 0) {
-      console.log('[Demo] Initializing announcements demo data');
       initializeAnnouncementsDemo(createAnnouncement);
-    } else {
-      console.log('[Demo] Announcements data already exists, skipping initialization');
     }
   }, [createAnnouncement, getAnnouncements]);
 

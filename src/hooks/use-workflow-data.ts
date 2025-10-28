@@ -25,14 +25,7 @@ export function useWorkflowData(userId: string) {
 
         if (!myRequestsResult.success || !pendingApprovalsResult.success) {
           // Supabaseからの取得に失敗した場合はZustandストアのデータを使用
-          console.log('Using local store data as fallback');
           store.initializeDemoData();
-        } else {
-          // Supabaseのデータが取得できた場合
-          console.log('Loaded data from Supabase:', {
-            myRequests: myRequestsResult.data?.length || 0,
-            pendingApprovals: pendingApprovalsResult.data?.length || 0,
-          });
         }
       } catch (err) {
         console.error('Failed to fetch workflow data:', err);

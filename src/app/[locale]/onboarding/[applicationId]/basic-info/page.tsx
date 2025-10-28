@@ -91,11 +91,8 @@ export default function BasicInfoFormPage() {
 
   const onSubmit = async (data: BasicInfoFormInput) => {
     try {
-      console.log('[BasicInfoForm] Submitting with data:', data);
-      console.log('[BasicInfoForm] Validation errors:', errors);
       updateForm(data);
       await submitForm();
-      console.log('[BasicInfoForm] Form submitted successfully');
       router.push(`/${locale}/onboarding/${applicationId}`);
     } catch (error) {
       console.error('[BasicInfoForm] Failed to submit form:', error);

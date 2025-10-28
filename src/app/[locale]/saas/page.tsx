@@ -109,9 +109,6 @@ export default function SaaSManagementPage() {
         // ストアから最新のユーザーを取得
         const currentUsers = useUserStore.getState().users;
 
-        console.log('サービス数:', allServices.length);
-        console.log('プラン数:', plansWithIds.length);
-        console.log('ユーザー数:', currentUsers.length);
 
         if (plansWithIds.length === 0) {
           toast.error('プランの取得に失敗しました');
@@ -125,7 +122,6 @@ export default function SaaSManagementPage() {
 
         const assignments = generateAssignments(allServices, plansWithIds, currentUsers);
 
-        console.log('生成された割り当て数:', assignments.length);
 
         assignments.forEach((assignment) => {
           addAssignment(assignment);
@@ -176,7 +172,6 @@ export default function SaaSManagementPage() {
           }
         });
 
-        console.log('追加されたサービスID:', addedServiceIds);
 
         // 3. 各サービスにプランを追加
         addedServiceIds.forEach((serviceId) => {
@@ -197,9 +192,6 @@ export default function SaaSManagementPage() {
           // ストアから最新のユーザーを取得
           const currentUsers = useUserStore.getState().users;
 
-          console.log('取得したサービス:', servicesWithIds.length);
-          console.log('取得したプラン:', plansWithIds.length);
-          console.log('ユーザー数:', currentUsers.length);
 
           if (plansWithIds.length === 0) {
             toast.error('プランの取得に失敗しました。もう一度お試しください。');
@@ -213,7 +205,6 @@ export default function SaaSManagementPage() {
 
           const assignments = generateAssignments(servicesWithIds, plansWithIds, currentUsers);
 
-          console.log('生成された割り当て数:', assignments.length);
 
           assignments.forEach((assignment) => {
             addAssignment(assignment);
