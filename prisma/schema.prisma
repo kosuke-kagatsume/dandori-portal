@@ -118,3 +118,82 @@ model Attendance {
   @@index([date])
   @@index([status])
 }
+
+// ワークフロー申請
+model WorkflowRequest {
+  id              String   @id @default(cuid())
+  tenantId        String
+  requesterId     String   // 申請者ID
+  requesterName   String   // 申請者名
+  department      String?  // 部署
+  type            String   // leave, overtime, expense, business_trip, purchase, attendance_correction
+  title           String   // 申請タイトル
+  description     String?  // 申請内容
+  amount          Float?   // 金額（経費・購買申請用）
+  days            Int?     // 日数（休暇申請用）
+  hours           Float?   // 時間数（残業申請用）
+  details         Json?    // その他詳細情報
+  status          String   @default("pending") // pending, in_progress, approved, rejected, withdrawn
+  currentStep     Int      @default(0)
+  priority        String   @default("medium") // low, medium, high, urgent
+  dueDate         DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  approvalSteps   ApprovalStep[]
+  timelineEntries TimelineEntry[]
+
+  @@map("workflow_requests")
+  @@index([tenantId])
+  @@index([requesterId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// 承認ステップ
+model ApprovalStep {
+  id              String    @id @default(cuid())
+  workflowId      String
+  order           Int       // ステップの順序（0始まり）
+  approverRole    String    // direct_manager, hr_manager, finance_manager, etc.
+  approverId      String?   // 承認者ID
+  approverName    String?   // 承認者名
+  status          String    @default("pending") // pending, approved, rejected, skipped
+  actionDate      DateTime? // 承認/却下日時
+  comments        String?   // コメント
+  executionMode   String    @default("sequential") // sequential, parallel
+  timeoutHours    Int?      // タイムアウト時間
+  isEscalated     Boolean   @default(false)
+  escalatedTo     String?   // エスカレーション先
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  workflow WorkflowRequest @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@map("approval_steps")
+  @@index([workflowId])
+  @@index([approverId])
+  @@index([status])
+}
+
+// タイムライン（履歴）
+model TimelineEntry {
+  id         String   @id @default(cuid())
+  workflowId String
+  action     String   // created, submitted, approved, rejected, returned, escalated, etc.
+  actorId    String?  // アクション実行者ID
+  actorName  String?  // アクション実行者名
+  details    String?  // 詳細情報
+  createdAt  DateTime @default(now())
+
+  // Relations
+  workflow WorkflowRequest @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@map("timeline_entries")
+  @@index([workflowId])
+  @@index([createdAt])
+}
