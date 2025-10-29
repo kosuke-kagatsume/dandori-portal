@@ -197,3 +197,58 @@ model TimelineEntry {
   @@index([workflowId])
   @@index([createdAt])
 }
+
+// 休暇申請
+model LeaveRequest {
+  id             String    @id @default(cuid())
+  tenantId       String
+  userId         String
+  userName       String
+  type           String    // paid, sick, special, compensatory, half_day_am, half_day_pm
+  startDate      DateTime  @db.Date
+  endDate        DateTime  @db.Date
+  days           Float     // 日数（0.5の半休も対応）
+  reason         String
+  status         String    @default("draft") // draft, pending, approved, rejected, cancelled
+  approver       String?   // 承認者ID
+  approverName   String?   // 承認者名
+  approvedDate   DateTime?
+  rejectedReason String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("leave_requests")
+  @@index([tenantId])
+  @@index([userId])
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+// 休暇残数
+model LeaveBalance {
+  id                       String   @id @default(cuid())
+  tenantId                 String
+  userId                   String
+  year                     Int
+  paidLeaveTotal           Int      @default(0)
+  paidLeaveUsed            Float    @default(0)
+  paidLeaveRemaining       Float    @default(0)
+  paidLeaveExpiry          DateTime @db.Date
+  sickLeaveTotal           Int      @default(0)
+  sickLeaveUsed            Float    @default(0)
+  sickLeaveRemaining       Float    @default(0)
+  specialLeaveTotal        Int      @default(0)
+  specialLeaveUsed         Float    @default(0)
+  specialLeaveRemaining    Float    @default(0)
+  compensatoryLeaveTotal   Int      @default(0)
+  compensatoryLeaveUsed    Float    @default(0)
+  compensatoryLeaveRemaining Float  @default(0)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("leave_balances")
+  @@unique([userId, year])
+  @@index([tenantId])
+  @@index([userId])
+}
