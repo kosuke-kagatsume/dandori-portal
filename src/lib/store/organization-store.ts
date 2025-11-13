@@ -71,7 +71,27 @@ export const useOrganizationStore = create<OrganizationStore>()(
       transferHistories: [],
 
       // Basic setters
-      setOrganizationTree: (tree) => set({ organizationTree: tree }),
+      setOrganizationTree: (tree) => {
+        // ツリーから全メンバーを抽出
+        const extractAllMembers = (node: OrganizationNode): OrganizationMember[] => {
+          let members = [...node.members];
+          for (const child of node.children) {
+            members = [...members, ...extractAllMembers(child)];
+          }
+          return members;
+        };
+
+        // 重複を除去
+        const allExtractedMembers = extractAllMembers(tree);
+        const uniqueMembers = allExtractedMembers.filter(
+          (member, index, self) => self.findIndex(m => m.id === member.id) === index
+        );
+
+        set({
+          organizationTree: tree,
+          allMembers: uniqueMembers
+        });
+      },
       setSelectedMember: (member) => set({ selectedMember: member }),
       setSelectedNode: (node) => set({ selectedNode: node }),
       setViewMode: (mode) => set({ viewMode: mode }),

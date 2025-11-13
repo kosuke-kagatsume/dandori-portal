@@ -15,6 +15,7 @@ import {
   Moon,
   Languages,
   Clock,
+  Shield,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -25,15 +26,16 @@ import { SimpleSettings, defaultSettings } from '@/features/settings/types';
 import {
   AppearanceTab,
   RegionalTab,
-  DataTab,
   SystemTab,
   CompanyTab,
   PayrollTab,
   YearEndTab,
   AttendanceTab,
   WorkflowTab,
-  ApprovalFlowTab,
 } from '@/features/settings/tabs';
+import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
+import { useOrganizationStore } from '@/lib/store/organization-store';
+import { unifiedOrganizationMembers } from '@/lib/unified-organization-data';
 
 export default function SettingsPage() {
   const mounted = useIsMounted();
@@ -47,8 +49,12 @@ export default function SettingsPage() {
     updatePayrollSettings,
     updateYearEndAdjustmentSettings
   } = useCompanySettingsStore();
+  const { getFilteredMembers, allMembers } = useOrganizationStore();
   const [settings, setSettings] = useState<SimpleSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // 組織メンバーを取得（allMembersが空ならunifiedOrganizationMembersを使用）
+  const organizationMembers = allMembers.length > 0 ? getFilteredMembers() : unifiedOrganizationMembers;
 
   // ページロード時にlocalStorageから役職を読み込む
   useEffect(() => {
@@ -141,7 +147,7 @@ export default function SettingsPage() {
       )}
 
       <Tabs defaultValue="appearance" className="space-y-4 w-full">
-        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-1">
+        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-1">
           <TabsTrigger value="appearance" className="flex-1 sm:flex-none min-w-[100px]">
             <Sun className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">外観</span>
@@ -170,16 +176,17 @@ export default function SettingsPage() {
             <GitBranch className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">ワークフロー</span>
           </TabsTrigger>
-          <TabsTrigger value="approval-flow" className="flex-1 sm:flex-none min-w-[100px]">
-            <GitBranch className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">承認フロー</span>
-          </TabsTrigger>
-          <TabsTrigger value="data" className="flex-1 sm:flex-none min-w-[100px]">データ</TabsTrigger>
           {canManageSystem && (
-            <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
-              <ShieldCheck className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">システム</span>
-            </TabsTrigger>
+            <>
+              <TabsTrigger value="permissions" className="flex-1 sm:flex-none min-w-[100px]">
+                <Shield className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">権限</span>
+              </TabsTrigger>
+              <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
+                <ShieldCheck className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">システム</span>
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -211,18 +218,25 @@ export default function SettingsPage() {
           <WorkflowTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
         </TabsContent>
 
-        <TabsContent value="approval-flow">
-          <ApprovalFlowTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
-        </TabsContent>
-
-        <TabsContent value="data">
-          <DataTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
-        </TabsContent>
-
         {canManageSystem && (
-          <TabsContent value="system">
-            <SystemTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
-          </TabsContent>
+          <>
+            <TabsContent value="permissions">
+              <PermissionManagementPanel
+                members={organizationMembers}
+                onMemberPermissionUpdate={(memberId, permissions) => {
+                  console.log('Update permissions for member:', memberId, permissions);
+                  toast.success('権限を更新しました');
+                }}
+                onRoleUpdate={(roleId, permissions) => {
+                  console.log('Update role permissions:', roleId, permissions);
+                  toast.success('ロール権限を更新しました');
+                }}
+              />
+            </TabsContent>
+            <TabsContent value="system">
+              <SystemTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
+            </TabsContent>
+          </>
         )}
       </Tabs>
     </div>

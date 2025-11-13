@@ -11,6 +11,4 @@ export { AttendanceTab } from './AttendanceTab';
 export { AssetsTab } from './AssetsTab';
 export { SaaSTab } from './SaaSTab';
 export { WorkflowTab } from './WorkflowTab';
-export { ApprovalFlowTab } from './ApprovalFlowTab';
-export { DataTab } from './DataTab';
 export { SystemTab } from './SystemTab';

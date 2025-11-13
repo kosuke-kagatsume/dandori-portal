@@ -40,8 +40,8 @@ export const MENU_PERMISSIONS = {
   assets: ['executive', 'hr', 'admin'],
   saas: ['executive', 'hr', 'admin'],
   onboarding: ['hr', 'applicant'], // 人事担当と新入社員がアクセス可能
-  settings: ['admin'],
-  audit: ['admin'],
+  settings: ['executive', 'hr', 'admin'], // 経営者、人事担当、システム管理者
+  audit: ['admin'], // 監査ログはシステム管理者のみ
 } as const;
 
 export type MenuKey = keyof typeof MENU_PERMISSIONS;

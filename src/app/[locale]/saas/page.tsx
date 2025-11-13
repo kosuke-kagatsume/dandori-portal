@@ -271,14 +271,14 @@ export default function SaaSManagementPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* ヘッダー */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">SaaS管理</h1>
           <p className="text-muted-foreground">
             社内で利用しているSaaSサービスのライセンスとコストを一元管理
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           {mounted && (
             <>
               {services.length === 0 ? (
@@ -293,11 +293,11 @@ export default function SaaSManagementPage() {
                 </Button>
               ) : (
                 <>
-                  <Button variant="outline" size="sm" onClick={handleExportServicesCSV}>
+                  <Button variant="outline" size="sm" onClick={handleExportServicesCSV} className="w-full sm:w-auto">
                     <Download className="mr-2 h-4 w-4" />
                     サービスCSV
                   </Button>
-                  <Button variant="outline" size="sm" onClick={handleExportAssignmentsCSV}>
+                  <Button variant="outline" size="sm" onClick={handleExportAssignmentsCSV} className="w-full sm:w-auto">
                     <Download className="mr-2 h-4 w-4" />
                     割り当てCSV
                   </Button>
@@ -305,15 +305,15 @@ export default function SaaSManagementPage() {
               )}
             </>
           )}
-          <Button variant="outline" onClick={() => router.push('/ja/saas/users')}>
+          <Button variant="outline" onClick={() => router.push('/ja/saas/users')} className="w-full sm:w-auto">
             <Users className="mr-2 h-4 w-4" />
             ユーザー別利用
           </Button>
-          <Button variant="outline" onClick={() => router.push('/ja/saas/departments')}>
+          <Button variant="outline" onClick={() => router.push('/ja/saas/departments')} className="w-full sm:w-auto">
             <Building className="mr-2 h-4 w-4" />
             部門別分析
           </Button>
-          <Button onClick={handleOpenCreateDialog}>
+          <Button onClick={handleOpenCreateDialog} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             新規サービス登録
           </Button>
@@ -322,7 +322,7 @@ export default function SaaSManagementPage() {
 
       {/* サマリーカード */}
       {mounted ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">総サービス数</CardTitle>
@@ -376,7 +376,7 @@ export default function SaaSManagementPage() {
           </Card>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">総サービス数</CardTitle>

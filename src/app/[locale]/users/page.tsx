@@ -478,9 +478,9 @@ export default function UsersPage() {
             システムに登録されているユーザーを管理します
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <Filter className="mr-2 h-4 w-4" />
               <SelectValue />
             </SelectTrigger>
@@ -492,7 +492,7 @@ export default function UsersPage() {
               <SelectItem value="suspended">停止のみ</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+          <Button variant="outline" size="sm" onClick={handleExportCSV} className="w-full sm:w-auto">
             <Download className="mr-2 h-4 w-4" />
             エクスポート
           </Button>
@@ -500,6 +500,7 @@ export default function UsersPage() {
             variant="outline"
             size="sm"
             onClick={() => importInputRef?.click()}
+            className="w-full sm:w-auto"
           >
             <Upload className="mr-2 h-4 w-4" />
             インポート
@@ -516,6 +517,7 @@ export default function UsersPage() {
               setEditingUser(undefined);
               setDialogOpen(true);
             }}
+            className="w-full sm:w-auto"
           >
             <UserPlus className="mr-2 h-4 w-4" />
             ユーザー追加

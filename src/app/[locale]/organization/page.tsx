@@ -30,12 +30,12 @@ import {
 } from 'lucide-react';
 import { OrganizationChart } from '@/components/organization/organization-chart';
 import { UserManagementPanel } from '@/components/organization/user-management-panel';
-import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
 import { TransferHistoryPanel } from '@/components/organization/transfer-history-panel';
 import { AddTransferDialog } from '@/components/organization/add-transfer-dialog';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { useUserStore } from '@/lib/store';
-import { demoOrganizationTree, demoMembers, demoTransferHistories } from '@/lib/demo-organization';
+import { demoTransferHistories } from '@/lib/demo-organization';
+import { unifiedOrganizationTree, unifiedOrganizationMembers } from '@/lib/unified-organization-data';
 import { hasPermission } from '@/lib/demo-users';
 import type { OrganizationNode, OrganizationMember } from '@/types';
 
@@ -62,12 +62,13 @@ export default function OrganizationPage() {
 
   // 初期データの設定
   useEffect(() => {
-    if (!organizationTree) {
-      setOrganizationTree(demoOrganizationTree);
+    // 組織ツリーが未設定、またはallMembersが18人以下（旧demoMembers）の場合、50人の統一データで初期化
+    if (!organizationTree || allMembers.length <= 18) {
+      setOrganizationTree(unifiedOrganizationTree);
     }
     // 異動履歴データの初期化
     initializeTransferHistories(demoTransferHistories);
-  }, [organizationTree, setOrganizationTree, initializeTransferHistories]);
+  }, [organizationTree, allMembers.length, setOrganizationTree, initializeTransferHistories]);
 
   // 権限チェック
   const canManageOrganization = currentDemoUser && hasPermission(currentDemoUser, 'manage_system');
@@ -78,10 +79,10 @@ export default function OrganizationPage() {
 
   // 組織統計の計算
   const organizationStats = {
-    totalMembers: allMembers.length || demoMembers.length,
-    activeMembers: (allMembers.length ? allMembers : demoMembers).filter(m => m.status === 'active').length,
-    managers: (allMembers.length ? allMembers : demoMembers).filter(m => m.isManager).length,
-    departments: organizationTree ? countNodes(organizationTree, 'department') : 3
+    totalMembers: allMembers.length || unifiedOrganizationMembers.length,
+    activeMembers: (allMembers.length ? allMembers : unifiedOrganizationMembers).filter(m => m.status === 'active').length,
+    managers: (allMembers.length ? allMembers : unifiedOrganizationMembers).filter(m => m.isManager).length,
+    departments: organizationTree ? countNodes(organizationTree, 'department') : 8
   };
 
   function countNodes(node: OrganizationNode, type?: string): number {
@@ -201,13 +202,10 @@ export default function OrganizationPage() {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
           <TabsTrigger value="overview">組織図</TabsTrigger>
           <TabsTrigger value="members">メンバー</TabsTrigger>
           <TabsTrigger value="transfers">異動</TabsTrigger>
-          <TabsTrigger value="permissions" disabled={!canManageOrganization}>
-            権限
-          </TabsTrigger>
           <TabsTrigger value="analytics">分析</TabsTrigger>
         </TabsList>
 
@@ -320,7 +318,7 @@ export default function OrganizationPage() {
         {/* メンバー管理タブ */}
         <TabsContent value="members">
           <UserManagementPanel
-            members={allMembers.length ? allMembers : demoMembers}
+            members={allMembers.length ? allMembers : unifiedOrganizationMembers}
             organizationNodes={organizationTree ? [organizationTree] : []}
             onMemberAdd={canManageOrganization ? handleMemberAdd : undefined}
             onMemberUpdate={canManageOrganization ? handleMemberUpdate : undefined}
@@ -334,31 +332,6 @@ export default function OrganizationPage() {
           <TransferHistoryPanel
             onAddTransfer={canManageOrganization ? () => setTransferDialogOpen(true) : undefined}
           />
-        </TabsContent>
-
-        {/* 権限管理タブ */}
-        <TabsContent value="permissions">
-          {canManageOrganization ? (
-            <PermissionManagementPanel
-              members={allMembers.length ? allMembers : demoMembers}
-              onMemberPermissionUpdate={(memberId, permissions) => {
-                console.log('Update permissions for member:', memberId, permissions);
-              }}
-              onRoleUpdate={(roleId, permissions) => {
-                console.log('Update role permissions:', roleId, permissions);
-              }}
-            />
-          ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Shield className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">権限管理にはシステム管理者権限が必要です</h3>
-                <p className="text-muted-foreground text-center">
-                  この機能にアクセスするには、システム管理者権限が必要です。
-                </p>
-              </CardContent>
-            </Card>
-          )}
         </TabsContent>
 
         {/* 分析タブ */}
