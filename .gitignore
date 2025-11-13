@@ -46,3 +46,4 @@ Thumbs.db
 
 # Serena MCP cache
 .serena/cache/
+supabase/.temp

@@ -14,10 +14,24 @@ import {
   startTokenRefreshTimer,
   stopTokenRefreshTimer,
 } from '@/lib/auth/token-manager';
+import {
+  fetchUsers as supabaseFetchUsers,
+  fetchUserById as supabaseFetchUserById,
+  createUser as supabaseCreateUser,
+  updateUser as supabaseUpdateUser,
+  deleteUser as supabaseDeleteUser,
+  retireUser as supabaseRetireUser,
+  fetchUsersByUnit as supabaseFetchUsersByUnit,
+  fetchActiveUsers as supabaseFetchActiveUsers,
+  fetchRetiredUsers as supabaseFetchRetiredUsers,
+} from '@/lib/supabase/user-service';
 
 interface UserState {
   currentUser: User | null;
   users: User[];
+  // Supabase統合用
+  tenantId: string | null;
+
   // デモ用の役割管理
   isDemoMode: boolean;
   currentDemoUser: DemoUser | null;
@@ -35,12 +49,16 @@ interface UserState {
   fetchCurrentUser: () => Promise<void>;
   isAuthenticated: () => boolean;
 
+  // Supabase統合アクション
+  fetchUsers: () => Promise<void>;
+
+  // 既存アクション（Supabase統合に更新）
   setCurrentUser: (user: User) => void;
   setUsers: (users: User[]) => void;
-  addUser: (user: User) => void;
-  updateUser: (id: string, updates: Partial<User>) => void;
-  removeUser: (id: string) => void;
-  retireUser: (id: string, retiredDate: string, reason: 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other') => void;
+  addUser: (user: User) => Promise<void>;
+  updateUser: (id: string, updates: Partial<User>) => Promise<void>;
+  removeUser: (id: string) => Promise<void>;
+  retireUser: (id: string, retiredDate: string, reason: 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other') => Promise<void>;
   getUserById: (id: string) => User | undefined;
   getUsersByUnit: (unitId: string) => User[];
   getActiveUsers: () => User[];
@@ -79,6 +97,9 @@ const createUserStore = () => {
       users: [],
       isLoading: false,
       error: null,
+
+      // Supabase統合用
+      tenantId: 'tenant-demo-001', // デフォルトテナントID（本番では認証後に設定）
 
       // デモモードの初期状態（デフォルトで有効）
       isDemoMode: true,
@@ -276,58 +297,212 @@ const createUserStore = () => {
         set({ currentUser: user });
       },
 
+      // Supabase統合: ユーザー一覧取得
+      fetchUsers: async () => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set({ isLoading: false });
+            return;
+          }
+
+          const state = get();
+          if (!state.tenantId) {
+            throw new Error('テナントIDが設定されていません');
+          }
+
+          const users = await supabaseFetchUsers(state.tenantId);
+          set({ users, isLoading: false });
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'ユーザー一覧の取得に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
       setUsers: (users: User[]) => {
         set({ users });
       },
 
-      addUser: (user: User) => {
-        set((state: UserState) => ({
-          users: [...state.users, user],
-        }));
+      // Supabase統合: ユーザー作成
+      addUser: async (user: User) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state: UserState) => ({
+              users: [...state.users, user],
+              isLoading: false,
+            }));
+            return;
+          }
+
+          const state = get();
+          if (!state.tenantId) {
+            throw new Error('テナントIDが設定されていません');
+          }
+
+          const createdUser = await supabaseCreateUser(user, state.tenantId);
+          set((state: UserState) => ({
+            users: [...state.users, createdUser],
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'ユーザーの作成に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
       },
 
-      updateUser: (id: string, updates: Partial<User>) => {
-        set((state: UserState) => ({
-          users: state.users.map((u) =>
-            u.id === id ? { ...u, ...updates } : u
-          ),
-          currentUser:
-            state.currentUser?.id === id
-              ? { ...state.currentUser, ...updates }
-              : state.currentUser,
-        }));
+      // Supabase統合: ユーザー更新
+      updateUser: async (id: string, updates: Partial<User>) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state: UserState) => ({
+              users: state.users.map((u) =>
+                u.id === id ? { ...u, ...updates } : u
+              ),
+              currentUser:
+                state.currentUser?.id === id
+                  ? { ...state.currentUser, ...updates }
+                  : state.currentUser,
+              isLoading: false,
+            }));
+            return;
+          }
+
+          const updatedUser = await supabaseUpdateUser(id, updates);
+          set((state: UserState) => ({
+            users: state.users.map((u) =>
+              u.id === id ? updatedUser : u
+            ),
+            currentUser:
+              state.currentUser?.id === id
+                ? updatedUser
+                : state.currentUser,
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'ユーザーの更新に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
       },
 
-      removeUser: (id: string) => {
-        set((state: UserState) => ({
-          users: state.users.filter((u) => u.id !== id),
-          currentUser:
-            state.currentUser?.id === id ? null : state.currentUser,
-        }));
+      // Supabase統合: ユーザー削除
+      removeUser: async (id: string) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state: UserState) => ({
+              users: state.users.filter((u) => u.id !== id),
+              currentUser:
+                state.currentUser?.id === id ? null : state.currentUser,
+              isLoading: false,
+            }));
+            return;
+          }
+
+          await supabaseDeleteUser(id);
+          set((state: UserState) => ({
+            users: state.users.filter((u) => u.id !== id),
+            currentUser:
+              state.currentUser?.id === id ? null : state.currentUser,
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'ユーザーの削除に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
       },
 
-      retireUser: (id: string, retiredDate: string, reason: 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other') => {
-        set((state: UserState) => ({
-          users: state.users.map((u) =>
-            u.id === id
-              ? {
-                  ...u,
-                  status: 'retired' as const,
-                  retiredDate,
-                  retirementReason: reason,
-                }
-              : u
-          ),
-          currentUser:
-            state.currentUser?.id === id
-              ? {
-                  ...state.currentUser,
-                  status: 'retired' as const,
-                  retiredDate,
-                  retirementReason: reason,
-                }
-              : state.currentUser,
-        }));
+      // Supabase統合: ユーザー退職処理
+      retireUser: async (id: string, retiredDate: string, reason: 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other') => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state: UserState) => ({
+              users: state.users.map((u) =>
+                u.id === id
+                  ? {
+                      ...u,
+                      status: 'retired' as const,
+                      retiredDate,
+                      retirementReason: reason,
+                    }
+                  : u
+              ),
+              currentUser:
+                state.currentUser?.id === id
+                  ? {
+                      ...state.currentUser,
+                      status: 'retired' as const,
+                      retiredDate,
+                      retirementReason: reason,
+                    }
+                  : state.currentUser,
+              isLoading: false,
+            }));
+            return;
+          }
+
+          const updatedUser = await supabaseRetireUser(id, retiredDate, reason);
+          set((state: UserState) => ({
+            users: state.users.map((u) =>
+              u.id === id ? updatedUser : u
+            ),
+            currentUser:
+              state.currentUser?.id === id
+                ? updatedUser
+                : state.currentUser,
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'ユーザーの退職処理に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
       },
 
       getUserById: (id: string) => {
@@ -421,6 +596,7 @@ const createUserStore = () => {
       partialize: (state) => ({
         currentUser: state.currentUser,
         users: state.users, // ユーザー配列も永続化
+        tenantId: state.tenantId, // テナントIDも永続化
         isDemoMode: state.isDemoMode,
         currentDemoUser: state.currentDemoUser,
         accessToken: state.accessToken,

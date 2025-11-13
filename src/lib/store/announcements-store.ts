@@ -1,5 +1,17 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  fetchAnnouncements as supabaseFetchAnnouncements,
+  fetchAnnouncementById as supabaseFetchAnnouncementById,
+  createAnnouncement as supabaseCreateAnnouncement,
+  updateAnnouncement as supabaseUpdateAnnouncement,
+  deleteAnnouncement as supabaseDeleteAnnouncement,
+  publishAnnouncement as supabasePublishAnnouncement,
+  unpublishAnnouncement as supabaseUnpublishAnnouncement,
+  markAnnouncementAsRead as supabaseMarkAsRead,
+  fetchReadAnnouncementIds as supabaseFetchReadIds,
+  fetchPublishedAnnouncements as supabaseFetchPublished,
+} from '@/lib/supabase/announcements-service';
 
 // アナウンスの優先度
 export type AnnouncementPriority =
@@ -77,16 +89,21 @@ export interface Announcement {
 
 interface AnnouncementsState {
   announcements: Announcement[];
+  isLoading: boolean;
+  error: string | null;
+
+  // Supabase統合
+  fetchAnnouncements: () => Promise<void>;
 
   // CRUD操作（HR・管理者のみ）
-  createAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt' | 'userStates'>) => void;
-  updateAnnouncement: (id: string, updates: Partial<Announcement>) => void;
-  deleteAnnouncement: (id: string) => void;
-  publishAnnouncement: (id: string) => void;
-  unpublishAnnouncement: (id: string) => void;
+  createAnnouncement: (announcement: Omit<Announcement, 'id' | 'createdAt' | 'updatedAt' | 'userStates'>) => Promise<void>;
+  updateAnnouncement: (id: string, updates: Partial<Announcement>) => Promise<void>;
+  deleteAnnouncement: (id: string) => Promise<void>;
+  publishAnnouncement: (id: string) => Promise<void>;
+  unpublishAnnouncement: (id: string) => Promise<void>;
 
   // ユーザー操作
-  markAsRead: (announcementId: string, userId: string) => void;
+  markAsRead: (announcementId: string, userId: string) => Promise<void>;
   markAsCompleted: (announcementId: string, userId: string) => void;
 
   // クエリ操作
@@ -113,77 +130,321 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
   persist(
     (set, get) => ({
       announcements: [],
+      isLoading: false,
+      error: null,
 
-      // アナウンスを作成
-      createAnnouncement: (announcement) => {
-        const newAnnouncement: Announcement = {
-          ...announcement,
-          id: `announcement-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          userStates: [],
-        };
+      // Supabase統合: お知らせ一覧取得
+      fetchAnnouncements: async () => {
+        set({ isLoading: true, error: null });
 
-        set((state) => ({
-          announcements: [...state.announcements, newAnnouncement],
-        }));
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set({ isLoading: false });
+            return;
+          }
+
+          const announcements = await supabaseFetchAnnouncements();
+          set({ announcements, isLoading: false });
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'お知らせ一覧の取得に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
       },
 
-      // アナウンスを更新
-      updateAnnouncement: (id, updates) => {
-        set((state) => ({
-          announcements: state.announcements.map((announcement) =>
-            announcement.id === id
-              ? {
-                  ...announcement,
-                  ...updates,
-                  updatedAt: new Date().toISOString(),
+      // Supabase統合: アナウンスを作成
+      createAnnouncement: async (announcement) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            const newAnnouncement: Announcement = {
+              ...announcement,
+              id: `announcement-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              userStates: [],
+            };
+
+            set((state) => ({
+              announcements: [...state.announcements, newAnnouncement],
+              isLoading: false,
+            }));
+            return;
+          }
+
+          const createdAnnouncement = await supabaseCreateAnnouncement(announcement);
+          set((state) => ({
+            announcements: [...state.announcements, createdAnnouncement],
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'お知らせの作成に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // Supabase統合: アナウンスを更新
+      updateAnnouncement: async (id, updates) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state) => ({
+              announcements: state.announcements.map((announcement) =>
+                announcement.id === id
+                  ? {
+                      ...announcement,
+                      ...updates,
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : announcement
+              ),
+              isLoading: false,
+            }));
+            return;
+          }
+
+          const updatedAnnouncement = await supabaseUpdateAnnouncement(id, updates);
+          set((state) => ({
+            announcements: state.announcements.map((announcement) =>
+              announcement.id === id ? updatedAnnouncement : announcement
+            ),
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'お知らせの更新に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // Supabase統合: アナウンスを削除
+      deleteAnnouncement: async (id) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state) => ({
+              announcements: state.announcements.filter((announcement) => announcement.id !== id),
+              isLoading: false,
+            }));
+            return;
+          }
+
+          await supabaseDeleteAnnouncement(id);
+          set((state) => ({
+            announcements: state.announcements.filter((announcement) => announcement.id !== id),
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'お知らせの削除に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // Supabase統合: アナウンスを公開
+      publishAnnouncement: async (id) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state) => ({
+              announcements: state.announcements.map((announcement) =>
+                announcement.id === id
+                  ? {
+                      ...announcement,
+                      published: true,
+                      publishedAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : announcement
+              ),
+              isLoading: false,
+            }));
+            return;
+          }
+
+          const updatedAnnouncement = await supabasePublishAnnouncement(id);
+          set((state) => ({
+            announcements: state.announcements.map((announcement) =>
+              announcement.id === id ? updatedAnnouncement : announcement
+            ),
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'お知らせの公開に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // Supabase統合: アナウンスを非公開に
+      unpublishAnnouncement: async (id) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state) => ({
+              announcements: state.announcements.map((announcement) =>
+                announcement.id === id
+                  ? {
+                      ...announcement,
+                      published: false,
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : announcement
+              ),
+              isLoading: false,
+            }));
+            return;
+          }
+
+          const updatedAnnouncement = await supabaseUnpublishAnnouncement(id);
+          set((state) => ({
+            announcements: state.announcements.map((announcement) =>
+              announcement.id === id ? updatedAnnouncement : announcement
+            ),
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'お知らせの非公開化に失敗しました';
+
+          set({
+            error: errorMessage,
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // Supabase統合: 既読にする
+      markAsRead: async (announcementId, userId) => {
+        try {
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            set((state) => ({
+              announcements: state.announcements.map((announcement) => {
+                if (announcement.id !== announcementId) return announcement;
+
+                const existingState = announcement.userStates.find((s) => s.userId === userId);
+
+                if (existingState) {
+                  return {
+                    ...announcement,
+                    userStates: announcement.userStates.map((s) =>
+                      s.userId === userId && s.status === 'unread'
+                        ? {
+                            ...s,
+                            status: 'read' as UserAnnouncementStatus,
+                            readAt: new Date().toISOString(),
+                          }
+                        : s
+                    ),
+                  };
+                } else {
+                  return {
+                    ...announcement,
+                    userStates: [
+                      ...announcement.userStates,
+                      {
+                        userId,
+                        status: 'read' as UserAnnouncementStatus,
+                        readAt: new Date().toISOString(),
+                      },
+                    ],
+                  };
                 }
-              : announcement
-          ),
-        }));
-      },
+              }),
+            }));
+            return;
+          }
 
-      // アナウンスを削除
-      deleteAnnouncement: (id) => {
-        set((state) => ({
-          announcements: state.announcements.filter((announcement) => announcement.id !== id),
-        }));
-      },
+          await supabaseMarkAsRead(announcementId, userId);
 
-      // アナウンスを公開
-      publishAnnouncement: (id) => {
-        set((state) => ({
-          announcements: state.announcements.map((announcement) =>
-            announcement.id === id
-              ? {
+          // ローカル状態を更新（オプティミスティックアップデート）
+          set((state) => ({
+            announcements: state.announcements.map((announcement) => {
+              if (announcement.id !== announcementId) return announcement;
+
+              const existingState = announcement.userStates.find((s) => s.userId === userId);
+
+              if (existingState) {
+                return {
                   ...announcement,
-                  published: true,
-                  publishedAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                }
-              : announcement
-          ),
-        }));
-      },
-
-      // アナウンスを非公開に
-      unpublishAnnouncement: (id) => {
-        set((state) => ({
-          announcements: state.announcements.map((announcement) =>
-            announcement.id === id
-              ? {
+                  userStates: announcement.userStates.map((s) =>
+                    s.userId === userId && s.status === 'unread'
+                      ? {
+                          ...s,
+                          status: 'read' as UserAnnouncementStatus,
+                          readAt: new Date().toISOString(),
+                        }
+                      : s
+                  ),
+                };
+              } else {
+                return {
                   ...announcement,
-                  published: false,
-                  updatedAt: new Date().toISOString(),
-                }
-              : announcement
-          ),
-        }));
+                  userStates: [
+                    ...announcement.userStates,
+                    {
+                      userId,
+                      status: 'read' as UserAnnouncementStatus,
+                      readAt: new Date().toISOString(),
+                    },
+                  ],
+                };
+              }
+            }),
+          }));
+        } catch (error) {
+          console.error('Failed to mark as read:', error);
+          throw error;
+        }
       },
 
-      // 既読にする
-      markAsRead: (announcementId, userId) => {
+      // 完了にする (デモモードのみ、Supabaseには対応しない)
+      markAsCompleted: (announcementId, userId) => {
         set((state) => ({
           announcements: state.announcements.map((announcement) => {
             if (announcement.id !== announcementId) return announcement;
