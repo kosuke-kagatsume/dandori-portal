@@ -2,6 +2,27 @@
 const createNextIntlPlugin = require('next-intl/plugin');
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
+// PWA設定
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development', // 開発環境では無効化
+  runtimeCaching: [
+    {
+      urlPattern: /^https?.*/, // すべてのHTTPリクエスト
+      handler: 'NetworkFirst', // Network-first戦略
+      options: {
+        cacheName: 'offlineCache',
+        expiration: {
+          maxEntries: 200,
+          maxAgeSeconds: 24 * 60 * 60, // 24時間
+        },
+      },
+    },
+  ],
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // React Strict Mode でパフォーマンス問題を検出
@@ -76,5 +97,5 @@ const nextConfig = {
   },
 };
 
-// next-intl有効化
-module.exports = withNextIntl(nextConfig);
+// next-intl + PWA有効化
+module.exports = withPWA(withNextIntl(nextConfig));

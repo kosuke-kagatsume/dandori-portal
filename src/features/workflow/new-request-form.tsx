@@ -56,6 +56,7 @@ import { format, addDays, differenceInDays } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ImageUpload } from '@/components/camera/image-upload';
 
 interface NewRequestFormProps {
   open: boolean;
@@ -84,6 +85,7 @@ const expenseClaimSchema = z.object({
   client: z.string().optional(),
   projectCode: z.string().optional(),
   hasReceipt: z.boolean(),
+  receiptImages: z.array(z.string()).optional(),
 });
 
 const overtimeRequestSchema = z.object({
@@ -732,6 +734,7 @@ function LeaveRequestForm({ form, onFlowUpdate }: FormComponentProps<LeaveReques
 function ExpenseClaimForm({ form, onFlowUpdate }: FormComponentProps<ExpenseClaimFormData>) {
   const [expenseDate, setExpenseDate] = useState<Date>();
   const [amount, setAmount] = useState<number>(0);
+  const [receiptImages, setReceiptImages] = useState<string[]>([]);
 
   return (
     <Card>
@@ -840,6 +843,21 @@ function ExpenseClaimForm({ form, onFlowUpdate }: FormComponentProps<ExpenseClai
             {...form.register('hasReceipt')}
           />
           <Label htmlFor="hasReceipt">領収書あり</Label>
+        </div>
+
+        {/* 領収書画像アップロード */}
+        <div className="border-t pt-4">
+          <ImageUpload
+            value={receiptImages}
+            onChange={(images) => {
+              setReceiptImages(images);
+              form.setValue('receiptImages', images);
+            }}
+            maxImages={5}
+            maxSizeKB={2048}
+            label="領収書・レシート画像"
+            description="カメラで撮影するか、ファイルを選択してください（最大5枚、各2MB以下）"
+          />
         </div>
 
         {amount > 0 && (

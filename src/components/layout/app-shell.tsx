@@ -18,6 +18,8 @@ import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 import { initializeLegalUpdatesDemo } from '@/lib/demo-legal-updates';
 import { initializeAnnouncementsDemo } from '@/lib/demo-announcements';
 import { useScheduledChangesNotifications } from '@/hooks/use-scheduled-changes-notifications';
+import { initBackgroundSync } from '@/lib/offline/sync-manager';
+import { initOfflineDB } from '@/lib/offline/offline-storage';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -86,6 +88,17 @@ export function AppShell({ children }: AppShellProps) {
       initializeAnnouncementsDemo(createAnnouncement);
     }
   }, [createAnnouncement, getAnnouncements]);
+
+  // Initialize offline storage and background sync (PWA)
+  useEffect(() => {
+    // オフラインDBの初期化
+    initOfflineDB().catch((error) => {
+      console.error('Failed to initialize offline DB:', error);
+    });
+
+    // バックグラウンド同期のセットアップ
+    initBackgroundSync();
+  }, []);
 
   // Apply theme to document
   useEffect(() => {
