@@ -36,6 +36,8 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#3B82F6',
+  // PWA設定（警告を消すため）
+  mobileWebAppCapable: true,
 };
 
 export default async function RootLayout({

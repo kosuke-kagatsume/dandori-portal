@@ -28,7 +28,7 @@ import { useUserStore } from '@/lib/store/user-store';
 import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
 import { MountGate } from '@/components/common/MountGate';
-import { AnnouncementCard } from '@/features/announcements/announcement-card';
+import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
 import { QuickCheckIn } from '@/features/dashboard/quick-check-in';
 import dynamic from 'next/dynamic';
 
@@ -179,45 +179,14 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header - モバイルはシンプルに、PCは詳細表示 */}
-      <div>
-        {/* モバイル用ヘッダー */}
-        <div className="block md:hidden">
-          <h1 className="text-2xl font-bold">{effectiveDemoUser.name}</h1>
-          <p className="text-sm text-muted-foreground">{roleDisplayNames[effectiveDemoUser.role] || effectiveDemoUser.role}</p>
-        </div>
-
-        {/* PC用ヘッダー */}
-        <div className="hidden md:block">
-          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
-          <p className="text-muted-foreground">
-            {`${effectiveDemoUser.name}さん（${roleDisplayNames[effectiveDemoUser.role] || effectiveDemoUser.role}）のダッシュボード`}
-          </p>
-          {/* 役割説明バッジ */}
-          <div className="mt-2 flex items-center gap-2">
-            <Badge variant={
-              effectiveDemoUser.role === 'admin' ? 'destructive' :
-              effectiveDemoUser.role === 'hr' ? 'default' :
-              effectiveDemoUser.role === 'manager' ? 'secondary' :
-              'outline'
-            }>
-              {effectiveDemoUser.role === 'employee' && '👤 自分の情報のみ表示'}
-              {effectiveDemoUser.role === 'manager' && '👥 チーム8名の情報を表示'}
-              {effectiveDemoUser.role === 'hr' && '🏢 全社50名の情報を表示'}
-              {effectiveDemoUser.role === 'admin' && '⚙️ システム管理機能付き'}
-            </Badge>
-          </div>
-        </div>
-      </div>
-
       {/* クイックアクション（打刻ボタン） - モバイルのみ表示 */}
       <div className="block md:hidden">
         <QuickCheckIn />
       </div>
 
-      {/* アナウンス・掲示板 */}
+      {/* 最新アナウンス */}
       <MountGate>
-        <AnnouncementCard />
+        <LatestAnnouncementCard />
       </MountGate>
 
       {/* Role-based KPI Cards */}
