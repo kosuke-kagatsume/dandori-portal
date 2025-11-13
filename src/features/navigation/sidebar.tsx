@@ -61,7 +61,11 @@ const getNavigation = (locale: string, currentUser: User | null) => {
   ];
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const pathname = usePathname();
   const params = useParams();
   const currentLocale = (params?.locale as string) || 'ja';
@@ -94,10 +98,14 @@ export function Sidebar() {
       )}>
         {/* Logo/Brand */}
         <div className="flex h-16 items-center px-4 border-b border-border">
-          <Link href={`/${currentLocale}/dashboard`} className={cn(
-            "flex items-center",
-            sidebarCollapsed ? "justify-center w-full" : ""
-          )}>
+          <Link
+            href={`/${currentLocale}/dashboard`}
+            onClick={() => onNavigate?.()}
+            className={cn(
+              "flex items-center",
+              sidebarCollapsed ? "justify-center w-full" : ""
+            )}
+          >
             <LogoCompact compact={sidebarCollapsed} />
           </Link>
         </div>
@@ -116,11 +124,12 @@ export function Sidebar() {
               <Link
                 key={item.key}
                 href={item.href as any}
+                onClick={() => onNavigate?.()}
                 className={cn(
                   'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
                   'hover:bg-accent hover:text-accent-foreground',
-                  isActive 
-                    ? 'bg-primary text-primary-foreground shadow-sm' 
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
                     : 'text-muted-foreground',
                   sidebarCollapsed ? 'justify-center' : 'justify-start'
                 )}

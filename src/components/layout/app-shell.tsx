@@ -118,7 +118,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Mobile Sidebar - Sheet */}
       <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
         <SheetContent side="left" className="w-64 p-0">
-          <Sidebar />
+          <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
         </SheetContent>
       </Sheet>
 
