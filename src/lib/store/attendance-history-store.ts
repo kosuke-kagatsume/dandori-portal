@@ -1,5 +1,10 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import {
+  fetchAttendanceRecords as supabaseFetchAttendanceRecords,
+  upsertAttendanceRecord as supabaseUpsertAttendanceRecord,
+  deleteAttendanceRecord as supabaseDeleteAttendanceRecord,
+} from '@/lib/supabase/attendance-service';
 
 export interface AttendanceRecord {
   id: string;
@@ -29,11 +34,16 @@ interface AttendanceHistoryState {
     breakStartTime: string | null;
     workLocation: 'office' | 'home' | 'client' | 'other';
   } | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
 interface AttendanceHistoryActions {
+  // Supabaseから勤怠記録を取得
+  fetchRecords: (userId: string, startDate?: string, endDate?: string) => Promise<void>;
+
   // 打刻記録の追加・更新
-  addOrUpdateRecord: (record: Partial<AttendanceRecord>) => void;
+  addOrUpdateRecord: (record: Partial<AttendanceRecord>) => Promise<void>;
 
   // 特定日の記録取得
   getRecordByDate: (date: string, userId?: string) => AttendanceRecord | undefined;
@@ -45,16 +55,16 @@ interface AttendanceHistoryActions {
   getMonthlyRecords: (year: number, month: number, userId?: string) => AttendanceRecord[];
 
   // 出勤打刻
-  checkIn: (workLocation: 'office' | 'home' | 'client' | 'other', userId: string, userName: string) => void;
+  checkIn: (workLocation: 'office' | 'home' | 'client' | 'other', userId: string, userName: string) => Promise<void>;
 
   // 退勤打刻
-  checkOut: (memo?: string, userId?: string) => void;
+  checkOut: (memo?: string, userId?: string) => Promise<void>;
 
   // 休憩開始
-  startBreak: (userId?: string) => void;
+  startBreak: (userId?: string) => Promise<void>;
 
   // 休憩終了
-  endBreak: (userId?: string) => void;
+  endBreak: (userId?: string) => Promise<void>;
 
   // 今日の状態取得
   getTodayStatus: (userId?: string) => {
@@ -74,7 +84,7 @@ interface AttendanceHistoryActions {
   };
 
   // 記録削除
-  deleteRecord: (id: string) => void;
+  deleteRecord: (id: string) => Promise<void>;
 
   // 全記録削除
   clearAllRecords: () => void;
@@ -111,49 +121,118 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
     (set, get) => ({
       records: [],
       currentCheckIn: null,
+      isLoading: false,
+      error: null,
 
-      addOrUpdateRecord: (record) => {
-        const now = new Date().toISOString();
-        const userId = record.userId || getCurrentUserId();
-        const date = record.date || new Date().toISOString().split('T')[0];
+      fetchRecords: async (userId, startDate, endDate) => {
+        set({ isLoading: true, error: null });
+        try {
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            // デモモード: localStorageから読み込むのみ
+            set({ isLoading: false });
+            return;
+          }
 
-        set((state) => {
-          const existingIndex = state.records.findIndex(
+          const records = await supabaseFetchAttendanceRecords(userId, startDate, endDate);
+          set({ records, isLoading: false });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '勤怠記録の取得に失敗しました';
+          set({ error: errorMessage, isLoading: false });
+          throw error;
+        }
+      },
+
+      addOrUpdateRecord: async (record) => {
+        set({ isLoading: true, error: null });
+        try {
+          const now = new Date().toISOString();
+          const userId = record.userId || getCurrentUserId();
+          const date = record.date || new Date().toISOString().split('T')[0];
+
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            // デモモード: localStorageのみ更新
+            set((state) => {
+              const existingIndex = state.records.findIndex(
+                r => r.userId === userId && r.date === date
+              );
+
+              if (existingIndex >= 0) {
+                // 更新
+                const updatedRecords = [...state.records];
+                updatedRecords[existingIndex] = {
+                  ...updatedRecords[existingIndex],
+                  ...record,
+                  updatedAt: now,
+                };
+                return { records: updatedRecords, isLoading: false };
+              } else {
+                // 新規追加
+                const newRecord: AttendanceRecord = {
+                  id: `attendance-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                  userId,
+                  userName: record.userName || getCurrentUserName(),
+                  date,
+                  checkIn: null,
+                  checkOut: null,
+                  breakStart: null,
+                  breakEnd: null,
+                  totalBreakMinutes: 0,
+                  workMinutes: 0,
+                  overtimeMinutes: 0,
+                  workLocation: 'office',
+                  status: 'present',
+                  createdAt: now,
+                  updatedAt: now,
+                  ...record,
+                };
+                return { records: [...state.records, newRecord], isLoading: false };
+              }
+            });
+            return;
+          }
+
+          // 本番モード: Supabaseにupsert
+          const existingRecord = get().records.find(
             r => r.userId === userId && r.date === date
           );
 
-          if (existingIndex >= 0) {
-            // 更新
-            const updatedRecords = [...state.records];
-            updatedRecords[existingIndex] = {
-              ...updatedRecords[existingIndex],
-              ...record,
-              updatedAt: now,
-            };
-            return { records: updatedRecords };
-          } else {
-            // 新規追加
-            const newRecord: AttendanceRecord = {
-              id: `attendance-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              userId,
-              userName: record.userName || getCurrentUserName(),
-              date,
-              checkIn: null,
-              checkOut: null,
-              breakStart: null,
-              breakEnd: null,
-              totalBreakMinutes: 0,
-              workMinutes: 0,
-              overtimeMinutes: 0,
-              workLocation: 'office',
-              status: 'present',
-              createdAt: now,
-              updatedAt: now,
-              ...record,
-            };
-            return { records: [...state.records, newRecord] };
-          }
-        });
+          const recordToUpsert: Omit<AttendanceRecord, 'id' | 'createdAt' | 'updatedAt' | 'userName' | 'totalBreakMinutes'> = {
+            userId,
+            date,
+            checkIn: record.checkIn !== undefined ? record.checkIn : (existingRecord?.checkIn || null),
+            checkOut: record.checkOut !== undefined ? record.checkOut : (existingRecord?.checkOut || null),
+            breakStart: record.breakStart !== undefined ? record.breakStart : (existingRecord?.breakStart || null),
+            breakEnd: record.breakEnd !== undefined ? record.breakEnd : (existingRecord?.breakEnd || null),
+            workMinutes: record.workMinutes !== undefined ? record.workMinutes : (existingRecord?.workMinutes || 0),
+            overtimeMinutes: record.overtimeMinutes !== undefined ? record.overtimeMinutes : (existingRecord?.overtimeMinutes || 0),
+            workLocation: record.workLocation || existingRecord?.workLocation || 'office',
+            status: record.status || existingRecord?.status || 'present',
+            memo: record.memo,
+            approvalStatus: record.approvalStatus,
+            approvalReason: record.approvalReason,
+          };
+
+          const upsertedRecord = await supabaseUpsertAttendanceRecord(recordToUpsert);
+
+          // ローカルステートも更新
+          set((state) => {
+            const existingIndex = state.records.findIndex(
+              r => r.userId === userId && r.date === date
+            );
+
+            if (existingIndex >= 0) {
+              const updatedRecords = [...state.records];
+              updatedRecords[existingIndex] = upsertedRecord;
+              return { records: updatedRecords, isLoading: false };
+            } else {
+              return { records: [...state.records, upsertedRecord], isLoading: false };
+            }
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '勤怠記録の保存に失敗しました';
+          set({ error: errorMessage, isLoading: false });
+          throw error;
+        }
       },
 
       getRecordByDate: (date, userId) => {
@@ -179,7 +258,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
         return get().getRecordsByPeriod(startDate, endDate, targetUserId);
       },
 
-      checkIn: (workLocation, userId, userName) => {
+      checkIn: async (workLocation, userId, userName) => {
         const now = new Date();
         const date = now.toISOString().split('T')[0];
         const timeString = now.toLocaleTimeString('ja-JP', {
@@ -198,7 +277,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           }
         });
 
-        get().addOrUpdateRecord({
+        await get().addOrUpdateRecord({
           userId,
           userName,
           date,
@@ -210,7 +289,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
         });
       },
 
-      checkOut: (memo, userId) => {
+      checkOut: async (memo, userId) => {
         const now = new Date();
         const date = now.toISOString().split('T')[0];
         const timeString = now.toLocaleTimeString('ja-JP', {
@@ -231,7 +310,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           // 早退判定（18:00前）
           const isEarly = now.getHours() < 18;
 
-          get().addOrUpdateRecord({
+          await get().addOrUpdateRecord({
             userId: targetUserId,
             date,
             checkOut: timeString,
@@ -247,7 +326,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
         }
       },
 
-      startBreak: (userId) => {
+      startBreak: async (userId) => {
         const now = new Date();
         const date = now.toISOString().split('T')[0];
         const timeString = now.toLocaleTimeString('ja-JP', {
@@ -264,14 +343,14 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           } : null
         }));
 
-        get().addOrUpdateRecord({
+        await get().addOrUpdateRecord({
           userId: targetUserId,
           date,
           breakStart: timeString,
         });
       },
 
-      endBreak: (userId) => {
+      endBreak: async (userId) => {
         const now = new Date();
         const date = now.toISOString().split('T')[0];
         const timeString = now.toLocaleTimeString('ja-JP', {
@@ -295,7 +374,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             } : null
           }));
 
-          get().addOrUpdateRecord({
+          await get().addOrUpdateRecord({
             userId: targetUserId,
             date,
             breakEnd: timeString,
@@ -349,10 +428,31 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
         };
       },
 
-      deleteRecord: (id) => {
-        set((state) => ({
-          records: state.records.filter(r => r.id !== id)
-        }));
+      deleteRecord: async (id) => {
+        set({ isLoading: true, error: null });
+        try {
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            // デモモード: localStorageのみ削除
+            set((state) => ({
+              records: state.records.filter(r => r.id !== id),
+              isLoading: false,
+            }));
+            return;
+          }
+
+          // 本番モード: Supabaseから削除
+          await supabaseDeleteAttendanceRecord(id);
+
+          // ローカルステートからも削除
+          set((state) => ({
+            records: state.records.filter(r => r.id !== id),
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '勤怠記録の削除に失敗しました';
+          set({ error: errorMessage, isLoading: false });
+          throw error;
+        }
       },
 
       clearAllRecords: () => {

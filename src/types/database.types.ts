@@ -210,6 +210,64 @@ export interface Database {
           }
         ]
       }
+      attendance_records: {
+        Row: {
+          id: string
+          user_id: string
+          date: string
+          check_in: string | null
+          check_out: string | null
+          break_start: string | null
+          break_end: string | null
+          work_hours: number | null
+          overtime_hours: number | null
+          status: string
+          location: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          date: string
+          check_in?: string | null
+          check_out?: string | null
+          break_start?: string | null
+          break_end?: string | null
+          work_hours?: number | null
+          overtime_hours?: number | null
+          status?: string
+          location?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          date?: string
+          check_in?: string | null
+          check_out?: string | null
+          break_start?: string | null
+          break_end?: string | null
+          work_hours?: number | null
+          overtime_hours?: number | null
+          status?: string
+          location?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       workflow_requests: {
         Row: {
           id: string

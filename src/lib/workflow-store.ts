@@ -9,6 +9,7 @@ import { getBroadcast } from '@/lib/realtime/broadcast';
 import { useApprovalFlowStore } from './store/approval-flow-store';
 import { useOrganizationStore } from './store/organization-store';
 import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration';
+import { workflowService } from './supabase/workflow-service';
 
 export type WorkflowType =
   | 'leave_request'      // 休暇申請
@@ -117,7 +118,9 @@ export interface WorkflowRequest {
 interface WorkflowStore {
   requests: WorkflowRequest[];
   initialized: boolean;
-  
+  isLoading: boolean;
+  error: string | null;
+
   // 代理承認者設定
   delegateSettings: {
     userId: string;
@@ -128,20 +131,20 @@ interface WorkflowStore {
     reason: string;
     isActive: boolean;
   }[];
-  
+
   // 初期化
   initializeDemoData: () => void;
   resetDemoData: () => void;
-  
+
   // 申請の作成・更新
-  createRequest: (request: Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>) => string;
-  updateRequest: (id: string, updates: Partial<WorkflowRequest>) => void;
+  createRequest: (request: Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  updateRequest: (id: string, updates: Partial<WorkflowRequest>) => Promise<void>;
   submitRequest: (id: string) => void;
   cancelRequest: (id: string, reason: string) => void;
-  
+
   // 承認アクション
-  approveRequest: (requestId: string, stepId: string, comments?: string, requireComment?: boolean) => void;
-  rejectRequest: (requestId: string, stepId: string, reason: string) => void;
+  approveRequest: (requestId: string, stepId: string, comments?: string, requireComment?: boolean) => Promise<void>;
+  rejectRequest: (requestId: string, stepId: string, reason: string) => Promise<void>;
   delegateApproval: (requestId: string, stepId: string, delegateToId: string, delegateName: string, reason: string) => void;
   
   // 一括承認機能
@@ -234,6 +237,8 @@ export const useWorkflowStore = create<WorkflowStore>()(
       return {
       requests: [],
       initialized: false,
+      isLoading: false,
+      error: null,
       delegateSettings: [],
 
       initializeDemoData: () => {
@@ -271,14 +276,16 @@ export const useWorkflowStore = create<WorkflowStore>()(
         }, 100);
       },
       
-      createRequest: (request) => {
-        const id = `WF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const now = new Date().toISOString();
-
-        // 承認フローの自動生成を試みる
-        let generatedApprovalSteps: ApprovalStep[] | undefined;
-
+      createRequest: async (request) => {
+        set({ isLoading: true, error: null });
         try {
+          const id = `WF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const now = new Date().toISOString();
+
+          // 承認フローの自動生成を試みる
+          let generatedApprovalSteps: ApprovalStep[] | undefined;
+
+          try {
           // WorkflowTypeをDocumentTypeに変換（直接対応する5種類のみ）
           const documentType = request.type as 'leave_request' | 'overtime_request' | 'expense_claim' | 'business_trip' | 'purchase_request';
           const supportedTypes: string[] = ['leave_request', 'overtime_request', 'expense_claim', 'business_trip', 'purchase_request'];
@@ -326,30 +333,64 @@ export const useWorkflowStore = create<WorkflowStore>()(
           console.warn('承認フローの自動生成に失敗しました。手動設定の承認ステップを使用します。', error);
         }
 
-        const newRequest: WorkflowRequest = {
-          ...request,
-          id,
-          createdAt: now,
-          updatedAt: now,
-          currentStep: 0,
-          // 自動生成された承認ステップ、または手動設定された承認ステップを使用
-          approvalSteps: generatedApprovalSteps || request.approvalSteps,
-          timeline: [{
-            id: `TL-${Date.now()}`,
-            action: generatedApprovalSteps
-              ? '申請書を作成しました（承認フロー自動適用）'
-              : '申請書を作成しました',
-            userId: request.requesterId,
-            userName: request.requesterName,
-            timestamp: now,
-          }],
-        };
+          const newRequest: WorkflowRequest = {
+            ...request,
+            id,
+            createdAt: now,
+            updatedAt: now,
+            currentStep: 0,
+            // 自動生成された承認ステップ、または手動設定された承認ステップを使用
+            approvalSteps: generatedApprovalSteps || request.approvalSteps,
+            timeline: [{
+              id: `TL-${Date.now()}`,
+              action: generatedApprovalSteps
+                ? '申請書を作成しました（承認フロー自動適用）'
+                : '申請書を作成しました',
+              userId: request.requesterId,
+              userName: request.requesterName,
+              timestamp: now,
+            }],
+          };
 
-        set((state) => ({
-          requests: [...state.requests, newRequest],
-        }));
+          // デモモードチェック
+          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            // デモモード: localStorageのみ
+            set((state) => ({
+              requests: [...state.requests, newRequest],
+              isLoading: false,
+            }));
+            return id;
+          }
 
-        return id;
+          // 本番モード: Supabaseに保存（TODO: テナントID取得ロジック）
+          const tenantId = 'tenant-demo-001'; // 仮のテナントID
+
+          const result = await workflowService.createRequest({
+            organization_id: tenantId,
+            type: request.type,
+            title: request.title,
+            description: request.description || null,
+            requester_id: request.requesterId,
+            status: 'draft',
+            metadata: request.details || {},
+          });
+
+          if (!result.success || !result.data) {
+            throw new Error('ワークフロー申請の作成に失敗しました');
+          }
+
+          // ローカルステートも更新
+          set((state) => ({
+            requests: [...state.requests, newRequest],
+            isLoading: false,
+          }));
+
+          return id;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'ワークフロー申請の作成に失敗しました';
+          set({ error: errorMessage, isLoading: false });
+          throw error;
+        }
       },
       
       updateRequest: (id, updates) => {
