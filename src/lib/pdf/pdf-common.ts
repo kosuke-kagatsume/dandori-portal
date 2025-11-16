@@ -375,8 +375,14 @@ export const formatDateToJapanese = (dateString: string): string => {
 /**
  * ヘルパー関数: 日付を「YYYY/MM/DD」形式に変換
  */
-export const formatDateToSlash = (dateString: string): string => {
-  return dateString.replace(/-/g, '/');
+export const formatDateToSlash = (date: string | Date): string => {
+  if (date instanceof Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  }
+  return date.replace(/-/g, '/');
 };
 
 /**
