@@ -20,6 +20,7 @@ export interface InvoiceData {
   dueDate: Date;                 // 支払い期限
   paidDate?: Date;               // 支払日
   sentDate?: Date;               // メール送信日時
+  paymentMethod?: 'bank_transfer' | 'credit_card' | 'invoice' | 'other'; // 支払い方法
   billingEmail: string;          // 請求先メールアドレス
   memo?: string;                 // メモ
   items: InvoiceItem[];

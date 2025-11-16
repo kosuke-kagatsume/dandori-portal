@@ -35,6 +35,7 @@ import {
   BillingTab,
 } from '@/features/settings/tabs';
 import { TenantManagementTab } from '@/features/super-admin/tenant-management-tab';
+import { PaymentManagementTab } from '@/features/super-admin/payment-management-tab';
 import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { unifiedOrganizationMembers } from '@/lib/unified-organization-data';
@@ -209,7 +210,13 @@ export default function SettingsPage() {
           {isSuperAdmin && (
             <TabsTrigger value="tenant-management" className="flex-1 sm:flex-none min-w-[100px]">
               <Building2 className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">テナント管理</span>
+              <span className="hidden sm:inline">テナント</span>
+            </TabsTrigger>
+          )}
+          {isSuperAdmin && (
+            <TabsTrigger value="payment-management" className="flex-1 sm:flex-none min-w-[100px]">
+              <DollarSign className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">支払い</span>
             </TabsTrigger>
           )}
           {canManageSystem && (
@@ -273,6 +280,12 @@ export default function SettingsPage() {
         {isSuperAdmin && (
           <TabsContent value="tenant-management">
             <TenantManagementTab />
+          </TabsContent>
+        )}
+
+        {isSuperAdmin && (
+          <TabsContent value="payment-management">
+            <PaymentManagementTab />
           </TabsContent>
         )}
 

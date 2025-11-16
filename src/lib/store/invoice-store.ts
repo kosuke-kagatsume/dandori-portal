@@ -16,13 +16,18 @@ interface InvoiceStore {
   getInvoiceById: (id: string) => InvoiceData | undefined;
   getInvoicesByTenant: (tenantId: string) => InvoiceData[];
   getInvoicesByStatus: (status: 'draft' | 'sent' | 'paid' | 'overdue') => InvoiceData[];
+  getAllInvoices: () => InvoiceData[];
   createInvoice: (invoice: Omit<InvoiceData, 'id'>) => InvoiceData;
   updateInvoice: (id: string, updates: Partial<InvoiceData>) => void;
   deleteInvoice: (id: string) => void;
 
   // ステータス更新
   markAsSent: (id: string) => void;
-  markAsPaid: (id: string, paidDate: Date) => void;
+  markAsPaid: (
+    id: string,
+    paidDate: Date,
+    paymentMethod?: 'bank_transfer' | 'credit_card' | 'invoice' | 'other'
+  ) => void;
 
   // 統計
   getStats: (tenantId?: string) => {
@@ -121,6 +126,14 @@ export const useInvoiceStore = create<InvoiceStore>()(
         });
       },
 
+      getAllInvoices: () => {
+        return get().invoices.sort((a, b) => {
+          const dateA = new Date(a.billingMonth);
+          const dateB = new Date(b.billingMonth);
+          return dateB.getTime() - dateA.getTime();
+        });
+      },
+
       createInvoice: (invoice) => {
         const newInvoice: InvoiceData = {
           ...invoice,
@@ -158,11 +171,16 @@ export const useInvoiceStore = create<InvoiceStore>()(
         }));
       },
 
-      markAsPaid: (id, paidDate) => {
+      markAsPaid: (id, paidDate, paymentMethod) => {
         set((state) => ({
           invoices: state.invoices.map((inv) =>
             inv.id === id
-              ? { ...inv, status: 'paid' as const, paidDate }
+              ? {
+                  ...inv,
+                  status: 'paid' as const,
+                  paidDate,
+                  paymentMethod: paymentMethod || inv.paymentMethod,
+                }
               : inv
           ),
         }));
