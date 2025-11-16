@@ -1,0 +1,41 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Node.jsバージョン確認
+        - node --version
+        - npm --version
+
+        # 依存関係インストール
+        - npm ci
+
+        # Prisma Clientの生成
+        - npx prisma generate
+
+    build:
+      commands:
+        # 型チェック（オプション、時間短縮のためコメントアウト可）
+        # - npm run typecheck
+
+        # 本番ビルド
+        - npm run build
+
+  artifacts:
+    # Next.jsのビルド成果物
+    baseDirectory: .next
+    files:
+      - '**/*'
+
+  cache:
+    paths:
+      # ビルド高速化のためのキャッシュ
+      - node_modules/**/*
+      - .next/cache/**/*
+
+# 環境変数（Amplifyコンソールで設定）
+# NEXT_PUBLIC_SUPABASE_URL
+# NEXT_PUBLIC_SUPABASE_ANON_KEY
+# DATABASE_URL
+# DEMO_MODE=false
+# NEXT_PUBLIC_DEMO_MODE=false
