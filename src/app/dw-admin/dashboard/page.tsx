@@ -23,6 +23,7 @@ import {
   Calendar,
   Building2,
   LayoutDashboard,
+  Bell,
 } from 'lucide-react';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { useTenantStore } from '@/lib/store/tenant-store';
@@ -30,6 +31,8 @@ import { useNotificationHistoryStore } from '@/lib/store/notification-history-st
 import { TenantManagementTab } from '@/features/super-admin/tenant-management-tab';
 import { PaymentManagementTab } from '@/features/super-admin/payment-management-tab';
 import { NotificationManagementTab } from '@/features/super-admin/notification-management-tab';
+import { PaymentReminderTab } from '@/features/super-admin/payment-reminder-tab';
+import { InvoiceAutoGenerationTab } from '@/features/super-admin/invoice-auto-generation-tab';
 
 export default function DWAdminDashboardPage() {
   const { getAllInvoices, getStats } = useInvoiceStore();
@@ -103,7 +106,7 @@ export default function DWAdminDashboardPage() {
 
       {/* タブ */}
       <Tabs defaultValue="dashboard" className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="dashboard">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             ダッシュボード
@@ -115,6 +118,14 @@ export default function DWAdminDashboardPage() {
           <TabsTrigger value="payments">
             <DollarSign className="w-4 h-4 mr-2" />
             支払い管理
+          </TabsTrigger>
+          <TabsTrigger value="auto-generation">
+            <FileText className="w-4 h-4 mr-2" />
+            自動生成
+          </TabsTrigger>
+          <TabsTrigger value="reminders">
+            <Bell className="w-4 h-4 mr-2" />
+            リマインダー
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Mail className="w-4 h-4 mr-2" />
@@ -370,7 +381,17 @@ export default function DWAdminDashboardPage() {
           <PaymentManagementTab />
         </TabsContent>
 
-        {/* タブ4: 通知履歴 */}
+        {/* タブ4: 請求書自動生成 */}
+        <TabsContent value="auto-generation">
+          <InvoiceAutoGenerationTab />
+        </TabsContent>
+
+        {/* タブ5: リマインダー管理 */}
+        <TabsContent value="reminders">
+          <PaymentReminderTab />
+        </TabsContent>
+
+        {/* タブ6: 通知履歴 */}
         <TabsContent value="notifications">
           <NotificationManagementTab />
         </TabsContent>

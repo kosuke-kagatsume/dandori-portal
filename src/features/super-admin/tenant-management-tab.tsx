@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { CreateTenantDialog } from '@/features/billing/create-tenant-dialog';
 
 export function TenantManagementTab() {
+  const router = useRouter();
   const { tenants, initializeTenants } = useTenantStore();
   const { getInvoicesByTenant, getStats, initializeInvoices } = useInvoiceStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,7 +177,11 @@ export function TenantManagementTab() {
                   const hasUnpaid = stats.unpaidAmount > 0;
 
                   return (
-                    <TableRow key={tenant.id}>
+                    <TableRow
+                      key={tenant.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => router.push(`/dw-admin/tenants/${tenant.id}`)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4 text-muted-foreground" />

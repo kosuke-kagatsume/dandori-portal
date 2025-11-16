@@ -21,6 +21,7 @@ import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 import { initializeLegalUpdatesDemo } from '@/lib/demo-legal-updates';
 import { initializeAnnouncementsDemo } from '@/lib/demo-announcements';
 import { useScheduledChangesNotifications } from '@/hooks/use-scheduled-changes-notifications';
+import { usePaymentReminderCheck } from '@/hooks/use-payment-reminder-check';
 import { initBackgroundSync } from '@/lib/offline/sync-manager';
 import { initOfflineDB } from '@/lib/offline/offline-storage';
 
@@ -51,6 +52,9 @@ export function AppShell({ children }: AppShellProps) {
 
   // 予約管理の通知チェックを有効化
   useScheduledChangesNotifications();
+
+  // 支払い期限リマインダーの自動チェックを有効化
+  usePaymentReminderCheck();
 
   // Initialize onboarding data for applicant role (only once if no data exists)
   useEffect(() => {
