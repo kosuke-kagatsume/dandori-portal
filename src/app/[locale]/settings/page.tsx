@@ -34,6 +34,7 @@ import {
   WorkflowTab,
   BillingTab,
 } from '@/features/settings/tabs';
+import { TenantManagementTab } from '@/features/super-admin/tenant-management-tab';
 import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { unifiedOrganizationMembers } from '@/lib/unified-organization-data';
@@ -77,6 +78,15 @@ export default function SettingsPage() {
     if (!currentDemoUser) return false;
     const role = currentDemoUser.role;
     return role === 'admin' || role === 'hr';
+  }, [currentDemoUser]);
+
+  // DW社管理者権限（全テナント管理）
+  // TODO: 実際のプロダクションでは、ユーザーに isSuperAdmin フラグまたは専用ロールを追加
+  const isSuperAdmin = useMemo(() => {
+    if (!currentDemoUser) return false;
+    // デモでは admin ロールかつ特定のユーザーIDの場合のみ
+    // 実際には、テナントが 'dw_company' などの特別な値を持つか、ユーザーに super_admin フラグがある
+    return currentDemoUser.role === 'admin' && currentDemoUser.id === 'demo-admin';
   }, [currentDemoUser]);
 
   // 設定の読み込み
@@ -196,6 +206,12 @@ export default function SettingsPage() {
               <span className="hidden sm:inline">請求</span>
             </TabsTrigger>
           )}
+          {isSuperAdmin && (
+            <TabsTrigger value="tenant-management" className="flex-1 sm:flex-none min-w-[100px]">
+              <Building2 className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">テナント管理</span>
+            </TabsTrigger>
+          )}
           {canManageSystem && (
             <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
               <ShieldCheck className="w-4 h-4 sm:mr-1" />
@@ -251,6 +267,12 @@ export default function SettingsPage() {
         {canViewBilling && (
           <TabsContent value="billing">
             <BillingTab />
+          </TabsContent>
+        )}
+
+        {isSuperAdmin && (
+          <TabsContent value="tenant-management">
+            <TenantManagementTab />
           </TabsContent>
         )}
 

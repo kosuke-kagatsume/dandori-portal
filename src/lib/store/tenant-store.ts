@@ -10,32 +10,44 @@ interface TenantState {
   addTenant: (tenant: Tenant) => void;
   updateTenant: (id: string, updates: Partial<Tenant>) => void;
   removeTenant: (id: string) => void;
+  initializeTenants: () => void;
 }
+
+// デフォルトテナントデータ
+const getDefaultTenants = (): Tenant[] => [
+  {
+    id: 'tenant_001',
+    name: 'デモ株式会社',
+    timezone: 'Asia/Tokyo',
+    closingDay: '末' as const,
+    weekStartDay: 0,
+  },
+];
 
 export const useTenantStore = create<TenantState>()(
   persist(
     (set, get) => ({
       currentTenant: null,
       tenants: [],
-      
+
       setCurrentTenant: (tenant) => {
         set({ currentTenant: tenant });
       },
-      
+
       setTenants: (tenants) => {
         set({ tenants });
         if (tenants.length > 0 && !get().currentTenant) {
           set({ currentTenant: tenants[0] });
         }
       },
-      
+
       addTenant: (tenant) => {
         set((state) => ({
           tenants: [...state.tenants, tenant],
           currentTenant: state.currentTenant || tenant,
         }));
       },
-      
+
       updateTenant: (id, updates) => {
         set((state) => ({
           tenants: state.tenants.map((t) =>
@@ -47,7 +59,7 @@ export const useTenantStore = create<TenantState>()(
               : state.currentTenant,
         }));
       },
-      
+
       removeTenant: (id) => {
         set((state) => {
           const newTenants = state.tenants.filter((t) => t.id !== id);
@@ -55,12 +67,23 @@ export const useTenantStore = create<TenantState>()(
             state.currentTenant?.id === id
               ? newTenants[0] || null
               : state.currentTenant;
-          
+
           return {
             tenants: newTenants,
             currentTenant: newCurrentTenant,
           };
         });
+      },
+
+      initializeTenants: () => {
+        const existingTenants = get().tenants;
+        if (existingTenants.length === 0) {
+          const defaultTenants = getDefaultTenants();
+          set({
+            tenants: defaultTenants,
+            currentTenant: defaultTenants[0],
+          });
+        }
       },
     }),
     {
