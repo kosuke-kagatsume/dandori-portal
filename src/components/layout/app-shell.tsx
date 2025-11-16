@@ -5,6 +5,9 @@ import { useUIStore, useTenantStore, useUserStore, useNotificationStore } from '
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import { useLegalUpdatesStore } from '@/lib/store/legal-updates-store';
 import { useAnnouncementsStore } from '@/lib/store/announcements-store';
+import { useNotificationHistoryStore } from '@/lib/store/notification-history-store';
+import { useInvoiceStore } from '@/lib/store/invoice-store';
+import { useTenantStore as useBillingTenantStore } from '@/lib/store/tenant-store';
 import { Sidebar } from '@/features/navigation/sidebar';
 import { Header } from '@/features/navigation/header';
 import { Toaster } from '@/components/ui/sonner';
@@ -39,6 +42,9 @@ export function AppShell({ children }: AppShellProps) {
   } = useOnboardingStore();
   const { addUpdate, getLegalUpdates } = useLegalUpdatesStore();
   const { createAnnouncement, getAnnouncements } = useAnnouncementsStore();
+  const { initializeNotifications } = useNotificationHistoryStore();
+  const { initializeInvoices } = useInvoiceStore();
+  const { initializeTenants } = useBillingTenantStore();
 
   // キーボードショートカットを有効化
   useGlobalShortcuts();
@@ -88,6 +94,13 @@ export function AppShell({ children }: AppShellProps) {
       initializeAnnouncementsDemo(createAnnouncement);
     }
   }, [createAnnouncement, getAnnouncements]);
+
+  // Initialize billing data (invoices, tenants, notification history)
+  useEffect(() => {
+    initializeTenants();
+    initializeInvoices();
+    initializeNotifications();
+  }, [initializeTenants, initializeInvoices, initializeNotifications]);
 
   // Initialize offline storage and background sync (PWA)
   useEffect(() => {

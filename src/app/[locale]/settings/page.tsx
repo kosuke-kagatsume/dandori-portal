@@ -16,6 +16,7 @@ import {
   Languages,
   Clock,
   Shield,
+  Mail,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -36,6 +37,7 @@ import {
 } from '@/features/settings/tabs';
 import { TenantManagementTab } from '@/features/super-admin/tenant-management-tab';
 import { PaymentManagementTab } from '@/features/super-admin/payment-management-tab';
+import { NotificationManagementTab } from '@/features/super-admin/notification-management-tab';
 import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { unifiedOrganizationMembers } from '@/lib/unified-organization-data';
@@ -219,6 +221,12 @@ export default function SettingsPage() {
               <span className="hidden sm:inline">支払い</span>
             </TabsTrigger>
           )}
+          {isSuperAdmin && (
+            <TabsTrigger value="notification-management" className="flex-1 sm:flex-none min-w-[100px]">
+              <Mail className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">通知履歴</span>
+            </TabsTrigger>
+          )}
           {canManageSystem && (
             <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
               <ShieldCheck className="w-4 h-4 sm:mr-1" />
@@ -286,6 +294,12 @@ export default function SettingsPage() {
         {isSuperAdmin && (
           <TabsContent value="payment-management">
             <PaymentManagementTab />
+          </TabsContent>
+        )}
+
+        {isSuperAdmin && (
+          <TabsContent value="notification-management">
+            <NotificationManagementTab />
           </TabsContent>
         )}
 

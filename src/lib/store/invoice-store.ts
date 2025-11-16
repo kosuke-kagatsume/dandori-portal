@@ -8,6 +8,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { InvoiceData } from '@/lib/billing/invoice-generator';
 import { generateInvoice } from '@/lib/billing/invoice-generator';
+import { useNotificationHistoryStore } from './notification-history-store';
 
 interface InvoiceStore {
   invoices: InvoiceData[];
@@ -162,6 +163,9 @@ export const useInvoiceStore = create<InvoiceStore>()(
       },
 
       markAsSent: (id) => {
+        const invoice = get().invoices.find((inv) => inv.id === id);
+        if (!invoice) return;
+
         set((state) => ({
           invoices: state.invoices.map((inv) =>
             inv.id === id
@@ -169,9 +173,24 @@ export const useInvoiceStore = create<InvoiceStore>()(
               : inv
           ),
         }));
+
+        // 通知を送信
+        const notificationStore = useNotificationHistoryStore.getState();
+        notificationStore.addNotification({
+          type: 'invoice_sent',
+          tenantId: invoice.tenantId,
+          tenantName: invoice.tenantName,
+          recipientEmail: invoice.billingEmail || 'billing@example.com',
+          subject: `【請求書発行】${invoice.invoiceNumber}`,
+          status: 'sent',
+          invoiceNumber: invoice.invoiceNumber,
+        });
       },
 
       markAsPaid: (id, paidDate, paymentMethod) => {
+        const invoice = get().invoices.find((inv) => inv.id === id);
+        if (!invoice) return;
+
         set((state) => ({
           invoices: state.invoices.map((inv) =>
             inv.id === id
@@ -184,6 +203,18 @@ export const useInvoiceStore = create<InvoiceStore>()(
               : inv
           ),
         }));
+
+        // 通知を送信
+        const notificationStore = useNotificationHistoryStore.getState();
+        notificationStore.addNotification({
+          type: 'payment_received',
+          tenantId: invoice.tenantId,
+          tenantName: invoice.tenantName,
+          recipientEmail: invoice.billingEmail || 'billing@example.com',
+          subject: `【入金確認】${invoice.invoiceNumber} - ご入金ありがとうございました`,
+          status: 'sent',
+          invoiceNumber: invoice.invoiceNumber,
+        });
       },
 
       getStats: (tenantId) => {
