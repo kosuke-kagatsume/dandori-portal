@@ -67,7 +67,7 @@ export interface PDFGenerationResult {
 // 共通PDFセクション
 export interface PDFSection {
   title: string;
-  items: Array<{ label: string; value: number }>;
+  items: Array<{ label: string; value: number | string }>;
   total?: number;
 }
 

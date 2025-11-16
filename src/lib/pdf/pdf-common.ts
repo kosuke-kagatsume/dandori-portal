@@ -195,7 +195,8 @@ const drawTwoColumnSections = (
 
   leftSection.items.forEach((item) => {
     doc.text(`• ${item.label}`, leftX + 2, leftY);
-    doc.text(`¥${item.value.toLocaleString()}`, leftX + colWidth, leftY, { align: 'right' });
+    const valueText = typeof item.value === 'number' ? `¥${item.value.toLocaleString()}` : item.value;
+    doc.text(valueText, leftX + colWidth, leftY, { align: 'right' });
     leftY += SPACING.XS;
   });
 
@@ -226,7 +227,8 @@ const drawTwoColumnSections = (
 
   rightSection.items.forEach((item) => {
     doc.text(`• ${item.label}`, rightX + 2, rightY);
-    doc.text(`¥${item.value.toLocaleString()}`, rightX + colWidth, rightY, { align: 'right' });
+    const valueText = typeof item.value === 'number' ? `¥${item.value.toLocaleString()}` : item.value;
+    doc.text(valueText, rightX + colWidth, rightY, { align: 'right' });
     rightY += SPACING.XS;
   });
 

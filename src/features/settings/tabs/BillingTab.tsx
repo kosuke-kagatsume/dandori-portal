@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store/tenant-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
@@ -88,9 +89,10 @@ export function BillingTab() {
   const handleDownloadPDF = async (invoice: InvoiceData) => {
     try {
       await downloadInvoicePDF(invoice);
+      toast.success('請求書PDFをダウンロードしました');
     } catch (error) {
       console.error('PDF出力エラー:', error);
-      alert('PDF出力に失敗しました');
+      toast.error(`PDF出力に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
     }
   };
 
