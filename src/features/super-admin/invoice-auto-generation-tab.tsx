@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -272,9 +272,9 @@ export function InvoiceAutoGenerationTab() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  history.map((item) => (
-                    <>
-                      <TableRow key={item.id}>
+                  history.map((item, index) => (
+                    <React.Fragment key={`history-${item.id}-${index}`}>
+                      <TableRow key={`row-${item.id}`}>
                         <TableCell className="font-mono text-sm">
                           {new Date(item.executedAt).toLocaleString('ja-JP')}
                         </TableCell>
@@ -315,7 +315,7 @@ export function InvoiceAutoGenerationTab() {
 
                       {/* 詳細表示 */}
                       {expandedHistoryId === item.id && (
-                        <TableRow>
+                        <TableRow key={`detail-${item.id}`}>
                           <TableCell colSpan={6} className="bg-muted/50">
                             <div className="py-4">
                               <h4 className="font-semibold mb-3">生成詳細</h4>
@@ -359,7 +359,7 @@ export function InvoiceAutoGenerationTab() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   ))
                 )}
               </TableBody>

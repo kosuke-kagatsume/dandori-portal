@@ -33,15 +33,31 @@ import { PaymentManagementTab } from '@/features/super-admin/payment-management-
 import { NotificationManagementTab } from '@/features/super-admin/notification-management-tab';
 import { PaymentReminderTab } from '@/features/super-admin/payment-reminder-tab';
 import { InvoiceAutoGenerationTab } from '@/features/super-admin/invoice-auto-generation-tab';
+import { useIsMounted } from '@/hooks/useIsMounted';
 
 export default function DWAdminDashboardPage() {
+  const mounted = useIsMounted();
   const { getAllInvoices, getStats } = useInvoiceStore();
   const { tenants } = useTenantStore();
   const { getStats: getNotificationStats } = useNotificationHistoryStore();
 
-  const allInvoices = getAllInvoices();
-  const invoiceStats = getStats();
-  const notificationStats = getNotificationStats();
+  const allInvoices = mounted ? getAllInvoices() : [];
+  const invoiceStats = mounted ? getStats() : {
+    totalInvoices: 0,
+    unpaidAmount: 0,
+    overdueCount: 0,
+    paidAmount: 0,
+    paidCount: 0,
+  };
+  const notificationStats = mounted ? getNotificationStats() : {
+    totalSent: 0,
+    totalFailed: 0,
+    byType: {
+      invoice_sent: 0,
+      payment_reminder: 0,
+      payment_received: 0,
+    },
+  };
 
   // 最近の支払い状況（過去10件）
   const recentPayments = useMemo(() => {

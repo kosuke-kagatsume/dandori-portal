@@ -15,13 +15,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Building2, Plus, Search, Users, DollarSign, Calendar } from 'lucide-react';
-import { useTenantStore } from '@/lib/store/tenant-store';
+import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { CreateTenantDialog } from '@/features/billing/create-tenant-dialog';
 
 export function TenantManagementTab() {
   const router = useRouter();
-  const { tenants, initializeTenants } = useTenantStore();
+  const { tenants, initializeTenants } = useAdminTenantStore();
   const { getInvoicesByTenant, getStats, initializeInvoices } = useInvoiceStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);

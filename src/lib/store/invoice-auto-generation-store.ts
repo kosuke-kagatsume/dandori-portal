@@ -10,7 +10,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useInvoiceStore } from './invoice-store';
-import { useTenantStore } from './tenant-store';
+import { useAdminTenantStore } from './admin-tenant-store';
+import { generateInvoice } from '@/lib/billing/invoice-generator';
 
 // ============================================================================
 // TYPES
@@ -120,7 +121,7 @@ export const useInvoiceAutoGenerationStore = create<InvoiceAutoGenerationStore>(
       generateInvoicesForAllTenants: (executionType) => {
         const { settings, addHistory } = get();
         const invoiceStore = useInvoiceStore.getState();
-        const tenantStore = useTenantStore.getState();
+        const tenantStore = useAdminTenantStore.getState();
 
         const tenants = tenantStore.tenants.filter((t) => t.status === 'active');
         const details: GenerationDetail[] = [];
@@ -134,32 +135,30 @@ export const useInvoiceAutoGenerationStore = create<InvoiceAutoGenerationStore>(
 
         tenants.forEach((tenant) => {
           try {
-            // ユーザー数に応じた金額計算
-            const amount = tenant.currentUsers * settings.basePricePerUser;
+            // 既存の請求書を取得（請求書番号の採番のため）
+            const existingInvoices = invoiceStore.getAllInvoices();
 
-            // 請求書作成
-            const invoiceId = invoiceStore.createInvoice({
+            // invoiceNumberが存在する請求書のみをフィルタリング
+            const validInvoices = existingInvoices.filter(
+              (inv) => inv.invoiceNumber && typeof inv.invoiceNumber === 'string'
+            );
+
+            // generateInvoice ヘルパーを使用して請求書データを生成
+            const invoiceData = generateInvoice({
               tenantId: tenant.id,
               tenantName: tenant.name,
-              billingMonth: billingMonth.toISOString(),
-              items: [
-                {
-                  description: `${tenant.plan.toUpperCase()}プラン利用料（${tenant.currentUsers}ユーザー）`,
-                  quantity: tenant.currentUsers,
-                  unitPrice: settings.basePricePerUser,
-                  amount: amount,
-                },
-              ],
-              subtotal: amount,
-              tax: Math.floor(amount * 0.1), // 10%税
-              total: amount + Math.floor(amount * 0.1),
+              billingMonth: billingMonth,
+              userCount: tenant.currentUsers,
+              existingInvoices: validInvoices,
               billingEmail: tenant.billingEmail,
+              memo: `${tenant.plan.toUpperCase()}プラン - 自動生成`,
             });
 
-            // 生成された請求書を取得
-            const invoice = invoiceStore.getInvoiceById(invoiceId);
+            // 請求書作成
+            const invoice = invoiceStore.createInvoice(invoiceData);
 
-            if (invoice) {
+            // 生成された請求書が正常に作成されたか確認
+            if (invoice && invoice.id) {
               details.push({
                 tenantId: tenant.id,
                 tenantName: tenant.name,

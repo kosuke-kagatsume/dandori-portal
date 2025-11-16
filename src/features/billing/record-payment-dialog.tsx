@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -64,6 +64,9 @@ export function RecordPaymentDialog({ invoice, open, onClose }: RecordPaymentDia
             <CheckCircle className="h-5 w-5 text-green-600" />
             支払い記録
           </DialogTitle>
+          <DialogDescription>
+            請求書の支払い情報を記録します
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">

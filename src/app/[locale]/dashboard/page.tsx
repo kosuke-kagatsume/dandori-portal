@@ -189,51 +189,6 @@ export default function DashboardPage() {
         <LatestAnnouncementCard />
       </MountGate>
 
-      {/* DW管理者ダッシュボードへのリンク（adminのみ） */}
-      {effectiveDemoUser.role === 'admin' && (
-        <Link href="/dw-admin/dashboard">
-          <Card className="relative overflow-hidden border-2 border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600 transition-all duration-300 cursor-pointer hover:shadow-xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
-            <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full -mr-20 -mt-20" />
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-3 bg-purple-600 rounded-lg">
-                  <ShieldCheck className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <div className="text-lg font-bold text-purple-900 dark:text-purple-100">
-                    DW管理者ダッシュボード
-                  </div>
-                  <div className="text-sm text-purple-700 dark:text-purple-300 font-normal">
-                    全テナントの収益状況と管理機能
-                  </div>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="flex gap-4">
-                  <div className="text-center">
-                    <div className="text-sm text-muted-foreground">テナント管理</div>
-                    <Badge variant="secondary" className="mt-1">統合管理</Badge>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-sm text-muted-foreground">支払い管理</div>
-                    <Badge variant="secondary" className="mt-1">収益分析</Badge>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-sm text-muted-foreground">通知履歴</div>
-                    <Badge variant="secondary" className="mt-1">一元管理</Badge>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" className="text-purple-600 dark:text-purple-400">
-                  開く →
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      )}
-
       {/* Role-based KPI Cards */}
       <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 ${
         effectiveDemoUser.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'

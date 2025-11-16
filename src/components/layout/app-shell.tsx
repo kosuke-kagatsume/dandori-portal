@@ -7,7 +7,7 @@ import { useLegalUpdatesStore } from '@/lib/store/legal-updates-store';
 import { useAnnouncementsStore } from '@/lib/store/announcements-store';
 import { useNotificationHistoryStore } from '@/lib/store/notification-history-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
-import { useTenantStore as useBillingTenantStore } from '@/lib/store/tenant-store';
+import { useAdminTenantStore as useBillingTenantStore } from '@/lib/store/admin-tenant-store';
 import { Sidebar } from '@/features/navigation/sidebar';
 import { Header } from '@/features/navigation/header';
 import { Toaster } from '@/components/ui/sonner';

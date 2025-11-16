@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -136,6 +136,9 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
             <Building2 className="h-5 w-5" />
             新規テナント作成
           </DialogTitle>
+          <DialogDescription>
+            ステップ {step}/3: {step === 1 ? '会社情報' : step === 2 ? '契約プラン' : '管理者設定'}
+          </DialogDescription>
           <div className="flex gap-2 mt-4">
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex-1">

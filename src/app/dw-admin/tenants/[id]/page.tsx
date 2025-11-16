@@ -1,7 +1,7 @@
 'use client';
 
-import { use, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useMemo, useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,19 +28,18 @@ import {
   Save,
   X,
 } from 'lucide-react';
-import { useTenantStore } from '@/lib/store/tenant-store';
+import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { useNotificationHistoryStore } from '@/lib/store/notification-history-store';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import { toast } from 'sonner';
 
-interface PageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default function TenantDetailPage({ params }: PageProps) {
-  const { id: tenantId } = use(params);
+export default function TenantDetailPage() {
+  const mounted = useIsMounted();
+  const params = useParams();
+  const tenantId = params?.id as string;
   const router = useRouter();
-  const { tenants, updateTenant } = useTenantStore();
+  const { tenants, updateTenant } = useAdminTenantStore();
   const { getInvoicesByTenant } = useInvoiceStore();
   const { getNotificationsByTenant } = useNotificationHistoryStore();
 
