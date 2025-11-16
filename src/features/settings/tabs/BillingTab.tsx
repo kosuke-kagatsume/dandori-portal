@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTenantStore } from '@/lib/store/tenant-store';
 import { useUserStore } from '@/lib/store/user-store';
+import { useInvoiceStore } from '@/lib/store/invoice-store';
 import {
   calculateMonthlyPrice,
   calculateTax,
@@ -21,12 +22,41 @@ import {
   Calendar,
   FileText,
   AlertCircle,
+  Download,
+  Eye,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { InvoiceDetailModal } from '@/features/billing/invoice-detail-modal';
+import type { InvoiceData } from '@/lib/billing/invoice-generator';
+import { downloadInvoicePDF } from '@/lib/pdf/invoice-pdf';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 export function BillingTab() {
   const currentTenant = useTenantStore((state) => state.currentTenant);
   const users = useUserStore((state) => state.users);
+  const { getInvoicesByTenant, initializeInvoices } = useInvoiceStore();
+
+  // 請求書詳細モーダル
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // 初期化
+  useEffect(() => {
+    initializeInvoices();
+  }, [initializeInvoices]);
+
+  // テナントの請求書を取得（送信済みと支払済みのみ表示）
+  const allTenantInvoices = getInvoicesByTenant(currentTenant?.id || 'tenant_001');
+  const tenantInvoices = allTenantInvoices.filter(
+    (invoice) => invoice.status === 'sent' || invoice.status === 'paid'
+  );
 
   // 現在のアクティブユーザー数
   const activeUsers = users.filter((u) => u.status === 'active').length;
@@ -55,8 +85,18 @@ export function BillingTab() {
     setProrationResult(proration);
   };
 
+  const handleDownloadPDF = async (invoice: InvoiceData) => {
+    try {
+      await downloadInvoicePDF(invoice);
+    } catch (error) {
+      console.error('PDF出力エラー:', error);
+      alert('PDF出力に失敗しました');
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <>
+      <div className="space-y-6">
       {/* ヘッダー */}
       <div>
         <h2 className="text-2xl font-bold">請求情報</h2>
@@ -286,19 +326,102 @@ export function BillingTab() {
         {/* 請求書履歴タブ */}
         <TabsContent value="invoices">
           <Card className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <FileText className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-lg font-bold">請求書履歴</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-lg font-bold">請求書履歴</h3>
+              </div>
+              <Badge variant="outline">{tenantInvoices.length}件</Badge>
             </div>
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Coming Soon...</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                請求書の自動生成機能は近日公開予定です
-              </p>
-            </div>
+
+            {tenantInvoices.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">請求書がありません</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>請求書番号</TableHead>
+                    <TableHead>請求月</TableHead>
+                    <TableHead className="text-right">金額（税込）</TableHead>
+                    <TableHead>支払い期限</TableHead>
+                    <TableHead>ステータス</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tenantInvoices.map((invoice) => {
+                    const isOverdue =
+                      invoice.status !== 'paid' &&
+                      new Date(invoice.dueDate) < new Date();
+
+                    return (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-mono font-medium">
+                          {invoice.invoiceNumber}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(invoice.billingMonth).toLocaleDateString('ja-JP', {
+                            year: 'numeric',
+                            month: 'long',
+                          })}
+                        </TableCell>
+                        <TableCell className="text-right font-bold">
+                          ¥{invoice.total.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <span className={isOverdue ? 'text-red-600 font-medium' : ''}>
+                            {new Date(invoice.dueDate).toLocaleDateString('ja-JP')}
+                            {isOverdue && (
+                              <AlertCircle className="inline ml-2 h-4 w-4" />
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {invoice.status === 'paid' ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              支払済み
+                            </Badge>
+                          ) : isOverdue ? (
+                            <Badge variant="destructive">期限超過</Badge>
+                          ) : (
+                            <Badge variant="default">未払い</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setIsDetailModalOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            詳細
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+
+      {/* 請求書詳細モーダル（閲覧専用） */}
+      <InvoiceDetailModal
+        invoice={selectedInvoice}
+        open={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        onDownloadPDF={handleDownloadPDF}
+        readOnly={true}
+      />
+    </>
   );
 }
