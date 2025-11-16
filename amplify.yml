@@ -7,8 +7,8 @@ frontend:
         - node --version
         - npm --version
 
-        # 依存関係インストール
-        - npm ci
+        # 依存関係インストール（devDependenciesも含む）
+        - npm ci --include=dev
 
         # Prisma Clientの生成
         - npx prisma generate
