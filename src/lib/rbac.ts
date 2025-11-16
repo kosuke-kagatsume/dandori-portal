@@ -42,6 +42,7 @@ export const MENU_PERMISSIONS = {
   onboarding: ['hr', 'applicant'], // 人事担当と新入社員がアクセス可能
   settings: ['executive', 'hr', 'admin'], // 経営者、人事担当、システム管理者
   audit: ['admin'], // 監査ログはシステム管理者のみ
+  dwAdminDashboard: ['admin'], // DW管理者ダッシュボード（システム管理者のみ）
 } as const;
 
 export type MenuKey = keyof typeof MENU_PERMISSIONS;
