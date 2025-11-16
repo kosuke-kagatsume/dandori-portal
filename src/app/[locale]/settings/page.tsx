@@ -32,6 +32,7 @@ import {
   YearEndTab,
   AttendanceTab,
   WorkflowTab,
+  BillingTab,
 } from '@/features/settings/tabs';
 import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
 import { useOrganizationStore } from '@/lib/store/organization-store';
@@ -69,6 +70,13 @@ export default function SettingsPage() {
   // 権限チェック
   const canManageSystem = useMemo(() => {
     return hasPermission(currentDemoUser, 'manage_system');
+  }, [currentDemoUser]);
+
+  // 請求情報の閲覧権限（システム管理者と人事担当）
+  const canViewBilling = useMemo(() => {
+    if (!currentDemoUser) return false;
+    const role = currentDemoUser.role;
+    return role === 'admin' || role === 'hr';
   }, [currentDemoUser]);
 
   // 設定の読み込み
@@ -147,7 +155,7 @@ export default function SettingsPage() {
       )}
 
       <Tabs defaultValue="appearance" className="space-y-4 w-full">
-        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-1">
+        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-10 gap-1">
           <TabsTrigger value="appearance" className="flex-1 sm:flex-none min-w-[100px]">
             <Sun className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">外観</span>
@@ -177,16 +185,22 @@ export default function SettingsPage() {
             <span className="hidden sm:inline">ワークフロー</span>
           </TabsTrigger>
           {canManageSystem && (
-            <>
-              <TabsTrigger value="permissions" className="flex-1 sm:flex-none min-w-[100px]">
-                <Shield className="w-4 h-4 sm:mr-1" />
-                <span className="hidden sm:inline">権限</span>
-              </TabsTrigger>
-              <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
-                <ShieldCheck className="w-4 h-4 sm:mr-1" />
-                <span className="hidden sm:inline">システム</span>
-              </TabsTrigger>
-            </>
+            <TabsTrigger value="permissions" className="flex-1 sm:flex-none min-w-[100px]">
+              <Shield className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">権限</span>
+            </TabsTrigger>
+          )}
+          {canViewBilling && (
+            <TabsTrigger value="billing" className="flex-1 sm:flex-none min-w-[100px]">
+              <DollarSign className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">請求</span>
+            </TabsTrigger>
+          )}
+          {canManageSystem && (
+            <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
+              <ShieldCheck className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">システム</span>
+            </TabsTrigger>
           )}
         </TabsList>
 
@@ -219,24 +233,31 @@ export default function SettingsPage() {
         </TabsContent>
 
         {canManageSystem && (
-          <>
-            <TabsContent value="permissions">
-              <PermissionManagementPanel
-                members={organizationMembers}
-                onMemberPermissionUpdate={(memberId, permissions) => {
-                  console.log('Update permissions for member:', memberId, permissions);
-                  toast.success('権限を更新しました');
-                }}
-                onRoleUpdate={(roleId, permissions) => {
-                  console.log('Update role permissions:', roleId, permissions);
-                  toast.success('ロール権限を更新しました');
-                }}
-              />
-            </TabsContent>
-            <TabsContent value="system">
-              <SystemTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
-            </TabsContent>
-          </>
+          <TabsContent value="permissions">
+            <PermissionManagementPanel
+              members={organizationMembers}
+              onMemberPermissionUpdate={(memberId, permissions) => {
+                console.log('Update permissions for member:', memberId, permissions);
+                toast.success('権限を更新しました');
+              }}
+              onRoleUpdate={(roleId, permissions) => {
+                console.log('Update role permissions:', roleId, permissions);
+                toast.success('ロール権限を更新しました');
+              }}
+            />
+          </TabsContent>
+        )}
+
+        {canViewBilling && (
+          <TabsContent value="billing">
+            <BillingTab />
+          </TabsContent>
+        )}
+
+        {canManageSystem && (
+          <TabsContent value="system">
+            <SystemTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
+          </TabsContent>
         )}
       </Tabs>
     </div>

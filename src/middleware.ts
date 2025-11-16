@@ -53,6 +53,13 @@ function hasMenuAccess(userRole: string, menuKey: string): boolean {
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // 0. DW社管理画面（locale不要）
+  if (pathname.startsWith('/dw-admin')) {
+    // DW社管理画面は locale 処理をスキップ
+    // TODO: 将来的にDW社専用の認証チェックを追加
+    return NextResponse.next();
+  }
+
   // 1. パブリックルート（認証不要）
   const publicPaths = ['/auth/login', '/auth/register', '/'];
   const isPublicPath = publicPaths.some(path => pathname.includes(path));

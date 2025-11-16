@@ -12,3 +12,4 @@ export { AssetsTab } from './AssetsTab';
 export { SaaSTab } from './SaaSTab';
 export { WorkflowTab } from './WorkflowTab';
 export { SystemTab } from './SystemTab';
+export { BillingTab } from './BillingTab';
