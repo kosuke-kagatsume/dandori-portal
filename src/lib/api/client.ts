@@ -470,7 +470,7 @@ let defaultClient: APIClient | null = null;
 export function getAPIClient(): APIClient {
   if (!defaultClient) {
     defaultClient = new APIClient({
-      baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
+      baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
       onTokenRefresh: (accessToken) => {
         console.log('[API Client] Token refreshed successfully');
       },
