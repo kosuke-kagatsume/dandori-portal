@@ -28,9 +28,17 @@ import { useUserStore } from '@/lib/store/user-store';
 import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
 import { MountGate } from '@/components/common/MountGate';
-import { QuickCheckIn } from '@/features/dashboard/quick-check-in';
-import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
 import dynamic from 'next/dynamic';
+
+// SSR無効化: Hydration Error 完全回避
+const QuickCheckIn = dynamic(
+  () => import('@/features/dashboard/quick-check-in').then(mod => ({ default: mod.QuickCheckIn })),
+  { ssr: false, loading: () => <div className="h-[200px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" /> }
+);
+const LatestAnnouncementCard = dynamic(
+  () => import('@/features/announcements/latest-announcement-card').then(mod => ({ default: mod.LatestAnnouncementCard })),
+  { ssr: false, loading: () => <div className="h-[150px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg" /> }
+);
 
 // Chartコンポーネントを遅延読み込み（初回表示時のみロード）
 const PersonalAttendanceChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.PersonalAttendanceChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
