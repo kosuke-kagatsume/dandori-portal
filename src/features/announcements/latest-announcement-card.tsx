@@ -26,6 +26,9 @@ export function LatestAnnouncementCard() {
   const currentUser = useUserStore((state) => state.currentUser);
   const { getAnnouncements } = useAnnouncementsStore();
 
+  // SSR/CSR完全一致のため、マウント後のみレンダリング
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
   // クライアント専用のstate（SSR/CSR一致のため）
   const [latestAnnouncement, setLatestAnnouncement] = useState<Announcement | null>(null);
   const [formattedDate, setFormattedDate] = useState<string>('');
@@ -34,12 +37,19 @@ export function LatestAnnouncementCard() {
   // すべてのアナウンスを取得
   const allAnnouncements = getAnnouncements();
 
+  // マウントフラグを立てる（SSR/CSR一致のため）
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // クライアント側でのみフィルタリング・ソート処理を実行
   useEffect(() => {
-    if (!currentUser || !allAnnouncements || !Array.isArray(allAnnouncements)) {
-      setLatestAnnouncement(null);
-      return;
-    }
+    try {
+      if (!currentUser || !allAnnouncements || !Array.isArray(allAnnouncements)) {
+        setLatestAnnouncement(null);
+        setOtherAnnouncementsCount(0);
+        return;
+      }
 
     const userRoles = currentUser.roles || [];
 
@@ -97,16 +107,27 @@ export function LatestAnnouncementCard() {
     // 他のお知らせ件数を保存
     setOtherAnnouncementsCount(sortedAnnouncements.length - 1);
 
-    // 日付フォーマット（クライアント側でのみ実行）
-    const formatted = new Date(latest.startDate).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    setFormattedDate(formatted);
+      // 日付フォーマット（クライアント側でのみ実行）
+      const formatted = new Date(latest.startDate).toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      setFormattedDate(formatted);
+    } catch (error) {
+      // Supabase APIエラーなどを握りつぶす
+      console.warn('Failed to load latest announcement:', error);
+      setLatestAnnouncement(null);
+      setOtherAnnouncementsCount(0);
+    }
   }, [currentUser, allAnnouncements]);
 
-  // SSR時やデータ未取得時は何も表示しない
+  // SSR/CSR完全一致: マウント前は何も表示しない
+  if (!isMounted) {
+    return null;
+  }
+
+  // データ未取得時は何も表示しない
   if (!latestAnnouncement) {
     return null;
   }
