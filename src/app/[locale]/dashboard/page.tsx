@@ -29,13 +29,8 @@ import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
 import { MountGate } from '@/components/common/MountGate';
 import { QuickCheckIn } from '@/features/dashboard/quick-check-in';
+import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
 import dynamic from 'next/dynamic';
-
-// LatestAnnouncementCard を SSR 無効化（Hydration エラー回避）
-const LatestAnnouncementCard = dynamic(
-  () => import('@/features/announcements/latest-announcement-card').then(mod => ({ default: mod.LatestAnnouncementCard })),
-  { ssr: false }
-);
 
 // Chartコンポーネントを遅延読み込み（初回表示時のみロード）
 const PersonalAttendanceChart = dynamic(() => import('@/components/dashboard/role-based-charts').then(mod => ({ default: mod.PersonalAttendanceChart })), { ssr: false, loading: () => <div className="h-[300px] flex items-center justify-center">読み込み中...</div> });
