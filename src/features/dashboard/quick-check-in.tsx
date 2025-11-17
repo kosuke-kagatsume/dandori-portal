@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, LogIn, LogOut, MapPin } from 'lucide-react';
@@ -15,6 +15,18 @@ interface QuickCheckInProps {
 export function QuickCheckIn({ onCheckIn }: QuickCheckInProps) {
   const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [checkInTime, setCheckInTime] = useState<Date | null>(null);
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  // クライアント側でのみ時刻を設定・更新（Hydrationエラー回避）
+  useEffect(() => {
+    setCurrentTime(new Date());
+
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000); // 1秒ごとに更新
+
+    return () => clearInterval(timer);
+  }, []);
 
   const handleCheckIn = () => {
     const now = new Date();
@@ -60,10 +72,10 @@ export function QuickCheckIn({ onCheckIn }: QuickCheckInProps) {
         {/* 現在時刻 */}
         <div className="text-center">
           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {format(new Date(), 'HH:mm')}
+            {currentTime ? format(currentTime, 'HH:mm') : '--:--'}
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            {format(new Date(), 'M月d日（E）', { locale: ja })}
+            {currentTime ? format(currentTime, 'M月d日（E）', { locale: ja }) : '読み込み中...'}
           </div>
         </div>
 
