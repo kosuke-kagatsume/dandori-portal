@@ -23,7 +23,8 @@ interface LayoutShiftEntry extends PerformanceEntry {
 
 class PerformanceMonitor {
   private metrics: Map<string, PerformanceMetric[]> = new Map();
-  private enabled: boolean = process.env.NODE_ENV === 'development';
+  // NEXT_PUBLIC_*はビルド時に置き換わるため、ブラウザでも動作する
+  private enabled: boolean = process.env.NEXT_PUBLIC_ENABLE_PERFORMANCE === 'true';
 
   // コンポーネントのレンダリング時間を測定
   measureComponent(componentName: string, callback: () => void): void {
@@ -167,15 +168,16 @@ export const performanceMonitor = new PerformanceMonitor();
 
 // React用のパフォーマンス測定フック
 export function usePerformanceTracking(componentName: string) {
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  // NEXT_PUBLIC_*はビルド時に置き換わるため、ブラウザでも動作する
+  if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_ENABLE_PERFORMANCE === 'true') {
     const renderStart = performance.now();
-    
+
     // コンポーネントのアンマウント時に測定
     return () => {
       const renderDuration = performance.now() - renderStart;
       performanceMonitor.recordMetric(`component_lifecycle_${componentName}`, renderDuration);
     };
   }
-  
+
   return () => {};
 }

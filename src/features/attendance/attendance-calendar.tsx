@@ -92,24 +92,8 @@ export function AttendanceCalendar({ records }: AttendanceCalendarProps) {
     return () => clearTimeout(timer);
   }, [date]);
 
-  // Dev環境でのセルフチェック（table-row強制チェック）
-  useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') {
-      setTimeout(() => {
-        const bad = Array.from(document.querySelectorAll('.rdp tr'))
-          .filter((el) => getComputedStyle(el).display !== 'table-row');
-        if (bad.length) {
-          // eslint-disable-next-line no-console
-          console.warn('[Calendar] tr が table-row 以外です:', bad.slice(0, 3));
-          bad.forEach((el) => {
-            if (el instanceof HTMLElement) {
-              el.style.display = 'table-row';
-            }
-          });
-        }
-      }, 0);
-    }
-  }, [date]);
+  // Note: デバッグコードを削除（本番環境では不要）
+  // 以前はprocess.env.NODE_ENVを使用していたが、ブラウザで未定義となるため削除
 
   const getRecordForDate = (date: Date) => {
     return records.find(record => 
