@@ -61,7 +61,11 @@ export function useAuth() {
           setUser(session?.user ?? null);
 
           if (!session?.user) {
-            router.push(`/${locale}/auth/login`);
+            // 現在のロケールを動的に取得
+            const currentLocale = typeof window !== 'undefined'
+              ? window.location.pathname.split('/')[1] || 'ja'
+              : 'ja';
+            router.push(`/${currentLocale}/auth/login`);
           }
         });
 
@@ -86,8 +90,11 @@ export function useAuth() {
       await supabase.auth.signOut();
     }
 
-    // 現在のロケールを保持してログインページへリダイレクト
-    router.push(`/${locale}/auth/login`);
+    // 現在のロケールを動的に取得（クロージャの古い値を使わない）
+    const currentLocale = typeof window !== 'undefined'
+      ? window.location.pathname.split('/')[1] || 'ja'
+      : 'ja';
+    router.push(`/${currentLocale}/auth/login`);
   };
 
   return {
