@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -9,6 +9,8 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const params = useParams();
+  const locale = (params?.locale as string) || 'ja';
 
   // デモモードかチェック
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || 
@@ -59,7 +61,7 @@ export function useAuth() {
           setUser(session?.user ?? null);
 
           if (!session?.user) {
-            router.push('/auth/login');
+            router.push(`/${locale}/auth/login`);
           }
         });
 
@@ -83,8 +85,9 @@ export function useAuth() {
       const supabase = createClient();
       await supabase.auth.signOut();
     }
-    
-    router.push('/auth/login');
+
+    // 現在のロケールを保持してログインページへリダイレクト
+    router.push(`/${locale}/auth/login`);
   };
 
   return {
