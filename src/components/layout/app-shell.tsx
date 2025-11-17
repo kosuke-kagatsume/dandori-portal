@@ -92,10 +92,20 @@ export function AppShell({ children }: AppShellProps) {
   }, [addUpdate, getLegalUpdates]);
 
   // Initialize announcements demo data (only once if no data exists)
+  // デモ環境のみで実行（Amplifyなど本番環境では Supabase 401 エラーを防ぐ）
   useEffect(() => {
-    const existingAnnouncements = getAnnouncements();
-    if (existingAnnouncements.length === 0) {
-      initializeAnnouncementsDemo(createAnnouncement);
+    // デモ環境以外では何もしない
+    if (process.env.NEXT_PUBLIC_ENV !== 'demo') {
+      return;
+    }
+
+    try {
+      const existingAnnouncements = getAnnouncements();
+      if (existingAnnouncements.length === 0) {
+        initializeAnnouncementsDemo(createAnnouncement);
+      }
+    } catch (error) {
+      console.warn('Failed to initialize announcements demo data:', error);
     }
   }, [createAnnouncement, getAnnouncements]);
 

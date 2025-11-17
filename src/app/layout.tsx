@@ -56,8 +56,13 @@ export default async function RootLayout({
         >
           {children}
           <Toaster />
-          <Analytics />
-          <SpeedInsights />
+          {/* Vercel環境のみで Analytics/Speed Insights を有効化（Amplifyでは404エラーを防ぐ） */}
+          {process.env.NEXT_PUBLIC_DEPLOY_TARGET === 'vercel' && (
+            <>
+              <Analytics />
+              <SpeedInsights />
+            </>
+          )}
         </ThemeProvider>
       </body>
     </html>
