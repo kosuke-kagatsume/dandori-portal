@@ -430,13 +430,17 @@ export function getSessionManager(config?: SessionConfig): SessionManager {
       onSessionExpired: () => {
         console.log('[SessionManager] Session expired - redirecting to login');
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          // 現在のロケールをURLから取得
+          const locale = window.location.pathname.split('/')[1] || 'ja';
+          window.location.href = `/${locale}/auth/login`;
         }
       },
       onIdleTimeout: () => {
         console.log('[SessionManager] Idle timeout - logging out');
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          // 現在のロケールをURLから取得
+          const locale = window.location.pathname.split('/')[1] || 'ja';
+          window.location.href = `/${locale}/auth/login`;
         }
       },
       ...config,

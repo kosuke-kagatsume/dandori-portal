@@ -27,7 +27,10 @@ export default function Error({
         </p>
         <div className="flex gap-2 justify-center">
           <Button onClick={reset}>もう一度試す</Button>
-          <Button variant="outline" onClick={() => window.location.href = '/auth/login'}>
+          <Button variant="outline" onClick={() => {
+            const locale = window.location.pathname.split('/')[1] || 'ja';
+            window.location.href = `/${locale}/auth/login`;
+          }}>
             ログインページへ
           </Button>
         </div>
