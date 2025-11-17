@@ -1,4 +1,11 @@
+'use client';
+
+import { useParams } from 'next/navigation';
+
 export default function NotFound() {
+  const params = useParams();
+  const locale = (params?.locale as string) || 'ja';
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
       <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
@@ -7,7 +14,7 @@ export default function NotFound() {
         お探しのページは存在しないか、移動された可能性があります。
       </p>
       <a
-        href="/ja/dashboard"
+        href={`/${locale}/dashboard`}
         className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
       >
         ダッシュボードに戻る

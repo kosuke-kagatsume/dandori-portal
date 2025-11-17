@@ -477,7 +477,9 @@ export function getAPIClient(): APIClient {
       onUnauthorized: () => {
         console.log('[API Client] Unauthorized - redirecting to login');
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          // 現在のロケールをURLから取得
+          const locale = window.location.pathname.split('/')[1] || 'ja';
+          window.location.href = `/${locale}/auth/login`;
         }
       },
     });

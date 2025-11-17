@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/lib/store/user-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ export default function LoginPage() {
 
 function ActualLoginForm() {
   const router = useRouter();
+  const params = useParams();
+  const locale = (params?.locale as string) || 'ja';
   const login = useUserStore((state) => state.login);
   const storeError = useUserStore((state) => state.error);
   const storeLoading = useUserStore((state) => state.isLoading);
@@ -39,7 +41,7 @@ function ActualLoginForm() {
       await login(email, password);
 
       toast.success('ログインしました');
-      router.push('/ja/dashboard');
+      router.push(`/${locale}/dashboard`);
     } catch (error: any) {
       const errorMessage = error?.message || 'ログインに失敗しました';
       setLocalError(errorMessage);

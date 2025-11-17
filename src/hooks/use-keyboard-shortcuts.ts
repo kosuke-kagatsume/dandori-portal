@@ -7,7 +7,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 export interface KeyboardShortcut {
   key: string;
@@ -46,31 +46,33 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
  */
 export function useGlobalShortcuts() {
   const router = useRouter();
+  const params = useParams();
+  const locale = (params?.locale as string) || 'ja';
 
   const shortcuts: KeyboardShortcut[] = [
     {
       key: 'h',
       ctrl: true,
       description: 'ダッシュボードへ',
-      action: () => router.push('/ja/dashboard'),
+      action: () => router.push(`/${locale}/dashboard`),
     },
     {
       key: 'u',
       ctrl: true,
       description: 'ユーザー管理へ',
-      action: () => router.push('/ja/users'),
+      action: () => router.push(`/${locale}/users`),
     },
     {
       key: 'a',
       ctrl: true,
       description: '勤怠管理へ',
-      action: () => router.push('/ja/attendance'),
+      action: () => router.push(`/${locale}/attendance`),
     },
     {
       key: 'w',
       ctrl: true,
       description: 'ワークフローへ',
-      action: () => router.push('/ja/workflow'),
+      action: () => router.push(`/${locale}/workflow`),
     },
     {
       key: '/',

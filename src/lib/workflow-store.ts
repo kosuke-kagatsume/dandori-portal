@@ -11,6 +11,17 @@ import { useOrganizationStore } from './store/organization-store';
 import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration';
 import { workflowService } from './supabase/workflow-service';
 
+/**
+ * 現在のロケールをURLから取得するヘルパー関数
+ */
+function getCurrentLocale(): string {
+  if (typeof window !== 'undefined') {
+    const locale = window.location.pathname.split('/')[1];
+    return locale === 'ja' || locale === 'en' ? locale : 'ja';
+  }
+  return 'ja';
+}
+
 export type WorkflowType =
   | 'leave_request'      // 休暇申請
   | 'overtime_request'   // 残業申請
@@ -448,7 +459,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
               timestamp: now,
               read: false,
               important: true,
-              actionUrl: `/ja/workflow`,
+              actionUrl: `/${getCurrentLocale()}/workflow`,
               userId: firstStep.approverId,
             });
           }
@@ -592,7 +603,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
                 timestamp: now,
                 read: false,
                 important: true,
-                actionUrl: `/ja/workflow`,
+                actionUrl: `/${getCurrentLocale()}/workflow`,
                 userId: nextStep.approverId,
               });
             }

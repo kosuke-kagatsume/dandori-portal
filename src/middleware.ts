@@ -78,7 +78,9 @@ export default async function middleware(request: NextRequest) {
 
     if (menuKey && !hasMenuAccess(userRole, menuKey)) {
       // アクセス権限がない場合、ダッシュボードにリダイレクト
-      const dashboardUrl = new URL('/ja/dashboard', request.url);
+      // 現在のロケールをpathnameから取得
+      const locale = pathname.match(/^\/(ja|en)/)?.[1] || 'ja';
+      const dashboardUrl = new URL(`/${locale}/dashboard`, request.url);
       return NextResponse.redirect(dashboardUrl);
     }
 
@@ -90,7 +92,9 @@ export default async function middleware(request: NextRequest) {
 
   if (!accessToken) {
     // 未認証の場合、ログインページにリダイレクト
-    const loginUrl = new URL('/ja/auth/login', request.url);
+    // 現在のロケールをpathnameから取得（/ja/... or /en/...）
+    const locale = pathname.match(/^\/(ja|en)/)?.[1] || 'ja';
+    const loginUrl = new URL(`/${locale}/auth/login`, request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
