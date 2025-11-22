@@ -24,10 +24,13 @@ export interface NotificationHistory {
   tenantName: string;
   recipientEmail: string;
   subject: string;
+  body?: string;
   sentAt: Date;
   status: NotificationStatus;
   invoiceNumber?: string;
   errorMessage?: string;
+  error?: string;
+  metadata?: Record<string, any>;
 }
 
 interface NotificationHistoryStore {
@@ -35,10 +38,12 @@ interface NotificationHistoryStore {
 
   // CRUD操作
   addNotification: (notification: Omit<NotificationHistory, 'id' | 'sentAt'>) => void;
+  getNotificationById: (id: string) => NotificationHistory | undefined;
   getNotificationsByTenant: (tenantId: string) => NotificationHistory[];
   getNotificationsByType: (type: NotificationType) => NotificationHistory[];
   getNotificationsByInvoice: (invoiceNumber: string) => NotificationHistory[];
   getAllNotifications: () => NotificationHistory[];
+  resendNotification: (id: string) => void;
 
   // 統計
   getStats: () => {
@@ -155,6 +160,20 @@ export const useNotificationHistoryStore = create<NotificationHistoryStore>()(
           const dateB = new Date(b.sentAt);
           return dateB.getTime() - dateA.getTime();
         });
+      },
+
+      getNotificationById: (id) => {
+        return get().notifications.find((n) => n.id === id);
+      },
+
+      resendNotification: (id) => {
+        set((state) => ({
+          notifications: state.notifications.map((n) =>
+            n.id === id
+              ? { ...n, status: 'sent' as const, sentAt: new Date(), error: undefined, errorMessage: undefined }
+              : n
+          ),
+        }));
       },
 
       getStats: () => {

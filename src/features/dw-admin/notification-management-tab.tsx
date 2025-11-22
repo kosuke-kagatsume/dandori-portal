@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ import {
   User,
   Search,
   Filter,
+  Eye,
 } from 'lucide-react';
 import {
   useNotificationHistoryStore,
@@ -40,6 +42,7 @@ import {
 } from '@/lib/store/notification-history-store';
 
 export function NotificationManagementTab() {
+  const router = useRouter();
   const {
     getAllNotifications,
     getStats,
@@ -245,12 +248,13 @@ export function NotificationManagementTab() {
                   <TableHead>件名</TableHead>
                   <TableHead>請求書番号</TableHead>
                   <TableHead>ステータス</TableHead>
+                  <TableHead className="text-right">アクション</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredNotifications.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       該当する通知履歴がありません
                     </TableCell>
                   </TableRow>
@@ -296,6 +300,16 @@ export function NotificationManagementTab() {
                         )}
                       </TableCell>
                       <TableCell>{getStatusBadge(notification.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/dw-admin/notifications/${notification.id}`)}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          詳細
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

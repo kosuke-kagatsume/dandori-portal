@@ -27,12 +27,14 @@ import {
   Edit,
   Save,
   X,
+  Plus,
 } from 'lucide-react';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { useNotificationHistoryStore } from '@/lib/store/notification-history-store';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { toast } from 'sonner';
+import { CreateInvoiceDialog } from '@/features/dw-admin/components/create-invoice-dialog';
 
 export default function TenantDetailPage() {
   const mounted = useIsMounted();
@@ -44,6 +46,7 @@ export default function TenantDetailPage() {
   const { getNotificationsByTenant } = useNotificationHistoryStore();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [createInvoiceDialogOpen, setCreateInvoiceDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     contactEmail: '',
@@ -434,7 +437,13 @@ export default function TenantDetailPage() {
         <TabsContent value="invoices">
           <Card>
             <CardHeader>
-              <CardTitle>請求書履歴</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>請求書履歴</CardTitle>
+                <Button onClick={() => setCreateInvoiceDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  新規請求書作成
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="border rounded-lg">
@@ -639,6 +648,17 @@ export default function TenantDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 新規請求書作成ダイアログ */}
+      {tenant && (
+        <CreateInvoiceDialog
+          open={createInvoiceDialogOpen}
+          onOpenChange={setCreateInvoiceDialogOpen}
+          tenantId={tenant.id}
+          tenantName={tenant.name}
+          billingEmail={tenant.billingEmail}
+        />
+      )}
     </div>
   );
 }
