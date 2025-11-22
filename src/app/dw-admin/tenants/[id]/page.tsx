@@ -105,9 +105,9 @@ export default function TenantDetailPage() {
     return (
       <div className="p-4 sm:p-6 md:p-8">
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" size="sm" onClick={() => router.push('/dw-admin/dashboard')}>
+          <Button variant="outline" size="sm" onClick={() => router.push('/dw-admin/dashboard?tab=tenants')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            ダッシュボードに戻る
+            テナント管理に戻る
           </Button>
         </div>
         <Card>
@@ -162,9 +162,9 @@ export default function TenantDetailPage() {
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       {/* ヘッダー */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => router.push('/dw-admin/dashboard')}>
+        <Button variant="outline" size="sm" onClick={() => router.push('/dw-admin/dashboard?tab=tenants')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          ダッシュボードに戻る
+          テナント管理に戻る
         </Button>
       </div>
 
@@ -188,7 +188,7 @@ export default function TenantDetailPage() {
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-green-600" suppressHydrationWarning>
               ¥{stats.totalRevenue.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-1">支払済み請求書の合計</p>
@@ -201,7 +201,7 @@ export default function TenantDetailPage() {
             <AlertCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-2xl font-bold text-red-600" suppressHydrationWarning>
               ¥{stats.unpaidAmount.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground mt-1">未払い請求書の合計</p>
@@ -214,8 +214,8 @@ export default function TenantDetailPage() {
             <FileText className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.totalInvoices}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-2xl font-bold text-blue-600" suppressHydrationWarning>{stats.totalInvoices}</div>
+            <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
               支払済み: {stats.paidInvoices}件
             </p>
           </CardContent>
@@ -227,8 +227,8 @@ export default function TenantDetailPage() {
             <Building2 className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{tenant.currentUsers}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-2xl font-bold text-purple-600" suppressHydrationWarning>{tenant.currentUsers}</div>
+            <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
               最大: {tenant.maxUsers}ユーザー
             </p>
           </CardContent>
@@ -447,12 +447,13 @@ export default function TenantDetailPage() {
                       <TableHead>期限</TableHead>
                       <TableHead>ステータス</TableHead>
                       <TableHead className="text-right">金額</TableHead>
+                      <TableHead className="text-right">アクション</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {invoices.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           請求書がありません
                         </TableCell>
                       </TableRow>
@@ -489,6 +490,15 @@ export default function TenantDetailPage() {
                           </TableCell>
                           <TableCell className="text-right font-semibold">
                             ¥{invoice.total.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/dw-admin/invoices/${invoice.id}`)}
+                            >
+                              詳細
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))

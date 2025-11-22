@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -40,12 +41,22 @@ import { useIsMounted } from '@/hooks/useIsMounted';
 import { initializeDWAdminDemo } from '@/lib/demo-data/initialize-dw-admin-demo';
 import { toast } from 'sonner';
 
-export default function DWAdminDashboardPage() {
+function DWAdminDashboardPage() {
   const mounted = useIsMounted();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { getAllInvoices, getStats, initializeInvoices } = useInvoiceStore();
   const { tenants, initializeTenants } = useAdminTenantStore();
   const { getStats: getNotificationStats, initializeNotifications } = useNotificationHistoryStore();
   const [isInitializing, setIsInitializing] = useState(false);
+
+  // URLパラメータからタブを取得（デフォルトは 'dashboard'）
+  const activeTab = searchParams.get('tab') || 'dashboard';
+
+  // タブ変更ハンドラー
+  const handleTabChange = (value: string) => {
+    router.push(`/dw-admin/dashboard?tab=${value}`);
+  };
 
   // 初期化
   useEffect(() => {
@@ -173,7 +184,7 @@ export default function DWAdminDashboardPage() {
       </div>
 
       {/* タブ */}
-      <Tabs defaultValue="dashboard" className="space-y-4 w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 w-full">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="dashboard">
             <LayoutDashboard className="w-4 h-4 mr-2" />
@@ -467,3 +478,13 @@ export default function DWAdminDashboardPage() {
     </div>
   );
 }
+
+function DWAdminDashboardWithSuspense() {
+  return (
+    <Suspense fallback={<div className="p-6">読み込み中...</div>}>
+      <DWAdminDashboardPage />
+    </Suspense>
+  );
+}
+
+export default DWAdminDashboardWithSuspense;

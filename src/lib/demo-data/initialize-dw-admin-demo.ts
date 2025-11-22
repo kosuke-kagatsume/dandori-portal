@@ -112,7 +112,7 @@ export function initializeDWAdminDemo() {
 
       // 送信済みの請求書には通知履歴を追加
       if (sentDate) {
-        notificationStore.createNotification({
+        notificationStore.addNotification({
           type: 'invoice_sent',
           tenantId: tenant.id,
           tenantName: tenant.name,
@@ -131,7 +131,7 @@ export function initializeDWAdminDemo() {
 
       // 支払済みの請求書には入金確認通知を追加
       if (paidDate) {
-        notificationStore.createNotification({
+        notificationStore.addNotification({
           type: 'payment_received',
           tenantId: tenant.id,
           tenantName: tenant.name,
@@ -179,7 +179,7 @@ export function initializeDWAdminDemo() {
       });
 
       // 通知履歴にも追加
-      notificationStore.createNotification({
+      notificationStore.addNotification({
         type: 'payment_reminder',
         tenantId: invoice.tenantId,
         tenantName: invoice.tenantName,
