@@ -14,10 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, Plus, Search, Users, DollarSign, Calendar } from 'lucide-react';
-import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
+import { Building2, Plus, Search, Users, DollarSign, Calendar, Edit } from 'lucide-react';
+import { useAdminTenantStore, TenantWithStats } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { CreateTenantDialog } from '@/features/billing/create-tenant-dialog';
+import { EditTenantDialog } from '@/features/billing/edit-tenant-dialog';
 
 export function TenantManagementTab() {
   const router = useRouter();
@@ -25,6 +26,8 @@ export function TenantManagementTab() {
   const { getInvoicesByTenant, getStats, initializeInvoices } = useInvoiceStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<TenantWithStats | null>(null);
 
   // 初期化
   useEffect(() => {
@@ -51,6 +54,13 @@ export function TenantManagementTab() {
       overdueCount: stats.overdueCount,
       latestInvoiceDate: latestInvoice?.billingMonth,
     };
+  };
+
+  // 編集ダイアログを開く
+  const handleEditTenant = (tenant: TenantWithStats, e: React.MouseEvent) => {
+    e.stopPropagation(); // 行クリックイベントを止める
+    setEditingTenant(tenant);
+    setEditDialogOpen(true);
   };
 
   return (
@@ -161,12 +171,13 @@ export function TenantManagementTab() {
                 <TableHead>未払い額</TableHead>
                 <TableHead>最新請求月</TableHead>
                 <TableHead>ステータス</TableHead>
+                <TableHead className="text-right">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTenants.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     テナントが見つかりませんでした
                   </TableCell>
                 </TableRow>
@@ -225,6 +236,16 @@ export function TenantManagementTab() {
                           </Badge>
                         )}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => handleEditTenant(tenant, e)}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          編集
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })
@@ -238,6 +259,13 @@ export function TenantManagementTab() {
       <CreateTenantDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
+      />
+
+      {/* テナント編集ダイアログ */}
+      <EditTenantDialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        tenant={editingTenant}
       />
     </div>
   );
