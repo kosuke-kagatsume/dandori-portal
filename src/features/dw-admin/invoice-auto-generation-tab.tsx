@@ -91,7 +91,7 @@ export function InvoiceAutoGenerationTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalExecutions}</div>
+            <div className="text-2xl font-bold" suppressHydrationWarning>{stats.totalExecutions}</div>
           </CardContent>
         </Card>
 
@@ -103,7 +103,7 @@ export function InvoiceAutoGenerationTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.totalInvoicesGenerated}</div>
+            <div className="text-2xl font-bold text-blue-600" suppressHydrationWarning>{stats.totalInvoicesGenerated}</div>
           </CardContent>
         </Card>
 
@@ -115,7 +115,7 @@ export function InvoiceAutoGenerationTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-green-600" suppressHydrationWarning>
               ¥{stats.totalRevenue.toLocaleString()}
             </div>
           </CardContent>
@@ -129,7 +129,7 @@ export function InvoiceAutoGenerationTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm font-medium">
+            <div className="text-sm font-medium" suppressHydrationWarning>
               {stats.lastExecutionDate
                 ? new Date(stats.lastExecutionDate).toLocaleString('ja-JP')
                 : '-'}
@@ -275,7 +275,7 @@ export function InvoiceAutoGenerationTab() {
                   history.map((item, index) => (
                     <React.Fragment key={`history-${item.id}-${index}`}>
                       <TableRow key={`row-${item.id}`}>
-                        <TableCell className="font-mono text-sm">
+                        <TableCell className="font-mono text-sm" suppressHydrationWarning>
                           {new Date(item.executedAt).toLocaleString('ja-JP')}
                         </TableCell>
                         <TableCell>
@@ -283,9 +283,9 @@ export function InvoiceAutoGenerationTab() {
                             {item.executionType === 'auto' ? '自動' : '手動'}
                           </Badge>
                         </TableCell>
-                        <TableCell>{item.tenantCount}件</TableCell>
+                        <TableCell suppressHydrationWarning>{item.tenantCount}件</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" suppressHydrationWarning>
                             <span className="text-green-600">{item.successCount}件</span>
                             {item.failureCount > 0 && (
                               <>
@@ -295,7 +295,7 @@ export function InvoiceAutoGenerationTab() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right font-semibold" suppressHydrationWarning>
                           ¥{item.totalAmount.toLocaleString()}
                         </TableCell>
                         <TableCell>
@@ -347,7 +347,7 @@ export function InvoiceAutoGenerationTab() {
                                     </div>
                                     {detail.status === 'success' && (
                                       <div className="text-right">
-                                        <p className="font-semibold">
+                                        <p className="font-semibold" suppressHydrationWarning>
                                           ¥{detail.amount.toLocaleString()}
                                         </p>
                                       </div>
