@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
@@ -24,6 +25,8 @@ import {
   Building2,
   LayoutDashboard,
   Bell,
+  Database,
+  RefreshCw,
 } from 'lucide-react';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
@@ -34,12 +37,15 @@ import { NotificationManagementTab } from '@/features/dw-admin/notification-mana
 import { PaymentReminderTab } from '@/features/dw-admin/payment-reminder-tab';
 import { InvoiceAutoGenerationTab } from '@/features/dw-admin/invoice-auto-generation-tab';
 import { useIsMounted } from '@/hooks/useIsMounted';
+import { initializeDWAdminDemo } from '@/lib/demo-data/initialize-dw-admin-demo';
+import { toast } from 'sonner';
 
 export default function DWAdminDashboardPage() {
   const mounted = useIsMounted();
   const { getAllInvoices, getStats, initializeInvoices } = useInvoiceStore();
   const { tenants, initializeTenants } = useAdminTenantStore();
   const { getStats: getNotificationStats, initializeNotifications } = useNotificationHistoryStore();
+  const [isInitializing, setIsInitializing] = useState(false);
 
   // 初期化
   useEffect(() => {
@@ -47,6 +53,25 @@ export default function DWAdminDashboardPage() {
     initializeInvoices();
     initializeNotifications();
   }, [initializeTenants, initializeInvoices, initializeNotifications]);
+
+  // デモデータ初期化ハンドラー
+  const handleInitializeDemo = () => {
+    setIsInitializing(true);
+    try {
+      const result = initializeDWAdminDemo();
+      toast.success(
+        `デモデータを初期化しました！\nテナント: ${result.tenants}件\n請求書: ${result.invoices}件\n通知: ${result.notifications}件\nリマインダー: ${result.reminders}件`,
+        { duration: 5000 }
+      );
+      // ページをリロードして最新データを表示
+      window.location.reload();
+    } catch (error) {
+      console.error('Demo data initialization failed:', error);
+      toast.error('デモデータの初期化に失敗しました');
+    } finally {
+      setIsInitializing(false);
+    }
+  };
 
   const allInvoices = mounted ? getAllInvoices() : [];
   const invoiceStats = mounted ? getStats() : {
@@ -120,11 +145,31 @@ export default function DWAdminDashboardPage() {
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       {/* ヘッダー */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">DW管理者ダッシュボード</h1>
-        <p className="text-sm sm:text-base text-muted-foreground mt-1">
-          全テナントの収益状況と管理機能
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">DW管理者ダッシュボード</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            全テナントの収益状況と管理機能
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleInitializeDemo}
+          disabled={isInitializing}
+        >
+          {isInitializing ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              初期化中...
+            </>
+          ) : (
+            <>
+              <Database className="h-4 w-4 mr-2" />
+              デモデータ初期化
+            </>
+          )}
+        </Button>
       </div>
 
       {/* タブ */}
