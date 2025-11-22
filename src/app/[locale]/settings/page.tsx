@@ -35,9 +35,9 @@ import {
   WorkflowTab,
   BillingTab,
 } from '@/features/settings/tabs';
-import { TenantManagementTab } from '@/features/super-admin/tenant-management-tab';
-import { PaymentManagementTab } from '@/features/super-admin/payment-management-tab';
-import { NotificationManagementTab } from '@/features/super-admin/notification-management-tab';
+import { TenantManagementTab } from '@/features/dw-admin/tenant-management-tab';
+import { PaymentManagementTab } from '@/features/dw-admin/payment-management-tab';
+import { NotificationManagementTab } from '@/features/dw-admin/notification-management-tab';
 import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { unifiedOrganizationMembers } from '@/lib/unified-organization-data';

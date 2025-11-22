@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,20 +26,27 @@ import {
   Bell,
 } from 'lucide-react';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
-import { useTenantStore } from '@/lib/store/tenant-store';
+import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useNotificationHistoryStore } from '@/lib/store/notification-history-store';
-import { TenantManagementTab } from '@/features/super-admin/tenant-management-tab';
-import { PaymentManagementTab } from '@/features/super-admin/payment-management-tab';
-import { NotificationManagementTab } from '@/features/super-admin/notification-management-tab';
-import { PaymentReminderTab } from '@/features/super-admin/payment-reminder-tab';
-import { InvoiceAutoGenerationTab } from '@/features/super-admin/invoice-auto-generation-tab';
+import { TenantManagementTab } from '@/features/dw-admin/tenant-management-tab';
+import { PaymentManagementTab } from '@/features/dw-admin/payment-management-tab';
+import { NotificationManagementTab } from '@/features/dw-admin/notification-management-tab';
+import { PaymentReminderTab } from '@/features/dw-admin/payment-reminder-tab';
+import { InvoiceAutoGenerationTab } from '@/features/dw-admin/invoice-auto-generation-tab';
 import { useIsMounted } from '@/hooks/useIsMounted';
 
 export default function DWAdminDashboardPage() {
   const mounted = useIsMounted();
-  const { getAllInvoices, getStats } = useInvoiceStore();
-  const { tenants } = useTenantStore();
-  const { getStats: getNotificationStats } = useNotificationHistoryStore();
+  const { getAllInvoices, getStats, initializeInvoices } = useInvoiceStore();
+  const { tenants, initializeTenants } = useAdminTenantStore();
+  const { getStats: getNotificationStats, initializeNotifications } = useNotificationHistoryStore();
+
+  // 初期化
+  useEffect(() => {
+    initializeTenants();
+    initializeInvoices();
+    initializeNotifications();
+  }, [initializeTenants, initializeInvoices, initializeNotifications]);
 
   const allInvoices = mounted ? getAllInvoices() : [];
   const invoiceStats = mounted ? getStats() : {
