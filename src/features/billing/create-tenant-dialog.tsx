@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Building2, Mail, Calendar, Users, CreditCard } from 'lucide-react';
-import { useTenantStore } from '@/lib/store/tenant-store';
+import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { toast } from 'sonner';
 import { calculateMonthlyPrice, calculateTax, calculateTotalWithTax } from '@/lib/billing/pricing-calculator';
@@ -20,7 +20,7 @@ interface CreateTenantDialogProps {
 }
 
 export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
-  const { addTenant } = useTenantStore();
+  const { addTenant } = useAdminTenantStore();
   const { initializeInvoices } = useInvoiceStore();
 
   // フォーム状態
@@ -93,20 +93,43 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
     }
 
     try {
-      // テナントID生成
-      const tenantId = `tenant_${String(Date.now()).slice(-6)}`;
+      // トライアル期限計算
+      const trialDays = parseInt(formData.trialDays);
+      const trialEndDate = trialDays > 0
+        ? new Date(new Date(formData.contractStartDate).getTime() + trialDays * 24 * 60 * 60 * 1000)
+        : null;
 
       // テナント作成
       addTenant({
-        id: tenantId,
         name: formData.companyName,
-        timezone: 'Asia/Tokyo',
-        closingDay: '末' as const,
-        weekStartDay: 0,
+        logo: null,
+        plan: userCount <= 30 ? 'basic' : userCount <= 100 ? 'standard' : 'enterprise',
+        activeUsers: parseInt(formData.initialUserCount),
+        totalUsers: parseInt(formData.initialUserCount),
+        maxUsers: parseInt(formData.initialUserCount),
+        monthlyRevenue: total,
+        unpaidInvoices: 0,
+        contactEmail: formData.adminEmail,
+        billingEmail: formData.billingEmail,
+        phone: null,
+        address: null,
+        contractStartDate: formData.contractStartDate,
+        contractEndDate: null,
+        settings: {
+          id: `settings-${Date.now()}`,
+          tenantId: `tenant-${Date.now()}`,
+          trialEndDate,
+          contractStartDate: new Date(formData.contractStartDate),
+          contractEndDate: null,
+          billingEmail: formData.billingEmail,
+          customPricing: false,
+          status: trialDays > 0 ? 'trial' : 'active',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
-
-      // TODO: 管理者ユーザー作成（user-storeに追加）
-      // TODO: 初期請求書作成（invoice-storeに追加）
 
       toast.success(`テナント「${formData.companyName}」を作成しました`);
 
