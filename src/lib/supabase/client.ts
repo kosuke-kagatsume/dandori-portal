@@ -8,6 +8,7 @@ import type { Database } from '@/types/database';
 export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   // デモモードの場合はダミークライアントを返す
@@ -17,14 +18,24 @@ export function createClient() {
   }
 
   // Supabase設定がない場合はエラー
-  if (!supabaseUrl || !supabaseKey) {
+  if (!supabaseUrl) {
     console.error('❌ Supabase configuration missing');
-    throw new Error('Supabase URL and Key are required');
+    throw new Error('Supabase URL is required');
+  }
+
+  // 開発環境専用: サービスロールキーでRLSをバイパス（localhost限定）
+  // 本番環境では anon key + Supabase Auth + proper RLS で運用
+  const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+  const keyToUse = (isLocalhost && serviceRoleKey) ? serviceRoleKey : supabaseKey;
+
+  if (!keyToUse) {
+    console.error('❌ Supabase Key missing');
+    throw new Error('Supabase Key is required');
   }
 
   // 本番モード: 実際のSupabaseクライアントを返す
-  console.log('🚀 Production mode: Creating real Supabase client');
-  return createBrowserClient<Database>(supabaseUrl, supabaseKey);
+  console.log('🚀 Production mode: Creating real Supabase client' + (isLocalhost && serviceRoleKey ? ' (dev: service role)' : ' (prod: anon key)'));
+  return createBrowserClient<Database>(supabaseUrl, keyToUse);
 }
 
 /**

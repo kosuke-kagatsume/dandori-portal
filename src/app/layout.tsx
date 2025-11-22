@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   description: '段取りポータル - 統合型人事管理システム',
   manifest: '/manifest.json',
   appleWebApp: {
-    capable: true,
     statusBarStyle: 'default',
     title: 'Dandori Portal',
   },

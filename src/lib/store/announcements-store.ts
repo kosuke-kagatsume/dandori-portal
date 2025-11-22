@@ -139,7 +139,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
 
         try {
           // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
             set({ isLoading: false });
             return;
           }
@@ -165,7 +165,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
 
         try {
           // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
             const newAnnouncement: Announcement = {
               ...announcement,
               id: `announcement-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -205,7 +205,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
 
         try {
           // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
             set((state) => ({
               announcements: state.announcements.map((announcement) =>
                 announcement.id === id
@@ -247,7 +247,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
 
         try {
           // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
             set((state) => ({
               announcements: state.announcements.filter((announcement) => announcement.id !== id),
               isLoading: false,
@@ -279,7 +279,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
 
         try {
           // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
             set((state) => ({
               announcements: state.announcements.map((announcement) =>
                 announcement.id === id
@@ -322,7 +322,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
 
         try {
           // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
             set((state) => ({
               announcements: state.announcements.map((announcement) =>
                 announcement.id === id
@@ -362,7 +362,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
       markAsRead: async (announcementId, userId) => {
         try {
           // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
             set((state) => ({
               announcements: state.announcements.map((announcement) => {
                 if (announcement.id !== announcementId) return announcement;
