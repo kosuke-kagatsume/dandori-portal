@@ -27,11 +27,14 @@ import {
   CheckCircle,
   AlertCircle,
   FileText,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { RecordPaymentDialog } from '@/features/billing/record-payment-dialog';
 import { InvoiceDetailModal } from '@/features/billing/invoice-detail-modal';
 import { downloadReceiptPDF } from '@/lib/pdf/receipt-pdf';
+import { downloadInvoicePDF } from '@/lib/pdf/invoice-pdf';
+import { exportInvoicesToCSV, exportInvoiceDetailsToCSV } from '@/lib/dw-admin/invoice-export';
 import type { InvoiceData } from '@/lib/billing/invoice-generator';
 import { toast } from 'sonner';
 
@@ -100,6 +103,35 @@ export function PaymentManagementTab() {
       toast.success('領収書をダウンロードしました');
     } catch (error) {
       toast.error('領収書のダウンロードに失敗しました');
+    }
+  };
+
+  const handleDownloadInvoicePDF = async (invoice: InvoiceData) => {
+    try {
+      await downloadInvoicePDF(invoice);
+      toast.success('請求書PDFをダウンロードしました');
+    } catch (error) {
+      toast.error('請求書PDFのダウンロードに失敗しました');
+    }
+  };
+
+  // CSV出力（一覧）
+  const handleExportCSV = () => {
+    const result = exportInvoicesToCSV(filteredInvoices);
+    if (result.success) {
+      toast.success(`${result.recordCount}件の請求書をCSV出力しました`);
+    } else {
+      toast.error(result.error || 'CSV出力に失敗しました');
+    }
+  };
+
+  // CSV出力（明細付き）
+  const handleExportDetailsCSV = () => {
+    const result = exportInvoiceDetailsToCSV(filteredInvoices);
+    if (result.success) {
+      toast.success(`${result.recordCount}件の請求書明細をCSV出力しました`);
+    } else {
+      toast.error(result.error || 'CSV出力に失敗しました');
     }
   };
 
@@ -188,6 +220,16 @@ export function PaymentManagementTab() {
             <SelectItem value="overdue">期限超過</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            CSV出力
+          </Button>
+          <Button variant="outline" onClick={handleExportDetailsCSV}>
+            <FileText className="h-4 w-4 mr-2" />
+            明細CSV
+          </Button>
+        </div>
       </div>
 
       {/* 請求書一覧 */}
@@ -263,7 +305,7 @@ export function PaymentManagementTab() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           <Button
                             size="sm"
                             variant="outline"
@@ -271,6 +313,14 @@ export function PaymentManagementTab() {
                           >
                             <FileText className="h-3 w-3 mr-1" />
                             詳細
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDownloadInvoicePDF(invoice)}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            PDF
                           </Button>
                           {invoice.status === 'sent' && (
                             <Button
@@ -321,6 +371,7 @@ export function PaymentManagementTab() {
           setDetailModalOpen(false);
           setSelectedInvoice(null);
         }}
+        onDownloadPDF={handleDownloadInvoicePDF}
         readOnly={false}
       />
     </div>
