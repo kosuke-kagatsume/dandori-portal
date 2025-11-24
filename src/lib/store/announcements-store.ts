@@ -115,6 +115,9 @@ interface AnnouncementsState {
   getAnnouncementsByType: (type: AnnouncementType) => Announcement[];
   getAnnouncementsByPriority: (priority: AnnouncementPriority) => Announcement[];
 
+  // ユーザーごとのステータス取得
+  getUserStatus: (announcementId: string, userId: string) => UserAnnouncementStatus;
+
   // 統計
   getStats: (userId: string, userRoles: string[]) => {
     total: number;
@@ -599,6 +602,15 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
       // 優先度別取得
       getAnnouncementsByPriority: (priority) => {
         return get().announcements.filter((announcement) => announcement.priority === priority);
+      },
+
+      // ユーザーごとのステータス取得
+      getUserStatus: (announcementId, userId) => {
+        const announcement = get().announcements.find((a) => a.id === announcementId);
+        if (!announcement) return 'unread';
+
+        const userState = announcement.userStates.find((s) => s.userId === userId);
+        return userState ? userState.status : 'unread';
       },
 
       // 統計を取得

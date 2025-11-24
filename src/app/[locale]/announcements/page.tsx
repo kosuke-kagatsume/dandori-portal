@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useAnnouncementsStore } from '@/lib/store/announcements-store';
-import type { Announcement, AnnouncementPriority, AnnouncementType } from '@/lib/store/announcements-store';
+import type { Announcement, AnnouncementPriority, AnnouncementType, UserAnnouncementStatus } from '@/lib/store/announcements-store';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import ReactMarkdown from 'react-markdown';
 
@@ -57,9 +57,8 @@ export default function AnnouncementsPage() {
   const {
     announcements,
     isLoading,
-    fetchPublishedAnnouncements,
+    fetchAnnouncements,
     markAsRead,
-    getUserStatus,
   } = useAnnouncementsStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,13 +68,25 @@ export default function AnnouncementsPage() {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
-  // 初期化: 公開済みアナウンスを取得
+  // 初期化: アナウンスを取得
   useEffect(() => {
-    fetchPublishedAnnouncements();
-  }, [fetchPublishedAnnouncements]);
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
 
   // 現在のユーザーID（仮）
   const currentUserId = 'current-user-id'; // TODO: 実際のユーザーIDを取得
+
+  // ローカル関数: ユーザーのステータスを取得
+  const getUserStatus = useCallback(
+    (announcementId: string): UserAnnouncementStatus => {
+      const announcement = announcements.find((a) => a.id === announcementId);
+      if (!announcement) return 'unread';
+
+      const userState = announcement.userStates.find((s) => s.userId === currentUserId);
+      return userState?.status ?? 'unread';
+    },
+    [announcements, currentUserId]
+  );
 
   // フィルタリング
   const filteredAnnouncements = useMemo(() => {
