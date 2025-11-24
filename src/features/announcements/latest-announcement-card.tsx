@@ -208,7 +208,7 @@ export function LatestAnnouncementCard() {
 
           {/* 詳細ボタン */}
           <div className="flex items-center justify-between pt-2">
-            <Link href="/ja/announcements-admin">
+            <Link href="/ja/announcements">
               <Button variant="outline" size="sm" className="gap-2">
                 詳細を見る
                 <ChevronRight className="h-4 w-4" />

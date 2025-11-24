@@ -25,6 +25,7 @@ export type UserRole =
 
 export const MENU_PERMISSIONS = {
   dashboard: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'],
+  announcements: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // アナウンス一覧（全社員）
   users: ['hr', 'admin'],
   members: ['manager', 'executive', 'hr'],
   attendance: ['employee', 'manager', 'executive', 'hr', 'applicant'],

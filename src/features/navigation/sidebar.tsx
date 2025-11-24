@@ -42,6 +42,7 @@ const getNavigation = (locale: string, currentUser: User | null) => {
 
   return [
     { key: 'dashboard', href: `/${locale}/dashboard`, icon: LayoutDashboard, menuKey: 'dashboard' as MenuKey },
+    { key: 'announcements', href: `/${locale}/announcements`, icon: Bell, menuKey: 'announcements' as MenuKey },
     { key: 'users', href: `/${locale}/users`, icon: Users, menuKey: 'users' as MenuKey },
     { key: 'members', href: `/${locale}/members`, icon: UserCheck, menuKey: 'members' as MenuKey },
     { key: 'attendance', href: `/${locale}/attendance`, icon: Clock, menuKey: 'attendance' as MenuKey },

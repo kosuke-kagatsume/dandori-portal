@@ -31,6 +31,7 @@
   },
   "navigation": {
     "dashboard": "ダッシュボード",
+    "announcements": "アナウンス",
     "users": "ユーザー管理",
     "members": "メンバー状況",
     "attendance": "勤怠管理",
