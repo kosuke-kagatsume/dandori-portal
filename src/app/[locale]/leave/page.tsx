@@ -20,6 +20,7 @@ import {
   Trash2,
   Download,
   FileDown,
+  Paperclip,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +43,7 @@ import { exportLeaveToCSV } from '@/lib/csv/csv-export';
 
 // ダイアログの遅延読み込み
 const LeaveRequestDialog = dynamic(() => import('@/features/leave/leave-request-dialog').then(mod => ({ default: mod.LeaveRequestDialog })), { ssr: false });
+const LeaveDetailDialog = dynamic(() => import('@/features/leave/leave-detail-dialog').then(mod => ({ default: mod.LeaveDetailDialog })), { ssr: false });
 
 export default function LeavePage() {
   const t = (key: string) => {
@@ -60,6 +62,8 @@ export default function LeavePage() {
 
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
   const [activeTab, setActiveTab] = useState('requests');
 
   // Zustand ストアから状態と関数を取得
@@ -307,6 +311,21 @@ export default function LeavePage() {
       ),
     },
     {
+      accessorKey: 'attachments',
+      header: '添付',
+      cell: ({ row }) => {
+        const attachments = row.original.attachments || [];
+        return attachments.length > 0 ? (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Paperclip className="h-4 w-4" />
+            <span>{attachments.length}</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">-</span>
+        );
+      },
+    },
+    {
       accessorKey: 'status',
       header: 'ステータス',
       cell: ({ row }) => getStatusBadge(row.original.status),
@@ -338,7 +357,12 @@ export default function LeavePage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>操作</DropdownMenuLabel>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedRequest(request);
+                  setDetailDialogOpen(true);
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" />
                 詳細表示
               </DropdownMenuItem>
@@ -643,6 +667,13 @@ export default function LeavePage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSubmit={handleCreateRequest}
+      />
+
+      {/* Leave Detail Dialog */}
+      <LeaveDetailDialog
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        request={selectedRequest}
       />
     </div>
   );

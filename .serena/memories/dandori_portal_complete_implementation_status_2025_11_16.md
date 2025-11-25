@@ -48,12 +48,13 @@
 15. `/[locale]/audit` - 監査ログ管理
 16. `/[locale]/onboarding` - 入社手続き（新入社員向け）
 17. `/[locale]/onboarding-admin` - 入社手続き管理（HR向け）
-18. `/[locale]/announcements-admin` - お知らせ管理
-19. `/[locale]/scheduled-changes` - 予定変更管理
-20. `/[locale]/legal-updates` - 法改正情報
-21. `/[locale]/billing` - 請求書閲覧（テナント管理者向け）
+18. `/[locale]/announcements-admin` - お知らせ管理（HR/管理者向け）
+19. `/[locale]/announcements` - お知らせ閲覧（全社員向け、458行、NEW!）
+20. `/[locale]/scheduled-changes` - 予定変更管理
+21. `/[locale]/legal-updates` - 法改正情報
+22. `/[locale]/billing` - 請求書閲覧（テナント管理者向け）
 
-**合計**: 21ページ（通常テナント向け）
+**合計**: 22ページ（通常テナント向け）
 
 ---
 
@@ -273,7 +274,16 @@
 25. **`audit-store.ts`** - 監査ログ管理
 26. **`scheduled-changes-store.ts`** - 予定変更管理
 27. **`legal-updates-store.ts`** - 法改正情報管理
-28. **`announcements-store.ts`** - お知らせ管理
+28. **`announcements-store.ts`** (推定500-700行) - お知らせ管理（NEW!）
+   - アナウンスCRUD（作成、更新、削除、一覧取得）
+   - 優先度管理（通常/重要/緊急）
+   - カテゴリ管理（お知らせ/イベント/システム/人事/その他）
+   - 対象設定（全社員/部門別/役職別）
+   - 公開設定（下書き/公開）
+   - ユーザー既読状態管理（未読/既読/確認済み/返信済み）
+   - 自動既読マーク機能
+   - LocalStorage永続化
+   - Supabase連携準備（デモモード/本番モード切り替え）
 29. **`retired-yearend-store.ts`** - 退職者年末調整
 
 ---

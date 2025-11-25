@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getCurrentLocation } from './geolocation';
+
+export interface LocationData {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  timestamp: string;
+}
 
 export interface AttendanceRecord {
   id: string;
@@ -8,7 +16,9 @@ export interface AttendanceRecord {
   date: string;
   dayOfWeek: string;
   checkIn?: string;
+  checkInLocation?: LocationData;
   checkOut?: string;
+  checkOutLocation?: LocationData;
   breakTime: string;
   workHours: number;
   overtime: number;
@@ -23,7 +33,9 @@ export interface AttendanceRecord {
 export interface TodayAttendanceStatus {
   status: 'notStarted' | 'working' | 'onBreak' | 'finished';
   checkIn?: string;
+  checkInLocation?: LocationData;
   checkOut?: string;
+  checkOutLocation?: LocationData;
   breakStart?: string;
   breakEnd?: string;
   totalBreakTime: number;
@@ -83,25 +95,37 @@ export const useAttendanceStore = create<AttendanceStore>()(
       
       checkIn: async (workLocation) => {
         const now = new Date();
-        const timeString = now.toLocaleTimeString('ja-JP', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        const timeString = now.toLocaleTimeString('ja-JP', {
+          hour: '2-digit',
+          minute: '2-digit'
         });
-        
+
         // 遅刻判定（9:30以降を遅刻とする）
         const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 30);
-        
+
+        // 位置情報を取得（非同期だがエラーは無視）
+        let locationData;
+        try {
+          const locationResult = await getCurrentLocation();
+          if (locationResult.success && locationResult.location) {
+            locationData = locationResult.location;
+          }
+        } catch (error) {
+          console.warn('Failed to get location for check-in:', error);
+        }
+
         set((state) => ({
           todayStatus: {
             ...state.todayStatus,
             status: 'working',
             checkIn: timeString,
+            checkInLocation: locationData,
             workLocation,
             needsApproval: isLate,
             approvalReason: isLate ? '遅刻のため承認が必要です' : undefined,
           }
         }));
-        
+
         // 勤怠一覧の更新を通知
         const { onAttendanceUpdate } = get();
         if (onAttendanceUpdate) {
@@ -153,19 +177,31 @@ export const useAttendanceStore = create<AttendanceStore>()(
       
       checkOut: async (memo) => {
         const now = new Date();
-        const timeString = now.toLocaleTimeString('ja-JP', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        const timeString = now.toLocaleTimeString('ja-JP', {
+          hour: '2-digit',
+          minute: '2-digit'
         });
-        
+
         // 早退判定（17:00前を早退とする）
         const isEarlyLeave = now.getHours() < 17;
-        
+
+        // 位置情報を取得（非同期だがエラーは無視）
+        let locationData;
+        try {
+          const locationResult = await getCurrentLocation();
+          if (locationResult.success && locationResult.location) {
+            locationData = locationResult.location;
+          }
+        } catch (error) {
+          console.warn('Failed to get location for check-out:', error);
+        }
+
         set((state) => ({
           todayStatus: {
             ...state.todayStatus,
             status: 'finished',
             checkOut: timeString,
+            checkOutLocation: locationData,
             memo,
             needsApproval: state.todayStatus.needsApproval || isEarlyLeave,
             approvalReason: isEarlyLeave ? '早退のため承認が必要です' : state.todayStatus.approvalReason,

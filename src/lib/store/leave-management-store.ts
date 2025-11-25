@@ -4,6 +4,15 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 export type LeaveType = 'paid' | 'sick' | 'special' | 'compensatory' | 'half_day_am' | 'half_day_pm';
 export type LeaveStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'cancelled';
 
+export interface UploadedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url: string;
+  uploadedAt: string;
+}
+
 export interface LeaveRequest {
   id: string;
   userId: string;
@@ -17,6 +26,7 @@ export interface LeaveRequest {
   approver?: string;
   approvedDate?: string;
   rejectedReason?: string;
+  attachments?: UploadedFile[];
   createdAt: string;
   updatedAt: string;
 }

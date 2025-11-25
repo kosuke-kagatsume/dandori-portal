@@ -5,11 +5,11 @@ import { useAttendanceStore } from '@/lib/attendance-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Clock, 
-  MapPin, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Clock,
+  MapPin,
+  CheckCircle,
+  XCircle,
   Coffee,
   Home,
   Building2,
@@ -22,6 +22,7 @@ import {
   Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { LocationBadge } from '@/components/attendance/location-badge';
 import {
   Dialog,
   DialogContent,
@@ -180,17 +181,27 @@ export function AdvancedCheckIn() {
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">出勤時刻</span>
-                {todayStatus.checkIn && <Badge variant="outline">{getLocationIcon(todayStatus.workLocation)}</Badge>}
+                <div className="flex items-center gap-2">
+                  {todayStatus.checkIn && <Badge variant="outline">{getLocationIcon(todayStatus.workLocation)}</Badge>}
+                  {todayStatus.checkInLocation && (
+                    <LocationBadge location={todayStatus.checkInLocation} label="GPS" />
+                  )}
+                </div>
               </div>
               <div className="text-2xl font-bold">
                 {todayStatus.checkIn || '--:--'}
               </div>
             </div>
-            
+
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">退勤時刻</span>
-                {todayStatus.checkOut && <CheckCircle className="h-4 w-4 text-green-500" />}
+                <div className="flex items-center gap-2">
+                  {todayStatus.checkOut && <CheckCircle className="h-4 w-4 text-green-500" />}
+                  {todayStatus.checkOutLocation && (
+                    <LocationBadge location={todayStatus.checkOutLocation} label="GPS" />
+                  )}
+                </div>
               </div>
               <div className="text-2xl font-bold">
                 {todayStatus.checkOut || '--:--'}

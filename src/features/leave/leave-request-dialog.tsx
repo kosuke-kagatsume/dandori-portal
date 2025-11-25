@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Paperclip } from 'lucide-react';
+import { FileUpload, UploadedFile } from '@/components/ui/file-upload';
 import {
   Dialog,
   DialogContent,
@@ -187,6 +188,7 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
   const { createFlow, submitRequest } = useApprovalStore();
   const currentUserId = '1'; // 現在のユーザー（田中太郎）
   const [selectedType, setSelectedType] = useState<string>('annual');
+  const [attachments, setAttachments] = useState<UploadedFile[]>([]);
 
   const {
     register,
@@ -256,8 +258,9 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
         id: requestId,
         days,
         approvalFlowId: flow.id,
+        attachments,
       };
-      
+
       await onSubmit(requestData);
       
       // 申請を提出状態に変更
@@ -458,6 +461,27 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
                   id="emergencyContact"
                   placeholder="緊急時の連絡先（任意）"
                   {...register('emergencyContact')}
+                />
+              </div>
+            )}
+
+            {/* File Attachments (for sick leave) */}
+            {leaveType === 'sick' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Paperclip className="h-4 w-4" />
+                  添付ファイル（診断書など）
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  診断書や医療証明書をアップロードしてください（任意）
+                </p>
+                <FileUpload
+                  value={attachments}
+                  onChange={setAttachments}
+                  maxFiles={3}
+                  maxSize={10}
+                  accept="image/*,.pdf"
+                  bucket="leave-attachments"
                 />
               </div>
             )}
