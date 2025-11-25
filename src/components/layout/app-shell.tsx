@@ -8,6 +8,7 @@ import { useAnnouncementsStore } from '@/lib/store/announcements-store';
 import { useNotificationHistoryStore } from '@/lib/store/notification-history-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { useAdminTenantStore as useBillingTenantStore } from '@/lib/store/admin-tenant-store';
+import { useTenantContextInit } from '@/lib/store/tenant-context-store';
 import { Sidebar } from '@/features/navigation/sidebar';
 import { Header } from '@/features/navigation/header';
 import { Toaster } from '@/components/ui/sonner';
@@ -46,6 +47,9 @@ export function AppShell({ children }: AppShellProps) {
   const { initializeNotifications } = useNotificationHistoryStore();
   const { initializeInvoices } = useInvoiceStore();
   const { initializeTenants } = useBillingTenantStore();
+
+  // マルチテナントコンテキストを初期化
+  useTenantContextInit();
 
   // キーボードショートカットを有効化
   useGlobalShortcuts();
