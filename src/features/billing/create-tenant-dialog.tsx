@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Mail, Calendar, Users, CreditCard, Globe, AlertCircle, CheckCircle } from 'lucide-react';
+import { Building2, Mail, Calendar, Users, CreditCard, Globe, AlertCircle, CheckCircle, Lock, Loader2 } from 'lucide-react';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { toast } from 'sonner';
@@ -39,7 +39,12 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
     // Step 3: 管理者情報
     adminName: '',
     adminEmail: '',
+    adminPassword: '',
+    adminPasswordConfirm: '',
   });
+
+  // 作成中のローディング状態
+  const [isCreating, setIsCreating] = useState(false);
 
   // サブドメインのバリデーション状態
   const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable' | 'invalid'>('idle');
@@ -123,26 +128,58 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
     setStep((prev) => (prev - 1) as 1 | 2 | 3);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     // 最終バリデーション
-    if (!formData.adminName || !formData.adminEmail) {
-      toast.error('管理者情報を入力してください');
+    if (!formData.adminName || !formData.adminEmail || !formData.adminPassword) {
+      toast.error('管理者情報を全て入力してください');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail)) {
       toast.error('有効な管理者メールアドレスを入力してください');
       return;
     }
+    if (formData.adminPassword.length < 8) {
+      toast.error('パスワードは8文字以上必要です');
+      return;
+    }
+    if (formData.adminPassword !== formData.adminPasswordConfirm) {
+      toast.error('パスワードが一致しません');
+      return;
+    }
+
+    setIsCreating(true);
 
     try {
+      // テナントIDを生成
+      const tenantId = `tenant-${Date.now()}`;
+
+      // 1. Supabase Authにユーザーを作成
+      const authResponse = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.adminEmail,
+          password: formData.adminPassword,
+          name: formData.adminName,
+          role: 'admin',
+          tenantId: tenantId,
+        }),
+      });
+
+      const authData = await authResponse.json();
+
+      if (!authResponse.ok) {
+        throw new Error(authData.error || '管理者アカウントの作成に失敗しました');
+      }
       // トライアル期限計算
       const trialDays = parseInt(formData.trialDays);
       const trialEndDate = trialDays > 0
         ? new Date(new Date(formData.contractStartDate).getTime() + trialDays * 24 * 60 * 60 * 1000)
         : null;
 
-      // テナント作成
+      // 2. テナント作成
       addTenant({
+        id: tenantId,
         name: formData.companyName,
         subdomain: formData.subdomain || null,
         logo: null,
@@ -160,7 +197,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
         contractEndDate: null,
         settings: {
           id: `settings-${Date.now()}`,
-          tenantId: `tenant-${Date.now()}`,
+          tenantId: tenantId,
           trialEndDate,
           contractStartDate: new Date(formData.contractStartDate),
           contractEndDate: null,
@@ -186,13 +223,17 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
         initialUserCount: '10',
         adminName: '',
         adminEmail: '',
+        adminPassword: '',
+        adminPasswordConfirm: '',
       });
       setSubdomainStatus('idle');
       setStep(1);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create tenant:', error);
-      toast.error('テナントの作成に失敗しました');
+      toast.error(error.message || 'テナントの作成に失敗しました');
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -424,11 +465,45 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
                     onChange={(e) => handleChange('adminEmail', e.target.value)}
                     placeholder="admin@example.com"
                     className="pl-10"
+                    disabled={isCreating}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  招待メールがこのアドレスに送信されます
+                  このアドレスでログインできます
                 </p>
+              </div>
+
+              <div>
+                <Label htmlFor="adminPassword">パスワード *</Label>
+                <div className="relative mt-2">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="adminPassword"
+                    type="password"
+                    value={formData.adminPassword}
+                    onChange={(e) => handleChange('adminPassword', e.target.value)}
+                    placeholder="8文字以上"
+                    className="pl-10"
+                    disabled={isCreating}
+                    minLength={8}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="adminPasswordConfirm">パスワード（確認） *</Label>
+                <div className="relative mt-2">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="adminPasswordConfirm"
+                    type="password"
+                    value={formData.adminPasswordConfirm}
+                    onChange={(e) => handleChange('adminPasswordConfirm', e.target.value)}
+                    placeholder="パスワードを再入力"
+                    className="pl-10"
+                    disabled={isCreating}
+                  />
+                </div>
               </div>
 
               {/* 確認サマリー */}
@@ -482,7 +557,16 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
           {step < 3 ? (
             <Button onClick={handleNext}>次へ</Button>
           ) : (
-            <Button onClick={handleCreate}>作成</Button>
+            <Button onClick={handleCreate} disabled={isCreating}>
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  作成中...
+                </>
+              ) : (
+                '作成'
+              )}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
