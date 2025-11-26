@@ -1,4 +1,9 @@
-import { createClient } from '@/lib/supabase/client';
+/**
+ * アバターアップロード
+ * プロフィール画像をAWS S3にアップロード
+ */
+
+import { uploadToS3, deleteFromS3, getPublicUrl } from './s3-client';
 
 export interface UploadAvatarOptions {
   userId: string;
@@ -12,44 +17,34 @@ export interface UploadAvatarResult {
 }
 
 /**
- * プロフィール画像をSupabase Storageにアップロード
+ * プロフィール画像をS3にアップロード
  */
 export async function uploadAvatar({
   userId,
   file,
 }: UploadAvatarOptions): Promise<UploadAvatarResult> {
   try {
-    const supabase = createClient();
-
     // ファイル名を生成（ユーザーIDとタイムスタンプ）
     const timestamp = Date.now();
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${timestamp}.${fileExt}`;
+    const key = `avatars/${userId}/${timestamp}.${fileExt}`;
 
-    // アップロード
-    const { data, error } = await supabase.storage
-      .from('avatars')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+    // FileをBufferに変換
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    if (error) {
-      console.error('Avatar upload error:', error);
+    const result = await uploadToS3(buffer, key, file.type);
+
+    if (!result.success) {
       return {
         success: false,
-        error: error.message,
+        error: result.error,
       };
     }
 
-    // 公開URLを取得
-    const { data: { publicUrl } } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(fileName);
-
     return {
       success: true,
-      url: publicUrl,
+      url: result.url,
     };
   } catch (error) {
     console.error('Avatar upload exception:', error);
@@ -61,31 +56,28 @@ export async function uploadAvatar({
 }
 
 /**
- * 既存のプロフィール画像を削除
+ * 既存のプロフィール画像をS3から削除
  */
 export async function deleteAvatar(avatarUrl: string): Promise<boolean> {
   try {
-    const supabase = createClient();
-
-    // URLからファイルパスを抽出
+    // URLからキーを抽出
     const url = new URL(avatarUrl);
-    const pathParts = url.pathname.split('/');
-    const fileName = pathParts.slice(-2).join('/'); // userId/timestamp.ext
+    const key = url.pathname.slice(1); // 先頭の "/" を除去
 
-    const { error } = await supabase.storage
-      .from('avatars')
-      .remove([fileName]);
+    const result = await deleteFromS3(key);
 
-    if (error) {
-      console.error('Avatar delete error:', error);
-      return false;
-    }
-
-    return true;
+    return result.success;
   } catch (error) {
     console.error('Avatar delete exception:', error);
     return false;
   }
+}
+
+/**
+ * アバターの公開URLを取得
+ */
+export function getAvatarUrl(userId: string, filename: string): string {
+  return getPublicUrl(`avatars/${userId}/${filename}`);
 }
 
 /**
