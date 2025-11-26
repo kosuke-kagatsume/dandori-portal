@@ -397,3 +397,261 @@ model TenantSettings {
 
   @@map("tenant_settings")
 }
+
+// ========================================
+// マスタデータ（部署・役職・雇用形態）
+// ========================================
+
+// 部署マスタ
+model Department {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  parentId  String?  // 親部署ID（階層構造用）
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations（自己参照は削除してシンプル化）
+
+  @@unique([tenantId, name]) // 同一テナント内で部署名は重複不可
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, sortOrder])
+  @@map("departments")
+}
+
+// 役職マスタ
+model Position {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  level     Int      @default(1) // 役職レベル（1: 一般, 2: 主任, 3: 係長, 4: 課長, 5: 部長, 6: 役員, 7: 代表）
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, name]) // 同一テナント内で役職名は重複不可
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, level])
+  @@map("positions")
+}
+
+// 雇用形態マスタ
+model EmploymentType {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, name]) // 同一テナント内で雇用形態名は重複不可
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@map("employment_types")
+}
+
+// ========================================
+// 承認フロー定義
+// ========================================
+
+// 承認フロー定義（マスタ）
+model ApprovalFlowDefinition {
+  id                     String   @id @default(cuid())
+  tenantId               String
+  name                   String   // フロー名
+  description            String?  // 説明
+  documentType           String   // leave_request, overtime_request, expense_claim, business_trip, purchase_request
+  flowType               String   // organization（組織連動）, custom（カスタム）
+  useOrganizationHierarchy Boolean @default(false) // 組織連動型の場合true
+  organizationLevels     Int?     // 組織連動型: 何階層上まで承認が必要か（1-5）
+  isActive               Boolean  @default(true)
+  isDefault              Boolean  @default(false) // このドキュメントタイプのデフォルトフロー
+  priority               Int      @default(1) // 優先度（条件分岐時の判定順）
+  createdBy              String   // 作成者ID
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  steps      ApprovalFlowStep[]
+  conditions ApprovalFlowCondition[]
+
+  // Note: デフォルトフローの一意性はアプリケーションレベルで制御
+  @@index([tenantId])
+  @@index([tenantId, documentType])
+  @@index([tenantId, documentType, isActive])
+  @@map("approval_flow_definitions")
+}
+
+// 承認フローステップ定義（カスタム型用）
+model ApprovalFlowStep {
+  id               String   @id @default(cuid())
+  flowId           String
+  stepNumber       Int      // ステップ番号（1始まり）
+  name             String   // ステップ名（例: 直属上司承認、部長承認）
+  executionMode    String   @default("serial") // serial（順次）, parallel（並列）
+  requiredApprovals Int     @default(1) // 必要承認数（並列時）
+  timeoutHours     Int?     // タイムアウト時間
+  allowDelegate    Boolean  @default(true) // 代理承認を許可
+  allowSkip        Boolean  @default(false) // スキップを許可
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  flow      ApprovalFlowDefinition @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  approvers ApprovalFlowApprover[]
+
+  @@index([flowId])
+  @@index([flowId, stepNumber])
+  @@map("approval_flow_steps")
+}
+
+// 承認フローステップの承認者定義
+model ApprovalFlowApprover {
+  id          String   @id @default(cuid())
+  stepId      String
+  approverType String  // user（特定ユーザー）, role（役職）, position_level（役職レベル以上）
+  approverId  String?  // approverType=userの場合: ユーザーID
+  approverRole String? // approverType=roleの場合: manager, hr, finance等
+  positionLevel Int?   // approverType=position_levelの場合: 役職レベル
+  order       Int      @default(1) // 承認者の順序（並列時）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  step ApprovalFlowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId])
+  @@map("approval_flow_approvers")
+}
+
+// 承認フロー適用条件
+model ApprovalFlowCondition {
+  id          String   @id @default(cuid())
+  flowId      String
+  field       String   // 条件判定フィールド（amount, days, hours等）
+  operator    String   // 演算子（gte, lte, gt, lt, eq, ne）
+  value       Float    // 比較値
+  description String?  // 条件の説明（例: 5日以上の休暇）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  flow ApprovalFlowDefinition @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@index([flowId])
+  @@map("approval_flow_conditions")
+}
+
+// ========================================
+// 会社設定（Company Settings）
+// ========================================
+
+// 会社情報
+model CompanySettings {
+  id                   String   @id @default(cuid())
+  tenantId             String   @unique // 1テナント1設定
+
+  // 基本情報
+  name                 String   // 会社名
+  nameKana             String?  // 会社名（カナ）
+  postalCode           String?  // 郵便番号
+  address              String?  // 住所
+  phone                String?  // 電話番号
+  fax                  String?  // FAX番号
+  email                String?  // メールアドレス
+
+  // 法人情報
+  corporateNumber      String?  // 法人番号（13桁）
+  representativeName   String?  // 代表者名
+  representativeTitle  String?  // 代表者役職
+
+  // 税務情報
+  taxOffice            String?  // 所轄税務署
+  taxOfficeCode        String?  // 税務署コード
+
+  // その他
+  fiscalYearEnd        String?  // 決算月（MM形式）
+  foundedDate          DateTime? @db.Date // 設立日
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("company_settings")
+}
+
+// 給与設定
+model PayrollSettings {
+  id                        String   @id @default(cuid())
+  tenantId                  String   @unique // 1テナント1設定
+
+  // 支給日設定
+  paymentDay                Int      @default(25) // 支給日（1-31）
+  paymentDayType            String   @default("current") // current（当月払い）/ next（翌月払い）
+
+  // 締め日設定
+  closingDay                Int      @default(31) // 締め日（1-31、末日は31）
+
+  // 給与体系
+  defaultPayType            String   @default("monthly") // monthly / hourly / daily
+
+  // 時間設定
+  standardWorkHours         Float    @default(8) // 所定労働時間/日
+  standardWorkDays          Int      @default(20) // 所定労働日数/月
+
+  // 控除設定
+  enableHealthInsurance     Boolean  @default(true)  // 健康保険
+  enablePensionInsurance    Boolean  @default(true)  // 厚生年金
+  enableEmploymentInsurance Boolean  @default(true)  // 雇用保険
+  enableIncomeTax           Boolean  @default(true)  // 所得税
+  enableResidentTax         Boolean  @default(true)  // 住民税
+
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("payroll_settings")
+}
+
+// 勤怠設定
+model AttendanceSettings {
+  id                    String   @id @default(cuid())
+  tenantId              String   @unique // 1テナント1設定
+
+  // 勤務時間設定
+  workStartTime         String   @default("09:00") // 始業時刻
+  workEndTime           String   @default("18:00") // 終業時刻
+  breakStartTime        String   @default("12:00") // 休憩開始時刻
+  breakEndTime          String   @default("13:00") // 休憩終了時刻
+  breakDurationMinutes  Int      @default(60) // 休憩時間（分）
+
+  // フレックス設定
+  enableFlexTime        Boolean  @default(false) // フレックス制度
+  coreTimeStart         String?  // コアタイム開始
+  coreTimeEnd           String?  // コアタイム終了
+
+  // 残業設定
+  overtimeThresholdMinutes Int   @default(480) // 残業計算開始（分）= 8時間
+  maxOvertimeHoursPerMonth Int   @default(45) // 月間残業上限（時間）
+
+  // 打刻設定
+  allowRemoteCheckIn    Boolean  @default(true) // リモート打刻許可
+  requireLocationOnCheckIn Boolean @default(false) // 位置情報必須
+  allowEarlyCheckIn     Boolean  @default(true) // 早出打刻許可
+  earlyCheckInMinutes   Int      @default(30) // 早出許容時間（分）
+
+  // 休日設定
+  weeklyHolidays        String[] @default(["saturday", "sunday"]) // 週休日
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("attendance_settings")
+}

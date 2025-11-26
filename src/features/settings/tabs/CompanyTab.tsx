@@ -1,19 +1,40 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
-import { Building2, User, FileText, Calendar } from 'lucide-react';
+import { Building2, User, FileText, Loader2 } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 
 export function CompanyTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
-  const { companyInfo, updateCompanyInfo } = useCompanySettingsStore();
+  const {
+    companyInfo,
+    updateCompanyInfo,
+    fetchCompanySettings,
+    saveCompanySettings,
+    isLoading
+  } = useCompanySettingsStore();
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    saveSettings();
+  // 初回ロード時にAPIからデータ取得
+  useEffect(() => {
+    fetchCompanySettings();
+  }, [fetchCompanySettings]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await saveCompanySettings();
+      saveSettings(); // 親コンポーネントのコールバックも呼ぶ
+    } catch (error) {
+      console.error('保存エラー:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -220,8 +241,15 @@ export function CompanyTab({ settings, updateSettings, saveSettings }: SettingsT
 
       {/* 保存ボタン */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} size="lg">
-          会社情報を保存
+        <Button onClick={handleSave} size="lg" disabled={isSaving || isLoading}>
+          {isSaving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              保存中...
+            </>
+          ) : (
+            '会社情報を保存'
+          )}
         </Button>
       </div>
     </div>

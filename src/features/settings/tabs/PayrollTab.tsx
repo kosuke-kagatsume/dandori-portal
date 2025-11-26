@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,14 +9,34 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
-import { DollarSign, Calendar, Clock, Shield } from 'lucide-react';
+import { DollarSign, Calendar, Shield, Loader2 } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 
 export function PayrollTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
-  const { payrollSettings, updatePayrollSettings } = useCompanySettingsStore();
+  const {
+    payrollSettings,
+    updatePayrollSettings,
+    fetchPayrollSettings,
+    savePayrollSettings,
+    isLoading
+  } = useCompanySettingsStore();
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    saveSettings();
+  // 初回ロード時にAPIからデータ取得
+  useEffect(() => {
+    fetchPayrollSettings();
+  }, [fetchPayrollSettings]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await savePayrollSettings();
+      saveSettings();
+    } catch (error) {
+      console.error('保存エラー:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -242,8 +263,15 @@ export function PayrollTab({ settings, updateSettings, saveSettings }: SettingsT
 
       {/* 保存ボタン */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} size="lg">
-          給与設定を保存
+        <Button onClick={handleSave} size="lg" disabled={isSaving || isLoading}>
+          {isSaving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              保存中...
+            </>
+          ) : (
+            '給与設定を保存'
+          )}
         </Button>
       </div>
     </div>

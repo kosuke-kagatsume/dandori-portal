@@ -1,11 +1,12 @@
 /**
  * 会社設定ストア
+ * API連携版 - PostgreSQL永続化
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-const DATA_VERSION = 1;
+const DATA_VERSION = 2;
 
 export interface CompanyInfo {
   // 基本情報
@@ -71,31 +72,74 @@ export interface YearEndAdjustmentSettings {
   includeQRCode: boolean; // QRコード付与
 }
 
+export interface AttendanceSettings {
+  // 勤務時間設定
+  workStartTime: string; // 始業時刻
+  workEndTime: string; // 終業時刻
+  breakStartTime: string; // 休憩開始時刻
+  breakEndTime: string; // 休憩終了時刻
+  breakDurationMinutes: number; // 休憩時間（分）
+
+  // フレックス設定
+  enableFlexTime: boolean; // フレックス制度
+  coreTimeStart?: string; // コアタイム開始
+  coreTimeEnd?: string; // コアタイム終了
+
+  // 残業設定
+  overtimeThresholdMinutes: number; // 残業計算開始（分）
+  maxOvertimeHoursPerMonth: number; // 月間残業上限（時間）
+
+  // 打刻設定
+  allowRemoteCheckIn: boolean; // リモート打刻許可
+  requireLocationOnCheckIn: boolean; // 位置情報必須
+  allowEarlyCheckIn: boolean; // 早出打刻許可
+  earlyCheckInMinutes: number; // 早出許容時間（分）
+
+  // 休日設定
+  weeklyHolidays: string[]; // 週休日
+}
+
 interface CompanySettingsState {
   // データ
   companyInfo: CompanyInfo;
   payrollSettings: PayrollSettings;
   yearEndAdjustmentSettings: YearEndAdjustmentSettings;
+  attendanceSettings: AttendanceSettings;
 
-  // アクション
+  // 状態
+  initialized: boolean;
+  isLoading: boolean;
+  error: string | null;
+
+  // アクション（同期版 - UIからの即時更新用）
   updateCompanyInfo: (info: Partial<CompanyInfo>) => void;
   updatePayrollSettings: (settings: Partial<PayrollSettings>) => void;
   updateYearEndAdjustmentSettings: (settings: Partial<YearEndAdjustmentSettings>) => void;
+  updateAttendanceSettings: (settings: Partial<AttendanceSettings>) => void;
   resetSettings: () => void;
+
+  // アクション（非同期版 - API連携用）
+  fetchCompanySettings: () => Promise<void>;
+  saveCompanySettings: () => Promise<void>;
+  fetchPayrollSettings: () => Promise<void>;
+  savePayrollSettings: () => Promise<void>;
+  fetchAttendanceSettings: () => Promise<void>;
+  saveAttendanceSettings: () => Promise<void>;
+  fetchAllSettings: () => Promise<void>;
 }
 
 // デフォルト値
 const defaultCompanyInfo: CompanyInfo = {
-  name: 'サンプル株式会社',
-  nameKana: 'サンプルカブシキガイシャ',
-  postalCode: '100-0001',
-  address: '東京都千代田区千代田1-1-1',
-  phone: '03-1234-5678',
-  email: 'info@sample.co.jp',
-  representativeName: '山田 太郎',
-  representativeTitle: '代表取締役',
-  taxOffice: '麹町税務署',
-  fiscalYearEnd: '03', // 3月決算
+  name: '',
+  nameKana: '',
+  postalCode: '',
+  address: '',
+  phone: '',
+  email: '',
+  representativeName: '',
+  representativeTitle: '',
+  taxOffice: '',
+  fiscalYearEnd: '03',
 };
 
 const defaultPayrollSettings: PayrollSettings = {
@@ -124,16 +168,39 @@ const defaultYearEndAdjustmentSettings: YearEndAdjustmentSettings = {
   includeQRCode: false,
 };
 
+const defaultAttendanceSettings: AttendanceSettings = {
+  workStartTime: '09:00',
+  workEndTime: '18:00',
+  breakStartTime: '12:00',
+  breakEndTime: '13:00',
+  breakDurationMinutes: 60,
+  enableFlexTime: false,
+  coreTimeStart: undefined,
+  coreTimeEnd: undefined,
+  overtimeThresholdMinutes: 480,
+  maxOvertimeHoursPerMonth: 45,
+  allowRemoteCheckIn: true,
+  requireLocationOnCheckIn: false,
+  allowEarlyCheckIn: true,
+  earlyCheckInMinutes: 30,
+  weeklyHolidays: ['saturday', 'sunday'],
+};
+
 const initialState = {
   companyInfo: defaultCompanyInfo,
   payrollSettings: defaultPayrollSettings,
   yearEndAdjustmentSettings: defaultYearEndAdjustmentSettings,
+  attendanceSettings: defaultAttendanceSettings,
+  initialized: false,
+  isLoading: false,
+  error: null,
 };
 
 const createCompanySettingsStore = () => {
-  const storeCreator = (set: any) => ({
+  const storeCreator = (set: any, get: any) => ({
     ...initialState,
 
+    // 同期アクション（UI用）
     updateCompanyInfo: (info: Partial<CompanyInfo>) => {
       set((state: CompanySettingsState) => ({
         companyInfo: { ...state.companyInfo, ...info },
@@ -152,8 +219,228 @@ const createCompanySettingsStore = () => {
       }));
     },
 
+    updateAttendanceSettings: (settings: Partial<AttendanceSettings>) => {
+      set((state: CompanySettingsState) => ({
+        attendanceSettings: { ...state.attendanceSettings, ...settings },
+      }));
+    },
+
     resetSettings: () => {
       set(initialState);
+    },
+
+    // 非同期アクション（API連携）
+    fetchCompanySettings: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/company-settings?tenantId=tenant-demo-001');
+        const result = await response.json();
+
+        if (result.success) {
+          set({
+            companyInfo: {
+              name: result.data.name || '',
+              nameKana: result.data.nameKana || '',
+              postalCode: result.data.postalCode || '',
+              address: result.data.address || '',
+              phone: result.data.phone || '',
+              fax: result.data.fax || '',
+              email: result.data.email || '',
+              corporateNumber: result.data.corporateNumber || '',
+              representativeName: result.data.representativeName || '',
+              representativeTitle: result.data.representativeTitle || '',
+              taxOffice: result.data.taxOffice || '',
+              taxOfficeCode: result.data.taxOfficeCode || '',
+              fiscalYearEnd: result.data.fiscalYearEnd || '03',
+              foundedDate: result.data.foundedDate || undefined,
+            },
+            isLoading: false,
+          });
+        } else {
+          throw new Error(result.error || 'Failed to fetch company settings');
+        }
+      } catch (error) {
+        console.error('Error fetching company settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    },
+
+    saveCompanySettings: async () => {
+      const state = get() as CompanySettingsState;
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/company-settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: 'tenant-demo-001',
+            ...state.companyInfo,
+          }),
+        });
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save company settings');
+        }
+        set({ isLoading: false });
+      } catch (error) {
+        console.error('Error saving company settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error;
+      }
+    },
+
+    fetchPayrollSettings: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/payroll-settings?tenantId=tenant-demo-001');
+        const result = await response.json();
+
+        if (result.success) {
+          set({
+            payrollSettings: {
+              paymentDay: result.data.paymentDay,
+              paymentDayType: result.data.paymentDayType,
+              closingDay: result.data.closingDay,
+              defaultPayType: result.data.defaultPayType,
+              standardWorkHours: result.data.standardWorkHours,
+              standardWorkDays: result.data.standardWorkDays,
+              enableHealthInsurance: result.data.enableHealthInsurance,
+              enablePensionInsurance: result.data.enablePensionInsurance,
+              enableEmploymentInsurance: result.data.enableEmploymentInsurance,
+              enableIncomeTax: result.data.enableIncomeTax,
+              enableResidentTax: result.data.enableResidentTax,
+            },
+            isLoading: false,
+          });
+        } else {
+          throw new Error(result.error || 'Failed to fetch payroll settings');
+        }
+      } catch (error) {
+        console.error('Error fetching payroll settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    },
+
+    savePayrollSettings: async () => {
+      const state = get() as CompanySettingsState;
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/payroll-settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: 'tenant-demo-001',
+            ...state.payrollSettings,
+          }),
+        });
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save payroll settings');
+        }
+        set({ isLoading: false });
+      } catch (error) {
+        console.error('Error saving payroll settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error;
+      }
+    },
+
+    fetchAttendanceSettings: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/attendance-settings?tenantId=tenant-demo-001');
+        const result = await response.json();
+
+        if (result.success) {
+          set({
+            attendanceSettings: {
+              workStartTime: result.data.workStartTime,
+              workEndTime: result.data.workEndTime,
+              breakStartTime: result.data.breakStartTime,
+              breakEndTime: result.data.breakEndTime,
+              breakDurationMinutes: result.data.breakDurationMinutes,
+              enableFlexTime: result.data.enableFlexTime,
+              coreTimeStart: result.data.coreTimeStart || undefined,
+              coreTimeEnd: result.data.coreTimeEnd || undefined,
+              overtimeThresholdMinutes: result.data.overtimeThresholdMinutes,
+              maxOvertimeHoursPerMonth: result.data.maxOvertimeHoursPerMonth,
+              allowRemoteCheckIn: result.data.allowRemoteCheckIn,
+              requireLocationOnCheckIn: result.data.requireLocationOnCheckIn,
+              allowEarlyCheckIn: result.data.allowEarlyCheckIn,
+              earlyCheckInMinutes: result.data.earlyCheckInMinutes,
+              weeklyHolidays: result.data.weeklyHolidays,
+            },
+            isLoading: false,
+          });
+        } else {
+          throw new Error(result.error || 'Failed to fetch attendance settings');
+        }
+      } catch (error) {
+        console.error('Error fetching attendance settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    },
+
+    saveAttendanceSettings: async () => {
+      const state = get() as CompanySettingsState;
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/attendance-settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: 'tenant-demo-001',
+            ...state.attendanceSettings,
+          }),
+        });
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save attendance settings');
+        }
+        set({ isLoading: false });
+      } catch (error) {
+        console.error('Error saving attendance settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error;
+      }
+    },
+
+    fetchAllSettings: async () => {
+      const { fetchCompanySettings, fetchPayrollSettings, fetchAttendanceSettings } = get();
+      set({ initialized: false, isLoading: true });
+
+      try {
+        await Promise.all([
+          fetchCompanySettings(),
+          fetchPayrollSettings(),
+          fetchAttendanceSettings(),
+        ]);
+        set({ initialized: true });
+      } catch (error) {
+        console.error('Error fetching all settings:', error);
+        set({ initialized: true }); // エラーでも初期化完了とする
+      }
     },
   });
 
@@ -162,11 +449,17 @@ const createCompanySettingsStore = () => {
     return create<CompanySettingsState>()(storeCreator);
   }
 
-  // クライアントサイドではpersistを使用
+  // クライアントサイドではpersistを使用（オフライン対応のキャッシュとして）
   return create<CompanySettingsState>()(
     persist(storeCreator, {
       name: 'company-settings-store',
       version: DATA_VERSION,
+      partialize: (state) => ({
+        companyInfo: state.companyInfo,
+        payrollSettings: state.payrollSettings,
+        yearEndAdjustmentSettings: state.yearEndAdjustmentSettings,
+        attendanceSettings: state.attendanceSettings,
+      }),
     })
   );
 };
