@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useUIStore, useTenantStore, useUserStore, useNotificationStore } from '@/lib/store';
+import { useUIStore, useUserStore } from '@/lib/store';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import { useLegalUpdatesStore } from '@/lib/store/legal-updates-store';
 import { useAnnouncementsStore } from '@/lib/store/announcements-store';
@@ -32,9 +32,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const { theme, sidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen, getDensityClass } = useUIStore();
-  const { setTenants } = useTenantStore();
-  const { setCurrentUser, setDemoMode, currentUser } = useUserStore();
-  const { setNotifications } = useNotificationStore();
+  const { currentUser } = useUserStore();
   const {
     initializeApplication,
     initializeBasicInfoForm,
@@ -137,7 +135,7 @@ export function AppShell({ children }: AppShellProps) {
   }, [theme]);
 
   return (
-    <div className={cn('min-h-screen bg-background', getDensityClass())}>
+    <div className={cn('min-h-screen bg-background flex', getDensityClass())}>
       {/* スキップリンク - アクセシビリティ向上 */}
       <SkipLink />
 
@@ -155,7 +153,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main Content */}
       <div className={cn(
-        'flex flex-col min-h-screen transition-all duration-300',
+        'flex-1 flex flex-col min-h-screen transition-all duration-300',
         // モバイル: マージンなし、デスクトップ: サイドバーの幅に応じたマージン
         'ml-0',
         sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'

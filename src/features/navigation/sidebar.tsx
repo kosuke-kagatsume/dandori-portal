@@ -74,12 +74,6 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const tCommon = useTranslations('common');
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const currentUser = useUserStore(state => state.currentUser);
-  const _hasHydrated = useUserStore(state => state._hasHydrated);
-
-  // クライアントサイドでのマウント完了まで待つ
-  if (!_hasHydrated) {
-    return null;
-  }
 
   const navigation = getNavigation(currentLocale, currentUser);
 

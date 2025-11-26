@@ -2,12 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, DemoUser, UserRole } from '@/types';
 import { demoUsers } from '@/lib/demo-users';
-import {
-  login as apiLogin,
-  logout as apiLogout,
-  getCurrentUser as apiGetCurrentUser,
-} from '@/lib/api/auth';
-import { apiClient, APIError } from '@/lib/api/client';
+import { createClient } from '@/lib/supabase/client';
+import { APIError } from '@/lib/api/client';
 import {
   saveTokenData,
   clearTokenData,
@@ -146,27 +142,59 @@ const createUserStore = () => {
             return;
           }
 
-          // プロダクションモード: API呼び出し
-          const { user, accessToken, refreshToken: refreshTokenValue, expiresIn } = await apiLogin({ email, password });
+          // プロダクションモード: Supabase Auth
+          const supabase = createClient();
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) {
+            throw new Error(error.message);
+          }
+
+          if (!data.user || !data.session) {
+            throw new Error('ログインに失敗しました');
+          }
+
+          // Supabaseのユーザー情報からアプリ用Userに変換
+          const supabaseUser = data.user;
+          const session = data.session;
+
+          // ユーザーメタデータからロールを取得（デフォルトはemployee）
+          const userRole = (supabaseUser.user_metadata?.role as UserRole) || 'employee';
+
+          const user: User = {
+            id: supabaseUser.id,
+            name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'ユーザー',
+            email: supabaseUser.email || '',
+            phone: supabaseUser.user_metadata?.phone || '',
+            hireDate: supabaseUser.user_metadata?.hireDate || new Date().toISOString().split('T')[0],
+            unitId: supabaseUser.user_metadata?.unitId || '1',
+            roles: [userRole],
+            status: 'active',
+            timezone: 'Asia/Tokyo',
+            avatar: supabaseUser.user_metadata?.avatar || '',
+            position: supabaseUser.user_metadata?.position || '',
+            department: supabaseUser.user_metadata?.department || '',
+          };
 
           set({
             currentUser: user,
-            accessToken,
-            refreshToken: refreshTokenValue,
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token,
             isDemoMode: false,
             currentDemoUser: null,
             isLoading: false,
+            _hasHydrated: true,
           });
 
-          // apiClientにトークンを設定
-          apiClient.setToken(accessToken);
-
           // トークンデータを保存（Cookie含む）
-          saveTokenData(accessToken, refreshTokenValue, expiresIn);
+          const expiresIn = session.expires_in || 3600;
+          saveTokenData(session.access_token, session.refresh_token, expiresIn);
 
           // ユーザーロールをCookieに保存（middleware用）
-          if (typeof window !== 'undefined' && user.roles.length > 0) {
-            const userRole = user.roles[0];
+          if (typeof window !== 'undefined') {
             const expiresDate = new Date(Date.now() + expiresIn * 1000);
             document.cookie = `user_role=${userRole}; path=/; expires=${expiresDate.toUTCString()}; SameSite=Lax; Secure`;
           }
@@ -208,8 +236,9 @@ const createUserStore = () => {
         try {
           // デモモードチェック
           if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
-            // プロダクションモード: API呼び出し
-            await apiLogout();
+            // プロダクションモード: Supabase Auth
+            const supabase = createClient();
+            await supabase.auth.signOut();
           }
 
           // トークンリフレッシュタイマーを停止
@@ -262,8 +291,30 @@ const createUserStore = () => {
             return;
           }
 
-          // プロダクションモード: API呼び出し
-          const user = await apiGetCurrentUser();
+          // プロダクションモード: Supabase Auth
+          const supabase = createClient();
+          const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
+
+          if (error || !supabaseUser) {
+            throw new Error(error?.message || 'ユーザー情報の取得に失敗しました');
+          }
+
+          const userRole = (supabaseUser.user_metadata?.role as UserRole) || 'employee';
+
+          const user: User = {
+            id: supabaseUser.id,
+            name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'ユーザー',
+            email: supabaseUser.email || '',
+            phone: supabaseUser.user_metadata?.phone || '',
+            hireDate: supabaseUser.user_metadata?.hireDate || new Date().toISOString().split('T')[0],
+            unitId: supabaseUser.user_metadata?.unitId || '1',
+            roles: [userRole],
+            status: 'active',
+            timezone: 'Asia/Tokyo',
+            avatar: supabaseUser.user_metadata?.avatar || '',
+            position: supabaseUser.user_metadata?.position || '',
+            department: supabaseUser.user_metadata?.department || '',
+          };
 
           set({
             currentUser: user,
