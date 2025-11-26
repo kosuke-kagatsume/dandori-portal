@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 // import { useTranslations } from 'next-intl';
@@ -9,14 +9,12 @@ import { generateMockUsers } from '@/lib/mock-data';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import {
   MoreHorizontal,
-  Plus,
   Download,
   Upload,
   UserPlus,
   Mail,
   Phone,
   Edit,
-  Trash2,
   Eye,
   UserX,
   Filter,
@@ -46,8 +44,8 @@ import type { User } from '@/types';
 import { exportUsersToCSV } from '@/lib/csv/csv-export';
 
 // ダイアログの遅延読み込み
-const UserFormDialog = dynamic(() => import('@/features/users/user-form-dialog').then(mod => ({ default: mod.UserFormDialog })), { ssr: false });
 const RetireUserDialog = dynamic(() => import('@/features/users/retire-user-dialog').then(mod => ({ default: mod.RetireUserDialog })), { ssr: false });
+const InviteUserDialog = dynamic(() => import('@/features/users/invite-user-dialog').then(mod => ({ default: mod.InviteUserDialog })), { ssr: false });
 
 export default function UsersPage() {
   const mounted = useIsMounted();
@@ -60,15 +58,14 @@ export default function UsersPage() {
     return translations[key] || key;
   };
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | undefined>();
   const [retireDialogOpen, setRetireDialogOpen] = useState(false);
   const [retiringUser, setRetiringUser] = useState<User | undefined>();
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [importInputRef, setImportInputRef] = useState<HTMLInputElement | null>(null);
 
   const router = useRouter();
-  const { users, setUsers, addUser, updateUser, retireUser } = useUserStore();
+  const { users, setUsers, addUser, retireUser } = useUserStore();
 
   // フィルタリングされたユーザー一覧（useMemoでメモ化）
   const filteredUsers = useMemo(() => {
@@ -96,41 +93,6 @@ export default function UsersPage() {
     }
     setLoading(false);
   }, [users.length, setUsers]);
-
-  const handleCreateUser = (userData: Partial<User>) => {
-    try {
-      // ストアに直接追加
-      const newUser = {
-        ...userData,
-        id: `user-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      addUser(newUser as User);
-      toast.success('ユーザーを作成しました');
-    } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error('ユーザーの作成に失敗しました');
-      throw error;
-    }
-  };
-
-  const handleEditUser = (userData: Partial<User>) => {
-    if (!editingUser) return;
-
-    try {
-      // ストアを直接更新
-      updateUser(editingUser.id, {
-        ...userData,
-        updatedAt: new Date().toISOString(),
-      });
-      toast.success('ユーザーを更新しました');
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error('ユーザーの更新に失敗しました');
-      throw error;
-    }
-  };
 
   const handleRetireUser = async (retiredDate: string, reason: string) => {
     if (!retiringUser) return;
@@ -225,6 +187,7 @@ export default function UsersPage() {
 
             const user: User = {
               id: id || `imported-${Date.now()}-${index}`,
+              tenantId: 'tenant-demo-001',
               name: name || '',
               email: email || '',
               phone: phone || '',
@@ -513,14 +476,11 @@ export default function UsersPage() {
             style={{ display: 'none' }}
           />
           <Button
-            onClick={() => {
-              setEditingUser(undefined);
-              setDialogOpen(true);
-            }}
+            onClick={() => setInviteDialogOpen(true)}
             className="w-full sm:w-auto"
           >
             <UserPlus className="mr-2 h-4 w-4" />
-            ユーザー追加
+            ユーザー招待
           </Button>
         </div>
       </div>
@@ -594,20 +554,35 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* User Form Dialog */}
-      <UserFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        user={editingUser}
-        onSubmit={editingUser ? handleEditUser : handleCreateUser}
-      />
-
       {/* Retire User Dialog */}
       <RetireUserDialog
         open={retireDialogOpen}
         onOpenChange={setRetireDialogOpen}
         user={retiringUser}
         onConfirm={handleRetireUser}
+      />
+
+      {/* Invite User Dialog */}
+      <InviteUserDialog
+        open={inviteDialogOpen}
+        onOpenChange={setInviteDialogOpen}
+        onInviteSuccess={(user) => {
+          // 招待されたユーザーをリストに追加
+          addUser({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            status: 'active',
+            roles: ['user'],
+            department: user.department || '',
+            position: user.position || '',
+            hireDate: new Date().toISOString().split('T')[0],
+            phone: '',
+            unitId: '1',
+            timezone: 'Asia/Tokyo',
+            avatar: '',
+          });
+        }}
       />
     </div>
   );

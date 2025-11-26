@@ -102,6 +102,7 @@ function _generateMockUsersInternal(): User[] {
     
     const user: User = {
       id: `user-${i}`,
+      tenantId: 'tenant-demo-001',
       name: `${lastName} ${firstName}`,
       email: `${lastName.toLowerCase()}.${firstName.toLowerCase()}@dandori.co.jp`.replace(/[ぁ-ん]/g, (s) => String.fromCharCode(s.charCodeAt(0) + 96)),
       phone: randomPhone(),
@@ -121,6 +122,7 @@ function _generateMockUsersInternal(): User[] {
   // 最初のユーザーを山田太郎（管理者）に固定
   users[0] = {
     id: 'user-1',
+    tenantId: 'tenant-demo-001',
     name: '山田 太郎',
     email: 'yamada.taro@dandori.co.jp',
     phone: '090-1234-5678',

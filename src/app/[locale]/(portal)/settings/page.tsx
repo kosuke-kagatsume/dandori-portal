@@ -12,10 +12,8 @@ import {
   GitBranch,
   ShieldCheck,
   Sun,
-  Moon,
   Languages,
   Clock,
-  Shield,
   Mail,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
@@ -38,9 +36,7 @@ import {
 import { TenantManagementTab } from '@/features/dw-admin/tenant-management-tab';
 import { PaymentManagementTab } from '@/features/dw-admin/payment-management-tab';
 import { NotificationManagementTab } from '@/features/dw-admin/notification-management-tab';
-import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
-import { useOrganizationStore } from '@/lib/store/organization-store';
-import { unifiedOrganizationMembers } from '@/lib/unified-organization-data';
+import { MasterDataPanel } from '@/components/settings/master-data-panel';
 
 export default function SettingsPage() {
   const mounted = useIsMounted();
@@ -54,12 +50,8 @@ export default function SettingsPage() {
     updatePayrollSettings,
     updateYearEndAdjustmentSettings
   } = useCompanySettingsStore();
-  const { getFilteredMembers, allMembers } = useOrganizationStore();
   const [settings, setSettings] = useState<SimpleSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
-
-  // 組織メンバーを取得（allMembersが空ならunifiedOrganizationMembersを使用）
-  const organizationMembers = allMembers.length > 0 ? getFilteredMembers() : unifiedOrganizationMembers;
 
   // ページロード時にlocalStorageから役職を読み込む
   useEffect(() => {
@@ -198,9 +190,9 @@ export default function SettingsPage() {
             <span className="hidden sm:inline">ワークフロー</span>
           </TabsTrigger>
           {canManageSystem && (
-            <TabsTrigger value="permissions" className="flex-1 sm:flex-none min-w-[100px]">
-              <Shield className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">権限</span>
+            <TabsTrigger value="master-data" className="flex-1 sm:flex-none min-w-[100px]">
+              <Building2 className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">マスタ</span>
             </TabsTrigger>
           )}
           {canViewBilling && (
@@ -264,18 +256,8 @@ export default function SettingsPage() {
         </TabsContent>
 
         {canManageSystem && (
-          <TabsContent value="permissions">
-            <PermissionManagementPanel
-              members={organizationMembers}
-              onMemberPermissionUpdate={(memberId, permissions) => {
-                console.log('Update permissions for member:', memberId, permissions);
-                toast.success('権限を更新しました');
-              }}
-              onRoleUpdate={(roleId, permissions) => {
-                console.log('Update role permissions:', roleId, permissions);
-                toast.success('ロール権限を更新しました');
-              }}
-            />
+          <TabsContent value="master-data">
+            <MasterDataPanel />
           </TabsContent>
         )}
 

@@ -1,0 +1,234 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+
+// GET /api/approval-flows - 承認フロー一覧取得
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const documentType = searchParams.get('documentType');
+    const isActive = searchParams.get('isActive');
+
+    const where: Record<string, unknown> = { tenantId };
+
+    if (documentType) {
+      where.documentType = documentType;
+    }
+
+    if (isActive !== null && isActive !== undefined) {
+      where.isActive = isActive === 'true';
+    }
+
+    const flows = await prisma.approvalFlowDefinition.findMany({
+      where,
+      include: {
+        steps: {
+          orderBy: { stepNumber: 'asc' },
+          include: {
+            approvers: {
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+        conditions: true,
+      },
+      orderBy: [
+        { documentType: 'asc' },
+        { priority: 'desc' },
+        { createdAt: 'desc' },
+      ],
+    });
+
+    // フロントエンドの型に変換
+    const formattedFlows = flows.map((flow) => ({
+      id: flow.id,
+      name: flow.name,
+      description: flow.description,
+      type: flow.flowType as 'organization' | 'custom',
+      documentType: flow.documentType as 'leave_request' | 'overtime_request' | 'expense_claim' | 'business_trip' | 'purchase_request',
+      useOrganizationHierarchy: flow.useOrganizationHierarchy,
+      organizationLevels: flow.organizationLevels,
+      steps: flow.steps.map((step) => ({
+        id: step.id,
+        stepNumber: step.stepNumber,
+        name: step.name,
+        mode: step.executionMode as 'serial' | 'parallel',
+        approvers: step.approvers.map((approver) => ({
+          id: approver.id,
+          type: approver.approverType,
+          userId: approver.approverId,
+          role: approver.approverRole,
+          positionLevel: approver.positionLevel,
+          order: approver.order,
+        })),
+        requiredApprovals: step.requiredApprovals,
+        timeoutHours: step.timeoutHours,
+        allowDelegate: step.allowDelegate,
+        allowSkip: step.allowSkip,
+      })),
+      conditions: flow.conditions.map((condition) => ({
+        id: condition.id,
+        field: condition.field,
+        operator: condition.operator as 'gte' | 'lte' | 'gt' | 'lt' | 'eq' | 'ne',
+        value: condition.value,
+        description: condition.description,
+      })),
+      isActive: flow.isActive,
+      isDefault: flow.isDefault,
+      priority: flow.priority,
+      createdBy: flow.createdBy,
+      createdAt: flow.createdAt.toISOString(),
+      updatedAt: flow.updatedAt.toISOString(),
+      companyId: flow.tenantId,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: formattedFlows,
+      count: formattedFlows.length,
+    });
+  } catch (error) {
+    console.error('Error fetching approval flows:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch approval flows',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/approval-flows - 承認フロー作成
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    const {
+      tenantId = 'tenant-demo-001',
+      name,
+      description,
+      documentType,
+      type, // 'organization' or 'custom'
+      useOrganizationHierarchy,
+      organizationLevels,
+      steps,
+      conditions,
+      isActive = true,
+      isDefault = false,
+      priority = 1,
+      createdBy = 'system',
+    } = body;
+
+    // バリデーション
+    if (!name || !documentType || !type) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Missing required fields',
+          required: ['name', 'documentType', 'type'],
+        },
+        { status: 400 }
+      );
+    }
+
+    // デフォルトフローの一意性チェック
+    if (isDefault) {
+      const existingDefault = await prisma.approvalFlowDefinition.findFirst({
+        where: {
+          tenantId,
+          documentType,
+          isDefault: true,
+        },
+      });
+
+      if (existingDefault) {
+        // 既存のデフォルトを解除
+        await prisma.approvalFlowDefinition.update({
+          where: { id: existingDefault.id },
+          data: { isDefault: false },
+        });
+      }
+    }
+
+    // フロー作成（ステップと条件も同時作成）
+    const flow = await prisma.approvalFlowDefinition.create({
+      data: {
+        tenantId,
+        name,
+        description,
+        documentType,
+        flowType: type,
+        useOrganizationHierarchy: useOrganizationHierarchy || type === 'organization',
+        organizationLevels: organizationLevels || null,
+        isActive,
+        isDefault,
+        priority,
+        createdBy,
+        steps: {
+          create: steps?.map((step: any) => ({
+            stepNumber: step.stepNumber,
+            name: step.name,
+            executionMode: step.mode || 'serial',
+            requiredApprovals: step.requiredApprovals || 1,
+            timeoutHours: step.timeoutHours || null,
+            allowDelegate: step.allowDelegate ?? true,
+            allowSkip: step.allowSkip ?? false,
+            approvers: {
+              create: step.approvers?.map((approver: any, index: number) => ({
+                approverType: approver.type || 'role',
+                approverId: approver.userId || null,
+                approverRole: approver.role || null,
+                positionLevel: approver.positionLevel || null,
+                order: approver.order || index + 1,
+              })) || [],
+            },
+          })) || [],
+        },
+        conditions: {
+          create: conditions?.map((condition: any) => ({
+            field: condition.field,
+            operator: condition.operator,
+            value: condition.value,
+            description: condition.description || null,
+          })) || [],
+        },
+      },
+      include: {
+        steps: {
+          orderBy: { stepNumber: 'asc' },
+          include: {
+            approvers: {
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+        conditions: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: flow.id,
+          name: flow.name,
+          documentType: flow.documentType,
+          type: flow.flowType,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Error creating approval flow:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to create approval flow',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}

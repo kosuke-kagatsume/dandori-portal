@@ -75,6 +75,7 @@ const createUserStore = () => {
   const initialDemoUser = demoUsers.employee;
   const initialCurrentUser: User = {
     id: initialDemoUser.id,
+    tenantId: 'tenant-demo-001',
     name: initialDemoUser.name,
     email: initialDemoUser.email,
     phone: '090-1234-5678',
@@ -166,6 +167,7 @@ const createUserStore = () => {
 
           const user: User = {
             id: supabaseUser.id,
+            tenantId: supabaseUser.user_metadata?.tenantId || 'tenant-demo-001',
             name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'ユーザー',
             email: supabaseUser.email || '',
             phone: supabaseUser.user_metadata?.phone || '',
@@ -303,6 +305,7 @@ const createUserStore = () => {
 
           const user: User = {
             id: supabaseUser.id,
+            tenantId: supabaseUser.user_metadata?.tenantId || 'tenant-demo-001',
             name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'ユーザー',
             email: supabaseUser.email || '',
             phone: supabaseUser.user_metadata?.phone || '',
@@ -586,6 +589,7 @@ const createUserStore = () => {
         // currentUserも同時に更新（サイドバーのRBACチェック用）
         const currentUser: User = {
           id: demoUser.id,
+          tenantId: 'tenant-demo-001',
           name: demoUser.name,
           email: demoUser.email,
           phone: '090-1234-5678',

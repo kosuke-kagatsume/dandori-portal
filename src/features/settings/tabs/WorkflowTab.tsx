@@ -53,14 +53,14 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
   const stats = getStats();
   const currentFlows = getFlowsByDocumentType(activeDocumentType);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('このフローを削除しますか？この操作は取り消せません。')) {
-      deleteFlow(id);
+      await deleteFlow(id);
     }
   };
 
-  const handleDuplicate = (id: string) => {
-    duplicateFlow(id);
+  const handleDuplicate = async (id: string) => {
+    await duplicateFlow(id);
   };
 
   const handleEdit = (id: string) => {
