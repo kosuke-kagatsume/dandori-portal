@@ -451,28 +451,28 @@ function DWAdminDashboardPage() {
         </TabsContent>
 
         {/* タブ2: テナント管理 */}
-        <TabsContent value="tenants">
-          <TenantManagementTab />
+        <TabsContent value="tenants" suppressHydrationWarning>
+          {mounted && <TenantManagementTab />}
         </TabsContent>
 
         {/* タブ3: 支払い管理 */}
-        <TabsContent value="payments">
-          <PaymentManagementTab />
+        <TabsContent value="payments" suppressHydrationWarning>
+          {mounted && <PaymentManagementTab />}
         </TabsContent>
 
         {/* タブ4: 請求書自動生成 */}
-        <TabsContent value="auto-generation">
-          <InvoiceAutoGenerationTab />
+        <TabsContent value="auto-generation" suppressHydrationWarning>
+          {mounted && <InvoiceAutoGenerationTab />}
         </TabsContent>
 
         {/* タブ5: リマインダー管理 */}
-        <TabsContent value="reminders">
-          <PaymentReminderTab />
+        <TabsContent value="reminders" suppressHydrationWarning>
+          {mounted && <PaymentReminderTab />}
         </TabsContent>
 
         {/* タブ6: 通知履歴 */}
-        <TabsContent value="notifications">
-          <NotificationManagementTab />
+        <TabsContent value="notifications" suppressHydrationWarning>
+          {mounted && <NotificationManagementTab />}
         </TabsContent>
       </Tabs>
     </div>
