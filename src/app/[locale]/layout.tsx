@@ -1,17 +1,13 @@
 import { Suspense } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
-import dynamic from 'next/dynamic';
 
-// AppShell を SSR 無効化（Hydration Error 完全回避）
-const AppShell = dynamic(
-  () => import('@/components/layout/app-shell').then(mod => ({ default: mod.AppShell })),
-  {
-    ssr: false,
-    loading: () => <div className="min-h-screen bg-background" />,
-  }
-);
-
+/**
+ * ロケールレイアウト
+ * Route Groupsによって(auth)と(portal)でレイアウトを分離
+ * - (auth): 認証ページ（サイドバーなし）
+ * - (portal): ポータルページ（サイドバーあり）
+ */
 export default async function LocaleLayout({
   children,
   params: { locale }
@@ -24,11 +20,9 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      <AppShell>
-        <Suspense fallback={<div>Loading...</div>}>
-          {children}
-        </Suspense>
-      </AppShell>
+      <Suspense fallback={<div className="min-h-screen bg-background" />}>
+        {children}
+      </Suspense>
     </NextIntlClientProvider>
   );
 }
