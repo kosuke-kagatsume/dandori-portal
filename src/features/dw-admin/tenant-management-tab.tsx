@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, Plus, Search, Users, DollarSign, Calendar, Edit } from 'lucide-react';
+import { Building2, Plus, Search, Users, DollarSign, Calendar, Edit, Globe } from 'lucide-react';
 import { useAdminTenantStore, TenantWithStats } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { CreateTenantDialog } from '@/features/billing/create-tenant-dialog';
@@ -88,7 +88,7 @@ export function TenantManagementTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tenants.length}</div>
+            <div className="text-2xl font-bold" suppressHydrationWarning>{tenants.length}</div>
           </CardContent>
         </Card>
 
@@ -99,7 +99,7 @@ export function TenantManagementTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold" suppressHydrationWarning>
               ¥{tenants.reduce((sum, tenant) => {
                 const stats = getStats(tenant.id);
                 return sum + stats.totalAmount;
@@ -115,7 +115,7 @@ export function TenantManagementTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
+            <div className="text-2xl font-bold text-yellow-600" suppressHydrationWarning>
               ¥{tenants.reduce((sum, tenant) => {
                 const stats = getStats(tenant.id);
                 return sum + stats.unpaidAmount;
@@ -131,7 +131,7 @@ export function TenantManagementTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-2xl font-bold text-red-600" suppressHydrationWarning>
               {tenants.filter(tenant => {
                 const stats = getStats(tenant.id);
                 return stats.overdueCount > 0;
@@ -165,7 +165,7 @@ export function TenantManagementTab() {
             <TableHeader>
               <TableRow>
                 <TableHead>テナント</TableHead>
-                <TableHead>テナントID</TableHead>
+                <TableHead>サブドメイン</TableHead>
                 <TableHead>請求書</TableHead>
                 <TableHead>総請求額</TableHead>
                 <TableHead>未払い額</TableHead>
@@ -200,22 +200,27 @@ export function TenantManagementTab() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {tenant.id}
-                        </code>
+                        {tenant.subdomain ? (
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Globe className="h-3 w-3" />
+                            <span>{tenant.subdomain}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell suppressHydrationWarning>
                         {stats.invoiceCount}件
                       </TableCell>
-                      <TableCell>
+                      <TableCell suppressHydrationWarning>
                         ¥{stats.totalAmount.toLocaleString()}
                       </TableCell>
-                      <TableCell>
+                      <TableCell suppressHydrationWarning>
                         <span className={hasUnpaid ? 'text-yellow-600 font-medium' : ''}>
                           ¥{stats.unpaidAmount.toLocaleString()}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell suppressHydrationWarning>
                         {stats.latestInvoiceDate ? (
                           new Date(stats.latestInvoiceDate).toLocaleDateString('ja-JP', {
                             year: 'numeric',

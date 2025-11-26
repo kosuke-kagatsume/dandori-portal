@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Mail, Calendar, Users, CreditCard } from 'lucide-react';
+import { Building2, Mail, Calendar, Users, CreditCard, Globe, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { toast } from 'sonner';
@@ -20,7 +20,7 @@ interface CreateTenantDialogProps {
 }
 
 export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
-  const { addTenant } = useAdminTenantStore();
+  const { addTenant, isSubdomainAvailable } = useAdminTenantStore();
   const { initializeInvoices } = useInvoiceStore();
 
   // フォーム状態
@@ -28,6 +28,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
   const [formData, setFormData] = useState({
     // Step 1: 会社情報
     companyName: '',
+    subdomain: '',
     billingEmail: '',
 
     // Step 2: 契約プラン
@@ -39,6 +40,32 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
     adminName: '',
     adminEmail: '',
   });
+
+  // サブドメインのバリデーション状態
+  const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable' | 'invalid'>('idle');
+
+  // サブドメインのバリデーション
+  const validateSubdomain = (value: string) => {
+    if (!value) {
+      setSubdomainStatus('idle');
+      return;
+    }
+    // 英小文字、数字、ハイフンのみ許可（先頭と末尾のハイフンは不可）
+    const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+    if (!subdomainRegex.test(value) || value.length < 3 || value.length > 30) {
+      setSubdomainStatus('invalid');
+      return;
+    }
+    setSubdomainStatus('checking');
+    // 重複チェック
+    setTimeout(() => {
+      if (isSubdomainAvailable(value)) {
+        setSubdomainStatus('available');
+      } else {
+        setSubdomainStatus('unavailable');
+      }
+    }, 300);
+  };
 
   // 料金計算
   const userCount = parseInt(formData.initialUserCount) || 0;
@@ -60,6 +87,21 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.billingEmail)) {
         toast.error('有効なメールアドレスを入力してください');
         return;
+      }
+      // サブドメインのバリデーション
+      if (formData.subdomain) {
+        if (subdomainStatus === 'invalid') {
+          toast.error('サブドメインは3〜30文字の英小文字・数字・ハイフンのみ使用可能です');
+          return;
+        }
+        if (subdomainStatus === 'unavailable') {
+          toast.error('このサブドメインは既に使用されています');
+          return;
+        }
+        if (subdomainStatus === 'checking') {
+          toast.error('サブドメインの確認中です。少々お待ちください');
+          return;
+        }
       }
     }
 
@@ -102,6 +144,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
       // テナント作成
       addTenant({
         name: formData.companyName,
+        subdomain: formData.subdomain || null,
         logo: null,
         plan: userCount <= 30 ? 'basic' : userCount <= 100 ? 'standard' : 'enterprise',
         activeUsers: parseInt(formData.initialUserCount),
@@ -136,6 +179,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
       // フォームリセット
       setFormData({
         companyName: '',
+        subdomain: '',
         billingEmail: '',
         contractStartDate: new Date().toISOString().split('T')[0],
         trialDays: '0',
@@ -143,6 +187,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
         adminName: '',
         adminEmail: '',
       });
+      setSubdomainStatus('idle');
       setStep(1);
       onClose();
     } catch (error) {
@@ -189,6 +234,57 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
                     placeholder="例: デモ株式会社"
                     className="pl-10"
                   />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="subdomain">サブドメイン</Label>
+                <div className="relative mt-2">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="subdomain"
+                    value={formData.subdomain}
+                    onChange={(e) => {
+                      const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                      handleChange('subdomain', value);
+                      validateSubdomain(value);
+                    }}
+                    placeholder="例: demo-corp"
+                    className="pl-10 pr-10"
+                  />
+                  {subdomainStatus === 'checking' && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="h-4 w-4 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                  {subdomainStatus === 'available' && (
+                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
+                  )}
+                  {(subdomainStatus === 'unavailable' || subdomainStatus === 'invalid') && (
+                    <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
+                  )}
+                </div>
+                <div className="mt-1 space-y-1">
+                  {formData.subdomain && (
+                    <p className="text-xs text-muted-foreground">
+                      アクセスURL: https://{formData.subdomain}.dandori-portal.com
+                    </p>
+                  )}
+                  {subdomainStatus === 'invalid' && (
+                    <p className="text-xs text-red-500">
+                      3〜30文字の英小文字・数字・ハイフンのみ使用可能です
+                    </p>
+                  )}
+                  {subdomainStatus === 'unavailable' && (
+                    <p className="text-xs text-red-500">
+                      このサブドメインは既に使用されています
+                    </p>
+                  )}
+                  {subdomainStatus === 'available' && (
+                    <p className="text-xs text-green-500">
+                      このサブドメインは使用可能です
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -343,6 +439,12 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
                     <span className="text-muted-foreground">会社名</span>
                     <span className="font-medium">{formData.companyName}</span>
                   </div>
+                  {formData.subdomain && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">サブドメイン</span>
+                      <span className="font-medium">{formData.subdomain}.dandori-portal.com</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">請求先</span>
                     <span className="font-medium">{formData.billingEmail}</span>

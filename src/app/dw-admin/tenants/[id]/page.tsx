@@ -28,6 +28,8 @@ import {
   Save,
   X,
   Plus,
+  Globe,
+  ExternalLink,
 } from 'lucide-react';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
@@ -49,6 +51,7 @@ export default function TenantDetailPage() {
   const [createInvoiceDialogOpen, setCreateInvoiceDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
+    subdomain: '',
     contactEmail: '',
     billingEmail: '',
     phone: '',
@@ -127,6 +130,7 @@ export default function TenantDetailPage() {
   const handleStartEdit = () => {
     setEditForm({
       name: tenant.name,
+      subdomain: tenant.subdomain || '',
       contactEmail: tenant.contactEmail,
       billingEmail: tenant.billingEmail || '',
       phone: tenant.phone || '',
@@ -148,6 +152,7 @@ export default function TenantDetailPage() {
   const handleSave = () => {
     updateTenant(tenant.id, {
       name: editForm.name,
+      subdomain: editForm.subdomain || null,
       contactEmail: editForm.contactEmail,
       billingEmail: editForm.billingEmail || undefined,
       phone: editForm.phone || undefined,
@@ -174,6 +179,20 @@ export default function TenantDetailPage() {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">{tenant.name}</h1>
+          {tenant.subdomain && (
+            <div className="flex items-center gap-2 mt-1">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <a
+                href={`https://${tenant.subdomain}.dandori-portal.com`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+              >
+                {tenant.subdomain}.dandori-portal.com
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
             テナント詳細情報と管理
           </p>
@@ -294,6 +313,32 @@ export default function TenantDetailPage() {
                     />
                   ) : (
                     <p className="text-sm font-medium">{tenant.name}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="subdomain">サブドメイン</Label>
+                  {isEditing ? (
+                    <Input
+                      id="subdomain"
+                      value={editForm.subdomain}
+                      onChange={(e) => {
+                        const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                        setEditForm({ ...editForm, subdomain: value });
+                      }}
+                      placeholder="例: demo-corp"
+                    />
+                  ) : (
+                    <p className="text-sm font-medium">
+                      {tenant.subdomain ? (
+                        <span className="flex items-center gap-1">
+                          <Globe className="h-3 w-3" />
+                          {tenant.subdomain}.dandori-portal.com
+                        </span>
+                      ) : (
+                        '-'
+                      )}
+                    </p>
                   )}
                 </div>
 

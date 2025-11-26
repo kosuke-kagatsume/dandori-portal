@@ -20,6 +20,7 @@ datasource db {
 model Tenant {
   id           String   @id @default(cuid())
   name         String
+  subdomain    String?  @unique // サブドメイン（例: dandori-work, sample-corp）
   logo         String?
   timezone     String   @default("Asia/Tokyo")
   closingDay   String   @default("末") // 末, 20, 15, 任意
@@ -36,6 +37,7 @@ model Tenant {
   settings      TenantSettings?
   userHistories UserHistory[]
 
+  @@index([subdomain])
   @@map("tenants")
 }
 

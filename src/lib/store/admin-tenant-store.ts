@@ -23,6 +23,7 @@ export interface TenantSettings {
 export interface TenantWithStats {
   id: string;
   name: string;
+  subdomain: string | null; // サブドメイン（例: sample-corp, dandori-work）
   logo: string | null;
   plan: 'basic' | 'standard' | 'enterprise'; // 契約プラン
   activeUsers: number;
@@ -53,7 +54,9 @@ interface AdminTenantState {
 
   // クエリ
   getTenantById: (id: string) => TenantWithStats | undefined;
+  getTenantBySubdomain: (subdomain: string) => TenantWithStats | undefined;
   getTenantsByStatus: (status: TenantSettings['status']) => TenantWithStats[];
+  isSubdomainAvailable: (subdomain: string, excludeTenantId?: string) => boolean;
 
   // 統計
   getStats: () => {
@@ -73,6 +76,7 @@ const DEMO_TENANTS: TenantWithStats[] = [
   {
     id: 'tenant-001',
     name: '株式会社サンプル商事',
+    subdomain: 'sample-corp',
     logo: null,
     plan: 'standard',
     activeUsers: 49,
@@ -106,6 +110,7 @@ const DEMO_TENANTS: TenantWithStats[] = [
   {
     id: 'tenant-002',
     name: 'テスト株式会社',
+    subdomain: 'test-corp',
     logo: null,
     plan: 'basic',
     activeUsers: 15,
@@ -139,6 +144,7 @@ const DEMO_TENANTS: TenantWithStats[] = [
   {
     id: 'tenant-003',
     name: 'トライアル株式会社',
+    subdomain: 'trial-corp',
     logo: null,
     plan: 'basic',
     activeUsers: 5,
@@ -172,6 +178,7 @@ const DEMO_TENANTS: TenantWithStats[] = [
   {
     id: 'tenant-004',
     name: '大規模株式会社',
+    subdomain: 'large-corp',
     logo: null,
     plan: 'enterprise',
     activeUsers: 120,
@@ -205,6 +212,7 @@ const DEMO_TENANTS: TenantWithStats[] = [
   {
     id: 'tenant-005',
     name: '停止中株式会社',
+    subdomain: 'suspended-corp',
     logo: null,
     plan: 'standard',
     activeUsers: 0,
@@ -246,6 +254,7 @@ export const useAdminTenantStore = create<AdminTenantState>()(
         const newTenant: TenantWithStats = {
           ...tenant,
           id: `tenant-${Date.now()}`,
+          subdomain: tenant.subdomain || null, // サブドメイン
           currentUsers: tenant.activeUsers, // エイリアス同期
           billingEmail: tenant.settings.billingEmail || '',
           status: tenant.settings.status,
@@ -290,8 +299,21 @@ export const useAdminTenantStore = create<AdminTenantState>()(
         return get().tenants.find((tenant) => tenant.id === id);
       },
 
+      getTenantBySubdomain: (subdomain) => {
+        return get().tenants.find((tenant) => tenant.subdomain === subdomain);
+      },
+
       getTenantsByStatus: (status) => {
         return get().tenants.filter((tenant) => tenant.settings.status === status);
+      },
+
+      isSubdomainAvailable: (subdomain, excludeTenantId) => {
+        const tenants = get().tenants;
+        return !tenants.some(
+          (tenant) =>
+            tenant.subdomain === subdomain &&
+            tenant.id !== excludeTenantId
+        );
       },
 
       getStats: () => {

@@ -7,26 +7,86 @@ const intlMiddleware = createMiddleware({
   defaultLocale: 'ja'
 });
 
-// テナント情報をサブドメインから取得するマッピング
-const SUBDOMAIN_TO_TENANT: Record<string, string> = {
-  'dandori-work': 'tenant-006', // 株式会社ダンドリワーク（本番）
-  'sample-corp': 'tenant-001',  // デモ: 株式会社サンプル商事
-  'test-corp': 'tenant-002',    // デモ: テスト株式会社
-  'trial-corp': 'tenant-003',   // デモ: トライアル株式会社
-  'large-corp': 'tenant-004',   // デモ: 大規模株式会社
-  'suspended-corp': 'tenant-005', // デモ: 停止中株式会社
-};
-
 // メインドメインのデフォルトテナント
 const DEFAULT_TENANT_ID = 'tenant-006'; // 株式会社ダンドリワーク
+
+// テナント情報のキャッシュ（メモリ内）
+// Edge Runtimeでもグローバル変数は利用可能
+const tenantCache = new Map<string, { tenantId: string; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5分間キャッシュ
+
+/**
+ * キャッシュからテナント情報を取得
+ */
+function getCachedTenant(subdomain: string): string | null {
+  const cached = tenantCache.get(subdomain);
+  if (!cached) return null;
+
+  const now = Date.now();
+  if (now - cached.timestamp > CACHE_TTL) {
+    // キャッシュ期限切れ
+    tenantCache.delete(subdomain);
+    return null;
+  }
+
+  return cached.tenantId;
+}
+
+/**
+ * キャッシュにテナント情報を保存
+ */
+function setCachedTenant(subdomain: string, tenantId: string): void {
+  tenantCache.set(subdomain, {
+    tenantId,
+    timestamp: Date.now(),
+  });
+}
+
+/**
+ * データベースからテナント情報を取得
+ */
+async function fetchTenantFromDatabase(
+  subdomain: string,
+  baseUrl: string
+): Promise<string | null> {
+  try {
+    const url = new URL('/api/tenant/resolve', baseUrl);
+    url.searchParams.set('subdomain', subdomain);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // タイムアウト設定（3秒）
+      signal: AbortSignal.timeout(3000),
+    });
+
+    if (!response.ok) {
+      console.warn(
+        `[Middleware] Tenant not found in database: ${subdomain}`
+      );
+      return null;
+    }
+
+    const data = await response.json();
+    return data.tenantId || null;
+  } catch (error) {
+    console.error('[Middleware] Failed to fetch tenant:', error);
+    return null;
+  }
+}
 
 /**
  * サブドメインからテナントIDを抽出
  */
-function extractTenantFromHostname(hostname: string): {
+async function extractTenantFromHostname(
+  hostname: string,
+  requestUrl: string
+): Promise<{
   tenantId: string;
   subdomain: string | null;
-} {
+}> {
   // ローカル開発環境のチェック
   const isLocalhost = hostname.includes('localhost') || hostname.includes('127.0.0.1');
 
@@ -54,9 +114,37 @@ function extractTenantFromHostname(hostname: string): {
     }
   }
 
-  // サブドメインからテナントIDを取得
-  if (subdomain && SUBDOMAIN_TO_TENANT[subdomain]) {
-    tenantId = SUBDOMAIN_TO_TENANT[subdomain];
+  // サブドメインからテナントIDを取得（データベース検索）
+  if (subdomain) {
+    // 1. キャッシュチェック
+    const cachedTenantId = getCachedTenant(subdomain);
+    if (cachedTenantId) {
+      tenantId = cachedTenantId;
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Middleware] Cache hit:', subdomain, '→', tenantId);
+      }
+    } else {
+      // 2. データベース検索
+      const fetchedTenantId = await fetchTenantFromDatabase(subdomain, requestUrl);
+      if (fetchedTenantId) {
+        tenantId = fetchedTenantId;
+        // キャッシュに保存
+        setCachedTenant(subdomain, tenantId);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Middleware] Database hit:', subdomain, '→', tenantId);
+        }
+      } else {
+        // 3. 見つからない場合はデフォルト
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(
+            '[Middleware] Tenant not found, using default:',
+            subdomain,
+            '→',
+            DEFAULT_TENANT_ID
+          );
+        }
+      }
+    }
   }
 
   // デバッグログ（開発時のみ）
@@ -117,7 +205,10 @@ export default async function middleware(request: NextRequest) {
 
   // 0. マルチテナント識別（すべてのリクエストで実行）
   const hostname = request.headers.get('host') || '';
-  const { tenantId, subdomain } = extractTenantFromHostname(hostname);
+  const { tenantId, subdomain } = await extractTenantFromHostname(
+    hostname,
+    request.url
+  );
 
   // 0-1. DW社管理画面（locale不要、テナント識別スキップ）
   if (pathname.startsWith('/dw-admin')) {
