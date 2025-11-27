@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ interface VendorFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   vendor?: VendorFromAPI;
+  onSuccess?: () => void;
 }
 
 const VENDOR_CATEGORIES = [
@@ -44,24 +45,35 @@ const RATING_OPTIONS = [
   { value: '1', label: '1 - 不満' },
 ];
 
+// 初期フォームデータを生成
+const getInitialFormData = (vendor?: VendorFromAPI) => ({
+  name: vendor?.name || '',
+  category: vendor?.category || 'repair',
+  contactPerson: vendor?.contactPerson || '',
+  phone: vendor?.phone || '',
+  email: vendor?.email || '',
+  address: vendor?.address || '',
+  rating: vendor?.rating?.toString() || '',
+  notes: vendor?.notes || '',
+});
+
 export function VendorFormDialog({
   open,
   onOpenChange,
   vendor,
+  onSuccess,
 }: VendorFormDialogProps) {
   const { createVendor, updateVendor } = useVendorsAPI();
   const isEdit = !!vendor;
 
-  const [formData, setFormData] = useState({
-    name: vendor?.name || '',
-    category: vendor?.category || 'repair',
-    contactPerson: vendor?.contactPerson || '',
-    phone: vendor?.phone || '',
-    email: vendor?.email || '',
-    address: vendor?.address || '',
-    rating: vendor?.rating?.toString() || '',
-    notes: vendor?.notes || '',
-  });
+  const [formData, setFormData] = useState(getInitialFormData(vendor));
+
+  // vendor propが変更されたらフォームデータをリセット
+  useEffect(() => {
+    if (open) {
+      setFormData(getInitialFormData(vendor));
+    }
+  }, [vendor, open]);
 
   const [loading, setLoading] = useState(false);
 
@@ -90,6 +102,7 @@ export function VendorFormDialog({
     setLoading(false);
 
     if (result.success) {
+      onSuccess?.();
       onOpenChange(false);
     } else {
       alert(result.error || '保存に失敗しました');
