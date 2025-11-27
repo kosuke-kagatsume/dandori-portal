@@ -1186,3 +1186,78 @@ model SaaSMonthlyCost {
   @@index([tenantId, period])
   @@map("saas_monthly_costs")
 }
+
+// ========================================
+// お知らせ（Announcements）
+// ========================================
+
+// お知らせ
+model Announcement {
+  id                String    @id @default(cuid())
+  tenantId          String
+
+  // コンテンツ
+  title             String    // タイトル
+  content           String    @db.Text // 本文
+  type              String    @default("general") // general, system, emergency, event, policy
+  priority          String    @default("normal") // high, normal, low
+
+  // 対象者設定
+  target            String    @default("all") // all, department, role
+  targetDepartments String[]  // 対象部署リスト（target=departmentの場合）
+  targetRoles       String[]  // 対象ロールリスト（target=roleの場合）
+
+  // 公開設定
+  published         Boolean   @default(false)
+  publishedAt       DateTime?
+  startDate         DateTime  @db.Date // 表示開始日
+  endDate           DateTime? @db.Date // 表示終了日
+
+  // アクション設定
+  requiresAction    Boolean   @default(false) // アクション必須フラグ
+  actionLabel       String?   // アクションボタンラベル
+  actionUrl         String?   // アクションURL
+  actionDeadline    DateTime? @db.Date // アクション期限
+
+  // 作成者情報
+  createdBy         String    // 作成者ID
+  createdByName     String?   // 作成者名（非正規化）
+
+  // タイムスタンプ
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  reads             AnnouncementRead[]
+
+  @@index([tenantId])
+  @@index([tenantId, published])
+  @@index([tenantId, startDate])
+  @@index([published, startDate, endDate])
+  @@map("announcements")
+}
+
+// お知らせ既読状態
+model AnnouncementRead {
+  id              String    @id @default(cuid())
+  tenantId        String
+  announcementId  String
+  userId          String
+
+  // 既読情報
+  readAt          DateTime  @default(now())
+
+  // アクション完了（requiresAction=trueの場合）
+  actionCompleted Boolean   @default(false)
+  actionCompletedAt DateTime?
+
+  // Relations
+  announcement    Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId]) // 1ユーザー1お知らせに対して1レコード
+  @@index([tenantId])
+  @@index([announcementId])
+  @@index([userId])
+  @@index([tenantId, userId])
+  @@map("announcement_reads")
+}

@@ -1,39 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/saas/plans - プラン一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
     const serviceId = searchParams.get('serviceId');
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = { tenantId };
     if (serviceId) where.serviceId = serviceId;
 
+    // 総件数取得
+    const total = await prisma.saaSPlan.count({ where });
+
+    // プラン一覧取得（select最適化）
     const plans = await prisma.saaSPlan.findMany({
       where,
-      include: {
-        service: true,
+      select: {
+        id: true,
+        tenantId: true,
+        serviceId: true,
+        planName: true,
+        billingCycle: true,
+        pricePerUser: true,
+        fixedPrice: true,
+        currency: true,
+        maxUsers: true,
+        features: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        service: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: plans,
+    return successResponse(plans, {
       count: plans.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 300, // 5分キャッシュ
     });
   } catch (error) {
-    console.error('Error fetching SaaS plans:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch SaaS plans',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'SaaSプラン一覧の取得');
   }
 }
 

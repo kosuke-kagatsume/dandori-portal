@@ -1,25 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET: 役職一覧を取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId');
-    
-    if (!tenantId) {
-      return NextResponse.json({ error: 'tenantIdが必要です' }, { status: 400 });
-    }
+    const tenantId = getTenantId(searchParams);
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
+    const where = { tenantId };
+
+    // 総件数取得
+    const total = await prisma.position.count({ where });
+
+    // 役職一覧取得（select最適化）
     const positions = await prisma.position.findMany({
-      where: { tenantId },
+      where,
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        level: true,
+        sortOrder: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       orderBy: { sortOrder: 'asc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json(positions);
+    return successResponse(positions, {
+      count: positions.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 3600, // 1時間キャッシュ（マスターデータは変更頻度低）
+    });
   } catch (error) {
-    console.error('役職取得エラー:', error);
-    return NextResponse.json({ error: '役職の取得に失敗しました' }, { status: 500 });
+    return handleApiError(error, '役職一覧の取得');
   }
 }
 

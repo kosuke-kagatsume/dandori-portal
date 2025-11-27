@@ -11,6 +11,7 @@ export interface ApiSuccessResponse<T> {
     total: number;
     totalPages: number;
   };
+  stats?: Record<string, number>;
 }
 
 export interface ApiErrorResponse {
@@ -37,6 +38,7 @@ export function successResponse<T>(
   options?: {
     count?: number;
     pagination?: ApiSuccessResponse<T>['pagination'];
+    stats?: Record<string, number>;
     cacheSeconds?: number;
   }
 ) {
@@ -45,6 +47,7 @@ export function successResponse<T>(
     data,
     ...(options?.count !== undefined && { count: options.count }),
     ...(options?.pagination && { pagination: options.pagination }),
+    ...(options?.stats && { stats: options.stats }),
   });
 
   // GETリクエスト用のキャッシュヘッダー

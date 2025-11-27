@@ -1,13 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/approval-flows - 承認フロー一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
     const documentType = searchParams.get('documentType');
     const isActive = searchParams.get('isActive');
+    const includeDetails = searchParams.get('include') === 'details';
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = { tenantId };
 
@@ -19,84 +27,153 @@ export async function GET(request: NextRequest) {
       where.isActive = isActive === 'true';
     }
 
+    // 総件数取得
+    const total = await prisma.approvalFlowDefinition.count({ where });
+
+    // 承認フロー一覧取得（条件付きで詳細データ取得）
     const flows = await prisma.approvalFlowDefinition.findMany({
       where,
-      include: {
-        steps: {
-          orderBy: { stepNumber: 'asc' },
-          include: {
-            approvers: {
-              orderBy: { order: 'asc' },
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        description: true,
+        documentType: true,
+        flowType: true,
+        useOrganizationHierarchy: true,
+        organizationLevels: true,
+        isActive: true,
+        isDefault: true,
+        priority: true,
+        createdBy: true,
+        createdAt: true,
+        updatedAt: true,
+        // 詳細リクエスト時のみ関連データを含める
+        ...(includeDetails && {
+          steps: {
+            orderBy: { stepNumber: 'asc' as const },
+            select: {
+              id: true,
+              stepNumber: true,
+              name: true,
+              executionMode: true,
+              requiredApprovals: true,
+              timeoutHours: true,
+              allowDelegate: true,
+              allowSkip: true,
+              approvers: {
+                orderBy: { order: 'asc' as const },
+                select: {
+                  id: true,
+                  approverType: true,
+                  approverId: true,
+                  approverRole: true,
+                  positionLevel: true,
+                  order: true,
+                },
+              },
             },
           },
-        },
-        conditions: true,
+          conditions: {
+            select: {
+              id: true,
+              field: true,
+              operator: true,
+              value: true,
+              description: true,
+            },
+          },
+        }),
+        // 一覧用：カウントのみ
+        ...(!includeDetails && {
+          _count: {
+            select: {
+              steps: true,
+              conditions: true,
+            },
+          },
+        }),
       },
       orderBy: [
         { documentType: 'asc' },
         { priority: 'desc' },
         { createdAt: 'desc' },
       ],
+      skip,
+      take: limit,
     });
 
     // フロントエンドの型に変換
-    const formattedFlows = flows.map((flow) => ({
-      id: flow.id,
-      name: flow.name,
-      description: flow.description,
-      type: flow.flowType as 'organization' | 'custom',
-      documentType: flow.documentType as 'leave_request' | 'overtime_request' | 'expense_claim' | 'business_trip' | 'purchase_request',
-      useOrganizationHierarchy: flow.useOrganizationHierarchy,
-      organizationLevels: flow.organizationLevels,
-      steps: flow.steps.map((step) => ({
-        id: step.id,
-        stepNumber: step.stepNumber,
-        name: step.name,
-        mode: step.executionMode as 'serial' | 'parallel',
-        approvers: step.approvers.map((approver) => ({
-          id: approver.id,
-          type: approver.approverType,
-          userId: approver.approverId,
-          role: approver.approverRole,
-          positionLevel: approver.positionLevel,
-          order: approver.order,
-        })),
-        requiredApprovals: step.requiredApprovals,
-        timeoutHours: step.timeoutHours,
-        allowDelegate: step.allowDelegate,
-        allowSkip: step.allowSkip,
-      })),
-      conditions: flow.conditions.map((condition) => ({
-        id: condition.id,
-        field: condition.field,
-        operator: condition.operator as 'gte' | 'lte' | 'gt' | 'lt' | 'eq' | 'ne',
-        value: condition.value,
-        description: condition.description,
-      })),
-      isActive: flow.isActive,
-      isDefault: flow.isDefault,
-      priority: flow.priority,
-      createdBy: flow.createdBy,
-      createdAt: flow.createdAt.toISOString(),
-      updatedAt: flow.updatedAt.toISOString(),
-      companyId: flow.tenantId,
-    }));
+    const formattedFlows = flows.map((flow: any) => {
+      const baseData = {
+        id: flow.id,
+        name: flow.name,
+        description: flow.description,
+        type: flow.flowType as 'organization' | 'custom',
+        documentType: flow.documentType as 'leave_request' | 'overtime_request' | 'expense_claim' | 'business_trip' | 'purchase_request',
+        useOrganizationHierarchy: flow.useOrganizationHierarchy,
+        organizationLevels: flow.organizationLevels,
+        isActive: flow.isActive,
+        isDefault: flow.isDefault,
+        priority: flow.priority,
+        createdBy: flow.createdBy,
+        createdAt: flow.createdAt.toISOString(),
+        updatedAt: flow.updatedAt.toISOString(),
+        companyId: flow.tenantId,
+      };
 
-    return NextResponse.json({
-      success: true,
-      data: formattedFlows,
+      // 詳細データがある場合のみマッピング
+      if (includeDetails && flow.steps) {
+        return {
+          ...baseData,
+          steps: flow.steps.map((step: any) => ({
+            id: step.id,
+            stepNumber: step.stepNumber,
+            name: step.name,
+            mode: step.executionMode as 'serial' | 'parallel',
+            approvers: step.approvers.map((approver: any) => ({
+              id: approver.id,
+              type: approver.approverType,
+              userId: approver.approverId,
+              role: approver.approverRole,
+              positionLevel: approver.positionLevel,
+              order: approver.order,
+            })),
+            requiredApprovals: step.requiredApprovals,
+            timeoutHours: step.timeoutHours,
+            allowDelegate: step.allowDelegate,
+            allowSkip: step.allowSkip,
+          })),
+          conditions: flow.conditions?.map((condition: any) => ({
+            id: condition.id,
+            field: condition.field,
+            operator: condition.operator as 'gte' | 'lte' | 'gt' | 'lt' | 'eq' | 'ne',
+            value: condition.value,
+            description: condition.description,
+          })) || [],
+        };
+      }
+
+      // 一覧用：カウントのみ
+      return {
+        ...baseData,
+        stepCount: flow._count?.steps || 0,
+        conditionCount: flow._count?.conditions || 0,
+      };
+    });
+
+    return successResponse(formattedFlows, {
       count: formattedFlows.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 300, // 5分キャッシュ
     });
   } catch (error) {
-    console.error('Error fetching approval flows:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch approval flows',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, '承認フロー一覧の取得');
   }
 }
 

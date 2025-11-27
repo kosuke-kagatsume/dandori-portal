@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/dw-admin/legal-updates - 法令一覧取得（DW管理用）
 export async function GET(request: NextRequest) {
@@ -7,8 +12,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const isPublished = searchParams.get('isPublished');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = {};
 
@@ -23,41 +27,47 @@ export async function GET(request: NextRequest) {
     const [legalUpdates, total] = await Promise.all([
       prisma.legalUpdate.findMany({
         where,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          category: true,
+          effectiveDate: true,
+          relatedLaws: true,
+          affectedAreas: true,
+          priority: true,
+          isPublished: true,
+          publishedAt: true,
+          referenceUrl: true,
+          createdAt: true,
+          updatedAt: true,
+          createdBy: true,
+          _count: {
+            select: { tenantStatuses: true }
+          }
+        },
         orderBy: [
           { effectiveDate: 'desc' },
           { createdAt: 'desc' },
         ],
+        skip,
         take: limit,
-        skip: offset,
-        include: {
-          _count: {
-            select: { tenantStatuses: true }
-          }
-        }
       }),
       prisma.legalUpdate.count({ where }),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      data: legalUpdates,
+    return successResponse(legalUpdates, {
+      count: legalUpdates.length,
       pagination: {
-        total,
+        page,
         limit,
-        offset,
-        hasMore: offset + legalUpdates.length < total,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
+      cacheSeconds: 300, // 5分キャッシュ（管理用）
     });
   } catch (error) {
-    console.error('Error fetching legal updates:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch legal updates',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, '法令一覧の取得（DW管理）');
   }
 }
 

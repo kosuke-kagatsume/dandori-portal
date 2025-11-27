@@ -1,17 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/workflows - ワークフロー一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const tenantId = getTenantId(searchParams);
     const status = searchParams.get('status');
     const type = searchParams.get('type');
     const requesterId = searchParams.get('requesterId');
     const approverId = searchParams.get('approverId');
-    const tenantId = searchParams.get('tenantId');
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { tenantId };
 
     if (status && status !== 'all') {
       where.status = status;
@@ -25,10 +32,6 @@ export async function GET(request: NextRequest) {
       where.requesterId = requesterId;
     }
 
-    if (tenantId) {
-      where.tenantId = tenantId;
-    }
-
     // 承認者でフィルター（ApprovalStepとのリレーション経由）
     if (approverId) {
       where.approvalSteps = {
@@ -39,41 +42,74 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    // 総件数取得
+    const total = await prisma.workflowRequest.count({ where });
+
+    // ワークフロー一覧取得（select最適化）
     const workflows = await prisma.workflowRequest.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        tenantId: true,
+        requesterId: true,
+        requesterName: true,
+        department: true,
+        type: true,
+        title: true,
+        description: true,
+        status: true,
+        priority: true,
+        currentStep: true,
+        amount: true,
+        days: true,
+        hours: true,
+        dueDate: true,
+        createdAt: true,
+        updatedAt: true,
         approvalSteps: {
-          orderBy: {
-            order: 'asc',
+          orderBy: { order: 'asc' },
+          select: {
+            id: true,
+            order: true,
+            approverRole: true,
+            approverId: true,
+            approverName: true,
+            status: true,
+            executionMode: true,
+            comment: true,
+            approvedAt: true,
           },
         },
         timelineEntries: {
-          orderBy: {
-            createdAt: 'desc',
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: {
+            id: true,
+            action: true,
+            actorId: true,
+            actorName: true,
+            details: true,
+            createdAt: true,
           },
-          take: 5, // 最新5件のみ
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: workflows,
+    return successResponse(workflows, {
       count: workflows.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 30, // 30秒キャッシュ（ワークフローは動的）
     });
   } catch (error) {
-    console.error('Error fetching workflows:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch workflows',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'ワークフロー一覧の取得');
   }
 }
 

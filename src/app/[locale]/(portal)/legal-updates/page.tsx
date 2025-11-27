@@ -112,7 +112,7 @@ interface LegalUpdate {
 interface ApiResponse {
   success: boolean;
   data: LegalUpdate[];
-  stats: {
+  stats?: {
     total: number;
     completed: number;
     inProgress: number;
@@ -157,7 +157,10 @@ export default function LegalUpdatesPage() {
 
       if (result.success) {
         setUpdates(result.data);
-        setStats(result.stats);
+        // statsが存在する場合のみ更新（undefinedの場合はデフォルト値を維持）
+        if (result.stats) {
+          setStats(result.stats);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch legal updates:', error);

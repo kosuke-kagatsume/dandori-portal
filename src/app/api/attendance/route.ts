@@ -1,16 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/attendance - 勤怠一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const tenantId = getTenantId(searchParams);
     const userId = searchParams.get('userId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const status = searchParams.get('status');
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { tenantId };
 
     if (userId) {
       where.userId = userId;
@@ -35,9 +43,30 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
+    // 総件数取得
+    const total = await prisma.attendance.count({ where });
+
+    // 勤怠一覧取得（select最適化）
     const attendance = await prisma.attendance.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        tenantId: true,
+        date: true,
+        checkIn: true,
+        checkOut: true,
+        breakStart: true,
+        breakEnd: true,
+        totalBreakMinutes: true,
+        workMinutes: true,
+        overtimeMinutes: true,
+        workLocation: true,
+        status: true,
+        memo: true,
+        approvalStatus: true,
+        createdAt: true,
+        updatedAt: true,
         user: {
           select: {
             id: true,
@@ -48,26 +77,23 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: {
-        date: 'desc',
-      },
+      orderBy: { date: 'desc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: attendance,
+    return successResponse(attendance, {
       count: attendance.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 60, // 1分キャッシュ（勤怠はリアルタイム性重視）
     });
   } catch (error) {
-    console.error('Error fetching attendance:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch attendance',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, '勤怠一覧の取得');
   }
 }
 

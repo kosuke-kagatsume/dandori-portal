@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/saas/assignments - ライセンス割り当て一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
     const serviceId = searchParams.get('serviceId');
     const userId = searchParams.get('userId');
     const isActive = searchParams.get('isActive');
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = { tenantId };
     if (serviceId) where.serviceId = serviceId;
@@ -17,9 +24,28 @@ export async function GET(request: NextRequest) {
       where.isActive = isActive === 'true';
     }
 
+    // 総件数取得
+    const total = await prisma.saaSLicenseAssignment.count({ where });
+
+    // ライセンス割り当て一覧取得（select最適化）
     const assignments = await prisma.saaSLicenseAssignment.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        tenantId: true,
+        serviceId: true,
+        planId: true,
+        userId: true,
+        userName: true,
+        userEmail: true,
+        userDepartment: true,
+        assignedDate: true,
+        expiryDate: true,
+        status: true,
+        isActive: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
         service: {
           select: {
             id: true,
@@ -28,26 +54,32 @@ export async function GET(request: NextRequest) {
             licenseType: true,
           },
         },
-        plan: true,
+        plan: {
+          select: {
+            id: true,
+            planName: true,
+            billingCycle: true,
+            pricePerUser: true,
+          },
+        },
       },
       orderBy: { assignedDate: 'desc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: assignments,
+    return successResponse(assignments, {
       count: assignments.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 60, // 1分キャッシュ
     });
   } catch (error) {
-    console.error('Error fetching license assignments:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch license assignments',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'ライセンス割り当て一覧の取得');
   }
 }
 

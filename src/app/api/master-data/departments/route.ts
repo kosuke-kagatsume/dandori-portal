@@ -1,25 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET: 部署一覧を取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId');
-    
-    if (!tenantId) {
-      return NextResponse.json({ error: 'tenantIdが必要です' }, { status: 400 });
-    }
+    const tenantId = getTenantId(searchParams);
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
+    const where = { tenantId };
+
+    // 総件数取得
+    const total = await prisma.department.count({ where });
+
+    // 部署一覧取得（select最適化）
     const departments = await prisma.department.findMany({
-      where: { tenantId },
+      where,
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        parentId: true,
+        sortOrder: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       orderBy: { sortOrder: 'asc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json(departments);
+    return successResponse(departments, {
+      count: departments.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 3600, // 1時間キャッシュ（マスターデータは変更頻度低）
+    });
   } catch (error) {
-    console.error('部署取得エラー:', error);
-    return NextResponse.json({ error: '部署の取得に失敗しました' }, { status: 500 });
+    return handleApiError(error, '部署一覧の取得');
   }
 }
 

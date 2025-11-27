@@ -1,25 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET: 雇用形態一覧を取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId');
-    
-    if (!tenantId) {
-      return NextResponse.json({ error: 'tenantIdが必要です' }, { status: 400 });
-    }
+    const tenantId = getTenantId(searchParams);
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
+    const where = { tenantId };
+
+    // 総件数取得
+    const total = await prisma.employmentType.count({ where });
+
+    // 雇用形態一覧取得（select最適化）
     const employmentTypes = await prisma.employmentType.findMany({
-      where: { tenantId },
+      where,
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        sortOrder: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       orderBy: { sortOrder: 'asc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json(employmentTypes);
+    return successResponse(employmentTypes, {
+      count: employmentTypes.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 3600, // 1時間キャッシュ（マスターデータは変更頻度低）
+    });
   } catch (error) {
-    console.error('雇用形態取得エラー:', error);
-    return NextResponse.json({ error: '雇用形態の取得に失敗しました' }, { status: 500 });
+    return handleApiError(error, '雇用形態一覧の取得');
   }
 }
 

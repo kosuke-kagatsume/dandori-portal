@@ -1,21 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/assets/maintenance-records - メンテナンス記録一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
     const vehicleId = searchParams.get('vehicleId');
     const type = searchParams.get('type');
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = { tenantId };
     if (vehicleId) where.vehicleId = vehicleId;
     if (type) where.type = type;
 
+    // 総件数取得
+    const total = await prisma.maintenanceRecord.count({ where });
+
+    // メンテナンス記録一覧取得（select最適化）
     const records = await prisma.maintenanceRecord.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        tenantId: true,
+        vehicleId: true,
+        vendorId: true,
+        type: true,
+        date: true,
+        mileage: true,
+        cost: true,
+        description: true,
+        nextDueDate: true,
+        nextDueMileage: true,
+        tireType: true,
+        performedBy: true,
+        performedByName: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
         vehicle: {
           select: {
             id: true,
@@ -34,23 +62,22 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: { date: 'desc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: records,
+    return successResponse(records, {
       count: records.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 60, // 1分キャッシュ
     });
   } catch (error) {
-    console.error('Error fetching maintenance records:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch maintenance records',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'メンテナンス記録一覧の取得');
   }
 }
 

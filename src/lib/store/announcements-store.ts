@@ -1,17 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  fetchAnnouncements as supabaseFetchAnnouncements,
-  fetchAnnouncementById as supabaseFetchAnnouncementById,
-  createAnnouncement as supabaseCreateAnnouncement,
-  updateAnnouncement as supabaseUpdateAnnouncement,
-  deleteAnnouncement as supabaseDeleteAnnouncement,
-  publishAnnouncement as supabasePublishAnnouncement,
-  unpublishAnnouncement as supabaseUnpublishAnnouncement,
-  markAnnouncementAsRead as supabaseMarkAsRead,
-  fetchReadAnnouncementIds as supabaseFetchReadIds,
-  fetchPublishedAnnouncements as supabaseFetchPublished,
-} from '@/lib/supabase/announcements-service';
+
+// API呼び出し関数
+const API_BASE = '/api/announcements';
+
+async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || `API error: ${response.status}`);
+  }
+
+  return response.json();
+}
 
 // アナウンスの優先度
 export type AnnouncementPriority =
@@ -136,7 +144,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
       isLoading: false,
       error: null,
 
-      // Supabase統合: お知らせ一覧取得
+      // API統合: お知らせ一覧取得
       fetchAnnouncements: async () => {
         set({ isLoading: true, error: null });
 
@@ -147,7 +155,22 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const announcements = await supabaseFetchAnnouncements();
+          const response = await apiFetch<{
+            success: boolean;
+            data: Announcement[];
+          }>(`${API_BASE}?tenantId=demo`);
+
+          // APIレスポンスをストア形式に変換
+          const announcements = response.data.map((item) => ({
+            ...item,
+            userStates: (item as unknown as { reads?: Array<{ userId: string; readAt: string; actionCompleted: boolean; actionCompletedAt?: string }> }).reads?.map((read) => ({
+              userId: read.userId,
+              status: read.actionCompleted ? 'completed' as UserAnnouncementStatus : 'read' as UserAnnouncementStatus,
+              readAt: read.readAt,
+              completedAt: read.actionCompletedAt,
+            })) || [],
+          }));
+
           set({ announcements, isLoading: false });
         } catch (error) {
           const errorMessage = error instanceof Error
@@ -162,7 +185,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         }
       },
 
-      // Supabase統合: アナウンスを作成
+      // API統合: アナウンスを作成
       createAnnouncement: async (announcement) => {
         set({ isLoading: true, error: null });
 
@@ -184,7 +207,16 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const createdAnnouncement = await supabaseCreateAnnouncement(announcement);
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}?tenantId=demo`, {
+            method: 'POST',
+            body: JSON.stringify(announcement),
+          });
+
+          const createdAnnouncement: Announcement = {
+            ...response.data,
+            userStates: [],
+          };
+
           set((state) => ({
             announcements: [...state.announcements, createdAnnouncement],
             isLoading: false,
@@ -202,7 +234,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         }
       },
 
-      // Supabase統合: アナウンスを更新
+      // API統合: アナウンスを更新
       updateAnnouncement: async (id, updates) => {
         set({ isLoading: true, error: null });
 
@@ -224,7 +256,17 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const updatedAnnouncement = await supabaseUpdateAnnouncement(id, updates);
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=demo`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+          });
+
+          const existingAnnouncement = get().announcements.find((a) => a.id === id);
+          const updatedAnnouncement: Announcement = {
+            ...response.data,
+            userStates: existingAnnouncement?.userStates || [],
+          };
+
           set((state) => ({
             announcements: state.announcements.map((announcement) =>
               announcement.id === id ? updatedAnnouncement : announcement
@@ -244,7 +286,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         }
       },
 
-      // Supabase統合: アナウンスを削除
+      // API統合: アナウンスを削除
       deleteAnnouncement: async (id) => {
         set({ isLoading: true, error: null });
 
@@ -258,7 +300,10 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          await supabaseDeleteAnnouncement(id);
+          await apiFetch<{ success: boolean }>(`${API_BASE}/${id}?tenantId=demo`, {
+            method: 'DELETE',
+          });
+
           set((state) => ({
             announcements: state.announcements.filter((announcement) => announcement.id !== id),
             isLoading: false,
@@ -276,7 +321,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         }
       },
 
-      // Supabase統合: アナウンスを公開
+      // API統合: アナウンスを公開
       publishAnnouncement: async (id) => {
         set({ isLoading: true, error: null });
 
@@ -299,7 +344,17 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const updatedAnnouncement = await supabasePublishAnnouncement(id);
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=demo`, {
+            method: 'PUT',
+            body: JSON.stringify({ published: true }),
+          });
+
+          const existingAnnouncement = get().announcements.find((a) => a.id === id);
+          const updatedAnnouncement: Announcement = {
+            ...response.data,
+            userStates: existingAnnouncement?.userStates || [],
+          };
+
           set((state) => ({
             announcements: state.announcements.map((announcement) =>
               announcement.id === id ? updatedAnnouncement : announcement
@@ -319,7 +374,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         }
       },
 
-      // Supabase統合: アナウンスを非公開に
+      // API統合: アナウンスを非公開に
       unpublishAnnouncement: async (id) => {
         set({ isLoading: true, error: null });
 
@@ -341,7 +396,17 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const updatedAnnouncement = await supabaseUnpublishAnnouncement(id);
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=demo`, {
+            method: 'PUT',
+            body: JSON.stringify({ published: false }),
+          });
+
+          const existingAnnouncement = get().announcements.find((a) => a.id === id);
+          const updatedAnnouncement: Announcement = {
+            ...response.data,
+            userStates: existingAnnouncement?.userStates || [],
+          };
+
           set((state) => ({
             announcements: state.announcements.map((announcement) =>
               announcement.id === id ? updatedAnnouncement : announcement
@@ -361,7 +426,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         }
       },
 
-      // Supabase統合: 既読にする
+      // API統合: 既読にする
       markAsRead: async (announcementId, userId) => {
         try {
           // デモモードチェック
@@ -403,7 +468,10 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          await supabaseMarkAsRead(announcementId, userId);
+          await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=demo`, {
+            method: 'POST',
+            body: JSON.stringify({ userId }),
+          });
 
           // ローカル状態を更新（オプティミスティックアップデート）
           set((state) => ({
@@ -444,46 +512,6 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
           console.error('Failed to mark as read:', error);
           throw error;
         }
-      },
-
-      // 完了にする (デモモードのみ、Supabaseには対応しない)
-      markAsCompleted: (announcementId, userId) => {
-        set((state) => ({
-          announcements: state.announcements.map((announcement) => {
-            if (announcement.id !== announcementId) return announcement;
-
-            const existingState = announcement.userStates.find((s) => s.userId === userId);
-
-            if (existingState) {
-              // 既存の状態を更新
-              return {
-                ...announcement,
-                userStates: announcement.userStates.map((s) =>
-                  s.userId === userId && s.status === 'unread'
-                    ? {
-                        ...s,
-                        status: 'read' as UserAnnouncementStatus,
-                        readAt: new Date().toISOString(),
-                      }
-                    : s
-                ),
-              };
-            } else {
-              // 新しい状態を追加
-              return {
-                ...announcement,
-                userStates: [
-                  ...announcement.userStates,
-                  {
-                    userId,
-                    status: 'read' as UserAnnouncementStatus,
-                    readAt: new Date().toISOString(),
-                  },
-                ],
-              };
-            }
-          }),
-        }));
       },
 
       // 完了にする

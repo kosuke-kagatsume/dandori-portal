@@ -1,26 +1,45 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
-// GET /api/users - 全ユーザー取得
+// GET /api/users - ユーザー一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const tenantId = getTenantId(searchParams);
     const status = searchParams.get('status');
-    const tenantId = searchParams.get('tenantId');
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { tenantId };
 
     if (status && status !== 'all') {
       where.status = status;
     }
 
-    if (tenantId) {
-      where.tenantId = tenantId;
-    }
+    // 総件数取得
+    const total = await prisma.user.count({ where });
 
+    // ユーザー一覧取得（select最適化）
     const users = await prisma.user.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        status: true,
+        position: true,
+        department: true,
+        avatar: true,
+        roles: true,
+        hireDate: true,
+        createdAt: true,
+        updatedAt: true,
         orgUnit: {
           select: {
             id: true,
@@ -35,26 +54,23 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: users,
+    return successResponse(users, {
       count: users.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 300, // 5分キャッシュ
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch users',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'ユーザー一覧の取得');
   }
 }
 

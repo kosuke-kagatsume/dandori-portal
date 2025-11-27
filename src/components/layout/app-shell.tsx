@@ -25,6 +25,7 @@ import { useScheduledChangesNotifications } from '@/hooks/use-scheduled-changes-
 import { usePaymentReminderCheck } from '@/hooks/use-payment-reminder-check';
 import { initBackgroundSync } from '@/lib/offline/sync-manager';
 import { initOfflineDB } from '@/lib/offline/offline-storage';
+import { SWRProvider } from '@/components/providers/swr-provider';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -135,52 +136,54 @@ export function AppShell({ children }: AppShellProps) {
   }, [theme]);
 
   return (
-    <div className={cn('min-h-screen bg-background flex', getDensityClass())}>
-      {/* スキップリンク - アクセシビリティ向上 */}
-      <SkipLink />
+    <SWRProvider>
+      <div className={cn('min-h-screen bg-background flex', getDensityClass())}>
+        {/* スキップリンク - アクセシビリティ向上 */}
+        <SkipLink />
 
-      {/* Desktop Sidebar - Hidden on mobile */}
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-
-      {/* Mobile Sidebar - Sheet */}
-      <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-        <SheetContent side="left" className="w-64 p-0">
-          <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
-        </SheetContent>
-      </Sheet>
-
-      {/* Main Content */}
-      <div className={cn(
-        'flex-1 flex flex-col min-h-screen transition-all duration-300',
-        // モバイル: マージンなし、デスクトップ: サイドバーの幅に応じたマージン
-        'ml-0',
-        sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
-      )}>
-        {/* Mobile Menu Button - Only visible on mobile */}
-        <div className="md:hidden fixed top-4 left-4 z-40">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setMobileSidebarOpen(true)}
-            className="bg-background shadow-md"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+        {/* Desktop Sidebar - Hidden on mobile */}
+        <div className="hidden md:block">
+          <Sidebar />
         </div>
 
-        {/* Header */}
-        <Header />
+        {/* Mobile Sidebar - Sheet */}
+        <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+          <SheetContent side="left" className="w-64 p-0">
+            <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
+          </SheetContent>
+        </Sheet>
 
-        {/* Page Content - メインコンテンツ */}
-        <main id="main-content" className="flex-1 overflow-auto p-6" role="main">
-          {children}
-        </main>
+        {/* Main Content */}
+        <div className={cn(
+          'flex-1 flex flex-col min-h-screen transition-all duration-300',
+          // モバイル: マージンなし、デスクトップ: サイドバーの幅に応じたマージン
+          'ml-0',
+          sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
+        )}>
+          {/* Mobile Menu Button - Only visible on mobile */}
+          <div className="md:hidden fixed top-4 left-4 z-40">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="bg-background shadow-md"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Header */}
+          <Header />
+
+          {/* Page Content - メインコンテンツ */}
+          <main id="main-content" className="flex-1 overflow-auto p-6" role="main">
+            {children}
+          </main>
+        </div>
+
+        {/* Global Toaster */}
+        <Toaster position="top-right" />
       </div>
-
-      {/* Global Toaster */}
-      <Toaster position="top-right" />
-    </div>
+    </SWRProvider>
   );
 }
