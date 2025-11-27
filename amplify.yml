@@ -12,17 +12,16 @@ frontend:
 
         # 環境変数を.env.productionに書き出し（Amplify SSR Lambda用）
         # これにより、ランタイムで環境変数が利用可能になる
-        - |
-          echo "DATABASE_URL=${DATABASE_URL}" >> .env.production
-          echo "DEMO_MODE=${DEMO_MODE}" >> .env.production
-          echo "NEXT_PUBLIC_DEMO_MODE=${NEXT_PUBLIC_DEMO_MODE}" >> .env.production
-          echo "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}" >> .env.production
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}" >> .env.production
+        - 'echo "DATABASE_URL=${DATABASE_URL}" >> .env.production'
+        - 'echo "DEMO_MODE=${DEMO_MODE}" >> .env.production'
+        - 'echo "NEXT_PUBLIC_DEMO_MODE=${NEXT_PUBLIC_DEMO_MODE}" >> .env.production'
+        - 'echo "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}" >> .env.production'
+        - 'echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}" >> .env.production'
 
         # 環境変数が正しく書き出されたか確認（DATABASE_URLは先頭のみ表示）
-        - echo "=== .env.production created ==="
+        - 'echo "=== .env.production created ==="'
         - cat .env.production | grep -v DATABASE_URL
-        - echo "DATABASE_URL is set: $(test -n \"$DATABASE_URL\" && echo 'YES' || echo 'NO')"
+        - 'echo "DATABASE_URL is set: $(test -n \"$DATABASE_URL\" && echo YES || echo NO)"'
 
         # Prisma Clientの生成
         - npx prisma generate
