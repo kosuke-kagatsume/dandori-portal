@@ -1,41 +1,88 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/assets/pc-assets - PC資産一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
     const status = searchParams.get('status');
     const ownershipType = searchParams.get('ownershipType');
+    const includeDetails = searchParams.get('include') === 'details';
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = { tenantId };
     if (status) where.status = status;
     if (ownershipType) where.ownershipType = ownershipType;
 
+    // 総件数取得（ページネーション用）
+    const total = await prisma.pCAsset.count({ where });
+
+    // 一覧用：必要最小限のフィールドのみ取得
     const pcAssets = await prisma.pCAsset.findMany({
       where,
-      include: {
-        softwareLicenses: true,
+      select: {
+        id: true,
+        tenantId: true,
+        assetNumber: true,
+        manufacturer: true,
+        model: true,
+        serialNumber: true,
+        cpu: true,
+        memory: true,
+        storage: true,
+        os: true,
+        assignedUserId: true,
+        assignedUserName: true,
+        assignedDate: true,
+        ownershipType: true,
+        leaseCompany: true,
+        leaseStartDate: true,
+        leaseEndDate: true,
+        monthlyLeaseCost: true,
+        purchaseDate: true,
+        purchasePrice: true,
+        warrantyExpiry: true,
+        status: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        // 詳細リクエスト時のみソフトウェアライセンスを含める
+        ...(includeDetails && {
+          softwareLicenses: {
+            select: {
+              id: true,
+              name: true,
+              licenseKey: true,
+              expiryDate: true,
+              status: true,
+            },
+          },
+        }),
       },
       orderBy: { assetNumber: 'asc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: pcAssets,
+    return successResponse(pcAssets, {
       count: pcAssets.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 60, // 1分キャッシュ
     });
   } catch (error) {
-    console.error('Error fetching PC assets:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch PC assets',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'PC資産一覧の取得');
   }
 }
 
@@ -70,12 +117,9 @@ export async function POST(request: NextRequest) {
 
     // バリデーション
     if (!assetNumber || !manufacturer || !model || !serialNumber) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '資産番号、メーカー、モデル、シリアル番号は必須です',
-        },
-        { status: 400 }
+      return handleApiError(
+        new Error('資産番号、メーカー、モデル、シリアル番号は必須です'),
+        'PC資産登録'
       );
     }
 
@@ -106,19 +150,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: pcAsset,
-    });
+    return successResponse(pcAsset);
   } catch (error) {
-    console.error('Error creating PC asset:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create PC asset',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'PC資産登録');
   }
 }

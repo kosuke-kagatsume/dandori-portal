@@ -1,48 +1,108 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/saas/services - SaaSサービス一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
     const category = searchParams.get('category');
     const status = searchParams.get('status');
+    const includeDetails = searchParams.get('include') === 'details';
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = { tenantId };
     if (category) where.category = category;
     if (status) where.status = status;
 
+    // 総件数取得（ページネーション用）
+    const total = await prisma.saaSService.count({ where });
+
+    // 一覧用：必要最小限のフィールドのみ取得
     const services = await prisma.saaSService.findMany({
       where,
-      include: {
-        plans: true,
-        assignments: {
-          where: { status: 'active' },
-        },
-        monthlyCosts: {
-          orderBy: { period: 'desc' },
-          take: 12,
-        },
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        category: true,
+        provider: true,
+        description: true,
+        website: true,
+        licenseType: true,
+        billingCycle: true,
+        basePrice: true,
+        currency: true,
+        ssoEnabled: true,
+        mfaRequired: true,
+        dataResidency: true,
+        complianceCerts: true,
+        contractStartDate: true,
+        contractEndDate: true,
+        autoRenewal: true,
+        noticePeriodDays: true,
+        adminEmail: true,
+        supportContact: true,
+        status: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        // 詳細リクエスト時のみ関連データを含める
+        ...(includeDetails && {
+          plans: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              userLimit: true,
+              features: true,
+            },
+          },
+          assignments: {
+            where: { status: 'active' },
+            select: {
+              id: true,
+              userId: true,
+              userName: true,
+              assignedDate: true,
+              status: true,
+            },
+          },
+          monthlyCosts: {
+            orderBy: { period: 'desc' as const },
+            take: 12,
+            select: {
+              id: true,
+              period: true,
+              amount: true,
+              userCount: true,
+            },
+          },
+        }),
       },
       orderBy: { name: 'asc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: services,
+    return successResponse(services, {
       count: services.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 60, // 1分キャッシュ
     });
   } catch (error) {
-    console.error('Error fetching SaaS services:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch SaaS services',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'SaaSサービス一覧の取得');
   }
 }
 
@@ -76,12 +136,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!name || !category || !licenseType) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'サービス名、カテゴリ、ライセンスタイプは必須です',
-        },
-        { status: 400 }
+      return handleApiError(
+        new Error('サービス名、カテゴリ、ライセンスタイプは必須です'),
+        'SaaSサービス登録'
       );
     }
 
@@ -112,19 +169,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: service,
-    });
+    return successResponse(service);
   } catch (error) {
-    console.error('Error creating SaaS service:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create SaaS service',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'SaaSサービス登録');
   }
 }

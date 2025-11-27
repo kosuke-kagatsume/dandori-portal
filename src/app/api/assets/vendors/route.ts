@@ -1,38 +1,75 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  successResponse,
+  handleApiError,
+  getTenantId,
+  getPaginationParams,
+} from '@/lib/api/api-helpers';
 
 // GET /api/assets/vendors - 業者一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
+    const category = searchParams.get('category');
+    const includeDetails = searchParams.get('include') === 'details';
+    const { page, limit, skip } = getPaginationParams(searchParams);
 
+    const where: Record<string, unknown> = { tenantId };
+    if (category) where.category = category;
+
+    // 総件数取得（ページネーション用）
+    const total = await prisma.vendor.count({ where });
+
+    // 一覧用：必要最小限のフィールドのみ取得
     const vendors = await prisma.vendor.findMany({
-      where: { tenantId },
-      include: {
-        maintenanceRecords: {
-          orderBy: { date: 'desc' },
-          take: 5,
-        },
+      where,
+      select: {
+        id: true,
+        tenantId: true,
+        name: true,
+        category: true,
+        phone: true,
+        address: true,
+        contactPerson: true,
+        email: true,
+        rating: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        // 詳細リクエスト時のみメンテナンス履歴を含める
+        ...(includeDetails && {
+          maintenanceRecords: {
+            orderBy: { date: 'desc' as const },
+            take: 5,
+            select: {
+              id: true,
+              type: true,
+              date: true,
+              cost: true,
+              description: true,
+            },
+          },
+        }),
       },
       orderBy: { name: 'asc' },
+      skip,
+      take: limit,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: vendors,
+    return successResponse(vendors, {
       count: vendors.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      cacheSeconds: 60, // 1分キャッシュ
     });
   } catch (error) {
-    console.error('Error fetching vendors:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch vendors',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, '業者一覧の取得');
   }
 }
 
@@ -43,6 +80,7 @@ export async function POST(request: NextRequest) {
     const {
       tenantId = 'tenant-demo-001',
       name,
+      category,
       phone,
       address,
       contactPerson,
@@ -52,16 +90,14 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!name) {
-      return NextResponse.json(
-        { success: false, error: '業者名は必須です' },
-        { status: 400 }
-      );
+      return handleApiError(new Error('業者名は必須です'), '業者登録');
     }
 
     const vendor = await prisma.vendor.create({
       data: {
         tenantId,
         name,
+        category,
         phone,
         address,
         contactPerson,
@@ -71,19 +107,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: vendor,
-    });
+    return successResponse(vendor);
   } catch (error) {
-    console.error('Error creating vendor:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create vendor',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, '業者登録');
   }
 }
