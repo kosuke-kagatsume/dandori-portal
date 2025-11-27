@@ -12,12 +12,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const tenantId = getTenantId(searchParams);
-    const category = searchParams.get('category');
     const includeDetails = searchParams.get('include') === 'details';
     const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = { tenantId };
-    if (category) where.category = category;
 
     // 総件数取得（ページネーション用）
     const total = await prisma.vendor.count({ where });
@@ -29,7 +27,6 @@ export async function GET(request: NextRequest) {
         id: true,
         tenantId: true,
         name: true,
-        category: true,
         phone: true,
         address: true,
         contactPerson: true,
@@ -80,7 +77,6 @@ export async function POST(request: NextRequest) {
     const {
       tenantId = 'tenant-demo-001',
       name,
-      category,
       phone,
       address,
       contactPerson,
@@ -97,7 +93,6 @@ export async function POST(request: NextRequest) {
       data: {
         tenantId,
         name,
-        category,
         phone,
         address,
         contactPerson,

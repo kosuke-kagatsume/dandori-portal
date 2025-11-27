@@ -13,13 +13,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const tenantId = getTenantId(searchParams);
     const category = searchParams.get('category');
-    const status = searchParams.get('status');
+    const isActive = searchParams.get('isActive');
     const includeDetails = searchParams.get('include') === 'details';
     const { page, limit, skip } = getPaginationParams(searchParams);
 
     const where: Record<string, unknown> = { tenantId };
     if (category) where.category = category;
-    if (status) where.status = status;
+    if (isActive !== null) where.isActive = isActive === 'true';
 
     // 総件数取得（ページネーション用）
     const total = await prisma.saaSService.count({ where });
@@ -32,25 +32,20 @@ export async function GET(request: NextRequest) {
         tenantId: true,
         name: true,
         category: true,
-        provider: true,
-        description: true,
+        vendor: true,
         website: true,
+        logo: true,
+        description: true,
         licenseType: true,
-        billingCycle: true,
-        basePrice: true,
-        currency: true,
+        securityRating: true,
         ssoEnabled: true,
-        mfaRequired: true,
-        dataResidency: true,
-        complianceCerts: true,
+        mfaEnabled: true,
+        adminEmail: true,
+        supportUrl: true,
         contractStartDate: true,
         contractEndDate: true,
-        autoRenewal: true,
-        noticePeriodDays: true,
-        adminEmail: true,
-        supportContact: true,
-        status: true,
-        notes: true,
+        autoRenew: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true,
         // 詳細リクエスト時のみ関連データを含める
@@ -58,10 +53,14 @@ export async function GET(request: NextRequest) {
           plans: {
             select: {
               id: true,
-              name: true,
-              price: true,
-              userLimit: true,
+              planName: true,
+              billingCycle: true,
+              pricePerUser: true,
+              fixedPrice: true,
+              currency: true,
+              maxUsers: true,
               features: true,
+              isActive: true,
             },
           },
           assignments: {
@@ -70,6 +69,7 @@ export async function GET(request: NextRequest) {
               id: true,
               userId: true,
               userName: true,
+              userEmail: true,
               assignedDate: true,
               status: true,
             },
@@ -80,8 +80,9 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               period: true,
-              amount: true,
-              userCount: true,
+              totalCost: true,
+              userLicenseCount: true,
+              currency: true,
             },
           },
         }),
@@ -114,25 +115,20 @@ export async function POST(request: NextRequest) {
       tenantId = 'tenant-demo-001',
       name,
       category,
-      provider,
-      description,
+      vendor,
       website,
+      logo,
+      description,
       licenseType,
-      billingCycle = 'monthly',
-      basePrice,
-      currency = 'JPY',
+      securityRating,
       ssoEnabled = false,
-      mfaRequired = false,
-      dataResidency,
-      complianceCerts,
+      mfaEnabled = false,
+      adminEmail,
+      supportUrl,
       contractStartDate,
       contractEndDate,
-      autoRenewal = true,
-      noticePeriodDays,
-      adminEmail,
-      supportContact,
-      status = 'active',
-      notes,
+      autoRenew = false,
+      isActive = true,
     } = body;
 
     if (!name || !category || !licenseType) {
@@ -147,25 +143,20 @@ export async function POST(request: NextRequest) {
         tenantId,
         name,
         category,
-        provider,
-        description,
+        vendor,
         website,
+        logo,
+        description,
         licenseType,
-        billingCycle,
-        basePrice,
-        currency,
+        securityRating,
         ssoEnabled,
-        mfaRequired,
-        dataResidency,
-        complianceCerts,
+        mfaEnabled,
+        adminEmail,
+        supportUrl,
         contractStartDate: contractStartDate ? new Date(contractStartDate) : null,
         contractEndDate: contractEndDate ? new Date(contractEndDate) : null,
-        autoRenewal,
-        noticePeriodDays,
-        adminEmail,
-        supportContact,
-        status,
-        notes,
+        autoRenew,
+        isActive,
       },
     });
 

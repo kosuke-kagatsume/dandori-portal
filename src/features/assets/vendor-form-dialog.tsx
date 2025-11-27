@@ -27,16 +27,6 @@ interface VendorFormDialogProps {
   onSuccess?: () => void;
 }
 
-const VENDOR_CATEGORIES = [
-  { value: 'repair', label: '修理・整備' },
-  { value: 'tire', label: 'タイヤ' },
-  { value: 'parts', label: '部品' },
-  { value: 'insurance', label: '保険' },
-  { value: 'lease', label: 'リース' },
-  { value: 'fuel', label: '燃料' },
-  { value: 'other', label: 'その他' },
-];
-
 const RATING_OPTIONS = [
   { value: '5', label: '5 - 最高' },
   { value: '4', label: '4 - 良い' },
@@ -48,7 +38,6 @@ const RATING_OPTIONS = [
 // 初期フォームデータを生成
 const getInitialFormData = (vendor?: VendorFromAPI) => ({
   name: vendor?.name || '',
-  category: vendor?.category || 'repair',
   contactPerson: vendor?.contactPerson || '',
   phone: vendor?.phone || '',
   email: vendor?.email || '',
@@ -83,7 +72,6 @@ export function VendorFormDialog({
 
     const vendorData: Partial<VendorFromAPI> = {
       name: formData.name,
-      category: formData.category || null,
       contactPerson: formData.contactPerson || null,
       phone: formData.phone || null,
       email: formData.email || null,
@@ -132,25 +120,6 @@ export function VendorFormDialog({
               onChange={(e) => handleChange('name', e.target.value)}
               required
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="category">カテゴリ</Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => handleChange('category', value)}
-            >
-              <SelectTrigger id="category">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VENDOR_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
