@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -19,11 +19,17 @@ import {
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { useRetiredYearEndStore } from '@/lib/store/retired-yearend-store';
-import { FileText, Calendar, QrCode, Send, CheckCircle, XCircle, Clock, Mail } from 'lucide-react';
+import { FileText, Calendar, QrCode, Send, CheckCircle, XCircle, Clock, Mail, Loader2 } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 
 export function YearEndTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
-  const { yearEndAdjustmentSettings, updateYearEndAdjustmentSettings } = useCompanySettingsStore();
+  const {
+    yearEndAdjustmentSettings,
+    updateYearEndAdjustmentSettings,
+    fetchYearEndSettings,
+    saveYearEndSettings,
+    isLoading
+  } = useCompanySettingsStore();
   const { getRetiredUsers } = useUserStore();
   const {
     sendWithholdingSlipsToRetired,
@@ -35,6 +41,12 @@ export function YearEndTab({ settings, updateSettings, saveSettings }: SettingsT
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [isSending, setIsSending] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // 初回ロード時にAPIからデータ取得
+  useEffect(() => {
+    fetchYearEndSettings();
+  }, [fetchYearEndSettings]);
 
   // 退職者リスト取得
   const retiredUsers = getRetiredUsers();
@@ -45,8 +57,16 @@ export function YearEndTab({ settings, updateSettings, saveSettings }: SettingsT
   // 統計
   const stats = getStats(selectedYear);
 
-  const handleSave = () => {
-    saveSettings();
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await saveYearEndSettings();
+      saveSettings();
+    } catch (error) {
+      console.error('保存エラー:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // 一括送信ハンドラー
@@ -437,8 +457,15 @@ export function YearEndTab({ settings, updateSettings, saveSettings }: SettingsT
 
       {/* 保存ボタン */}
       <div className="flex justify-end">
-        <Button onClick={handleSave} size="lg">
-          年末調整設定を保存
+        <Button onClick={handleSave} size="lg" disabled={isSaving || isLoading}>
+          {isSaving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              保存中...
+            </>
+          ) : (
+            '年末調整設定を保存'
+          )}
         </Button>
       </div>
     </div>

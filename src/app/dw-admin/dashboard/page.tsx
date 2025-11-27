@@ -28,6 +28,7 @@ import {
   Bell,
   Database,
   RefreshCw,
+  Scale,
 } from 'lucide-react';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
@@ -37,6 +38,7 @@ import { PaymentManagementTab } from '@/features/dw-admin/payment-management-tab
 import { NotificationManagementTab } from '@/features/dw-admin/notification-management-tab';
 import { PaymentReminderTab } from '@/features/dw-admin/payment-reminder-tab';
 import { InvoiceAutoGenerationTab } from '@/features/dw-admin/invoice-auto-generation-tab';
+import { LegalUpdatesManagementTab } from '@/features/dw-admin/legal-updates-management-tab';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { initializeDWAdminDemo } from '@/lib/demo-data/initialize-dw-admin-demo';
 import { toast } from 'sonner';
@@ -185,7 +187,7 @@ function DWAdminDashboardPage() {
 
       {/* タブ */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="dashboard">
             <LayoutDashboard className="w-4 h-4 mr-2" />
             ダッシュボード
@@ -205,6 +207,10 @@ function DWAdminDashboardPage() {
           <TabsTrigger value="reminders">
             <Bell className="w-4 h-4 mr-2" />
             リマインダー
+          </TabsTrigger>
+          <TabsTrigger value="legal-updates">
+            <Scale className="w-4 h-4 mr-2" />
+            法令管理
           </TabsTrigger>
           <TabsTrigger value="notifications">
             <Mail className="w-4 h-4 mr-2" />
@@ -470,7 +476,12 @@ function DWAdminDashboardPage() {
           {mounted && <PaymentReminderTab />}
         </TabsContent>
 
-        {/* タブ6: 通知履歴 */}
+        {/* タブ6: 法令管理 */}
+        <TabsContent value="legal-updates" suppressHydrationWarning>
+          {mounted && <LegalUpdatesManagementTab />}
+        </TabsContent>
+
+        {/* タブ7: 通知履歴 */}
         <TabsContent value="notifications" suppressHydrationWarning>
           {mounted && <NotificationManagementTab />}
         </TabsContent>

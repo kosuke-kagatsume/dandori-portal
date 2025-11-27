@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,34 +15,158 @@ import {
   Calendar,
   CheckCircle,
   XCircle,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
-import { useSaaSStore } from '@/lib/store/saas-store';
-import { categoryLabels, licenseTypeLabels, licenseStatusLabels, type LicensePlan, type LicenseAssignment } from '@/types/saas';
-import { ServiceFormDialog } from '@/features/saas/service-form-dialog';
-import { PlanFormDialog } from '@/features/saas/plan-form-dialog';
-import { AssignmentFormDialog } from '@/features/saas/assignment-form-dialog';
+import { toast } from 'sonner';
+import {
+  useSaaSServicesAPI,
+  useSaaSAssignmentsAPI,
+  type SaaSServiceFromAPI,
+  type SaaSPlanFromAPI,
+  type SaaSAssignmentFromAPI,
+} from '@/hooks/use-saas-api';
+import { EditServiceDialog } from '@/features/saas/edit-service-dialog';
+import { EditPlanDialog } from '@/features/saas/edit-plan-dialog';
+import { EditAssignmentDialog } from '@/features/saas/edit-assignment-dialog';
+
+// カテゴリラベル
+const categoryLabels: Record<string, string> = {
+  productivity: '生産性ツール',
+  communication: 'コミュニケーション',
+  project_management: 'プロジェクト管理',
+  hr: '人事・採用',
+  finance: '会計・財務',
+  marketing: 'マーケティング',
+  sales: '営業・CRM',
+  development: '開発ツール',
+  security: 'セキュリティ',
+  storage: 'ストレージ',
+  design: 'デザイン',
+  other: 'その他',
+};
+
+// ライセンスタイプラベル
+const licenseTypeLabels: Record<string, string> = {
+  'user-based': 'ユーザー単位',
+  'fixed': '固定料金',
+  'per_seat': 'シート単位',
+  'enterprise': 'エンタープライズ',
+  'usage_based': '従量課金',
+  'freemium': 'フリーミアム',
+};
+
+// ステータスラベル
+const statusLabels: Record<string, string> = {
+  active: '有効',
+  inactive: '無効',
+  pending: '保留中',
+  revoked: '取り消し',
+};
 
 export default function SaaSServiceDetailPage() {
   const params = useParams();
   const router = useRouter();
   const serviceId = params.id as string;
 
-  const { getServiceById, getPlansByServiceId, deletePlan, getAssignmentsByServiceId, deleteAssignment } = useSaaSStore();
-  const service = getServiceById(serviceId);
-  const plans = getPlansByServiceId(serviceId);
-  const assignments = getAssignmentsByServiceId(serviceId);
+  const { getServiceById, deleteService } = useSaaSServicesAPI();
+  const { deleteAssignment } = useSaaSAssignmentsAPI();
 
-  const [isServiceFormOpen, setIsServiceFormOpen] = useState(false);
-  const [isPlanFormOpen, setIsPlanFormOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<LicensePlan | undefined>(undefined);
-  const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<LicenseAssignment | undefined>(undefined);
+  const [service, setService] = useState<SaaSServiceFromAPI | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!service) {
+  // ダイアログの状態
+  const [isEditServiceOpen, setIsEditServiceOpen] = useState(false);
+  const [isEditPlanOpen, setIsEditPlanOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<SaaSPlanFromAPI | null>(null);
+  const [isEditAssignmentOpen, setIsEditAssignmentOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<SaaSAssignmentFromAPI | null>(null);
+  const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
+  const [isCreateAssignmentOpen, setIsCreateAssignmentOpen] = useState(false);
+
+  // サービス詳細を取得
+  const fetchService = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const result = await getServiceById(serviceId);
+    if (result.success && result.data) {
+      setService(result.data);
+    } else {
+      setError(result.error || 'サービスの取得に失敗しました');
+    }
+    setLoading(false);
+  }, [serviceId, getServiceById]);
+
+  useEffect(() => {
+    fetchService();
+  }, [fetchService]);
+
+  // サービス削除
+  const handleDeleteService = async () => {
+    if (!window.confirm('このサービスを削除してもよろしいですか？関連するプランと割り当ても削除されます。')) {
+      return;
+    }
+    const result = await deleteService(serviceId);
+    if (result.success) {
+      toast.success('サービスを削除しました');
+      router.push('/ja/saas');
+    } else {
+      toast.error(result.error || 'サービスの削除に失敗しました');
+    }
+  };
+
+  // プラン削除
+  const handleDeletePlan = async (planId: string) => {
+    if (!window.confirm('このプランを削除してもよろしいですか？')) {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/saas/plans/${planId}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('プランを削除しました');
+        fetchService();
+      } else {
+        toast.error(data.error || 'プランの削除に失敗しました');
+      }
+    } catch {
+      toast.error('プランの削除に失敗しました');
+    }
+  };
+
+  // 割り当て削除
+  const handleDeleteAssignment = async (assignmentId: string) => {
+    if (!window.confirm('このライセンス割り当てを解除してもよろしいですか？')) {
+      return;
+    }
+    const result = await deleteAssignment(assignmentId);
+    if (result.success) {
+      toast.success('ライセンス割り当てを解除しました');
+      fetchService();
+    } else {
+      toast.error(result.error || 'ライセンス割り当ての解除に失敗しました');
+    }
+  };
+
+  // ローディング表示
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">データを読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // エラー表示
+  if (error || !service) {
     return (
       <div className="container mx-auto p-6">
         <div className="text-center py-12">
-          <p className="text-lg text-muted-foreground">サービスが見つかりません</p>
+          <p className="text-lg text-muted-foreground">{error || 'サービスが見つかりません'}</p>
           <Button variant="outline" className="mt-4" onClick={() => router.push('/ja/saas')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             一覧に戻る
@@ -52,54 +176,20 @@ export default function SaaSServiceDetailPage() {
     );
   }
 
-  const handleOpenCreatePlanDialog = () => {
-    setSelectedPlan(undefined);
-    setIsPlanFormOpen(true);
-  };
-
-  const handleOpenEditPlanDialog = (plan: LicensePlan) => {
-    setSelectedPlan(plan);
-    setIsPlanFormOpen(true);
-  };
-
-  const handleClosePlanDialog = () => {
-    setIsPlanFormOpen(false);
-    setSelectedPlan(undefined);
-  };
-
-  const handleDeletePlan = (planId: string) => {
-    if (window.confirm('このプランを削除してもよろしいですか？')) {
-      deletePlan(planId);
-    }
-  };
-
-  const handleOpenCreateAssignmentDialog = () => {
-    setSelectedAssignment(undefined);
-    setIsAssignmentFormOpen(true);
-  };
-
-  const handleOpenEditAssignmentDialog = (assignment: LicenseAssignment) => {
-    setSelectedAssignment(assignment);
-    setIsAssignmentFormOpen(true);
-  };
-
-  const handleCloseAssignmentDialog = () => {
-    setIsAssignmentFormOpen(false);
-    setSelectedAssignment(undefined);
-  };
-
-  const handleDeleteAssignment = (assignmentId: string) => {
-    if (window.confirm('このライセンス割り当てを解除してもよろしいですか？')) {
-      deleteAssignment(assignmentId);
-    }
-  };
+  const plans = service.plans || [];
+  const assignments = service.assignments || [];
 
   const formatPrice = (price: number, currency: string) => {
     return currency === 'JPY' ? `¥${price.toLocaleString()}` : `$${price.toLocaleString()}`;
   };
 
   const formatBillingCycle = (cycle: string) => {
-    return cycle === 'monthly' ? '月額' : '年額';
+    switch (cycle) {
+      case 'monthly': return '月額';
+      case 'yearly': return '年額';
+      case 'quarterly': return '四半期';
+      default: return cycle;
+    }
   };
 
   return (
@@ -111,11 +201,19 @@ export default function SaaSServiceDetailPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">{service.name}</h1>
-          <p className="text-muted-foreground">{service.vendor}</p>
+          <p className="text-muted-foreground">{service.vendor || '（ベンダー未設定）'}</p>
         </div>
-        <Button variant="outline" onClick={() => setIsServiceFormOpen(true)}>
+        <Button variant="outline" size="sm" onClick={fetchService}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          更新
+        </Button>
+        <Button variant="outline" onClick={() => setIsEditServiceOpen(true)}>
           <Edit className="mr-2 h-4 w-4" />
-          サービス編集
+          編集
+        </Button>
+        <Button variant="destructive" onClick={handleDeleteService}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          削除
         </Button>
       </div>
 
@@ -131,23 +229,25 @@ export default function SaaSServiceDetailPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm">カテゴリ:</span>
-                  <Badge variant="outline">{categoryLabels[service.category]}</Badge>
+                  <Badge variant="outline">{categoryLabels[service.category] || service.category}</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">ライセンスタイプ:</span>
-                  <Badge variant="secondary">{licenseTypeLabels[service.licenseType]}</Badge>
+                  <Badge variant="secondary">{licenseTypeLabels[service.licenseType] || service.licenseType}</Badge>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">公式サイト:</span>
-                  <a
-                    href={service.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    {service.website}
-                  </a>
-                </div>
+                {service.website && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">公式サイト:</span>
+                    <a
+                      href={service.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline"
+                    >
+                      {service.website}
+                    </a>
+                  </div>
+                )}
                 {service.description && (
                   <div>
                     <span className="text-sm">説明:</span>
@@ -188,12 +288,6 @@ export default function SaaSServiceDetailPage() {
                     </Badge>
                   )}
                 </div>
-                {service.adminEmail && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">管理者:</span>
-                    <span className="text-sm">{service.adminEmail}</span>
-                  </div>
-                )}
                 <div className="flex items-center gap-2">
                   <span className="text-sm">自動更新:</span>
                   <Badge variant={service.autoRenew ? 'default' : 'secondary'}>
@@ -203,7 +297,7 @@ export default function SaaSServiceDetailPage() {
                 {service.contractEndDate && (
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">契約終了日: {service.contractEndDate}</span>
+                    <span className="text-sm">契約終了日: {new Date(service.contractEndDate).toLocaleDateString('ja-JP')}</span>
                   </div>
                 )}
               </div>
@@ -220,7 +314,7 @@ export default function SaaSServiceDetailPage() {
               <CardTitle>ライセンスプラン</CardTitle>
               <CardDescription>このサービスのライセンスプランを管理します</CardDescription>
             </div>
-            <Button onClick={handleOpenCreatePlanDialog}>
+            <Button onClick={() => setIsCreatePlanOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               プラン追加
             </Button>
@@ -279,7 +373,7 @@ export default function SaaSServiceDetailPage() {
                         )}
                       </div>
 
-                      {plan.features.length > 0 && (
+                      {plan.features && plan.features.length > 0 && (
                         <div className="mt-4">
                           <p className="text-sm text-muted-foreground mb-2">機能:</p>
                           <div className="flex flex-wrap gap-2">
@@ -297,7 +391,10 @@ export default function SaaSServiceDetailPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleOpenEditPlanDialog(plan)}
+                        onClick={() => {
+                          setSelectedPlan(plan);
+                          setIsEditPlanOpen(true);
+                        }}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -323,9 +420,9 @@ export default function SaaSServiceDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>ライセンス割り当て</CardTitle>
-              <CardDescription>ユーザーへのライセンス割り当て状況を管理します</CardDescription>
+              <CardDescription>ユーザーへのライセンス割り当て状況を管理します（{assignments.length}件）</CardDescription>
             </div>
-            <Button onClick={handleOpenCreateAssignmentDialog}>
+            <Button onClick={() => setIsCreateAssignmentOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               ライセンス割り当て
             </Button>
@@ -344,34 +441,34 @@ export default function SaaSServiceDetailPage() {
                   <CardContent className="flex items-center justify-between p-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">{assignment.userName}</h3>
+                        <h3 className="font-semibold text-lg">{assignment.userName || '不明'}</h3>
                         <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
-                          {licenseStatusLabels[assignment.status]}
+                          {statusLabels[assignment.status] || assignment.status}
                         </Badge>
                       </div>
 
                       <div className="grid grid-cols-3 gap-6 mt-4">
                         <div>
                           <p className="text-sm text-muted-foreground">プラン</p>
-                          <p className="font-medium">{assignment.planName}</p>
+                          <p className="font-medium">{assignment.plan?.planName || '未設定'}</p>
                         </div>
 
                         <div>
                           <p className="text-sm text-muted-foreground">割り当て日</p>
-                          <p className="font-medium">{assignment.assignedDate}</p>
+                          <p className="font-medium">{new Date(assignment.assignedDate).toLocaleDateString('ja-JP')}</p>
                         </div>
 
-                        {assignment.lastUsedAt && (
+                        {assignment.departmentName && (
                           <div>
-                            <p className="text-sm text-muted-foreground">最終使用日</p>
-                            <p className="font-medium">{assignment.lastUsedAt}</p>
+                            <p className="text-sm text-muted-foreground">部門</p>
+                            <p className="font-medium">{assignment.departmentName}</p>
                           </div>
                         )}
                       </div>
 
                       {assignment.userEmail && (
                         <div className="mt-4">
-                          <p className="text-sm text-muted-foreground">アカウントメール: {assignment.userEmail}</p>
+                          <p className="text-sm text-muted-foreground">メール: {assignment.userEmail}</p>
                         </div>
                       )}
 
@@ -386,7 +483,10 @@ export default function SaaSServiceDetailPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleOpenEditAssignmentDialog(assignment)}
+                        onClick={() => {
+                          setSelectedAssignment(assignment);
+                          setIsEditAssignmentOpen(true);
+                        }}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -407,23 +507,49 @@ export default function SaaSServiceDetailPage() {
       </Card>
 
       {/* ダイアログ */}
-      <ServiceFormDialog
-        open={isServiceFormOpen}
-        onClose={() => setIsServiceFormOpen(false)}
+      <EditServiceDialog
+        open={isEditServiceOpen}
+        onClose={() => setIsEditServiceOpen(false)}
         service={service}
+        onSuccess={fetchService}
       />
-      <PlanFormDialog
-        open={isPlanFormOpen}
-        onClose={handleClosePlanDialog}
+      <EditPlanDialog
+        open={isEditPlanOpen}
+        onClose={() => {
+          setIsEditPlanOpen(false);
+          setSelectedPlan(null);
+        }}
         serviceId={serviceId}
         plan={selectedPlan}
+        onSuccess={fetchService}
       />
-      <AssignmentFormDialog
-        open={isAssignmentFormOpen}
-        onClose={handleCloseAssignmentDialog}
+      <EditPlanDialog
+        open={isCreatePlanOpen}
+        onClose={() => setIsCreatePlanOpen(false)}
+        serviceId={serviceId}
+        plan={null}
+        onSuccess={fetchService}
+      />
+      <EditAssignmentDialog
+        open={isEditAssignmentOpen}
+        onClose={() => {
+          setIsEditAssignmentOpen(false);
+          setSelectedAssignment(null);
+        }}
         serviceId={serviceId}
         serviceName={service.name}
+        plans={plans}
         assignment={selectedAssignment}
+        onSuccess={fetchService}
+      />
+      <EditAssignmentDialog
+        open={isCreateAssignmentOpen}
+        onClose={() => setIsCreateAssignmentOpen(false)}
+        serviceId={serviceId}
+        serviceName={service.name}
+        plans={plans}
+        assignment={null}
+        onSuccess={fetchService}
       />
     </div>
   );

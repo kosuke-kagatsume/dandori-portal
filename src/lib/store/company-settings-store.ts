@@ -125,6 +125,8 @@ interface CompanySettingsState {
   savePayrollSettings: () => Promise<void>;
   fetchAttendanceSettings: () => Promise<void>;
   saveAttendanceSettings: () => Promise<void>;
+  fetchYearEndSettings: () => Promise<void>;
+  saveYearEndSettings: () => Promise<void>;
   fetchAllSettings: () => Promise<void>;
 }
 
@@ -426,8 +428,69 @@ const createCompanySettingsStore = () => {
       }
     },
 
+    fetchYearEndSettings: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/year-end-settings?tenantId=tenant-demo-001');
+        const result = await response.json();
+
+        if (result.success) {
+          set({
+            yearEndAdjustmentSettings: {
+              adjustmentStartMonth: result.data.adjustmentStartMonth,
+              adjustmentEndMonth: result.data.adjustmentEndMonth,
+              enableBasicDeduction: result.data.enableBasicDeduction,
+              enableSpouseDeduction: result.data.enableSpouseDeduction,
+              enableDependentDeduction: result.data.enableDependentDeduction,
+              enableInsuranceDeduction: result.data.enableInsuranceDeduction,
+              enableSocialInsuranceDeduction: result.data.enableSocialInsuranceDeduction,
+              withholdingSlipFormat: result.data.withholdingSlipFormat,
+              includeQRCode: result.data.includeQRCode,
+            },
+            isLoading: false,
+          });
+        } else {
+          throw new Error(result.error || 'Failed to fetch year-end settings');
+        }
+      } catch (error) {
+        console.error('Error fetching year-end settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    },
+
+    saveYearEndSettings: async () => {
+      const state = get() as CompanySettingsState;
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/year-end-settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: 'tenant-demo-001',
+            ...state.yearEndAdjustmentSettings,
+          }),
+        });
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save year-end settings');
+        }
+        set({ isLoading: false });
+      } catch (error) {
+        console.error('Error saving year-end settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error;
+      }
+    },
+
     fetchAllSettings: async () => {
-      const { fetchCompanySettings, fetchPayrollSettings, fetchAttendanceSettings } = get();
+      const { fetchCompanySettings, fetchPayrollSettings, fetchAttendanceSettings, fetchYearEndSettings } = get();
       set({ initialized: false, isLoading: true });
 
       try {
@@ -435,6 +498,7 @@ const createCompanySettingsStore = () => {
           fetchCompanySettings(),
           fetchPayrollSettings(),
           fetchAttendanceSettings(),
+          fetchYearEndSettings(),
         ]);
         set({ initialized: true });
       } catch (error) {

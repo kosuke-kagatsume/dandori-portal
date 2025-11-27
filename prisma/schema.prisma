@@ -655,3 +655,534 @@ model AttendanceSettings {
   @@index([tenantId])
   @@map("attendance_settings")
 }
+
+// 年末調整設定
+model YearEndAdjustmentSettings {
+  id                          String   @id @default(cuid())
+  tenantId                    String   @unique // 1テナント1設定
+
+  // 年末調整期間
+  adjustmentStartMonth        Int      @default(11) // 開始月（通常11月）
+  adjustmentEndMonth          Int      @default(12) // 終了月（通常12月）
+
+  // 控除項目
+  enableBasicDeduction        Boolean  @default(true)  // 基礎控除
+  enableSpouseDeduction       Boolean  @default(true)  // 配偶者控除
+  enableDependentDeduction    Boolean  @default(true)  // 扶養控除
+  enableInsuranceDeduction    Boolean  @default(true)  // 生命保険料控除
+  enableSocialInsuranceDeduction Boolean @default(true) // 社会保険料控除
+
+  // 源泉徴収票設定
+  withholdingSlipFormat       String   @default("standard") // standard / detailed
+  includeQRCode               Boolean  @default(false) // QRコード付与（e-Tax対応）
+
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("year_end_adjustment_settings")
+}
+
+// ========================================
+// 法令・制度更新（DW社一括管理 → 全テナント配信）
+// ========================================
+
+// 法令・制度更新マスタ（DW社が管理）
+model LegalUpdate {
+  id              String    @id @default(cuid())
+
+  // 基本情報
+  title           String    // タイトル
+  description     String?   @db.Text // 詳細説明
+  category        String    // tax（税務）, labor（労務）, social_insurance（社会保険）, payroll（給与計算）, attendance（勤怠管理）, safety（安全衛生）, other（その他）
+
+  // 施行情報
+  effectiveDate   DateTime  @db.Date // 施行日
+  relatedLaws     String?   // 関連法令名
+  affectedAreas   String[]  // 影響範囲（例: ["人事管理", "雇用管理"]）
+
+  // 優先度・ステータス
+  priority        String    @default("medium") // high, medium, low
+  isPublished     Boolean   @default(false) // 公開フラグ
+  publishedAt     DateTime? // 公開日時
+
+  // 参考情報
+  referenceUrl    String?   // 参考URL（官報・省庁サイト等）
+  attachments     Json?     // 添付ファイル情報
+
+  // メタ情報
+  createdBy       String?   // 作成者（DW社スタッフID）
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  tenantStatuses  TenantLegalStatus[]
+
+  @@index([category])
+  @@index([effectiveDate])
+  @@index([isPublished])
+  @@index([priority])
+  @@index([isPublished, effectiveDate])
+  @@map("legal_updates")
+}
+
+// テナント別の法令対応状況
+model TenantLegalStatus {
+  id            String    @id @default(cuid())
+  tenantId      String
+  legalUpdateId String
+
+  // 対応状況
+  status        String    @default("pending") // pending（未対応）, in_progress（対応中）, completed（対応済み）
+  notes         String?   @db.Text // メモ・備考
+  completedAt   DateTime? // 対応完了日時
+  completedBy   String?   // 対応完了者
+
+  // メタ情報
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  legalUpdate   LegalUpdate @relation(fields: [legalUpdateId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, legalUpdateId]) // 1テナント1法令に対して1レコード
+  @@index([tenantId])
+  @@index([legalUpdateId])
+  @@index([tenantId, status])
+  @@map("tenant_legal_statuses")
+}
+
+// ========================================
+// 資産管理（車両・PC）
+// ========================================
+
+// 業者マスタ
+model Vendor {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String   // 業者名
+  phone         String?  // 電話番号
+  address       String?  // 住所
+  contactPerson String?  // 担当者名
+  email         String?  // メールアドレス
+  rating        Int?     // 評価（1-5）
+  notes         String?  @db.Text // メモ
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  maintenanceRecords MaintenanceRecord[]
+
+  @@index([tenantId])
+  @@index([tenantId, name])
+  @@map("vendors")
+}
+
+// 車両マスタ
+model Vehicle {
+  id               String    @id @default(cuid())
+  tenantId         String
+  vehicleNumber    String    // 車両番号（社内管理番号）
+  licensePlate     String    // ナンバープレート
+  make             String    // メーカー
+  model            String    // 車種
+  year             Int       // 年式
+  color            String?   // 色
+
+  // 割当情報
+  assignedUserId   String?   // 割当ユーザーID
+  assignedUserName String?   // 割当ユーザー名（参照用）
+  assignedDate     DateTime? @db.Date // 割当日
+
+  // 所有・リース情報
+  ownershipType    String    @default("owned") // owned, leased, rental
+  purchaseDate     DateTime? @db.Date // 購入日
+  purchaseCost     Int?      // 購入価格
+  leaseCompany     String?   // リース会社
+  leaseMonthlyCost Int?      // リース月額
+  leaseStartDate   DateTime? @db.Date // リース開始日
+  leaseEndDate     DateTime? @db.Date // リース終了日
+  leaseContact     String?   // リース担当者
+  leasePhone       String?   // リース電話番号
+
+  // 期限管理
+  inspectionDate   DateTime? @db.Date // 次回車検日
+  maintenanceDate  DateTime? @db.Date // 次回点検日
+  insuranceDate    DateTime? @db.Date // 保険更新日
+
+  // タイヤ情報
+  currentTireType  String    @default("summer") // summer, winter
+  tireChangeDate   DateTime? @db.Date // 次回タイヤ履き替え予定日
+
+  // ステータス
+  status           String    @default("active") // active, maintenance, retired
+
+  // 走行距離管理
+  mileageTracking  Boolean   @default(true) // 走行距離管理ON/OFF
+  currentMileage   Int?      // 現在の総走行距離
+
+  notes            String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  monthlyMileages     MonthlyMileage[]
+  maintenanceRecords  MaintenanceRecord[]
+
+  @@unique([tenantId, vehicleNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, assignedUserId])
+  @@map("vehicles")
+}
+
+// 月次走行距離
+model MonthlyMileage {
+  id             String   @id @default(cuid())
+  tenantId       String
+  vehicleId      String
+  month          String   // YYYY-MM
+  distance       Int      // km
+  recordedBy     String?  // 記録者ID
+  recordedByName String?  // 記録者名
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([vehicleId, month])
+  @@index([tenantId])
+  @@index([vehicleId])
+  @@map("monthly_mileages")
+}
+
+// メンテナンス記録
+model MaintenanceRecord {
+  id              String    @id @default(cuid())
+  tenantId        String
+  vehicleId       String
+  type            String    // oil_change, tire_change, inspection, shaken, repair, other
+  date            DateTime  @db.Date
+  mileage         Int?      // 実施時の走行距離
+  cost            Int       // 費用
+  vendorId        String?   // 業者ID
+  description     String?   // 説明
+  nextDueDate     DateTime? @db.Date // 次回実施予定日
+  nextDueMileage  Int?      // 次回実施予定距離
+  tireType        String?   // summer, winter（タイヤ交換時）
+  performedBy     String?   // 作業者ID
+  performedByName String?   // 作業者名
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vendor  Vendor? @relation(fields: [vendorId], references: [id])
+
+  @@index([tenantId])
+  @@index([vehicleId])
+  @@index([tenantId, vehicleId])
+  @@index([tenantId, type])
+  @@map("maintenance_records")
+}
+
+// PC資産
+model PCAsset {
+  id               String    @id @default(cuid())
+  tenantId         String
+  assetNumber      String    // 資産番号
+  manufacturer     String    // メーカー
+  model            String    // 型番
+  serialNumber     String    // シリアル番号
+  cpu              String?   // CPU
+  memory           String?   // メモリ
+  storage          String?   // ストレージ
+  os               String?   // OS
+
+  // 割当情報
+  assignedUserId   String?   // 割当ユーザーID
+  assignedUserName String?   // 割当ユーザー名（参照用）
+  assignedDate     DateTime? @db.Date // 割当日
+
+  // 所有・リース情報
+  ownershipType    String    @default("owned") // owned, leased, rental
+  purchaseDate     DateTime? @db.Date // 購入日
+  purchaseCost     Int?      // 購入価格
+  leaseCompany     String?   // リース会社
+  leaseMonthlyCost Int?      // リース月額
+  leaseStartDate   DateTime? @db.Date // リース開始日
+  leaseEndDate     DateTime? @db.Date // リース終了日
+  leaseContact     String?   // リース担当者
+  leasePhone       String?   // リース電話番号
+
+  // 期限管理
+  warrantyExpiration DateTime? @db.Date // 保証期限
+
+  // ステータス
+  status           String    @default("active") // active, maintenance, retired
+
+  notes            String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  softwareLicenses SoftwareLicense[]
+  repairRecords    RepairRecord[]
+
+  @@unique([tenantId, assetNumber])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, assignedUserId])
+  @@map("pc_assets")
+}
+
+// 汎用資産（モニター、プリンター、スマートフォン等）
+model GeneralAsset {
+  id               String    @id @default(cuid())
+  tenantId         String
+  assetNumber      String    // 資産番号
+  category         String    // monitor, printer, phone, tablet, network_device, other
+  name             String    // 資産名
+  manufacturer     String?   // メーカー
+  model            String?   // 型番
+  serialNumber     String?   // シリアル番号
+  specifications   Json?     // 仕様詳細（カテゴリ別）
+
+  // 割当情報
+  assignedUserId   String?   // 割当ユーザーID
+  assignedUserName String?   // 割当ユーザー名（参照用）
+  assignedDate     DateTime? @db.Date // 割当日
+
+  // 所有・リース情報
+  ownershipType    String    @default("owned") // owned, leased, rental
+  purchaseDate     DateTime? @db.Date // 購入日
+  purchaseCost     Int?      // 購入価格
+  leaseCompany     String?   // リース会社
+  leaseMonthlyCost Int?      // リース月額
+  leaseStartDate   DateTime? @db.Date // リース開始日
+  leaseEndDate     DateTime? @db.Date // リース終了日
+
+  // 期限管理
+  warrantyExpiration DateTime? @db.Date // 保証期限
+
+  // ステータス
+  status           String    @default("active") // active, maintenance, retired
+
+  notes            String?   @db.Text
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  repairRecords    RepairRecord[]
+
+  @@unique([tenantId, assetNumber])
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, status])
+  @@index([tenantId, assignedUserId])
+  @@map("general_assets")
+}
+
+// 修理記録（PC・その他資産共通）
+model RepairRecord {
+  id              String    @id @default(cuid())
+  tenantId        String
+
+  // 資産参照（PC または 汎用資産）
+  pcAssetId       String?   // PC資産ID
+  generalAssetId  String?   // 汎用資産ID
+
+  // 修理情報
+  repairType      String    // screen, battery, keyboard, storage, power_supply, network, other
+  date            DateTime  @db.Date
+  cost            Int       // 費用
+  vendorId        String?   // 業者ID
+  vendorName      String?   // 業者名（参照用）
+  symptom         String?   // 症状
+  description     String?   // 作業内容
+
+  // ステータス
+  status          String    @default("completed") // pending, in_progress, completed
+  completedDate   DateTime? @db.Date // 完了日
+
+  performedBy     String?   // 作業者ID
+  performedByName String?   // 作業者名
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  pcAsset      PCAsset?      @relation(fields: [pcAssetId], references: [id], onDelete: Cascade)
+  generalAsset GeneralAsset? @relation(fields: [generalAssetId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([pcAssetId])
+  @@index([generalAssetId])
+  @@index([tenantId, repairType])
+  @@index([tenantId, date])
+  @@map("repair_records")
+}
+
+// ソフトウェアライセンス（PC紐づけ）
+model SoftwareLicense {
+  id             String    @id @default(cuid())
+  tenantId       String
+  pcAssetId      String
+  softwareName   String    // ソフトウェア名
+  licenseKey     String?   // ライセンスキー
+  expirationDate DateTime? @db.Date // 期限
+  monthlyCost    Int?      // 月額費用
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  pcAsset PCAsset @relation(fields: [pcAssetId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([pcAssetId])
+  @@map("software_licenses")
+}
+
+// ========================================
+// SaaS管理
+// ========================================
+
+// SaaSサービスマスタ
+model SaaSService {
+  id                String    @id @default(cuid())
+  tenantId          String
+  name              String    // サービス名
+  category          String    // communication, productivity, development, design, hr, finance, marketing, sales, security, storage, other
+  vendor            String?   // ベンダー名
+  website           String?   // 公式サイト
+  logo              String?   // ロゴURL
+  description       String?   @db.Text
+
+  // 契約タイプ
+  licenseType       String    // user-based, fixed, usage-based
+
+  // セキュリティ情報
+  securityRating    String?   // A, B, C, D
+  ssoEnabled        Boolean   @default(false)
+  mfaEnabled        Boolean   @default(false)
+
+  // 管理情報
+  adminEmail        String?
+  supportUrl        String?
+  contractStartDate DateTime? @db.Date
+  contractEndDate   DateTime? @db.Date
+  autoRenew         Boolean   @default(false)
+
+  // ステータス
+  isActive          Boolean   @default(true)
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  plans             SaaSLicensePlan[]
+  assignments       SaaSLicenseAssignment[]
+  monthlyCosts      SaaSMonthlyCost[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, isActive])
+  @@map("saas_services")
+}
+
+// SaaSライセンスプラン
+model SaaSLicensePlan {
+  id           String   @id @default(cuid())
+  tenantId     String
+  serviceId    String
+  planName     String   // プラン名
+  billingCycle String   // monthly, yearly
+  pricePerUser Int?     // ユーザー単価（user-based）
+  fixedPrice   Int?     // 固定価格（fixed）
+  currency     String   @default("JPY") // JPY, USD
+  maxUsers     Int?     // 最大ユーザー数
+  features     String[] // 機能リスト
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  service     SaaSService             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  assignments SaaSLicenseAssignment[]
+
+  @@index([tenantId])
+  @@index([serviceId])
+  @@map("saas_license_plans")
+}
+
+// SaaSライセンス割り当て
+model SaaSLicenseAssignment {
+  id             String    @id @default(cuid())
+  tenantId       String
+  serviceId      String
+  planId         String
+
+  // ユーザーライセンス型の場合
+  userId         String?   // ユーザーID
+  userName       String?   // ユーザー名（参照用）
+  userEmail      String?   // アカウントメールアドレス
+
+  // 固定契約型の場合
+  departmentId   String?   // 部署ID
+  departmentName String?   // 部署名（参照用）
+
+  // ステータス
+  status         String    @default("active") // active, inactive, pending
+  assignedDate   DateTime  @db.Date
+  revokedDate    DateTime? @db.Date
+
+  // 使用状況
+  lastUsedAt     DateTime?
+  usageCount     Int?      // 月次使用回数
+
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  service SaaSService     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  plan    SaaSLicensePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([serviceId])
+  @@index([planId])
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+  @@map("saas_license_assignments")
+}
+
+// SaaS月次コスト記録
+model SaaSMonthlyCost {
+  id               String   @id @default(cuid())
+  tenantId         String
+  serviceId        String
+  period           String   // YYYY-MM
+  userLicenseCount Int      @default(0)
+  userLicenseCost  Int      @default(0)
+  fixedCost        Int      @default(0)
+  usageCost        Int      @default(0)
+  totalCost        Int      @default(0)
+  currency         String   @default("JPY")
+  activeUserIds    String[] // アクティブユーザーIDリスト
+  inactiveUserIds  String[] // 非アクティブユーザーIDリスト
+  notes            String?  @db.Text
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  service SaaSService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, period])
+  @@index([tenantId])
+  @@index([serviceId])
+  @@index([tenantId, period])
+  @@map("saas_monthly_costs")
+}

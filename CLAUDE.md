@@ -42,6 +42,49 @@ Amplifyが自動でビルド・デプロイを実行します（GitHubと連携�
 
 ---
 
+## 🚨 DATABASE_URL環境変数の問題と解決策（2025-11-27）
+
+### 問題の症状
+- Prismaが「invalid port number in database URL」エラーを出す
+- `.env.local`には正しいDATABASE_URLが設定されているのに接続できない
+- APIが500エラーを返す
+
+### 根本原因
+シェル環境変数（`~/.zshrc`や`~/.bashrc`）にプレースホルダーの`DATABASE_URL`が設定されていると、dotenvで読み込んだ`.env.local`の値を上書きしてしまう。
+
+```bash
+# 確認方法
+echo $DATABASE_URL
+# → postgres://USER:PASSWORD@HOST:PORT/DB ← これが出たら問題あり
+```
+
+### 解決策
+
+#### 一時的な解決（開発サーバー起動時）
+```bash
+# 環境変数を解除してから起動
+env -u DATABASE_URL PORT=3001 npm run dev
+```
+
+#### 恒久的な解決
+1. `~/.zshrc` または `~/.bashrc` を確認
+2. `DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DB` のような行があれば削除
+3. ターミナルを再起動
+
+#### 確認コマンド
+```bash
+# シェル設定ファイルにDATABASE_URLがあるか確認
+grep DATABASE_URL ~/.zshrc ~/.bashrc 2>/dev/null
+```
+
+### 正しいDATABASE_URL
+AWS RDS接続用の正しいURLは`.env.local`に記載：
+```
+DATABASE_URL=postgresql://dandori_admin:DandoriAdmin2025@dandori-portal-db.chya4uuiiy9m.ap-northeast-1.rds.amazonaws.com:5432/dandori_portal?schema=public
+```
+
+---
+
 ## 📊 実装状況の全体像（2025-10-14調査）
 
 ### ✅ 完全実装済みの内容
