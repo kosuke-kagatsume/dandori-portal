@@ -72,7 +72,8 @@ export function useSaaSServicesAPI() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/saas/services');
+      // include=details を付けてplans, assignments, monthlyCostsを取得
+      const response = await fetch('/api/saas/services?include=details');
       const data = await response.json();
 
       if (data.success) {
