@@ -149,17 +149,18 @@ const createUserStore = () => {
   };
 
   const storeCreator = (set: (partial: Partial<UserState> | ((state: UserState) => Partial<UserState>)) => void, get: () => UserState): UserState => ({
-      currentUser: initialCurrentUser,
+      // 本番モード: null、デモモード: デモユーザー
+      currentUser: process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? initialCurrentUser : null,
       users: [],
       isLoading: false,
       error: null,
 
-      // API統合用
-      tenantId: 'tenant-demo-001', // デフォルトテナントID（本番では認証後に設定）
+      // API統合用（本番では認証後にテナントIDが設定される）
+      tenantId: process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? 'tenant-demo-001' : null,
 
-      // デモモードの初期状態（デフォルトで有効）
-      isDemoMode: true,
-      currentDemoUser: demoUsers.employee,
+      // デモモードの初期状態（環境変数で制御、デフォルトはfalse）
+      isDemoMode: process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
+      currentDemoUser: process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? demoUsers.employee : null,
 
       // 認証トークン
       accessToken: null,
