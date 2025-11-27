@@ -8,7 +8,8 @@
 // - 20社×30名規模（600ユーザー）に最適化
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -74,10 +75,12 @@ model User {
   id               String    @id @default(cuid())
   tenantId         String
   email            String    @unique
+  passwordHash     String?   // bcrypt hashed password for authentication
   name             String
   phone            String?
-  hireDate         DateTime
-  unitId           String
+  hireDate         DateTime?
+  unitId           String?
+  role             String?   @default("employee") // Primary role: admin, hr, manager, employee
   roles            String[] // JSON配列: ["employee", "admin"]
   status           String    @default("active") // active, inactive, suspended, retired
   retiredDate      DateTime?
@@ -91,7 +94,7 @@ model User {
 
   // Relations
   tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  orgUnit    OrgUnit      @relation(fields: [unitId], references: [id])
+  orgUnit    OrgUnit?     @relation(fields: [unitId], references: [id])
   attendance Attendance[]
 
   @@index([tenantId])
