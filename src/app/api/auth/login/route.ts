@@ -156,20 +156,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    // エラーの詳細をレスポンスに含める（デバッグ用）
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorName = error instanceof Error ? error.name : 'UnknownError';
     return NextResponse.json(
-      {
-        success: false,
-        error: 'ログインに失敗しました',
-        debug: {
-          name: errorName,
-          message: errorMessage,
-          databaseUrl: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
-          demoMode: process.env.NEXT_PUBLIC_DEMO_MODE,
-        }
-      },
+      { success: false, error: 'ログインに失敗しました' },
       { status: 500 }
     );
   }
