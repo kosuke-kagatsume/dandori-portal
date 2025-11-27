@@ -1,10 +1,47 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import {
-  fetchAttendanceRecords as supabaseFetchAttendanceRecords,
-  upsertAttendanceRecord as supabaseUpsertAttendanceRecord,
-  deleteAttendanceRecord as supabaseDeleteAttendanceRecord,
-} from '@/lib/supabase/attendance-service';
+
+// REST API helper functions
+const API_BASE = '/api/attendance';
+const getTenantId = () => 'default-tenant';
+
+async function apiFetchAttendanceRecords(userId: string, startDate?: string, endDate?: string) {
+  const params = new URLSearchParams({ tenantId: getTenantId(), userId });
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+
+  const response = await fetch(`${API_BASE}?${params}`);
+  if (!response.ok) {
+    throw new Error('勤怠記録の取得に失敗しました');
+  }
+  const result = await response.json();
+  return result.data || [];
+}
+
+async function apiUpsertAttendanceRecord(record: Record<string, unknown>) {
+  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const response = await fetch(`${API_BASE}/upsert?${params}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(record),
+  });
+  if (!response.ok) {
+    throw new Error('勤怠記録の保存に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
+async function apiDeleteAttendanceRecord(id: string) {
+  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const response = await fetch(`${API_BASE}/${id}?${params}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('勤怠記録の削除に失敗しました');
+  }
+  return true;
+}
 
 export interface AttendanceRecord {
   id: string;
@@ -39,7 +76,7 @@ interface AttendanceHistoryState {
 }
 
 interface AttendanceHistoryActions {
-  // Supabaseから勤怠記録を取得
+  // APIから勤怠記録を取得
   fetchRecords: (userId: string, startDate?: string, endDate?: string) => Promise<void>;
 
   // 打刻記録の追加・更新
@@ -133,7 +170,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             return;
           }
 
-          const records = await supabaseFetchAttendanceRecords(userId, startDate, endDate);
+          const records = await apiFetchAttendanceRecords(userId, startDate, endDate);
           set({ records, isLoading: false });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '勤怠記録の取得に失敗しました';
@@ -191,18 +228,19 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             return;
           }
 
-          // 本番モード: Supabaseにupsert
+          // 本番モード: REST APIでupsert
           const existingRecord = get().records.find(
             r => r.userId === userId && r.date === date
           );
 
-          const recordToUpsert: Omit<AttendanceRecord, 'id' | 'createdAt' | 'updatedAt' | 'userName' | 'totalBreakMinutes'> = {
+          const recordToUpsert = {
             userId,
             date,
             checkIn: record.checkIn !== undefined ? record.checkIn : (existingRecord?.checkIn || null),
             checkOut: record.checkOut !== undefined ? record.checkOut : (existingRecord?.checkOut || null),
             breakStart: record.breakStart !== undefined ? record.breakStart : (existingRecord?.breakStart || null),
             breakEnd: record.breakEnd !== undefined ? record.breakEnd : (existingRecord?.breakEnd || null),
+            totalBreakMinutes: record.totalBreakMinutes !== undefined ? record.totalBreakMinutes : (existingRecord?.totalBreakMinutes || 0),
             workMinutes: record.workMinutes !== undefined ? record.workMinutes : (existingRecord?.workMinutes || 0),
             overtimeMinutes: record.overtimeMinutes !== undefined ? record.overtimeMinutes : (existingRecord?.overtimeMinutes || 0),
             workLocation: record.workLocation || existingRecord?.workLocation || 'office',
@@ -212,7 +250,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             approvalReason: record.approvalReason,
           };
 
-          const upsertedRecord = await supabaseUpsertAttendanceRecord(recordToUpsert);
+          const upsertedRecord = await apiUpsertAttendanceRecord(recordToUpsert);
 
           // ローカルステートも更新
           set((state) => {
@@ -440,8 +478,8 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             return;
           }
 
-          // 本番モード: Supabaseから削除
-          await supabaseDeleteAttendanceRecord(id);
+          // 本番モード: REST APIから削除
+          await apiDeleteAttendanceRecord(id);
 
           // ローカルステートからも削除
           set((state) => ({

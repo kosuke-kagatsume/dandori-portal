@@ -13,9 +13,99 @@ import {
   CACHE_PREFIX,
 } from '@/lib/cache/redis';
 
+// デモ用の法令・制度更新データ
+const demoLegalUpdates = [
+  {
+    id: 'legal-001',
+    title: '育児・介護休業法の改正',
+    description: '男性育休取得促進のための改正。出生時育児休業（産後パパ育休）の創設、育児休業の分割取得が可能に。',
+    category: '労務',
+    effectiveDate: new Date('2024-04-01'),
+    relatedLaws: ['育児・介護休業法'],
+    affectedAreas: ['人事', '勤怠管理', '給与計算'],
+    priority: 'high',
+    referenceUrl: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000130583.html',
+    publishedAt: new Date('2024-01-15'),
+    tenantStatus: { status: 'completed', notes: '就業規則を改定済み', completedAt: new Date('2024-03-15'), completedBy: '人事部' },
+  },
+  {
+    id: 'legal-002',
+    title: '電子帳簿保存法の改正',
+    description: '電子取引データの保存義務化。2024年1月からの本格施行に伴う対応が必要。',
+    category: '税務',
+    effectiveDate: new Date('2024-01-01'),
+    relatedLaws: ['電子帳簿保存法'],
+    affectedAreas: ['経理', '総務'],
+    priority: 'high',
+    referenceUrl: 'https://www.nta.go.jp/law/joho-zeikaishaku/sonota/jirei/index.htm',
+    publishedAt: new Date('2023-10-01'),
+    tenantStatus: { status: 'completed', notes: '電子保存システム導入完了', completedAt: new Date('2023-12-20'), completedBy: '経理部' },
+  },
+  {
+    id: 'legal-003',
+    title: '働き方改革関連法（時間外労働上限規制）',
+    description: '建設業・運送業への時間外労働上限規制適用開始（2024年問題）。',
+    category: '労務',
+    effectiveDate: new Date('2024-04-01'),
+    relatedLaws: ['労働基準法'],
+    affectedAreas: ['人事', '勤怠管理'],
+    priority: 'high',
+    referenceUrl: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000148322.html',
+    publishedAt: new Date('2023-06-01'),
+    tenantStatus: { status: 'in_progress', notes: '勤怠システムの設定変更中', completedAt: null, completedBy: null },
+  },
+  {
+    id: 'legal-004',
+    title: '社会保険適用拡大',
+    description: '従業員101人以上の企業でパート・アルバイトへの社会保険適用拡大。2024年10月からは51人以上に。',
+    category: '社会保険',
+    effectiveDate: new Date('2024-10-01'),
+    relatedLaws: ['健康保険法', '厚生年金保険法'],
+    affectedAreas: ['人事', '給与計算'],
+    priority: 'medium',
+    referenceUrl: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/tanjikan.html',
+    publishedAt: new Date('2024-04-01'),
+    tenantStatus: { status: 'pending', notes: null, completedAt: null, completedBy: null },
+  },
+  {
+    id: 'legal-005',
+    title: '定額減税の実施',
+    description: '2024年6月から所得税・住民税の定額減税を実施。給与計算システムの対応が必要。',
+    category: '税務',
+    effectiveDate: new Date('2024-06-01'),
+    relatedLaws: ['所得税法', '地方税法'],
+    affectedAreas: ['給与計算', '経理'],
+    priority: 'high',
+    referenceUrl: 'https://www.nta.go.jp/users/gensen/teigakugenzei/index.htm',
+    publishedAt: new Date('2024-03-01'),
+    tenantStatus: { status: 'completed', notes: '給与システム対応済み', completedAt: new Date('2024-05-28'), completedBy: '経理部' },
+  },
+];
+
 // GET /api/legal-updates - テナント用：公開済み法令一覧取得（自社のステータス込み）
 export async function GET(request: NextRequest) {
   try {
+    // デモモードの場合はデモデータを返す
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      const stats = {
+        total: demoLegalUpdates.length,
+        completed: demoLegalUpdates.filter((d) => d.tenantStatus.status === 'completed').length,
+        inProgress: demoLegalUpdates.filter((d) => d.tenantStatus.status === 'in_progress').length,
+        pending: demoLegalUpdates.filter((d) => d.tenantStatus.status === 'pending').length,
+      };
+
+      return successResponse(demoLegalUpdates, {
+        count: demoLegalUpdates.length,
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: demoLegalUpdates.length,
+          totalPages: 1,
+        },
+        stats,
+        cacheSeconds: 300,
+      });
+    }
     const { searchParams } = new URL(request.url);
     const tenantId = getTenantId(searchParams);
     const category = searchParams.get('category');

@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/lib/prisma';
+import { randomBytes } from 'crypto';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * ユーザー招待API
  * テナント管理者がメンバーを招待する際に使用
- * Supabase Authの招待メール機能を利用
+ * 招待トークンを生成してユーザーを仮登録
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, role, tenantId, tenantName, redirectUrl } = await request.json();
+    const { email, name, role, tenantId, tenantName } = await request.json();
 
     // バリデーション
     if (!email || !name) {
@@ -27,78 +31,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Supabase configuration missing');
-      return NextResponse.json(
-        { error: 'サーバー設定エラー' },
-        { status: 500 }
-      );
-    }
-
-    // Service Role Keyでadminクライアントを作成
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
+    // 既存ユーザーチェック
+    const existingUser = await prisma.user.findFirst({
+      where: { email },
     });
 
-    // 招待メールを送信
-    // Supabaseは自動的にパスワード設定リンク付きのメールを送信
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: {
-        name,
-        role: role || 'user',
-        roles: [role || 'user'],
-        tenantId: tenantId || null,
-        tenantName: tenantName || null,
-        invited: true,
-        invitedAt: new Date().toISOString(),
-      },
-      redirectTo: redirectUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com'}/auth/callback`,
-    });
-
-    if (error) {
-      console.error('Failed to invite user:', error);
-
-      // 既存ユーザーの場合
-      if (error.message.includes('already been registered') || error.message.includes('already exists')) {
-        return NextResponse.json(
-          { error: 'このメールアドレスは既に登録されています' },
-          { status: 400 }
-        );
-      }
-
-      // レート制限の場合
-      if (error.message.includes('rate limit')) {
-        return NextResponse.json(
-          { error: '招待メールの送信制限に達しました。しばらく待ってから再試行してください。' },
-          { status: 429 }
-        );
-      }
-
+    if (existingUser) {
       return NextResponse.json(
-        { error: error.message || '招待メールの送信に失敗しました' },
+        { error: 'このメールアドレスは既に登録されています' },
         { status: 400 }
       );
     }
 
+    // 招待トークンを生成
+    const inviteToken = randomBytes(32).toString('hex');
+    const inviteExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7日後
+
+    // ユーザーを招待状態で作成
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        role: role || 'employee',
+        tenantId: tenantId || null,
+        status: 'inactive', // 招待受諾まで無効
+        inviteToken,
+        inviteExpiry,
+      },
+    });
+
+    // 招待メール送信 (ここでは招待URLを生成のみ)
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com'}/auth/accept-invite?token=${inviteToken}`;
+
     console.log('User invited successfully:', email);
+    console.log('Invite URL:', inviteUrl);
+
+    // TODO: 実際のメール送信処理を実装 (SES, SendGrid等)
+    // await sendInviteEmail(email, name, inviteUrl, tenantName);
 
     return NextResponse.json({
       success: true,
-      message: '招待メールを送信しました',
+      message: '招待を作成しました',
       user: {
-        id: data.user.id,
-        email: data.user.email,
+        id: user.id,
+        email: user.email,
         name,
-        role: role || 'user',
+        role: role || 'employee',
         tenantId,
         invitedAt: new Date().toISOString(),
       },
+      // 開発時のみ招待URLを返す
+      ...(process.env.NODE_ENV !== 'production' && { inviteUrl }),
     });
   } catch (error) {
     console.error('Invite user error:', error);

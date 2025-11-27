@@ -8,123 +8,49 @@ export async function POST(req: Request) {
   try {
     console.log('Demo login request received');
 
-    // デモモードかSupabase接続可能かチェック
-    const isDemoMode = process.env.DEMO_MODE === 'true' ||
-                      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-                      !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
     // リクエストボディ取得
     const body = await req.json().catch(() => ({}));
     const email = body.email ?? 'demo@dandori.local';
-    const password = body.password ?? 'demo-demo-demo';
 
-    console.log('Demo mode:', isDemoMode);
+    console.log('Creating demo user');
 
-    // デモモードの場合は直接デモユーザーを作成
-    if (isDemoMode) {
-      console.log('Running in demo mode, creating demo user');
-
-      const cookieStore = await cookies();
-
-      // デモユーザー情報を作成
-      const demoUser = {
-        id: 'demo-user-' + Date.now(),
-        email: email,
-        user_metadata: {
-          name: 'デモユーザー',
-          role: 'admin',
-          roles: ['admin'],
-          department: '営業部',
-        },
-        created_at: new Date().toISOString(),
-      };
-
-      // デモセッションCookieを設定
-      cookieStore.set('demo_session', JSON.stringify(demoUser), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24, // 24時間
-      });
-
-      console.log('Demo user created successfully');
-
-      return NextResponse.json({
-        ok: true,
-        user: demoUser,
-        message: 'Successfully logged in as demo user',
-        mode: 'demo'
-      });
-    }
-
-    // Supabaseが利用可能な場合の処理
-    const { createServerClient } = await import('@supabase/ssr');
     const cookieStore = await cookies();
 
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              );
-            } catch {
-              // Server Component errors can be ignored
-            }
-          },
-        },
-      }
-    );
+    // デモユーザー情報を作成
+    const demoUser = {
+      id: 'demo-user-' + Date.now(),
+      email: email,
+      name: 'デモユーザー',
+      role: 'admin',
+      roles: ['admin'],
+      department: '営業部',
+      tenantId: 'tenant-demo-001',
+      created_at: new Date().toISOString(),
+    };
 
-    // Supabase認証を試行
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    // デモセッションCookieを設定
+    cookieStore.set('demo_session', JSON.stringify(demoUser), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24, // 24時間
     });
 
-    if (error) {
-      // 認証失敗時はデモモードにフォールバック
-      console.warn('Supabase auth failed, falling back to demo mode:', error.message);
+    // ユーザーロールCookieも設定（middleware用）
+    cookieStore.set('user_role', 'admin', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24,
+    });
 
-      const demoUser = {
-        id: 'demo-user-' + Date.now(),
-        email: email,
-        user_metadata: {
-          name: 'デモユーザー',
-          role: 'admin',
-          roles: ['admin'],
-          department: '営業部',
-        },
-        created_at: new Date().toISOString(),
-      };
+    console.log('Demo user created successfully');
 
-      cookieStore.set('demo_session', JSON.stringify(demoUser), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24,
-      });
-
-      return NextResponse.json({
-        ok: true,
-        user: demoUser,
-        message: 'Successfully logged in as demo user (fallback mode)',
-        mode: 'demo_fallback'
-      });
-    }
-
-    // Supabase認証成功
     return NextResponse.json({
       ok: true,
-      user: data.user,
-      message: 'Successfully logged in via Supabase',
-      mode: 'supabase'
+      user: demoUser,
+      message: 'Successfully logged in as demo user',
+      mode: 'demo'
     });
 
   } catch (error) {
@@ -136,12 +62,11 @@ export async function POST(req: Request) {
       const demoUser = {
         id: 'demo-user-' + Date.now(),
         email: 'demo@dandori.local',
-        user_metadata: {
-          name: 'デモユーザー',
-          role: 'admin',
-          roles: ['admin'],
-          department: '営業部',
-        },
+        name: 'デモユーザー',
+        role: 'admin',
+        roles: ['admin'],
+        department: '営業部',
+        tenantId: 'tenant-demo-001',
         created_at: new Date().toISOString(),
       };
 

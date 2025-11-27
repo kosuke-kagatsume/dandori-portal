@@ -9,6 +9,7 @@ export type AuditAction =
   | 'delete'
   | 'approve'
   | 'reject'
+  | 'return'
   | 'export'
   | 'import'
   | 'access';
@@ -39,7 +40,7 @@ export interface AuditLog {
   description: string;
   ipAddress?: string;
   userAgent?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   severity: 'info' | 'warning' | 'error' | 'critical';
 }
 
@@ -73,59 +74,10 @@ interface AuditStore {
   };
 }
 
-// モックデータ生成
-const generateMockLogs = (): AuditLog[] => {
-  const users = [
-    { id: 'demo-user-1', name: '田中太郎', role: 'employee' as const },
-    { id: 'demo-user-2', name: '佐藤花子', role: 'manager' as const },
-    { id: 'demo-user-3', name: '山田次郎', role: 'hr' as const },
-    { id: 'demo-user-4', name: '鈴木一郎', role: 'admin' as const },
-  ];
-
-  const actions: { action: AuditAction; category: AuditCategory; targetType: string; description: string; severity: AuditLog['severity'] }[] = [
-    { action: 'login', category: 'auth', targetType: 'システム', description: 'ログインしました', severity: 'info' },
-    { action: 'create', category: 'attendance', targetType: '勤怠記録', description: '出勤を記録しました', severity: 'info' },
-    { action: 'update', category: 'user', targetType: 'ユーザー', description: 'プロフィールを更新しました', severity: 'info' },
-    { action: 'approve', category: 'workflow', targetType: '休暇申請', description: '休暇申請を承認しました', severity: 'info' },
-    { action: 'reject', category: 'workflow', targetType: '経費申請', description: '経費申請を却下しました', severity: 'warning' },
-    { action: 'export', category: 'payroll', targetType: '給与データ', description: '給与データをエクスポートしました', severity: 'warning' },
-    { action: 'delete', category: 'user', targetType: 'ユーザー', description: 'ユーザーを削除しました', severity: 'error' },
-    { action: 'update', category: 'settings', targetType: 'システム設定', description: 'セキュリティ設定を変更しました', severity: 'critical' },
-  ];
-
-  const logs: AuditLog[] = [];
-  const now = new Date();
-
-  for (let i = 0; i < 100; i++) {
-    const user = users[Math.floor(Math.random() * users.length)];
-    const actionData = actions[Math.floor(Math.random() * actions.length)];
-    const timestamp = new Date(now.getTime() - i * 1000 * 60 * Math.random() * 120);
-
-    logs.push({
-      id: `audit-${i + 1}`,
-      timestamp: timestamp.toISOString(),
-      userId: user.id,
-      userName: user.name,
-      userRole: user.role,
-      action: actionData.action,
-      category: actionData.category,
-      targetType: actionData.targetType,
-      targetId: `target-${i + 1}`,
-      targetName: `${actionData.targetType}-${i + 1}`,
-      description: actionData.description,
-      ipAddress: `192.168.1.${Math.floor(Math.random() * 255)}`,
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      severity: actionData.severity,
-    });
-  }
-
-  return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-};
-
 export const useAuditStore = create<AuditStore>()(
   persist(
     (set, get) => ({
-      logs: generateMockLogs(),
+      logs: [],
 
       addLog: (log) => {
         const newLog: AuditLog = {

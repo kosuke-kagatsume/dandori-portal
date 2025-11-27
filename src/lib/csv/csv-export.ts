@@ -9,6 +9,7 @@ import type { LeaveRequest } from '@/lib/store/leave-management-store';
 import type { User } from '@/types';
 import type { Vehicle, PCAsset } from '@/types/asset';
 import type { SaaSService, LicenseAssignment } from '@/types/saas';
+import { exportAudit } from '@/lib/audit/audit-logger';
 import {
   getWorkLocationLabel,
   getStatusLabel,
@@ -135,6 +136,9 @@ export const exportAttendanceToCSV = (
     const defaultFilename = `attendance_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
 
+    // 監査ログ記録
+    exportAudit.csv('勤怠データ', records.length);
+
     return {
       success: true,
       recordCount: records.length,
@@ -196,6 +200,9 @@ export const exportPayrollToCSV = (
     const csvString = generateCSVString(headers, rows);
     const defaultFilename = `payroll_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('給与データ', records.length);
 
     return {
       success: true,
@@ -260,6 +267,9 @@ export const exportBonusToCSV = (
     const csvString = generateCSVString(headers, rows);
     const defaultFilename = `bonus_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('賞与データ', records.length);
 
     return {
       success: true,
@@ -372,6 +382,9 @@ export const exportEvaluationToCSV = (
     const defaultFilename = `evaluation_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
 
+    // 監査ログ記録
+    exportAudit.csv('人事評価データ', evaluations.length);
+
     return {
       success: true,
       recordCount: evaluations.length,
@@ -440,6 +453,9 @@ export const exportLeaveToCSV = (
     const defaultFilename = `leave_requests_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
 
+    // 監査ログ記録
+    exportAudit.csv('休暇申請データ', requests.length);
+
     return {
       success: true,
       recordCount: requests.length,
@@ -503,6 +519,9 @@ export const exportUsersToCSV = (
     const csvString = generateCSVString(headers, rows);
     const defaultFilename = `users_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('ユーザーデータ', users.length);
 
     return {
       success: true,
@@ -577,6 +596,9 @@ export const exportVehiclesToCSV = (
     const csvString = generateCSVString(headers, rows);
     const defaultFilename = `vehicles_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('車両データ', vehicles.length);
 
     return {
       success: true,
@@ -654,6 +676,9 @@ export const exportPCAssetsToCSV = (
     const defaultFilename = `pc_assets_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
 
+    // 監査ログ記録
+    exportAudit.csv('PC資産データ', pcs.length);
+
     return {
       success: true,
       recordCount: pcs.length,
@@ -722,6 +747,9 @@ export const exportSaaSServicesToCSV = (
     const defaultFilename = `saas_services_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
 
+    // 監査ログ記録
+    exportAudit.csv('SaaSサービスデータ', services.length);
+
     return {
       success: true,
       recordCount: services.length,
@@ -785,6 +813,9 @@ export const exportLicenseAssignmentsToCSV = (
     const csvString = generateCSVString(headers, rows);
     const defaultFilename = `license_assignments_${getCurrentDate()}.csv`;
     downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('ライセンス割り当てデータ', assignments.length);
 
     return {
       success: true,

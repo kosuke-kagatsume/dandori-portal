@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { saasAudit } from '@/lib/audit/audit-logger';
 import type {
   SaaSService,
   LicensePlan,
@@ -192,6 +193,11 @@ const createSaaSStore = () => {
       set((state: SaaSState) => ({
         assignments: [...state.assignments, newAssignment],
       }));
+
+      // 監査ログ記録
+      const service = get().getServiceById(assignmentData.serviceId);
+      const serviceName = service?.name || assignmentData.serviceId;
+      saasAudit.assignLicense(serviceName, assignmentData.userName);
     },
 
     updateAssignment: (id: string, updates: Partial<LicenseAssignment>) => {
@@ -205,9 +211,19 @@ const createSaaSStore = () => {
     },
 
     deleteAssignment: (id: string) => {
+      // 削除前に情報を取得して監査ログ用に保存
+      const assignmentToDelete = get().assignments.find((a) => a.id === id);
+
       set((state: SaaSState) => ({
         assignments: state.assignments.filter((assignment) => assignment.id !== id),
       }));
+
+      // 監査ログ記録
+      if (assignmentToDelete) {
+        const service = get().getServiceById(assignmentToDelete.serviceId);
+        const serviceName = service?.name || assignmentToDelete.serviceId;
+        saasAudit.revokeLicense(serviceName, assignmentToDelete.userName);
+      }
     },
 
     getAssignmentById: (id: string) => {

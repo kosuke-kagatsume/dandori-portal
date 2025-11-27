@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, DemoUser, UserRole } from '@/types';
 import { demoUsers } from '@/lib/demo-users';
-import { createClient } from '@/lib/supabase/client';
 import { APIError } from '@/lib/api/client';
 import {
   saveTokenData,
@@ -10,22 +9,82 @@ import {
   startTokenRefreshTimer,
   stopTokenRefreshTimer,
 } from '@/lib/auth/token-manager';
-import {
-  fetchUsers as supabaseFetchUsers,
-  fetchUserById as supabaseFetchUserById,
-  createUser as supabaseCreateUser,
-  updateUser as supabaseUpdateUser,
-  deleteUser as supabaseDeleteUser,
-  retireUser as supabaseRetireUser,
-  fetchUsersByUnit as supabaseFetchUsersByUnit,
-  fetchActiveUsers as supabaseFetchActiveUsers,
-  fetchRetiredUsers as supabaseFetchRetiredUsers,
-} from '@/lib/supabase/user-service';
+import { userAudit, authAudit } from '@/lib/audit/audit-logger';
+
+// REST API helper functions
+const API_BASE = '/api/users';
+const getTenantId = () => 'default-tenant';
+
+async function apiFetchUsers(tenantId: string): Promise<User[]> {
+  const params = new URLSearchParams({ tenantId });
+  const response = await fetch(`${API_BASE}?${params}`);
+  if (!response.ok) {
+    throw new Error('ユーザー一覧の取得に失敗しました');
+  }
+  const result = await response.json();
+  return result.data || [];
+}
+
+async function apiCreateUser(user: User, tenantId: string): Promise<User> {
+  const params = new URLSearchParams({ tenantId });
+  const response = await fetch(`${API_BASE}?${params}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user),
+  });
+  if (!response.ok) {
+    throw new Error('ユーザーの作成に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
+async function apiUpdateUser(id: string, updates: Partial<User>): Promise<User> {
+  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const response = await fetch(`${API_BASE}/${id}?${params}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!response.ok) {
+    throw new Error('ユーザーの更新に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
+async function apiDeleteUser(id: string): Promise<void> {
+  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const response = await fetch(`${API_BASE}/${id}?${params}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('ユーザーの削除に失敗しました');
+  }
+}
+
+async function apiRetireUser(id: string, retiredDate: string, reason: string): Promise<User> {
+  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const response = await fetch(`${API_BASE}/${id}?${params}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      status: 'retired',
+      retiredDate,
+      retirementReason: reason,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error('ユーザーの退職処理に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
 
 interface UserState {
   currentUser: User | null;
   users: User[];
-  // Supabase統合用
+  // API統合用
   tenantId: string | null;
 
   // デモ用の役割管理
@@ -45,10 +104,10 @@ interface UserState {
   fetchCurrentUser: () => Promise<void>;
   isAuthenticated: () => boolean;
 
-  // Supabase統合アクション
+  // API統合アクション
   fetchUsers: () => Promise<void>;
 
-  // 既存アクション（Supabase統合に更新）
+  // 既存アクション（API統合に更新）
   setCurrentUser: (user: User) => void;
   setUsers: (users: User[]) => void;
   addUser: (user: User) => Promise<void>;
@@ -95,7 +154,7 @@ const createUserStore = () => {
       isLoading: false,
       error: null,
 
-      // Supabase統合用
+      // API統合用
       tenantId: 'tenant-demo-001', // デフォルトテナントID（本番では認証後に設定）
 
       // デモモードの初期状態（デフォルトで有効）
@@ -140,51 +199,50 @@ const createUserStore = () => {
               document.cookie = `user_role=${userRole}; path=/; SameSite=Lax`;
             }
 
+            // 監査ログ記録
+            authAudit.login();
+
             return;
           }
 
-          // プロダクションモード: Supabase Auth
-          const supabase = createClient();
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
+          // プロダクションモード: REST API で認証
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
           });
 
-          if (error) {
-            throw new Error(error.message);
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+            throw new Error(result.error || 'ログインに失敗しました');
           }
 
-          if (!data.user || !data.session) {
-            throw new Error('ログインに失敗しました');
-          }
+          const { user: apiUser, accessToken, refreshToken: apiRefreshToken, expiresIn } = result.data;
 
-          // Supabaseのユーザー情報からアプリ用Userに変換
-          const supabaseUser = data.user;
-          const session = data.session;
-
-          // ユーザーメタデータからロールを取得（デフォルトはemployee）
-          const userRole = (supabaseUser.user_metadata?.role as UserRole) || 'employee';
+          // APIユーザー情報からアプリ用Userに変換
+          const userRole = (apiUser.role as UserRole) || 'employee';
 
           const user: User = {
-            id: supabaseUser.id,
-            tenantId: supabaseUser.user_metadata?.tenantId || 'tenant-demo-001',
-            name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'ユーザー',
-            email: supabaseUser.email || '',
-            phone: supabaseUser.user_metadata?.phone || '',
-            hireDate: supabaseUser.user_metadata?.hireDate || new Date().toISOString().split('T')[0],
-            unitId: supabaseUser.user_metadata?.unitId || '1',
-            roles: [userRole],
+            id: apiUser.id,
+            tenantId: apiUser.tenantId || 'tenant-demo-001',
+            name: apiUser.name || apiUser.email?.split('@')[0] || 'ユーザー',
+            email: apiUser.email || '',
+            phone: apiUser.phone || '',
+            hireDate: apiUser.hireDate || new Date().toISOString().split('T')[0],
+            unitId: apiUser.unitId || '1',
+            roles: apiUser.roles || [userRole],
             status: 'active',
             timezone: 'Asia/Tokyo',
-            avatar: supabaseUser.user_metadata?.avatar || '',
-            position: supabaseUser.user_metadata?.position || '',
-            department: supabaseUser.user_metadata?.department || '',
+            avatar: apiUser.avatar || '',
+            position: apiUser.position || '',
+            department: apiUser.department || '',
           };
 
           set({
             currentUser: user,
-            accessToken: session.access_token,
-            refreshToken: session.refresh_token,
+            accessToken: accessToken,
+            refreshToken: apiRefreshToken,
             isDemoMode: false,
             currentDemoUser: null,
             isLoading: false,
@@ -192,12 +250,11 @@ const createUserStore = () => {
           });
 
           // トークンデータを保存（Cookie含む）
-          const expiresIn = session.expires_in || 3600;
-          saveTokenData(session.access_token, session.refresh_token, expiresIn);
+          saveTokenData(accessToken, apiRefreshToken, expiresIn || 3600);
 
           // ユーザーロールをCookieに保存（middleware用）
           if (typeof window !== 'undefined') {
-            const expiresDate = new Date(Date.now() + expiresIn * 1000);
+            const expiresDate = new Date(Date.now() + (expiresIn || 3600) * 1000);
             document.cookie = `user_role=${userRole}; path=/; expires=${expiresDate.toUTCString()}; SameSite=Lax; Secure`;
           }
 
@@ -216,6 +273,9 @@ const createUserStore = () => {
               logoutFn();
             }
           );
+
+          // 監査ログ記録
+          authAudit.login();
         } catch (error) {
           const errorMessage = error instanceof APIError
             ? error.message
@@ -233,14 +293,18 @@ const createUserStore = () => {
 
       // ログアウト
       logout: async () => {
+        // ログアウト前に監査ログを記録（ユーザー情報がクリアされる前に）
+        authAudit.logout();
+
         set({ isLoading: true, error: null });
 
         try {
           // デモモードチェック
           if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
-            // プロダクションモード: Supabase Auth
-            const supabase = createClient();
-            await supabase.auth.signOut();
+            // プロダクションモード: REST API でログアウト
+            await fetch('/api/auth/logout', {
+              method: 'POST',
+            });
           }
 
           // トークンリフレッシュタイマーを停止
@@ -293,30 +357,31 @@ const createUserStore = () => {
             return;
           }
 
-          // プロダクションモード: Supabase Auth
-          const supabase = createClient();
-          const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
+          // プロダクションモード: REST API でユーザー情報を取得
+          const response = await fetch('/api/auth/me');
+          const result = await response.json();
 
-          if (error || !supabaseUser) {
-            throw new Error(error?.message || 'ユーザー情報の取得に失敗しました');
+          if (!response.ok || !result.success) {
+            throw new Error(result.error || 'ユーザー情報の取得に失敗しました');
           }
 
-          const userRole = (supabaseUser.user_metadata?.role as UserRole) || 'employee';
+          const apiUser = result.data.user;
+          const userRole = (apiUser.role as UserRole) || 'employee';
 
           const user: User = {
-            id: supabaseUser.id,
-            tenantId: supabaseUser.user_metadata?.tenantId || 'tenant-demo-001',
-            name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'ユーザー',
-            email: supabaseUser.email || '',
-            phone: supabaseUser.user_metadata?.phone || '',
-            hireDate: supabaseUser.user_metadata?.hireDate || new Date().toISOString().split('T')[0],
-            unitId: supabaseUser.user_metadata?.unitId || '1',
-            roles: [userRole],
+            id: apiUser.id,
+            tenantId: apiUser.tenantId || 'tenant-demo-001',
+            name: apiUser.name || apiUser.email?.split('@')[0] || 'ユーザー',
+            email: apiUser.email || '',
+            phone: apiUser.phone || '',
+            hireDate: apiUser.hireDate || new Date().toISOString().split('T')[0],
+            unitId: apiUser.unitId || '1',
+            roles: apiUser.roles || [userRole],
             status: 'active',
             timezone: 'Asia/Tokyo',
-            avatar: supabaseUser.user_metadata?.avatar || '',
-            position: supabaseUser.user_metadata?.position || '',
-            department: supabaseUser.user_metadata?.department || '',
+            avatar: apiUser.avatar || '',
+            position: apiUser.position || '',
+            department: apiUser.department || '',
           };
 
           set({
@@ -351,7 +416,7 @@ const createUserStore = () => {
         set({ currentUser: user });
       },
 
-      // Supabase統合: ユーザー一覧取得
+      // API統合: ユーザー一覧取得
       fetchUsers: async () => {
         set({ isLoading: true, error: null });
 
@@ -367,7 +432,7 @@ const createUserStore = () => {
             throw new Error('テナントIDが設定されていません');
           }
 
-          const users = await supabaseFetchUsers(state.tenantId);
+          const users = await apiFetchUsers(state.tenantId);
           set({ users, isLoading: false });
         } catch (error) {
           const errorMessage = error instanceof Error
@@ -386,7 +451,7 @@ const createUserStore = () => {
         set({ users });
       },
 
-      // Supabase統合: ユーザー作成
+      // API統合: ユーザー作成
       addUser: async (user: User) => {
         set({ isLoading: true, error: null });
 
@@ -397,6 +462,8 @@ const createUserStore = () => {
               users: [...state.users, user],
               isLoading: false,
             }));
+            // 監査ログ記録
+            userAudit.create(user.id, user.name);
             return;
           }
 
@@ -405,11 +472,13 @@ const createUserStore = () => {
             throw new Error('テナントIDが設定されていません');
           }
 
-          const createdUser = await supabaseCreateUser(user, state.tenantId);
+          const createdUser = await apiCreateUser(user, state.tenantId);
           set((state: UserState) => ({
             users: [...state.users, createdUser],
             isLoading: false,
           }));
+          // 監査ログ記録
+          userAudit.create(createdUser.id, createdUser.name);
         } catch (error) {
           const errorMessage = error instanceof Error
             ? error.message
@@ -423,13 +492,14 @@ const createUserStore = () => {
         }
       },
 
-      // Supabase統合: ユーザー更新
+      // API統合: ユーザー更新
       updateUser: async (id: string, updates: Partial<User>) => {
         set({ isLoading: true, error: null });
 
         try {
           // デモモードチェック
           if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            const existingUser = get().users.find(u => u.id === id);
             set((state: UserState) => ({
               users: state.users.map((u) =>
                 u.id === id ? { ...u, ...updates } : u
@@ -440,10 +510,14 @@ const createUserStore = () => {
                   : state.currentUser,
               isLoading: false,
             }));
+            // 監査ログ記録
+            const changesDescription = Object.keys(updates).join(', ');
+            userAudit.update(id, existingUser?.name || id, changesDescription);
             return;
           }
 
-          const updatedUser = await supabaseUpdateUser(id, updates);
+          const existingUser = get().users.find(u => u.id === id);
+          const updatedUser = await apiUpdateUser(id, updates);
           set((state: UserState) => ({
             users: state.users.map((u) =>
               u.id === id ? updatedUser : u
@@ -454,6 +528,9 @@ const createUserStore = () => {
                 : state.currentUser,
             isLoading: false,
           }));
+          // 監査ログ記録
+          const changesDescription = Object.keys(updates).join(', ');
+          userAudit.update(id, existingUser?.name || updatedUser.name, changesDescription);
         } catch (error) {
           const errorMessage = error instanceof Error
             ? error.message
@@ -467,7 +544,7 @@ const createUserStore = () => {
         }
       },
 
-      // Supabase統合: ユーザー削除
+      // API統合: ユーザー削除
       removeUser: async (id: string) => {
         set({ isLoading: true, error: null });
 
@@ -483,7 +560,7 @@ const createUserStore = () => {
             return;
           }
 
-          await supabaseDeleteUser(id);
+          await apiDeleteUser(id);
           set((state: UserState) => ({
             users: state.users.filter((u) => u.id !== id),
             currentUser:
@@ -503,13 +580,22 @@ const createUserStore = () => {
         }
       },
 
-      // Supabase統合: ユーザー退職処理
+      // API統合: ユーザー退職処理
       retireUser: async (id: string, retiredDate: string, reason: 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other') => {
         set({ isLoading: true, error: null });
+
+        const reasonLabels: Record<string, string> = {
+          voluntary: '自己都合退職',
+          company: '会社都合退職',
+          contract_end: '契約期間満了',
+          retirement_age: '定年退職',
+          other: 'その他',
+        };
 
         try {
           // デモモードチェック
           if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+            const existingUser = get().users.find(u => u.id === id);
             set((state: UserState) => ({
               users: state.users.map((u) =>
                 u.id === id
@@ -532,10 +618,13 @@ const createUserStore = () => {
                   : state.currentUser,
               isLoading: false,
             }));
+            // 監査ログ記録
+            userAudit.retire(id, existingUser?.name || id, reasonLabels[reason] || reason);
             return;
           }
 
-          const updatedUser = await supabaseRetireUser(id, retiredDate, reason);
+          const existingUser = get().users.find(u => u.id === id);
+          const updatedUser = await apiRetireUser(id, retiredDate, reason);
           set((state: UserState) => ({
             users: state.users.map((u) =>
               u.id === id ? updatedUser : u
@@ -546,6 +635,8 @@ const createUserStore = () => {
                 : state.currentUser,
             isLoading: false,
           }));
+          // 監査ログ記録
+          userAudit.retire(id, existingUser?.name || updatedUser.name, reasonLabels[reason] || reason);
         } catch (error) {
           const errorMessage = error instanceof Error
             ? error.message
@@ -617,6 +708,9 @@ const createUserStore = () => {
           currentUser,
           isDemoMode: true
         });
+
+        // 監査ログ記録
+        authAudit.switchRole(demoUser.name + ' (' + role + ')');
       },
 
       setDemoMode: (enabled: boolean) => {

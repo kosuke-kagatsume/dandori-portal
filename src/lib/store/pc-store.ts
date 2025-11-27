@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { assetAudit } from '@/lib/audit/audit-logger';
 import type { PCAsset, SoftwareLicense, DeadlineWarning } from '@/types/asset';
 
 const DATA_VERSION = 1;
@@ -161,9 +162,16 @@ const createPCStore = () => {
       set((state: PCState) => ({
         pcs: [...state.pcs, newPC],
       }));
+
+      // 監査ログ記録
+      const pcName = `${pc.manufacturer} ${pc.model} (${pc.assetNumber})`;
+      assetAudit.create('PC', pcName);
     },
 
     updatePC: (id: string, updates: Partial<PCAsset>) => {
+      // 割り当て変更の監査ログ用に現在の状態を取得
+      const currentPC = get().pcs.find((pc: PCAsset) => pc.id === id);
+
       set((state: PCState) => ({
         pcs: state.pcs.map((pc) =>
           pc.id === id
@@ -171,12 +179,29 @@ const createPCStore = () => {
             : pc
         ),
       }));
+
+      // 割り当て変更があった場合は監査ログ記録
+      if (currentPC && updates.assignedTo !== undefined) {
+        const pcName = `${currentPC.manufacturer} ${currentPC.model} (${currentPC.assetNumber})`;
+        if (updates.assignedTo && updates.assignedTo.userName) {
+          assetAudit.assign('PC', pcName, updates.assignedTo.userName);
+        }
+      }
     },
 
     deletePC: (id: string) => {
+      // 削除前に情報を取得して監査ログ用に保存
+      const pcToDelete = get().pcs.find((pc: PCAsset) => pc.id === id);
+
       set((state: PCState) => ({
         pcs: state.pcs.filter((pc) => pc.id !== id),
       }));
+
+      // 監査ログ記録
+      if (pcToDelete) {
+        const pcName = `${pcToDelete.manufacturer} ${pcToDelete.model} (${pcToDelete.assetNumber})`;
+        assetAudit.dispose('PC', pcName, '資産管理から削除');
+      }
     },
 
     getPC: (id: string) => {

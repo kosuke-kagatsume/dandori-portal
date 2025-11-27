@@ -4,7 +4,7 @@ import { useState, useRef, ChangeEvent } from 'react';
 import { Upload, X, FileIcon, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { uploadFile, deleteFile, getPublicUrl } from '@/lib/supabase/storage';
+import { uploadFile, deleteFile, getPublicUrl } from '@/lib/storage/helpers';
 
 export interface UploadedFile {
   id: string;
@@ -91,7 +91,7 @@ export function FileUpload({
           return mockFile;
         }
 
-        // 本番環境ではSupabase Storageにアップロード
+        // 本番環境ではAWS S3にアップロード
         const { data, error: uploadError } = await uploadFile(bucket, file);
 
         if (uploadError) {
@@ -131,7 +131,7 @@ export function FileUpload({
 
   const handleRemove = async (fileToRemove: UploadedFile) => {
     try {
-      // デモモード以外の場合、Supabase Storageから削除
+      // デモモード以外の場合、AWS S3から削除
       if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
         await deleteFile(bucket, fileToRemove.id);
       }

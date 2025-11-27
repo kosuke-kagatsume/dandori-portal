@@ -1,96 +1,54 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import type { User, Session } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
+
+interface AuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  role?: string;
+  roles?: string[];
+  department?: string;
+  tenantId?: string;
+}
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const params = useParams();
-  const locale = (params?.locale as string) || 'ja';
-
-  // デモモードかチェック
-  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || 
-                    !process.env.NEXT_PUBLIC_SUPABASE_URL || 
-                    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   useEffect(() => {
     const getUser = async () => {
-      if (isDemoMode) {
-        // デモモードの場合はCookieからのみユーザー取得
-        const getDemoUserFromCookie = () => {
-          try {
-            const value = document.cookie
-              .split('; ')
-              .find(row => row.startsWith('demo_session='));
-            
-            if (value) {
-              const cookieValue = value.split('=')[1];
-              return JSON.parse(decodeURIComponent(cookieValue));
-            }
-            return null;
-          } catch (error) {
-            console.error('Failed to parse demo session cookie:', error);
-            return null;
-          }
-        };
+      try {
+        // REST APIからユーザー情報を取得
+        const response = await fetch('/api/auth/me');
+        const data = await response.json();
 
-        const demoUser = getDemoUserFromCookie();
-        if (demoUser && demoUser.user_metadata) {
-          setUser({
-            id: demoUser.id,
-            email: demoUser.email,
-            user_metadata: {
-              name: demoUser.user_metadata.name,
-              department: demoUser.user_metadata.department,
-              role: demoUser.user_metadata.role,
-            },
-          } as User);
+        if (data.success && data.data?.user) {
+          setUser(data.data.user);
+        } else {
+          setUser(null);
         }
-      } else {
-        // 本番モードの場合のみSupabaseを使用
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        setUser(user);
-
-        // 認証状態の変更を監視
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
-          setUser(session?.user ?? null);
-
-          if (!session?.user) {
-            // 現在のロケールを動的に取得
-            const currentLocale = typeof window !== 'undefined'
-              ? window.location.pathname.split('/')[1] || 'ja'
-              : 'ja';
-            router.push(`/${currentLocale}/auth/login`);
-          }
-        });
-
-        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error('Failed to get user:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     getUser();
-  }, [router, isDemoMode]);
+  }, []);
 
   const signOut = async () => {
-    if (isDemoMode) {
-      // デモモード: Cookieのみクリア
-      if (typeof window !== 'undefined') {
-        document.cookie = 'demo_session=; path=/; max-age=0';
-      }
-    } else {
-      // 本番モード: Supabaseからサインアウト
-      const supabase = createClient();
-      await supabase.auth.signOut();
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout error:', error);
     }
 
-    // 現在のロケールを動的に取得（クロージャの古い値を使わない）
+    // 現在のロケールを動的に取得
     const currentLocale = typeof window !== 'undefined'
       ? window.location.pathname.split('/')[1] || 'ja'
       : 'ja';

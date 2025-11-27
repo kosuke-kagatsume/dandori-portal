@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { generateBasePDF, formatDateToJapanese, formatDateToSlash, getCurrentDateFormatted } from './pdf-common';
+import { exportAudit } from '@/lib/audit/audit-logger';
 import {
   ALLOWANCE_LABELS,
   DEDUCTION_LABELS,
@@ -80,7 +81,12 @@ export const generatePayrollPDF = async (payrollData: PayrollData): Promise<jsPD
       },
     };
 
-    return await generateBasePDF(config);
+    const doc = await generateBasePDF(config);
+
+    // 監査ログ記録
+    exportAudit.pdf('給与明細', `${payrollData.employeeName}_${formatDateToSlash(payrollData.paymentDate)}`);
+
+    return doc;
   } catch (error) {
     console.error('Failed to generate payroll PDF:', error);
     throw new Error('給与明細PDFの生成に失敗しました');
@@ -151,7 +157,12 @@ export const generateBonusPDF = async (bonusData: BonusData): Promise<jsPDF> => 
       },
     };
 
-    return await generateBasePDF(config);
+    const doc = await generateBasePDF(config);
+
+    // 監査ログ記録
+    exportAudit.pdf('賞与明細', `${bonusData.employeeName}_${bonusTypeLabel}_${formatDateToSlash(bonusData.paymentDate)}`);
+
+    return doc;
   } catch (error) {
     console.error('Failed to generate bonus PDF:', error);
     throw new Error('賞与明細PDFの生成に失敗しました');
@@ -276,6 +287,9 @@ export const generateWithholdingSlipPDF = async (
     );
     y += 4;
     doc.text(`${PDF_TEXT.COMMON.ADDRESS}: ${data.companyAddress}`, 20, y);
+
+    // 監査ログ記録
+    exportAudit.pdf('源泉徴収票', `${data.employeeName}_${data.year}年分`);
 
     return doc;
   } catch (error) {

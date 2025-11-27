@@ -100,7 +100,7 @@ interface AnnouncementsState {
   isLoading: boolean;
   error: string | null;
 
-  // Supabase統合
+  // API統合
   fetchAnnouncements: () => Promise<void>;
 
   // CRUD操作（HR・管理者のみ）

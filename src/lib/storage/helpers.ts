@@ -1,9 +1,6 @@
 /**
  * ストレージヘルパー関数
  * AWS S3を使用したファイルアップロード・ダウンロード・削除機能
- *
- * 注意: 既存のSupabase Storage APIとの互換性を維持するため、
- * 関数シグネチャは変更せず、内部実装をS3に切り替え
  */
 
 import { uploadToS3, deleteFromS3, downloadFromS3, listS3Files, getPublicUrl as getS3PublicUrl } from '@/lib/storage/s3-client';
@@ -116,7 +113,6 @@ export async function listFiles(
       return { data: null, error: result.error || 'ファイル一覧取得に失敗しました' };
     }
 
-    // S3のキーをSupabase Storage形式に変換
     const files = result.files.map((key) => ({
       name: key.replace(`${bucket}/`, ''),
       id: key,

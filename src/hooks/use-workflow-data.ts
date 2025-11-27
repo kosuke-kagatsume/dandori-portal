@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { workflowService } from '@/lib/supabase/workflow-service';
 import { useWorkflowStore } from '@/lib/workflow-store';
 
+/**
+ * ワークフローデータフック
+ * REST API経由でデータを取得し、Zustandストアにキャッシュ
+ */
 export function useWorkflowData(userId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Zustandストアからもデータを取得（フォールバック用）
+
   const store = useWorkflowStore();
 
   useEffect(() => {
@@ -17,14 +19,11 @@ export function useWorkflowData(userId: string) {
         setLoading(true);
         setError(null);
 
-        // Supabaseからデータを取得
-        const [myRequestsResult, pendingApprovalsResult] = await Promise.all([
-          workflowService.getMyRequests(userId),
-          workflowService.getPendingApprovals(userId),
-        ]);
+        // REST APIからワークフローデータを取得
+        const response = await fetch('/api/workflows');
 
-        if (!myRequestsResult.success || !pendingApprovalsResult.success) {
-          // Supabaseからの取得に失敗した場合はZustandストアのデータを使用
+        if (!response.ok) {
+          // APIからの取得に失敗した場合はZustandストアのデータを使用
           store.initializeDemoData();
         }
       } catch (err) {
@@ -43,7 +42,7 @@ export function useWorkflowData(userId: string) {
   return {
     loading,
     error,
-    // Zustandストアのデータを返す（Supabaseのデータも内部で同期される）
+    // Zustandストアのデータを返す
     myRequests: store.getMyRequests(userId),
     pendingApprovals: store.getPendingApprovals(userId),
     delegatedApprovals: store.getDelegatedApprovals(userId),

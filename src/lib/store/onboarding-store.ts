@@ -5,7 +5,7 @@
  * Features:
  * - State management for 4 forms
  * - Auto-save functionality (every 30 seconds)
- * - LocalStorage persistence (dev) / Supabase (prod)
+ * - LocalStorage persistence (dev) / S3 (prod)
  * - Progress tracking
  * - Form submission/approval flow
  * - API integration for production mode

@@ -1,16 +1,22 @@
-import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { NextRequest } from 'next/server';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+/**
+ * 認証コールバックルート
+ * JWT認証への移行により、このルートはリダイレクトのみ実行
+ */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get('code');
+  const token = requestUrl.searchParams.get('token');
 
-  if (code) {
-    const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+  // 招待受諾用のトークンがある場合は招待受諾ページへ
+  if (token) {
+    return NextResponse.redirect(new URL(`/ja/auth/accept-invite?token=${token}`, request.url));
   }
 
-  // URLをリダイレクト先に設定
+  // デフォルトでダッシュボードにリダイレクト
   return NextResponse.redirect(new URL('/ja/dashboard', request.url));
 }

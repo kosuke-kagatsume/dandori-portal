@@ -7,9 +7,57 @@ import {
   getPaginationParams,
 } from '@/lib/api/api-helpers';
 
+// デモ用メンテナンス記録データ
+const demoMaintenanceRecords = [
+  {
+    id: 'maint-001',
+    tenantId: 'tenant-demo-001',
+    vehicleId: 'vehicle-001',
+    type: 'oil_change',
+    date: new Date('2024-02-20'),
+    mileage: 45000,
+    cost: 8500,
+    description: 'エンジンオイル交換、オイルフィルター交換',
+    nextDueDate: new Date('2024-08-20'),
+    nextDueMileage: 50000,
+    performedByName: 'トヨタモビリティサービス',
+    notes: '純正オイル使用',
+    createdAt: new Date('2024-02-20'),
+    updatedAt: new Date('2024-02-20'),
+    vehicle: { id: 'vehicle-001', vehicleNumber: 'V-001', licensePlate: '品川 300 あ 1234', make: 'トヨタ', model: 'プリウス' },
+    vendor: { id: 'vendor-001', name: 'トヨタモビリティサービス', phone: '03-1234-5678' },
+  },
+  {
+    id: 'maint-002',
+    tenantId: 'tenant-demo-001',
+    vehicleId: 'vehicle-002',
+    type: 'tire_change',
+    date: new Date('2024-01-15'),
+    mileage: 32000,
+    cost: 48000,
+    description: 'スタッドレスタイヤに交換',
+    tireType: 'winter',
+    performedByName: 'オートバックス品川店',
+    notes: 'ブリヂストン製',
+    createdAt: new Date('2024-01-15'),
+    updatedAt: new Date('2024-01-15'),
+    vehicle: { id: 'vehicle-002', vehicleNumber: 'V-002', licensePlate: '品川 500 い 5678', make: 'ホンダ', model: 'フィット' },
+    vendor: { id: 'vendor-002', name: 'オートバックス品川店', phone: '03-9876-5432' },
+  },
+];
+
 // GET /api/assets/maintenance-records - メンテナンス記録一覧取得
 export async function GET(request: NextRequest) {
   try {
+    // デモモードの場合はデモデータを返す
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return successResponse(demoMaintenanceRecords, {
+        count: demoMaintenanceRecords.length,
+        pagination: { page: 1, limit: 20, total: demoMaintenanceRecords.length, totalPages: 1 },
+        cacheSeconds: 60,
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const tenantId = getTenantId(searchParams);
     const vehicleId = searchParams.get('vehicleId');

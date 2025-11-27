@@ -7,9 +7,69 @@ import {
   getPaginationParams,
 } from '@/lib/api/api-helpers';
 
+// デモ用PC資産データ
+const demoPCAssets = [
+  {
+    id: 'pc-001',
+    tenantId: 'tenant-demo-001',
+    assetNumber: 'PC-001',
+    manufacturer: 'Dell',
+    model: 'Latitude 5520',
+    serialNumber: 'DELL12345',
+    cpu: 'Intel Core i7-1185G7',
+    memory: '16GB',
+    storage: '512GB SSD',
+    os: 'Windows 11 Pro',
+    assignedUserId: 'user-001',
+    assignedUserName: '田中太郎',
+    assignedDate: new Date('2023-04-01'),
+    ownershipType: 'owned',
+    purchaseDate: new Date('2023-03-15'),
+    purchaseCost: 180000,
+    warrantyExpiration: new Date('2026-03-14'),
+    status: 'active',
+    notes: '営業部用ノートPC',
+    createdAt: new Date('2023-03-15'),
+    updatedAt: new Date('2024-01-10'),
+  },
+  {
+    id: 'pc-002',
+    tenantId: 'tenant-demo-001',
+    assetNumber: 'PC-002',
+    manufacturer: 'Apple',
+    model: 'MacBook Pro 14"',
+    serialNumber: 'APPLE67890',
+    cpu: 'Apple M2 Pro',
+    memory: '32GB',
+    storage: '1TB SSD',
+    os: 'macOS Sonoma',
+    assignedUserId: 'user-003',
+    assignedUserName: '佐藤次郎',
+    assignedDate: new Date('2023-06-01'),
+    ownershipType: 'leased',
+    leaseCompany: 'オリックスレンテック',
+    leaseStartDate: new Date('2023-06-01'),
+    leaseEndDate: new Date('2026-05-31'),
+    leaseMonthlyCost: 12000,
+    status: 'active',
+    notes: '開発部用MacBook',
+    createdAt: new Date('2023-06-01'),
+    updatedAt: new Date('2024-02-20'),
+  },
+];
+
 // GET /api/assets/pc-assets - PC資産一覧取得
 export async function GET(request: NextRequest) {
   try {
+    // デモモードの場合はデモデータを返す
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return successResponse(demoPCAssets, {
+        count: demoPCAssets.length,
+        pagination: { page: 1, limit: 20, total: demoPCAssets.length, totalPages: 1 },
+        cacheSeconds: 60,
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const tenantId = getTenantId(searchParams);
     const status = searchParams.get('status');

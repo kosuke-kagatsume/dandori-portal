@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getCurrentLocation } from './geolocation';
+import { attendanceAudit } from '@/lib/audit/audit-logger';
 
 export interface LocationData {
   latitude: number;
@@ -126,6 +127,10 @@ export const useAttendanceStore = create<AttendanceStore>()(
           }
         }));
 
+        // 監査ログ記録
+        const today = new Date().toLocaleDateString('ja-JP');
+        attendanceAudit.checkIn(today);
+
         // 勤怠一覧の更新を通知
         const { onAttendanceUpdate } = get();
         if (onAttendanceUpdate) {
@@ -207,7 +212,11 @@ export const useAttendanceStore = create<AttendanceStore>()(
             approvalReason: isEarlyLeave ? '早退のため承認が必要です' : state.todayStatus.approvalReason,
           }
         }));
-        
+
+        // 監査ログ記録
+        const today = new Date().toLocaleDateString('ja-JP');
+        attendanceAudit.checkOut(today);
+
         // 勤怠一覧の更新を通知
         const { onAttendanceUpdate } = get();
         if (onAttendanceUpdate) {

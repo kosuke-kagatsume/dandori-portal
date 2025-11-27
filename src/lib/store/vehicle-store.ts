@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { assetAudit } from '@/lib/audit/audit-logger';
 import type {
   Vehicle,
   Vendor,
@@ -427,9 +428,16 @@ const createVehicleStore = () => {
       set((state: VehicleState) => ({
         vehicles: [...state.vehicles, newVehicle],
       }));
+
+      // 監査ログ記録
+      const vehicleName = `${vehicle.make} ${vehicle.model} (${vehicle.vehicleNumber})`;
+      assetAudit.create('車両', vehicleName);
     },
 
     updateVehicle: (id: string, updates: Partial<Vehicle>) => {
+      // 割り当て変更の監査ログ用に現在の状態を取得
+      const currentVehicle = get().vehicles.find((v: Vehicle) => v.id === id);
+
       set((state: VehicleState) => ({
         vehicles: state.vehicles.map((v) =>
           v.id === id
@@ -437,12 +445,29 @@ const createVehicleStore = () => {
             : v
         ),
       }));
+
+      // 割り当て変更があった場合は監査ログ記録
+      if (currentVehicle && updates.assignedTo !== undefined) {
+        const vehicleName = `${currentVehicle.make} ${currentVehicle.model} (${currentVehicle.vehicleNumber})`;
+        if (updates.assignedTo && updates.assignedTo.userName) {
+          assetAudit.assign('車両', vehicleName, updates.assignedTo.userName);
+        }
+      }
     },
 
     deleteVehicle: (id: string) => {
+      // 削除前に情報を取得して監査ログ用に保存
+      const vehicleToDelete = get().vehicles.find((v: Vehicle) => v.id === id);
+
       set((state: VehicleState) => ({
         vehicles: state.vehicles.filter((v) => v.id !== id),
       }));
+
+      // 監査ログ記録
+      if (vehicleToDelete) {
+        const vehicleName = `${vehicleToDelete.make} ${vehicleToDelete.model} (${vehicleToDelete.vehicleNumber})`;
+        assetAudit.dispose('車両', vehicleName, '資産管理から削除');
+      }
     },
 
     getVehicle: (id: string) => {

@@ -9,7 +9,30 @@ import { getBroadcast } from '@/lib/realtime/broadcast';
 import { useApprovalFlowStore } from './store/approval-flow-store';
 import { useOrganizationStore } from './store/organization-store';
 import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration';
-import { workflowService } from './supabase/workflow-service';
+import { workflowAudit } from '@/lib/audit/audit-logger';
+
+// REST API helper function
+async function apiCreateWorkflow(data: {
+  tenantId: string;
+  type: string;
+  title: string;
+  description: string | null;
+  requesterId: string;
+  status: string;
+  details: Record<string, unknown>;
+}) {
+  const params = new URLSearchParams({ tenantId: data.tenantId });
+  const response = await fetch(`/api/workflows?${params}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('ワークフロー申請の作成に失敗しました');
+  }
+  const result = await response.json();
+  return result;
+}
 
 /**
  * 現在のロケールをURLから取得するヘルパー関数
@@ -373,17 +396,17 @@ export const useWorkflowStore = create<WorkflowStore>()(
             return id;
           }
 
-          // 本番モード: Supabaseに保存（TODO: テナントID取得ロジック）
+          // 本番モード: REST APIに保存
           const tenantId = 'tenant-demo-001'; // 仮のテナントID
 
-          const result = await workflowService.createRequest({
-            organization_id: tenantId,
+          const result = await apiCreateWorkflow({
+            tenantId,
             type: request.type,
             title: request.title,
             description: request.description || null,
-            requester_id: request.requesterId,
+            requesterId: request.requesterId,
             status: 'draft',
-            metadata: request.details || {},
+            details: request.details || {},
           });
 
           if (!result.success || !result.data) {
@@ -395,6 +418,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
             requests: [...state.requests, newRequest],
             isLoading: false,
           }));
+
+          // 監査ログ記録
+          workflowAudit.create(id, request.title);
 
           return id;
         } catch (error) {
@@ -448,6 +474,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
         if (request) {
           broadcast?.send('workflow:new', request);
 
+          // 監査ログ記録（提出）
+          workflowAudit.submit(id, request.title);
+
           // 最初の承認者に通知
           const firstStep = request.approvalSteps[0];
           if (firstStep) {
@@ -468,10 +497,12 @@ export const useWorkflowStore = create<WorkflowStore>()(
       
       cancelRequest: (id, reason) => {
         const now = new Date().toISOString();
+        const requestBeforeCancel = get().requests.find(r => r.id === id);
+
         set((state) => {
           const request = state.requests.find(r => r.id === id);
           if (!request) return state;
-          
+
           return {
             requests: state.requests.map((req) =>
               req.id === id
@@ -495,6 +526,11 @@ export const useWorkflowStore = create<WorkflowStore>()(
             ),
           };
         });
+
+        // 監査ログ記録（取り消し）
+        if (requestBeforeCancel) {
+          workflowAudit.cancel(id, requestBeforeCancel.title);
+        }
       },
       
       approveRequest: (requestId, stepId, comments, requireComment = false) => {
@@ -578,6 +614,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
           const step = request.approvalSteps[stepIndex];
           const isFullyApproved = request.status === 'approved';
 
+          // 監査ログ記録（承認）
+          workflowAudit.approve(requestId, request.title, step?.approverName || '承認者');
+
           // 申請者に通知
           useNotificationStore.getState().addNotification({
             id: `notif-${Date.now()}-${Math.random()}`,
@@ -657,6 +696,10 @@ export const useWorkflowStore = create<WorkflowStore>()(
         const request = get().requests.find(r => r.id === requestId);
         if (request) {
           const step = request.approvalSteps.find(s => s.id === stepId);
+
+          // 監査ログ記録（却下）
+          workflowAudit.reject(requestId, request.title, reason);
+
           useNotificationStore.getState().addNotification({
             id: `notif-${Date.now()}-${Math.random()}`,
             type: 'error',

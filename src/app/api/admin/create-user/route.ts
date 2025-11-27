@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
- * Supabase Authにユーザーを作成するAPI
+ * ユーザー作成API
  * DW管理画面からテナント作成時に呼び出される
  */
 export async function POST(request: NextRequest) {
@@ -24,65 +28,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
-
-    console.log('Supabase URL:', supabaseUrl);
-    console.log('Service Role Key exists:', !!serviceRoleKey);
-
-    if (!supabaseUrl || !serviceRoleKey) {
+    // メールアドレス形式チェック
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Supabase configuration missing' },
-        { status: 500 }
-      );
-    }
-
-    // Service Role Keyでadminクライアントを作成
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-
-    // ユーザーを作成（自動確認）
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // メール確認をスキップ
-      user_metadata: {
-        name,
-        role: role || 'admin',
-        roles: [role || 'admin'],
-        tenantId: tenantId || null,
-      },
-    });
-
-    if (error) {
-      console.error('Failed to create user:', error);
-
-      // 既存ユーザーの場合
-      if (error.message.includes('already been registered')) {
-        return NextResponse.json(
-          { error: 'このメールアドレスは既に登録されています' },
-          { status: 400 }
-        );
-      }
-
-      return NextResponse.json(
-        { error: error.message || 'ユーザー作成に失敗しました' },
+        { error: '有効なメールアドレスを入力してください' },
         { status: 400 }
       );
     }
 
+    // 既存ユーザーチェック
+    const existingUser = await prisma.user.findFirst({
+      where: { email },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'このメールアドレスは既に登録されています' },
+        { status: 400 }
+      );
+    }
+
+    // パスワードをハッシュ化
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // ユーザーを作成
+    const user = await prisma.user.create({
+      data: {
+        email,
+        name,
+        passwordHash,
+        role: role || 'admin',
+        tenantId: tenantId || null,
+        status: 'active',
+      },
+    });
+
+    console.log('User created successfully:', email);
+
     return NextResponse.json({
       success: true,
       user: {
-        id: data.user.id,
-        email: data.user.email,
-        name,
-        role: role || 'admin',
-        tenantId,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
       },
     });
   } catch (error) {
