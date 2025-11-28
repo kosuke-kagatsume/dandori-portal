@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useUIStore, useUserStore } from '@/lib/store';
+import { useUIStore, useUserStore, useTenantStore } from '@/lib/store';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import { useLegalUpdatesStore } from '@/lib/store/legal-updates-store';
 import { useAnnouncementsStore } from '@/lib/store/announcements-store';
@@ -45,7 +45,8 @@ export function AppShell({ children }: AppShellProps) {
   const { createAnnouncement, getAnnouncements } = useAnnouncementsStore();
   const { initializeNotifications } = useNotificationHistoryStore();
   const { initializeInvoices } = useInvoiceStore();
-  const { initializeTenants } = useBillingTenantStore();
+  const { initializeTenants: initializeBillingTenants } = useBillingTenantStore();
+  const { initializeTenants } = useTenantStore();
 
   // マルチテナントコンテキストを初期化
   useTenantContextInit();
@@ -112,12 +113,17 @@ export function AppShell({ children }: AppShellProps) {
     }
   }, [createAnnouncement, getAnnouncements]);
 
-  // Initialize billing data (invoices, tenants, notification history)
+  // Initialize tenants (UI表示用)
   useEffect(() => {
     initializeTenants();
+  }, [initializeTenants]);
+
+  // Initialize billing data (invoices, tenants, notification history)
+  useEffect(() => {
+    initializeBillingTenants();
     initializeInvoices();
     initializeNotifications();
-  }, [initializeTenants, initializeInvoices, initializeNotifications]);
+  }, [initializeBillingTenants, initializeInvoices, initializeNotifications]);
 
   // Initialize offline storage and background sync (PWA)
   useEffect(() => {
