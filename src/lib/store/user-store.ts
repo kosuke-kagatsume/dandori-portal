@@ -10,6 +10,7 @@ import {
   stopTokenRefreshTimer,
 } from '@/lib/auth/token-manager';
 import { userAudit, authAudit } from '@/lib/audit/audit-logger';
+import { IS_DEMO_BUILD } from '@/config/demo';
 
 // REST API helper functions
 const API_BASE = '/api/users';
@@ -150,17 +151,18 @@ const createUserStore = () => {
 
   const storeCreator = (set: (partial: Partial<UserState> | ((state: UserState) => Partial<UserState>)) => void, get: () => UserState): UserState => ({
       // 本番モード: null、デモモード: デモユーザー
-      currentUser: process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? initialCurrentUser : null,
+      // IS_DEMO_BUILDを使用することでSSR/CSRで一貫した値になる
+      currentUser: IS_DEMO_BUILD ? initialCurrentUser : null,
       users: [],
       isLoading: false,
       error: null,
 
       // API統合用（本番では認証後にテナントIDが設定される）
-      tenantId: process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? 'tenant-demo-001' : null,
+      tenantId: IS_DEMO_BUILD ? 'tenant-demo-001' : null,
 
-      // デモモードの初期状態（環境変数で制御、デフォルトはfalse）
-      isDemoMode: process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
-      currentDemoUser: process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? demoUsers.employee : null,
+      // デモモードの初期状態（ビルド時に確定、localStorageからは読み込まない）
+      isDemoMode: IS_DEMO_BUILD,
+      currentDemoUser: IS_DEMO_BUILD ? demoUsers.employee : null,
 
       // 認証トークン
       accessToken: null,
@@ -184,8 +186,8 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          // デモモードチェック（ビルド時定数を使用）
+          if (IS_DEMO_BUILD) {
             // デモモード: ハードコードされたユーザーを使用
             set({
               currentUser: initialCurrentUser,
@@ -300,8 +302,8 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+          // デモモードチェック（ビルド時定数を使用）
+          if (!IS_DEMO_BUILD) {
             // プロダクションモード: REST API でログアウト
             await fetch('/api/auth/logout', {
               method: 'POST',
@@ -351,8 +353,8 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          // デモモードチェック（ビルド時定数を使用）
+          if (IS_DEMO_BUILD) {
             // デモモード: 既存のユーザーを返す
             set({ isLoading: false });
             return;
@@ -422,8 +424,8 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          // デモモードチェック（ビルド時定数を使用）
+          if (IS_DEMO_BUILD) {
             set({ isLoading: false });
             return;
           }
@@ -457,8 +459,8 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          // デモモードチェック（ビルド時定数を使用）
+          if (IS_DEMO_BUILD) {
             set((state: UserState) => ({
               users: [...state.users, user],
               isLoading: false,
@@ -498,8 +500,8 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          // デモモードチェック（ビルド時定数を使用）
+          if (IS_DEMO_BUILD) {
             const existingUser = get().users.find(u => u.id === id);
             set((state: UserState) => ({
               users: state.users.map((u) =>
@@ -550,8 +552,8 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          // デモモードチェック（ビルド時定数を使用）
+          if (IS_DEMO_BUILD) {
             set((state: UserState) => ({
               users: state.users.filter((u) => u.id !== id),
               currentUser:
@@ -594,8 +596,8 @@ const createUserStore = () => {
         };
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+          // デモモードチェック（ビルド時定数を使用）
+          if (IS_DEMO_BUILD) {
             const existingUser = get().users.find(u => u.id === id);
             set((state: UserState) => ({
               users: state.users.map((u) =>
@@ -743,18 +745,39 @@ const createUserStore = () => {
     persist(storeCreator, {
       name: 'user-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        currentUser: state.currentUser,
-        users: state.users, // ユーザー配列も永続化
-        tenantId: state.tenantId, // テナントIDも永続化
-        isDemoMode: state.isDemoMode,
-        currentDemoUser: state.currentDemoUser,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-      }),
+      partialize: (state) => {
+        // 本番ビルドの場合はisDemoModeとcurrentDemoUserを永続化しない
+        // これにより古いlocalStorageの値でDEMOモードになることを防ぐ
+        if (!IS_DEMO_BUILD) {
+          return {
+            currentUser: state.currentUser,
+            users: state.users,
+            tenantId: state.tenantId,
+            // isDemoModeとcurrentDemoUserは永続化しない
+            accessToken: state.accessToken,
+            refreshToken: state.refreshToken,
+          };
+        }
+        // デモビルドの場合は従来通り
+        return {
+          currentUser: state.currentUser,
+          users: state.users,
+          tenantId: state.tenantId,
+          isDemoMode: state.isDemoMode,
+          currentDemoUser: state.currentDemoUser,
+          accessToken: state.accessToken,
+          refreshToken: state.refreshToken,
+        };
+      },
       onRehydrateStorage: () => (state) => {
         // localStorageからの読み込み完了時に呼ばれる
         if (state) {
+          // 本番ビルドの場合、localStorageからisDemoMode=trueが読み込まれていても
+          // 強制的にfalseにリセットする（Hydrationエラー防止）
+          if (!IS_DEMO_BUILD) {
+            state.isDemoMode = false;
+            state.currentDemoUser = null;
+          }
           state.setHasHydrated(true);
           // トークンがある場合、apiClientにも設定
           if (state.accessToken) {
