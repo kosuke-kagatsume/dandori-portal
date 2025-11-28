@@ -16,8 +16,8 @@ interface TenantState {
 // デフォルトテナントデータ
 const getDefaultTenants = (): Tenant[] => [
   {
-    id: 'tenant_001',
-    name: 'デモ株式会社',
+    id: 'tenant-dandori-work',
+    name: 'ダンドリワーク',
     timezone: 'Asia/Tokyo',
     closingDay: '末' as const,
     weekStartDay: 0,
