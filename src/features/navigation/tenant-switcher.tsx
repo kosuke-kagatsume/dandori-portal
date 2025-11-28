@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Check, ChevronDown, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,16 +11,28 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTenantStore } from '@/lib/store';
-import { cn } from '@/lib/utils';
 
 export function TenantSwitcher() {
-  const { currentTenant, tenants, setCurrentTenant } = useTenantStore();
+  const [mounted, setMounted] = useState(false);
+  const { currentTenant, tenants, setCurrentTenant, initializeTenants } = useTenantStore();
+
+  // Hydrationエラー防止: クライアント側でのみレンダリング
+  useEffect(() => {
+    setMounted(true);
+    // テナントが未初期化の場合は初期化
+    initializeTenants();
+  }, [initializeTenants]);
+
+  // SSR時は何もレンダリングしない（Hydration不一致を防ぐ）
+  if (!mounted) {
+    return null;
+  }
 
   if (!currentTenant) {
     return (
       <div className="flex items-center space-x-2 text-muted-foreground">
         <Building className="w-4 h-4" />
-        <span className="text-sm">No tenant selected</span>
+        <span className="text-sm">読み込み中...</span>
       </div>
     );
   }
