@@ -12,3 +12,9 @@
  * - localStorageの値は参照しない（Hydrationエラー防止）
  */
 export const IS_DEMO_BUILD = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
+// デバッグ用ログ（本番で値を確認するため）
+if (typeof window !== 'undefined') {
+  console.log('[DEMO_DEBUG] IS_DEMO_BUILD =', IS_DEMO_BUILD);
+  console.log('[DEMO_DEBUG] NEXT_PUBLIC_DEMO_MODE =', process.env.NEXT_PUBLIC_DEMO_MODE);
+}
