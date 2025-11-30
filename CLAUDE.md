@@ -1,6 +1,174 @@
 # Dandori Portal - 開発ドキュメント
 
-## 🎯 最終更新: 2025-10-26 (Phase 9完了 - レスポンシブデザイン完全対応)
+## 🎯 最終更新: 2025-11-29 (Phase 2計画追加)
+
+---
+
+## 📋 Phase 2 リリース計画（開発完了後に削除）
+
+### リリース対象機能
+
+| 機能 | 現状 | 内容 |
+|------|------|------|
+| **人事評価** | 近日公開（UI済） | 既存UIを本番稼働化 |
+| **健康管理** | 新規 | 健康診断・ストレスチェック |
+| **タレントマネジメント** | 新規 | スキル管理・キャリアパス |
+
+### 健康管理 - 実装予定
+
+```
+Phase 2-1: 健康診断管理
+├─ 受診記録の登録・管理
+├─ 判定結果の記録（A/B/C/D）
+├─ 要再検査者リスト・フォロー
+└─ 受診率レポート
+
+Phase 2-2: ストレスチェック
+├─ 質問票（57問）
+├─ 判定ロジック
+├─ 高ストレス者管理
+└─ 部門別ストレス傾向分析
+
+Phase 2-3: 健康レポート
+├─ 有所見率推移
+├─ 残業×ストレス相関
+└─ 産業医報告用データ出力
+```
+
+#### 法令対応ポイント
+
+| 法令 | 要件 | 対応 |
+|------|------|------|
+| 労働安全衛生法 | 年1回健康診断 | 受診管理・リマインド |
+| 同上 | ストレスチェック（50人以上） | 質問票・判定・面談記録 |
+| 個人情報保護法 | 健康情報の取扱い | アクセス権限・閲覧ログ |
+
+#### 健康管理 - 画面構成
+
+```
+/ja/health
+├─ /ja/health                    # 健康管理ダッシュボード
+├─ /ja/health/checkups           # 健康診断一覧・管理
+├─ /ja/health/checkups/[id]      # 健康診断詳細
+├─ /ja/health/stress-check       # ストレスチェック一覧
+├─ /ja/health/stress-check/take  # ストレスチェック受検
+├─ /ja/health/reports            # 健康レポート・分析
+└─ /ja/health/settings           # 健康管理設定
+```
+
+#### 健康管理 - データモデル
+
+```typescript
+// 健康診断
+interface HealthCheckup {
+  id: string;
+  userId: string;
+  tenantId: string;
+  checkupDate: Date;           // 受診日
+  checkupType: 'regular' | 'hiring' | 'specific';
+  medicalInstitution: string;  // 医療機関名
+  overallResult: 'A' | 'B' | 'C' | 'D' | 'E'; // 総合判定
+  requiresReexam: boolean;     // 要再検査
+  requiresTreatment: boolean;  // 要治療
+  height?: number;
+  weight?: number;
+  bmi?: number;
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  findings: HealthFinding[];
+  followUpStatus: 'none' | 'scheduled' | 'completed';
+}
+
+// ストレスチェック
+interface StressCheck {
+  id: string;
+  userId: string;
+  tenantId: string;
+  fiscalYear: number;
+  checkDate: Date;
+  status: 'pending' | 'completed' | 'interview_recommended';
+  stressScore: {
+    stressFactors: number;     // A群
+    stressResponse: number;    // B群
+    socialSupport: number;     // C群
+    total: number;
+  };
+  isHighStress: boolean;
+  interviewRequested: boolean;
+}
+```
+
+#### 健康管理 - 権限設計
+
+| ロール | 閲覧範囲 | 操作 |
+|--------|----------|------|
+| 本人 | 自分のデータのみ | 結果閲覧、ストレスチェック受検 |
+| 上司 | 部下の受診状況のみ（結果は見れない） | 受診リマインド |
+| 人事担当 | 全社員の統計データ | 受診管理、レポート出力 |
+| 産業医 | 高ストレス者・要再検査者 | 面談記録、意見書作成 |
+| 管理者 | 全データ | 全操作 |
+
+#### 健康管理 - API設計
+
+```
+GET  /api/health/checkups              # 健康診断一覧
+POST /api/health/checkups              # 健康診断登録
+GET  /api/health/checkups/:id          # 健康診断詳細
+PUT  /api/health/checkups/:id          # 健康診断更新
+GET  /api/health/stress-checks         # ストレスチェック一覧
+POST /api/health/stress-checks         # ストレスチェック回答送信
+GET  /api/health/stress-checks/:id     # ストレスチェック結果
+GET  /api/health/reports/checkup-rate  # 受診率レポート
+GET  /api/health/reports/findings      # 有所見率レポート
+GET  /api/health/reports/stress        # ストレス傾向レポート
+```
+
+### タレントマネジメント - 実装予定
+
+```
+Phase 2-1: スキル管理（基本）
+├─ スキルマスタ登録
+├─ 社員ごとのスキル評価（5段階）
+└─ スキル履歴
+
+Phase 2-2: スキルマップ
+├─ 部門×スキルマトリクス
+└─ スキルギャップ分析
+
+Phase 2-3: キャリアパス
+├─ 目標ポジション設定
+├─ 必要スキル提案
+└─ 推奨研修・資格の提案
+```
+
+### 既存機能との連携
+
+| 新機能 | 連携先 | 連携内容 |
+|--------|--------|----------|
+| 健康管理 | 勤怠管理 | 残業×健康データ相関 |
+| 健康管理 | ワークフロー | 面談申請 |
+| タレントマネジメント | 人事評価 | スキル評価と連動 |
+| タレントマネジメント | 組織図 | スキル分布可視化 |
+
+---
+
+## 📝 保留タスク
+
+### DW管理画面の認証（会社メンバー受け渡し時に実装）
+
+**方針**: 専用ログイン画面で実装
+
+```
+/dw-admin/login → DW管理者専用ログイン
+/dw-admin/* → 認証必須
+```
+
+**実装予定内容**:
+- `/dw-admin/login` ページ作成
+- DW管理者専用の認証API
+- ミドルウェアで `/dw-admin/*` をガード
+- 特定メールドメイン制限（オプション）
+- MFA対応（オプション）
 
 ---
 
@@ -39,6 +207,15 @@ Amplifyが自動でビルド・デプロイを実行します（GitHubと連携�
 1. ローカル環境で機能実装・テスト
 2. `develop`ブランチにプッシュ → dev.dandori-portal.comで確認
 3. 問題なければ`main`にマージ → dandori-portal.comに反映
+
+### ⚠️ Git操作ルール（必須）
+
+**コミット・プッシュは必ずユーザーの許可を得てから実行すること**
+
+1. コードの変更が完了したら、変更内容を説明する
+2. 「コミット・プッシュしてよいですか？」と確認を取る
+3. ユーザーの明示的な許可（「OK」「いいよ」「プッシュして」等）があるまで絶対に実行しない
+4. 勝手にコミット・プッシュすることは禁止
 
 ---
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,28 +49,55 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
   // サブドメインのバリデーション状態
   const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'unavailable' | 'invalid'>('idle');
 
-  // サブドメインのバリデーション
-  const validateSubdomain = (value: string) => {
+  // デバウンス用のタイマー参照
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // サブドメインのバリデーション（API経由でデータベースをチェック）
+  const validateSubdomain = useCallback((value: string) => {
+    // 既存のタイマーをクリア
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
     if (!value) {
       setSubdomainStatus('idle');
       return;
     }
-    // 英小文字、数字、ハイフンのみ許可（先頭と末尾のハイフンは不可）
+
+    // 基本的なフォーマットチェック（APIでも行うが、UIの即時フィードバック用）
     const subdomainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
     if (!subdomainRegex.test(value) || value.length < 3 || value.length > 30) {
       setSubdomainStatus('invalid');
       return;
     }
+
     setSubdomainStatus('checking');
-    // 重複チェック
-    setTimeout(() => {
-      if (isSubdomainAvailable(value)) {
-        setSubdomainStatus('available');
-      } else {
-        setSubdomainStatus('unavailable');
+
+    // 500msのデバウンス後にAPIを呼び出す
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        // APIでサブドメインの利用可能性をチェック（データベース確認）
+        const response = await fetch(`/api/admin/tenants/check-subdomain?subdomain=${encodeURIComponent(value)}`);
+        const data = await response.json();
+
+        if (data.success && data.available) {
+          setSubdomainStatus('available');
+        } else if (data.reason === 'invalid_format') {
+          setSubdomainStatus('invalid');
+        } else {
+          setSubdomainStatus('unavailable');
+        }
+      } catch (error) {
+        console.error('サブドメインチェックエラー:', error);
+        // エラー時はローカルストアにフォールバック
+        if (isSubdomainAvailable(value)) {
+          setSubdomainStatus('available');
+        } else {
+          setSubdomainStatus('unavailable');
+        }
       }
-    }, 300);
-  };
+    }, 500);
+  }, [isSubdomainAvailable]);
 
   // 料金計算
   const userCount = parseInt(formData.initialUserCount) || 0;
@@ -150,10 +177,36 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
     setIsCreating(true);
 
     try {
-      // テナントIDを生成
-      const tenantId = `tenant-${Date.now()}`;
+      // トライアル期限計算
+      const trialDays = parseInt(formData.trialDays);
+      const trialEndDate = trialDays > 0
+        ? new Date(new Date(formData.contractStartDate).getTime() + trialDays * 24 * 60 * 60 * 1000)
+        : null;
 
-      // 1. Supabase Authにユーザーを作成
+      // 1. データベースにテナントを作成
+      const tenantResponse = await fetch('/api/admin/tenants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.companyName,
+          subdomain: formData.subdomain || null,
+          timezone: 'Asia/Tokyo',
+          billingEmail: formData.billingEmail,
+          trialEndDate: trialEndDate?.toISOString(),
+          contractStartDate: formData.contractStartDate,
+          status: trialDays > 0 ? 'trial' : 'active',
+        }),
+      });
+
+      const tenantData = await tenantResponse.json();
+
+      if (!tenantResponse.ok) {
+        throw new Error(tenantData.error || 'テナントの作成に失敗しました');
+      }
+
+      const tenantId = tenantData.data.id;
+
+      // 2. Supabase Authにユーザーを作成
       const authResponse = await fetch('/api/admin/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -171,13 +224,8 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
       if (!authResponse.ok) {
         throw new Error(authData.error || '管理者アカウントの作成に失敗しました');
       }
-      // トライアル期限計算
-      const trialDays = parseInt(formData.trialDays);
-      const trialEndDate = trialDays > 0
-        ? new Date(new Date(formData.contractStartDate).getTime() + trialDays * 24 * 60 * 60 * 1000)
-        : null;
 
-      // 2. テナント作成
+      // 3. ローカルストア（UI用）にもテナントを追加
       addTenant({
         id: tenantId,
         name: formData.companyName,
