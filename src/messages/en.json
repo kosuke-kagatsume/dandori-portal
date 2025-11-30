@@ -49,6 +49,7 @@
     "sites": "Sites",
     "settings": "Settings",
     "audit": "Audit Logs",
+    "health": "Health Management",
     "profile": "Profile"
   },
   "dashboard": {

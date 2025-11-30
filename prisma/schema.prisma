@@ -75,7 +75,7 @@ model User {
   id               String    @id @default(cuid())
   tenantId         String
   email            String    @unique
-  passwordHash     String?   // bcrypt hashed password for authentication
+  passwordHash     String? // bcrypt hashed password for authentication
   name             String
   phone            String?
   hireDate         DateTime?
@@ -410,7 +410,7 @@ model Department {
   id        String   @id @default(cuid())
   tenantId  String
   name      String
-  parentId  String?  // 親部署ID（階層構造用）
+  parentId  String? // 親部署ID（階層構造用）
   sortOrder Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -465,20 +465,20 @@ model EmploymentType {
 
 // 承認フロー定義（マスタ）
 model ApprovalFlowDefinition {
-  id                     String   @id @default(cuid())
-  tenantId               String
-  name                   String   // フロー名
-  description            String?  // 説明
-  documentType           String   // leave_request, overtime_request, expense_claim, business_trip, purchase_request
-  flowType               String   // organization（組織連動）, custom（カスタム）
-  useOrganizationHierarchy Boolean @default(false) // 組織連動型の場合true
-  organizationLevels     Int?     // 組織連動型: 何階層上まで承認が必要か（1-5）
-  isActive               Boolean  @default(true)
-  isDefault              Boolean  @default(false) // このドキュメントタイプのデフォルトフロー
-  priority               Int      @default(1) // 優先度（条件分岐時の判定順）
-  createdBy              String   // 作成者ID
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  tenantId                 String
+  name                     String // フロー名
+  description              String? // 説明
+  documentType             String // leave_request, overtime_request, expense_claim, business_trip, purchase_request
+  flowType                 String // organization（組織連動）, custom（カスタム）
+  useOrganizationHierarchy Boolean  @default(false) // 組織連動型の場合true
+  organizationLevels       Int? // 組織連動型: 何階層上まで承認が必要か（1-5）
+  isActive                 Boolean  @default(true)
+  isDefault                Boolean  @default(false) // このドキュメントタイプのデフォルトフロー
+  priority                 Int      @default(1) // 優先度（条件分岐時の判定順）
+  createdBy                String // 作成者ID
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 
   // Relations
   steps      ApprovalFlowStep[]
@@ -493,17 +493,17 @@ model ApprovalFlowDefinition {
 
 // 承認フローステップ定義（カスタム型用）
 model ApprovalFlowStep {
-  id               String   @id @default(cuid())
-  flowId           String
-  stepNumber       Int      // ステップ番号（1始まり）
-  name             String   // ステップ名（例: 直属上司承認、部長承認）
-  executionMode    String   @default("serial") // serial（順次）, parallel（並列）
-  requiredApprovals Int     @default(1) // 必要承認数（並列時）
-  timeoutHours     Int?     // タイムアウト時間
-  allowDelegate    Boolean  @default(true) // 代理承認を許可
-  allowSkip        Boolean  @default(false) // スキップを許可
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                String   @id @default(cuid())
+  flowId            String
+  stepNumber        Int // ステップ番号（1始まり）
+  name              String // ステップ名（例: 直属上司承認、部長承認）
+  executionMode     String   @default("serial") // serial（順次）, parallel（並列）
+  requiredApprovals Int      @default(1) // 必要承認数（並列時）
+  timeoutHours      Int? // タイムアウト時間
+  allowDelegate     Boolean  @default(true) // 代理承認を許可
+  allowSkip         Boolean  @default(false) // スキップを許可
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   // Relations
   flow      ApprovalFlowDefinition @relation(fields: [flowId], references: [id], onDelete: Cascade)
@@ -516,15 +516,15 @@ model ApprovalFlowStep {
 
 // 承認フローステップの承認者定義
 model ApprovalFlowApprover {
-  id          String   @id @default(cuid())
-  stepId      String
-  approverType String  // user（特定ユーザー）, role（役職）, position_level（役職レベル以上）
-  approverId  String?  // approverType=userの場合: ユーザーID
-  approverRole String? // approverType=roleの場合: manager, hr, finance等
-  positionLevel Int?   // approverType=position_levelの場合: 役職レベル
-  order       Int      @default(1) // 承認者の順序（並列時）
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  stepId        String
+  approverType  String // user（特定ユーザー）, role（役職）, position_level（役職レベル以上）
+  approverId    String? // approverType=userの場合: ユーザーID
+  approverRole  String? // approverType=roleの場合: manager, hr, finance等
+  positionLevel Int? // approverType=position_levelの場合: 役職レベル
+  order         Int      @default(1) // 承認者の順序（並列時）
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
   step ApprovalFlowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
@@ -537,10 +537,10 @@ model ApprovalFlowApprover {
 model ApprovalFlowCondition {
   id          String   @id @default(cuid())
   flowId      String
-  field       String   // 条件判定フィールド（amount, days, hours等）
-  operator    String   // 演算子（gte, lte, gt, lt, eq, ne）
-  value       Float    // 比較値
-  description String?  // 条件の説明（例: 5日以上の休暇）
+  field       String // 条件判定フィールド（amount, days, hours等）
+  operator    String // 演算子（gte, lte, gt, lt, eq, ne）
+  value       Float // 比較値
+  description String? // 条件の説明（例: 5日以上の休暇）
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -557,33 +557,33 @@ model ApprovalFlowCondition {
 
 // 会社情報
 model CompanySettings {
-  id                   String   @id @default(cuid())
-  tenantId             String   @unique // 1テナント1設定
+  id       String @id @default(cuid())
+  tenantId String @unique // 1テナント1設定
 
   // 基本情報
-  name                 String   // 会社名
-  nameKana             String?  // 会社名（カナ）
-  postalCode           String?  // 郵便番号
-  address              String?  // 住所
-  phone                String?  // 電話番号
-  fax                  String?  // FAX番号
-  email                String?  // メールアドレス
+  name       String // 会社名
+  nameKana   String? // 会社名（カナ）
+  postalCode String? // 郵便番号
+  address    String? // 住所
+  phone      String? // 電話番号
+  fax        String? // FAX番号
+  email      String? // メールアドレス
 
   // 法人情報
-  corporateNumber      String?  // 法人番号（13桁）
-  representativeName   String?  // 代表者名
-  representativeTitle  String?  // 代表者役職
+  corporateNumber     String? // 法人番号（13桁）
+  representativeName  String? // 代表者名
+  representativeTitle String? // 代表者役職
 
   // 税務情報
-  taxOffice            String?  // 所轄税務署
-  taxOfficeCode        String?  // 税務署コード
+  taxOffice     String? // 所轄税務署
+  taxOfficeCode String? // 税務署コード
 
   // その他
-  fiscalYearEnd        String?  // 決算月（MM形式）
-  foundedDate          DateTime? @db.Date // 設立日
+  fiscalYearEnd String? // 決算月（MM形式）
+  foundedDate   DateTime? @db.Date // 設立日
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@map("company_settings")
@@ -591,32 +591,32 @@ model CompanySettings {
 
 // 給与設定
 model PayrollSettings {
-  id                        String   @id @default(cuid())
-  tenantId                  String   @unique // 1テナント1設定
+  id       String @id @default(cuid())
+  tenantId String @unique // 1テナント1設定
 
   // 支給日設定
-  paymentDay                Int      @default(25) // 支給日（1-31）
-  paymentDayType            String   @default("current") // current（当月払い）/ next（翌月払い）
+  paymentDay     Int    @default(25) // 支給日（1-31）
+  paymentDayType String @default("current") // current（当月払い）/ next（翌月払い）
 
   // 締め日設定
-  closingDay                Int      @default(31) // 締め日（1-31、末日は31）
+  closingDay Int @default(31) // 締め日（1-31、末日は31）
 
   // 給与体系
-  defaultPayType            String   @default("monthly") // monthly / hourly / daily
+  defaultPayType String @default("monthly") // monthly / hourly / daily
 
   // 時間設定
-  standardWorkHours         Float    @default(8) // 所定労働時間/日
-  standardWorkDays          Int      @default(20) // 所定労働日数/月
+  standardWorkHours Float @default(8) // 所定労働時間/日
+  standardWorkDays  Int   @default(20) // 所定労働日数/月
 
   // 控除設定
-  enableHealthInsurance     Boolean  @default(true)  // 健康保険
-  enablePensionInsurance    Boolean  @default(true)  // 厚生年金
-  enableEmploymentInsurance Boolean  @default(true)  // 雇用保険
-  enableIncomeTax           Boolean  @default(true)  // 所得税
-  enableResidentTax         Boolean  @default(true)  // 住民税
+  enableHealthInsurance     Boolean @default(true) // 健康保険
+  enablePensionInsurance    Boolean @default(true) // 厚生年金
+  enableEmploymentInsurance Boolean @default(true) // 雇用保険
+  enableIncomeTax           Boolean @default(true) // 所得税
+  enableResidentTax         Boolean @default(true) // 住民税
 
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@map("payroll_settings")
@@ -624,36 +624,36 @@ model PayrollSettings {
 
 // 勤怠設定
 model AttendanceSettings {
-  id                    String   @id @default(cuid())
-  tenantId              String   @unique // 1テナント1設定
+  id       String @id @default(cuid())
+  tenantId String @unique // 1テナント1設定
 
   // 勤務時間設定
-  workStartTime         String   @default("09:00") // 始業時刻
-  workEndTime           String   @default("18:00") // 終業時刻
-  breakStartTime        String   @default("12:00") // 休憩開始時刻
-  breakEndTime          String   @default("13:00") // 休憩終了時刻
-  breakDurationMinutes  Int      @default(60) // 休憩時間（分）
+  workStartTime        String @default("09:00") // 始業時刻
+  workEndTime          String @default("18:00") // 終業時刻
+  breakStartTime       String @default("12:00") // 休憩開始時刻
+  breakEndTime         String @default("13:00") // 休憩終了時刻
+  breakDurationMinutes Int    @default(60) // 休憩時間（分）
 
   // フレックス設定
-  enableFlexTime        Boolean  @default(false) // フレックス制度
-  coreTimeStart         String?  // コアタイム開始
-  coreTimeEnd           String?  // コアタイム終了
+  enableFlexTime Boolean @default(false) // フレックス制度
+  coreTimeStart  String? // コアタイム開始
+  coreTimeEnd    String? // コアタイム終了
 
   // 残業設定
-  overtimeThresholdMinutes Int   @default(480) // 残業計算開始（分）= 8時間
-  maxOvertimeHoursPerMonth Int   @default(45) // 月間残業上限（時間）
+  overtimeThresholdMinutes Int @default(480) // 残業計算開始（分）= 8時間
+  maxOvertimeHoursPerMonth Int @default(45) // 月間残業上限（時間）
 
   // 打刻設定
-  allowRemoteCheckIn    Boolean  @default(true) // リモート打刻許可
+  allowRemoteCheckIn       Boolean @default(true) // リモート打刻許可
   requireLocationOnCheckIn Boolean @default(false) // 位置情報必須
-  allowEarlyCheckIn     Boolean  @default(true) // 早出打刻許可
-  earlyCheckInMinutes   Int      @default(30) // 早出許容時間（分）
+  allowEarlyCheckIn        Boolean @default(true) // 早出打刻許可
+  earlyCheckInMinutes      Int     @default(30) // 早出許容時間（分）
 
   // 休日設定
-  weeklyHolidays        String[] @default(["saturday", "sunday"]) // 週休日
+  weeklyHolidays String[] @default(["saturday", "sunday"]) // 週休日
 
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@map("attendance_settings")
@@ -661,26 +661,26 @@ model AttendanceSettings {
 
 // 年末調整設定
 model YearEndAdjustmentSettings {
-  id                          String   @id @default(cuid())
-  tenantId                    String   @unique // 1テナント1設定
+  id       String @id @default(cuid())
+  tenantId String @unique // 1テナント1設定
 
   // 年末調整期間
-  adjustmentStartMonth        Int      @default(11) // 開始月（通常11月）
-  adjustmentEndMonth          Int      @default(12) // 終了月（通常12月）
+  adjustmentStartMonth Int @default(11) // 開始月（通常11月）
+  adjustmentEndMonth   Int @default(12) // 終了月（通常12月）
 
   // 控除項目
-  enableBasicDeduction        Boolean  @default(true)  // 基礎控除
-  enableSpouseDeduction       Boolean  @default(true)  // 配偶者控除
-  enableDependentDeduction    Boolean  @default(true)  // 扶養控除
-  enableInsuranceDeduction    Boolean  @default(true)  // 生命保険料控除
+  enableBasicDeduction           Boolean @default(true) // 基礎控除
+  enableSpouseDeduction          Boolean @default(true) // 配偶者控除
+  enableDependentDeduction       Boolean @default(true) // 扶養控除
+  enableInsuranceDeduction       Boolean @default(true) // 生命保険料控除
   enableSocialInsuranceDeduction Boolean @default(true) // 社会保険料控除
 
   // 源泉徴収票設定
-  withholdingSlipFormat       String   @default("standard") // standard / detailed
-  includeQRCode               Boolean  @default(false) // QRコード付与（e-Tax対応）
+  withholdingSlipFormat String  @default("standard") // standard / detailed
+  includeQRCode         Boolean @default(false) // QRコード付与（e-Tax対応）
 
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@map("year_end_adjustment_settings")
@@ -692,34 +692,34 @@ model YearEndAdjustmentSettings {
 
 // 法令・制度更新マスタ（DW社が管理）
 model LegalUpdate {
-  id              String    @id @default(cuid())
+  id String @id @default(cuid())
 
   // 基本情報
-  title           String    // タイトル
-  description     String?   @db.Text // 詳細説明
-  category        String    // tax（税務）, labor（労務）, social_insurance（社会保険）, payroll（給与計算）, attendance（勤怠管理）, safety（安全衛生）, other（その他）
+  title       String // タイトル
+  description String? @db.Text // 詳細説明
+  category    String // tax（税務）, labor（労務）, social_insurance（社会保険）, payroll（給与計算）, attendance（勤怠管理）, safety（安全衛生）, other（その他）
 
   // 施行情報
-  effectiveDate   DateTime  @db.Date // 施行日
-  relatedLaws     String?   // 関連法令名
-  affectedAreas   String[]  // 影響範囲（例: ["人事管理", "雇用管理"]）
+  effectiveDate DateTime @db.Date // 施行日
+  relatedLaws   String? // 関連法令名
+  affectedAreas String[] // 影響範囲（例: ["人事管理", "雇用管理"]）
 
   // 優先度・ステータス
-  priority        String    @default("medium") // high, medium, low
-  isPublished     Boolean   @default(false) // 公開フラグ
-  publishedAt     DateTime? // 公開日時
+  priority    String    @default("medium") // high, medium, low
+  isPublished Boolean   @default(false) // 公開フラグ
+  publishedAt DateTime? // 公開日時
 
   // 参考情報
-  referenceUrl    String?   // 参考URL（官報・省庁サイト等）
-  attachments     Json?     // 添付ファイル情報
+  referenceUrl String? // 参考URL（官報・省庁サイト等）
+  attachments  Json? // 添付ファイル情報
 
   // メタ情報
-  createdBy       String?   // 作成者（DW社スタッフID）
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdBy String? // 作成者（DW社スタッフID）
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  tenantStatuses  TenantLegalStatus[]
+  tenantStatuses TenantLegalStatus[]
 
   @@index([category])
   @@index([effectiveDate])
@@ -731,22 +731,22 @@ model LegalUpdate {
 
 // テナント別の法令対応状況
 model TenantLegalStatus {
-  id            String    @id @default(cuid())
+  id            String @id @default(cuid())
   tenantId      String
   legalUpdateId String
 
   // 対応状況
-  status        String    @default("pending") // pending（未対応）, in_progress（対応中）, completed（対応済み）
-  notes         String?   @db.Text // メモ・備考
-  completedAt   DateTime? // 対応完了日時
-  completedBy   String?   // 対応完了者
+  status      String    @default("pending") // pending（未対応）, in_progress（対応中）, completed（対応済み）
+  notes       String?   @db.Text // メモ・備考
+  completedAt DateTime? // 対応完了日時
+  completedBy String? // 対応完了者
 
   // メタ情報
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  legalUpdate   LegalUpdate @relation(fields: [legalUpdateId], references: [id], onDelete: Cascade)
+  legalUpdate LegalUpdate @relation(fields: [legalUpdateId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, legalUpdateId]) // 1テナント1法令に対して1レコード
   @@index([tenantId])
@@ -763,12 +763,12 @@ model TenantLegalStatus {
 model Vendor {
   id            String   @id @default(cuid())
   tenantId      String
-  name          String   // 業者名
-  phone         String?  // 電話番号
-  address       String?  // 住所
-  contactPerson String?  // 担当者名
-  email         String?  // メールアドレス
-  rating        Int?     // 評価（1-5）
+  name          String // 業者名
+  phone         String? // 電話番号
+  address       String? // 住所
+  contactPerson String? // 担当者名
+  email         String? // メールアドレス
+  rating        Int? // 評価（1-5）
   notes         String?  @db.Text // メモ
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -783,54 +783,54 @@ model Vendor {
 
 // 車両マスタ
 model Vehicle {
-  id               String    @id @default(cuid())
-  tenantId         String
-  vehicleNumber    String    // 車両番号（社内管理番号）
-  licensePlate     String    // ナンバープレート
-  make             String    // メーカー
-  model            String    // 車種
-  year             Int       // 年式
-  color            String?   // 色
+  id            String  @id @default(cuid())
+  tenantId      String
+  vehicleNumber String // 車両番号（社内管理番号）
+  licensePlate  String // ナンバープレート
+  make          String // メーカー
+  model         String // 車種
+  year          Int // 年式
+  color         String? // 色
 
   // 割当情報
-  assignedUserId   String?   // 割当ユーザーID
-  assignedUserName String?   // 割当ユーザー名（参照用）
+  assignedUserId   String? // 割当ユーザーID
+  assignedUserName String? // 割当ユーザー名（参照用）
   assignedDate     DateTime? @db.Date // 割当日
 
   // 所有・リース情報
   ownershipType    String    @default("owned") // owned, leased, rental
   purchaseDate     DateTime? @db.Date // 購入日
-  purchaseCost     Int?      // 購入価格
-  leaseCompany     String?   // リース会社
-  leaseMonthlyCost Int?      // リース月額
+  purchaseCost     Int? // 購入価格
+  leaseCompany     String? // リース会社
+  leaseMonthlyCost Int? // リース月額
   leaseStartDate   DateTime? @db.Date // リース開始日
   leaseEndDate     DateTime? @db.Date // リース終了日
-  leaseContact     String?   // リース担当者
-  leasePhone       String?   // リース電話番号
+  leaseContact     String? // リース担当者
+  leasePhone       String? // リース電話番号
 
   // 期限管理
-  inspectionDate   DateTime? @db.Date // 次回車検日
-  maintenanceDate  DateTime? @db.Date // 次回点検日
-  insuranceDate    DateTime? @db.Date // 保険更新日
+  inspectionDate  DateTime? @db.Date // 次回車検日
+  maintenanceDate DateTime? @db.Date // 次回点検日
+  insuranceDate   DateTime? @db.Date // 保険更新日
 
   // タイヤ情報
-  currentTireType  String    @default("summer") // summer, winter
-  tireChangeDate   DateTime? @db.Date // 次回タイヤ履き替え予定日
+  currentTireType String    @default("summer") // summer, winter
+  tireChangeDate  DateTime? @db.Date // 次回タイヤ履き替え予定日
 
   // ステータス
-  status           String    @default("active") // active, maintenance, retired
+  status String @default("active") // active, maintenance, retired
 
   // 走行距離管理
-  mileageTracking  Boolean   @default(true) // 走行距離管理ON/OFF
-  currentMileage   Int?      // 現在の総走行距離
+  mileageTracking Boolean @default(true) // 走行距離管理ON/OFF
+  currentMileage  Int? // 現在の総走行距離
 
-  notes            String?   @db.Text
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  monthlyMileages     MonthlyMileage[]
-  maintenanceRecords  MaintenanceRecord[]
+  monthlyMileages    MonthlyMileage[]
+  maintenanceRecords MaintenanceRecord[]
 
   @@unique([tenantId, vehicleNumber])
   @@index([tenantId])
@@ -844,10 +844,10 @@ model MonthlyMileage {
   id             String   @id @default(cuid())
   tenantId       String
   vehicleId      String
-  month          String   // YYYY-MM
-  distance       Int      // km
-  recordedBy     String?  // 記録者ID
-  recordedByName String?  // 記録者名
+  month          String // YYYY-MM
+  distance       Int // km
+  recordedBy     String? // 記録者ID
+  recordedByName String? // 記録者名
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -865,17 +865,17 @@ model MaintenanceRecord {
   id              String    @id @default(cuid())
   tenantId        String
   vehicleId       String
-  type            String    // oil_change, tire_change, inspection, shaken, repair, other
+  type            String // oil_change, tire_change, inspection, shaken, repair, other
   date            DateTime  @db.Date
-  mileage         Int?      // 実施時の走行距離
-  cost            Int       // 費用
-  vendorId        String?   // 業者ID
-  description     String?   // 説明
+  mileage         Int? // 実施時の走行距離
+  cost            Int // 費用
+  vendorId        String? // 業者ID
+  description     String? // 説明
   nextDueDate     DateTime? @db.Date // 次回実施予定日
-  nextDueMileage  Int?      // 次回実施予定距離
-  tireType        String?   // summer, winter（タイヤ交換時）
-  performedBy     String?   // 作業者ID
-  performedByName String?   // 作業者名
+  nextDueMileage  Int? // 次回実施予定距離
+  tireType        String? // summer, winter（タイヤ交換時）
+  performedBy     String? // 作業者ID
+  performedByName String? // 作業者名
   notes           String?   @db.Text
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -893,42 +893,42 @@ model MaintenanceRecord {
 
 // PC資産
 model PCAsset {
-  id               String    @id @default(cuid())
-  tenantId         String
-  assetNumber      String    // 資産番号
-  manufacturer     String    // メーカー
-  model            String    // 型番
-  serialNumber     String    // シリアル番号
-  cpu              String?   // CPU
-  memory           String?   // メモリ
-  storage          String?   // ストレージ
-  os               String?   // OS
+  id           String  @id @default(cuid())
+  tenantId     String
+  assetNumber  String // 資産番号
+  manufacturer String // メーカー
+  model        String // 型番
+  serialNumber String // シリアル番号
+  cpu          String? // CPU
+  memory       String? // メモリ
+  storage      String? // ストレージ
+  os           String? // OS
 
   // 割当情報
-  assignedUserId   String?   // 割当ユーザーID
-  assignedUserName String?   // 割当ユーザー名（参照用）
+  assignedUserId   String? // 割当ユーザーID
+  assignedUserName String? // 割当ユーザー名（参照用）
   assignedDate     DateTime? @db.Date // 割当日
 
   // 所有・リース情報
   ownershipType    String    @default("owned") // owned, leased, rental
   purchaseDate     DateTime? @db.Date // 購入日
-  purchaseCost     Int?      // 購入価格
-  leaseCompany     String?   // リース会社
-  leaseMonthlyCost Int?      // リース月額
+  purchaseCost     Int? // 購入価格
+  leaseCompany     String? // リース会社
+  leaseMonthlyCost Int? // リース月額
   leaseStartDate   DateTime? @db.Date // リース開始日
   leaseEndDate     DateTime? @db.Date // リース終了日
-  leaseContact     String?   // リース担当者
-  leasePhone       String?   // リース電話番号
+  leaseContact     String? // リース担当者
+  leasePhone       String? // リース電話番号
 
   // 期限管理
   warrantyExpiration DateTime? @db.Date // 保証期限
 
   // ステータス
-  status           String    @default("active") // active, maintenance, retired
+  status String @default("active") // active, maintenance, retired
 
-  notes            String?   @db.Text
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   softwareLicenses SoftwareLicense[]
@@ -943,27 +943,27 @@ model PCAsset {
 
 // 汎用資産（モニター、プリンター、スマートフォン等）
 model GeneralAsset {
-  id               String    @id @default(cuid())
-  tenantId         String
-  assetNumber      String    // 資産番号
-  category         String    // monitor, printer, phone, tablet, network_device, other
-  name             String    // 資産名
-  manufacturer     String?   // メーカー
-  model            String?   // 型番
-  serialNumber     String?   // シリアル番号
-  specifications   Json?     // 仕様詳細（カテゴリ別）
+  id             String  @id @default(cuid())
+  tenantId       String
+  assetNumber    String // 資産番号
+  category       String // monitor, printer, phone, tablet, network_device, other
+  name           String // 資産名
+  manufacturer   String? // メーカー
+  model          String? // 型番
+  serialNumber   String? // シリアル番号
+  specifications Json? // 仕様詳細（カテゴリ別）
 
   // 割当情報
-  assignedUserId   String?   // 割当ユーザーID
-  assignedUserName String?   // 割当ユーザー名（参照用）
+  assignedUserId   String? // 割当ユーザーID
+  assignedUserName String? // 割当ユーザー名（参照用）
   assignedDate     DateTime? @db.Date // 割当日
 
   // 所有・リース情報
   ownershipType    String    @default("owned") // owned, leased, rental
   purchaseDate     DateTime? @db.Date // 購入日
-  purchaseCost     Int?      // 購入価格
-  leaseCompany     String?   // リース会社
-  leaseMonthlyCost Int?      // リース月額
+  purchaseCost     Int? // 購入価格
+  leaseCompany     String? // リース会社
+  leaseMonthlyCost Int? // リース月額
   leaseStartDate   DateTime? @db.Date // リース開始日
   leaseEndDate     DateTime? @db.Date // リース終了日
 
@@ -971,14 +971,14 @@ model GeneralAsset {
   warrantyExpiration DateTime? @db.Date // 保証期限
 
   // ステータス
-  status           String    @default("active") // active, maintenance, retired
+  status String @default("active") // active, maintenance, retired
 
-  notes            String?   @db.Text
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  repairRecords    RepairRecord[]
+  repairRecords RepairRecord[]
 
   @@unique([tenantId, assetNumber])
   @@index([tenantId])
@@ -990,31 +990,31 @@ model GeneralAsset {
 
 // 修理記録（PC・その他資産共通）
 model RepairRecord {
-  id              String    @id @default(cuid())
-  tenantId        String
+  id       String @id @default(cuid())
+  tenantId String
 
   // 資産参照（PC または 汎用資産）
-  pcAssetId       String?   // PC資産ID
-  generalAssetId  String?   // 汎用資産ID
+  pcAssetId      String? // PC資産ID
+  generalAssetId String? // 汎用資産ID
 
   // 修理情報
-  repairType      String    // screen, battery, keyboard, storage, power_supply, network, other
-  date            DateTime  @db.Date
-  cost            Int       // 費用
-  vendorId        String?   // 業者ID
-  vendorName      String?   // 業者名（参照用）
-  symptom         String?   // 症状
-  description     String?   // 作業内容
+  repairType  String // screen, battery, keyboard, storage, power_supply, network, other
+  date        DateTime @db.Date
+  cost        Int // 費用
+  vendorId    String? // 業者ID
+  vendorName  String? // 業者名（参照用）
+  symptom     String? // 症状
+  description String? // 作業内容
 
   // ステータス
-  status          String    @default("completed") // pending, in_progress, completed
-  completedDate   DateTime? @db.Date // 完了日
+  status        String    @default("completed") // pending, in_progress, completed
+  completedDate DateTime? @db.Date // 完了日
 
-  performedBy     String?   // 作業者ID
-  performedByName String?   // 作業者名
-  notes           String?   @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  performedBy     String? // 作業者ID
+  performedByName String? // 作業者名
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
   pcAsset      PCAsset?      @relation(fields: [pcAssetId], references: [id], onDelete: Cascade)
@@ -1033,10 +1033,10 @@ model SoftwareLicense {
   id             String    @id @default(cuid())
   tenantId       String
   pcAssetId      String
-  softwareName   String    // ソフトウェア名
-  licenseKey     String?   // ライセンスキー
+  softwareName   String // ソフトウェア名
+  licenseKey     String? // ライセンスキー
   expirationDate DateTime? @db.Date // 期限
-  monthlyCost    Int?      // 月額費用
+  monthlyCost    Int? // 月額費用
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -1054,22 +1054,22 @@ model SoftwareLicense {
 
 // SaaSサービスマスタ
 model SaaSService {
-  id                String    @id @default(cuid())
-  tenantId          String
-  name              String    // サービス名
-  category          String    // communication, productivity, development, design, hr, finance, marketing, sales, security, storage, other
-  vendor            String?   // ベンダー名
-  website           String?   // 公式サイト
-  logo              String?   // ロゴURL
-  description       String?   @db.Text
+  id          String  @id @default(cuid())
+  tenantId    String
+  name        String // サービス名
+  category    String // communication, productivity, development, design, hr, finance, marketing, sales, security, storage, other
+  vendor      String? // ベンダー名
+  website     String? // 公式サイト
+  logo        String? // ロゴURL
+  description String? @db.Text
 
   // 契約タイプ
-  licenseType       String    // user-based, fixed, usage-based
+  licenseType String // user-based, fixed, usage-based
 
   // セキュリティ情報
-  securityRating    String?   // A, B, C, D
-  ssoEnabled        Boolean   @default(false)
-  mfaEnabled        Boolean   @default(false)
+  securityRating String? // A, B, C, D
+  ssoEnabled     Boolean @default(false)
+  mfaEnabled     Boolean @default(false)
 
   // 管理情報
   adminEmail        String?
@@ -1079,15 +1079,15 @@ model SaaSService {
   autoRenew         Boolean   @default(false)
 
   // ステータス
-  isActive          Boolean   @default(true)
+  isActive Boolean @default(true)
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  plans             SaaSLicensePlan[]
-  assignments       SaaSLicenseAssignment[]
-  monthlyCosts      SaaSMonthlyCost[]
+  plans        SaaSLicensePlan[]
+  assignments  SaaSLicenseAssignment[]
+  monthlyCosts SaaSMonthlyCost[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -1101,12 +1101,12 @@ model SaaSLicensePlan {
   id           String   @id @default(cuid())
   tenantId     String
   serviceId    String
-  planName     String   // プラン名
-  billingCycle String   // monthly, yearly
-  pricePerUser Int?     // ユーザー単価（user-based）
-  fixedPrice   Int?     // 固定価格（fixed）
+  planName     String // プラン名
+  billingCycle String // monthly, yearly
+  pricePerUser Int? // ユーザー単価（user-based）
+  fixedPrice   Int? // 固定価格（fixed）
   currency     String   @default("JPY") // JPY, USD
-  maxUsers     Int?     // 最大ユーザー数
+  maxUsers     Int? // 最大ユーザー数
   features     String[] // 機能リスト
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -1123,32 +1123,32 @@ model SaaSLicensePlan {
 
 // SaaSライセンス割り当て
 model SaaSLicenseAssignment {
-  id             String    @id @default(cuid())
-  tenantId       String
-  serviceId      String
-  planId         String
+  id        String @id @default(cuid())
+  tenantId  String
+  serviceId String
+  planId    String
 
   // ユーザーライセンス型の場合
-  userId         String?   // ユーザーID
-  userName       String?   // ユーザー名（参照用）
-  userEmail      String?   // アカウントメールアドレス
+  userId    String? // ユーザーID
+  userName  String? // ユーザー名（参照用）
+  userEmail String? // アカウントメールアドレス
 
   // 固定契約型の場合
-  departmentId   String?   // 部署ID
-  departmentName String?   // 部署名（参照用）
+  departmentId   String? // 部署ID
+  departmentName String? // 部署名（参照用）
 
   // ステータス
-  status         String    @default("active") // active, inactive, pending
-  assignedDate   DateTime  @db.Date
-  revokedDate    DateTime? @db.Date
+  status       String    @default("active") // active, inactive, pending
+  assignedDate DateTime  @db.Date
+  revokedDate  DateTime? @db.Date
 
   // 使用状況
-  lastUsedAt     DateTime?
-  usageCount     Int?      // 月次使用回数
+  lastUsedAt DateTime?
+  usageCount Int? // 月次使用回数
 
-  notes          String?   @db.Text
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   service SaaSService     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
@@ -1167,7 +1167,7 @@ model SaaSMonthlyCost {
   id               String   @id @default(cuid())
   tenantId         String
   serviceId        String
-  period           String   // YYYY-MM
+  period           String // YYYY-MM
   userLicenseCount Int      @default(0)
   userLicenseCost  Int      @default(0)
   fixedCost        Int      @default(0)
@@ -1191,47 +1191,263 @@ model SaaSMonthlyCost {
 }
 
 // ========================================
+// 健康管理（Health Management）
+// ========================================
+
+// 健康診断
+model HealthCheckup {
+  id       String @id @default(cuid())
+  tenantId String
+  userId   String
+  userName String // 非正規化（参照用）
+
+  // 受診情報
+  checkupDate        DateTime @db.Date // 受診日
+  checkupType        String // regular（定期健診）, hiring（雇入時健診）, specific（特定健診）
+  medicalInstitution String? // 医療機関名
+  fiscalYear         Int // 年度
+
+  // 結果概要
+  overallResult     String // A, B, C, D, E（総合判定）
+  requiresReexam    Boolean @default(false) // 要再検査
+  requiresTreatment Boolean @default(false) // 要治療
+  requiresGuidance  Boolean @default(false) // 要保健指導
+
+  // 身体測定
+  height             Float? // 身長(cm)
+  weight             Float? // 体重(kg)
+  bmi                Float? // BMI
+  waistCircumference Float? // 腹囲(cm)
+  eyesightLeft       Float? // 視力（左）
+  eyesightRight      Float? // 視力（右）
+  hearingLeft        String? // 聴力（左）normal/abnormal
+  hearingRight       String? // 聴力（右）normal/abnormal
+
+  // 血圧
+  bloodPressureSystolic  Int? // 収縮期血圧
+  bloodPressureDiastolic Int? // 拡張期血圧
+
+  // 血液検査
+  bloodGlucose   Float? // 空腹時血糖
+  hba1c          Float? // HbA1c
+  triglycerides  Float? // 中性脂肪
+  hdlCholesterol Float? // HDLコレステロール
+  ldlCholesterol Float? // LDLコレステロール
+  got            Float? // GOT(AST)
+  gpt            Float? // GPT(ALT)
+  gammaGtp       Float? // γ-GTP
+  uricAcid       Float? // 尿酸
+
+  // 尿検査
+  urinaryProtein String? // 尿蛋白 -, +-, +, ++, +++
+  urinaryGlucose String? // 尿糖 -, +-, +, ++, +++
+
+  // フォローアップ
+  followUpStatus String    @default("none") // none, scheduled, completed
+  followUpDate   DateTime? @db.Date // フォローアップ予定日
+  followUpNotes  String?   @db.Text // フォローアップメモ
+
+  // 産業医意見
+  doctorOpinion   String? @db.Text // 産業医所見
+  workRestriction String? // none, partial, full（就業制限）
+
+  // 添付ファイル
+  attachments Json? // 添付ファイル情報
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  findings HealthFinding[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([tenantId, userId])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, checkupDate])
+  @@map("health_checkups")
+}
+
+// 健康診断所見
+model HealthFinding {
+  id             String   @id @default(cuid())
+  checkupId      String
+  category       String // 検査カテゴリ（blood_pressure, blood_sugar, lipid, liver, etc.）
+  finding        String // 所見内容
+  severity       String // normal, caution, warning, critical
+  recommendation String? // 推奨事項
+  createdAt      DateTime @default(now())
+
+  // Relations
+  checkup HealthCheckup @relation(fields: [checkupId], references: [id], onDelete: Cascade)
+
+  @@index([checkupId])
+  @@map("health_findings")
+}
+
+// ストレスチェック
+model StressCheck {
+  id       String @id @default(cuid())
+  tenantId String
+  userId   String
+  userName String // 非正規化（参照用）
+
+  // 実施情報
+  fiscalYear Int // 年度
+  checkDate  DateTime? @db.Date // 受検日
+  status     String    @default("pending") // pending, in_progress, completed, interview_recommended
+
+  // スコア（厚労省標準57問版）
+  stressFactorsScore  Int? // A群: 仕事のストレス要因（17問 17-68点）
+  stressResponseScore Int? // B群: 心身のストレス反応（29問 29-116点）
+  socialSupportScore  Int? // C群: 周囲のサポート（9問 9-36点）
+  totalScore          Int? // 合計スコア
+
+  // 判定
+  isHighStress     Boolean @default(false) // 高ストレス者判定
+  highStressReason String? // 高ストレス判定理由
+
+  // 面談
+  interviewRequested   Boolean   @default(false) // 面談申出
+  interviewRequestedAt DateTime?
+  interviewScheduled   Boolean   @default(false) // 面談予定
+  interviewScheduledAt DateTime?
+  interviewCompleted   Boolean   @default(false) // 面談完了
+  interviewCompletedAt DateTime?
+  interviewNotes       String?   @db.Text // 面談記録
+
+  // 産業医意見
+  doctorName    String? // 実施者名
+  doctorOpinion String? @db.Text // 産業医意見
+
+  // 回答データ（匿名化のため詳細は保存しない選択も可能）
+  responses Json? // 回答データ（オプション）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, userId, fiscalYear]) // 1人1年度1回
+  @@index([tenantId])
+  @@index([userId])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, isHighStress])
+  @@map("stress_checks")
+}
+
+// ストレスチェック質問マスタ
+model StressCheckQuestion {
+  id             String   @id @default(cuid())
+  tenantId       String? // nullの場合はシステム共通
+  questionNumber Int // 質問番号（1-57）
+  category       String // A（ストレス要因）, B（ストレス反応）, C（サポート）
+  subcategory    String // 小分類
+  questionText   String // 質問文
+  isReverse      Boolean  @default(false) // 逆転項目
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([tenantId, questionNumber])
+  @@index([tenantId])
+  @@index([category])
+  @@map("stress_check_questions")
+}
+
+// 健康管理設定
+model HealthSettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+
+  // 健康診断設定
+  checkupPeriodStart        Int     @default(4) // 受診期間開始月
+  checkupPeriodEnd          Int     @default(3) // 受診期間終了月
+  checkupReminderDays       Int     @default(30) // リマインド日数
+  requireCheckupForNewHires Boolean @default(true) // 雇入時健診必須
+
+  // ストレスチェック設定
+  stressCheckPeriodStart  Int     @default(10) // 実施期間開始月
+  stressCheckPeriodEnd    Int     @default(11) // 実施期間終了月
+  stressCheckReminderDays Int     @default(14) // リマインド日数
+  stressCheckRequired     Boolean @default(true) // 実施義務（50人以上）
+
+  // 高ストレス者判定基準
+  highStressThresholdA Int @default(77) // A+B群の合計点
+  highStressThresholdB Int @default(63) // B群のみ
+
+  // アクセス権限
+  allowSelfView          Boolean @default(true) // 本人閲覧可
+  allowManagerViewStatus Boolean @default(true) // 上司の受診状況閲覧可
+  allowHrViewStats       Boolean @default(true) // 人事の統計閲覧可
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("health_settings")
+}
+
+// 健康管理閲覧ログ（要配慮個人情報のため）
+model HealthAccessLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  userId       String // 閲覧者
+  targetUserId String // 閲覧対象
+  resourceType String // checkup, stress_check, report
+  resourceId   String? // 対象リソースID
+  action       String // view, export, print
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([targetUserId])
+  @@index([tenantId, createdAt])
+  @@map("health_access_logs")
+}
+
+// ========================================
 // お知らせ（Announcements）
 // ========================================
 
 // お知らせ
 model Announcement {
-  id                String    @id @default(cuid())
-  tenantId          String
+  id       String @id @default(cuid())
+  tenantId String
 
   // コンテンツ
-  title             String    // タイトル
-  content           String    @db.Text // 本文
-  type              String    @default("general") // general, system, emergency, event, policy
-  priority          String    @default("normal") // high, normal, low
+  title    String // タイトル
+  content  String @db.Text // 本文
+  type     String @default("general") // general, system, emergency, event, policy
+  priority String @default("normal") // high, normal, low
 
   // 対象者設定
-  target            String    @default("all") // all, department, role
-  targetDepartments String[]  // 対象部署リスト（target=departmentの場合）
-  targetRoles       String[]  // 対象ロールリスト（target=roleの場合）
+  target            String   @default("all") // all, department, role
+  targetDepartments String[] // 対象部署リスト（target=departmentの場合）
+  targetRoles       String[] // 対象ロールリスト（target=roleの場合）
 
   // 公開設定
-  published         Boolean   @default(false)
-  publishedAt       DateTime?
-  startDate         DateTime  @db.Date // 表示開始日
-  endDate           DateTime? @db.Date // 表示終了日
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  startDate   DateTime  @db.Date // 表示開始日
+  endDate     DateTime? @db.Date // 表示終了日
 
   // アクション設定
-  requiresAction    Boolean   @default(false) // アクション必須フラグ
-  actionLabel       String?   // アクションボタンラベル
-  actionUrl         String?   // アクションURL
-  actionDeadline    DateTime? @db.Date // アクション期限
+  requiresAction Boolean   @default(false) // アクション必須フラグ
+  actionLabel    String? // アクションボタンラベル
+  actionUrl      String? // アクションURL
+  actionDeadline DateTime? @db.Date // アクション期限
 
   // 作成者情報
-  createdBy         String    // 作成者ID
-  createdByName     String?   // 作成者名（非正規化）
+  createdBy     String // 作成者ID
+  createdByName String? // 作成者名（非正規化）
 
   // タイムスタンプ
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  reads             AnnouncementRead[]
+  reads AnnouncementRead[]
 
   @@index([tenantId])
   @@index([tenantId, published])
@@ -1242,20 +1458,20 @@ model Announcement {
 
 // お知らせ既読状態
 model AnnouncementRead {
-  id              String    @id @default(cuid())
-  tenantId        String
-  announcementId  String
-  userId          String
+  id             String @id @default(cuid())
+  tenantId       String
+  announcementId String
+  userId         String
 
   // 既読情報
-  readAt          DateTime  @default(now())
+  readAt DateTime @default(now())
 
   // アクション完了（requiresAction=trueの場合）
-  actionCompleted Boolean   @default(false)
+  actionCompleted   Boolean   @default(false)
   actionCompletedAt DateTime?
 
   // Relations
-  announcement    Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
 
   @@unique([announcementId, userId]) // 1ユーザー1お知らせに対して1レコード
   @@index([tenantId])

@@ -1,0 +1,922 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Heart,
+  Plus,
+  Search,
+  AlertTriangle,
+  FileText,
+  Download,
+  User,
+  Activity,
+  Brain,
+  TrendingUp,
+  Clock,
+  CheckCircle,
+  XCircle,
+  BarChart3,
+  Play,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+
+// 健康診断の結果タイプ
+type OverallResult = 'A' | 'B' | 'C' | 'D' | 'E';
+type CheckupType = 'regular' | 'hiring' | 'specific';
+type FollowUpStatus = 'none' | 'scheduled' | 'completed';
+
+// 健康診断データの型
+interface HealthCheckup {
+  id: string;
+  userId: string;
+  userName: string;
+  department: string;
+  checkupDate: Date;
+  checkupType: CheckupType;
+  medicalInstitution: string;
+  overallResult: OverallResult;
+  requiresReexam: boolean;
+  requiresTreatment: boolean;
+  height?: number;
+  weight?: number;
+  bmi?: number;
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  followUpStatus: FollowUpStatus;
+  doctorOpinion?: string;
+  findings: string[];
+}
+
+// ストレスチェックデータの型
+interface StressCheck {
+  id: string;
+  userId: string;
+  userName: string;
+  department: string;
+  fiscalYear: number;
+  checkDate: Date;
+  status: 'pending' | 'completed' | 'interview_recommended';
+  stressFactorsScore: number;
+  stressResponseScore: number;
+  socialSupportScore: number;
+  isHighStress: boolean;
+  interviewRequested: boolean;
+  interviewDate?: Date;
+}
+
+// デモデータ
+const generateDemoCheckups = (): HealthCheckup[] => {
+  const users = [
+    { id: 'user1', name: '田中太郎', department: '営業部' },
+    { id: 'user2', name: '鈴木花子', department: '開発部' },
+    { id: 'user3', name: '山田次郎', department: '人事部' },
+    { id: 'user4', name: '佐藤美咲', department: '営業部' },
+    { id: 'user5', name: '高橋健一', department: '開発部' },
+    { id: 'user6', name: '伊藤真理', department: '総務部' },
+    { id: 'user7', name: '渡辺誠', department: '開発部' },
+    { id: 'user8', name: '小林由美', department: '営業部' },
+  ];
+
+  return users.map((user, i) => ({
+    id: `checkup-${i + 1}`,
+    userId: user.id,
+    userName: user.name,
+    department: user.department,
+    checkupDate: new Date(2024, 8 + Math.floor(i / 3), 10 + i * 2),
+    checkupType: 'regular' as CheckupType,
+    medicalInstitution: '東京メディカルセンター',
+    overallResult: (['A', 'A', 'B', 'B', 'C', 'A', 'B', 'D'] as OverallResult[])[i],
+    requiresReexam: i === 4 || i === 7,
+    requiresTreatment: i === 7,
+    height: 165 + Math.floor(Math.random() * 20),
+    weight: 55 + Math.floor(Math.random() * 25),
+    bmi: 20 + Math.random() * 8,
+    bloodPressureSystolic: 110 + Math.floor(Math.random() * 40),
+    bloodPressureDiastolic: 70 + Math.floor(Math.random() * 20),
+    followUpStatus: i === 4 ? 'scheduled' : i === 7 ? 'none' : 'completed',
+    doctorOpinion: i === 7 ? '血圧が高めのため、医療機関での受診をお勧めします。' : undefined,
+    findings: i === 4 ? ['脂質異常'] : i === 7 ? ['高血圧', '高血糖'] : [],
+  }));
+};
+
+const generateDemoStressChecks = (): StressCheck[] => {
+  const users = [
+    { id: 'user1', name: '田中太郎', department: '営業部' },
+    { id: 'user2', name: '鈴木花子', department: '開発部' },
+    { id: 'user3', name: '山田次郎', department: '人事部' },
+    { id: 'user4', name: '佐藤美咲', department: '営業部' },
+    { id: 'user5', name: '高橋健一', department: '開発部' },
+    { id: 'user6', name: '伊藤真理', department: '総務部' },
+    { id: 'user7', name: '渡辺誠', department: '開発部' },
+    { id: 'user8', name: '小林由美', department: '営業部' },
+  ];
+
+  return users.map((user, i) => ({
+    id: `stress-${i + 1}`,
+    userId: user.id,
+    userName: user.name,
+    department: user.department,
+    fiscalYear: 2024,
+    checkDate: new Date(2024, 10, 1 + i * 2),
+    status: i === 0 ? 'pending' : i === 3 ? 'interview_recommended' : 'completed',
+    stressFactorsScore: 30 + Math.floor(Math.random() * 30),
+    stressResponseScore: 50 + Math.floor(Math.random() * 40),
+    socialSupportScore: 15 + Math.floor(Math.random() * 15),
+    isHighStress: i === 3 || i === 6,
+    interviewRequested: i === 3,
+    interviewDate: i === 3 ? new Date(2024, 11, 15) : undefined,
+  }));
+};
+
+const demoCheckups = generateDemoCheckups();
+const demoStressChecks = generateDemoStressChecks();
+
+// 結果バッジの色を取得
+const getResultBadgeColor = (result: OverallResult) => {
+  switch (result) {
+    case 'A':
+      return 'bg-green-100 text-green-800';
+    case 'B':
+      return 'bg-blue-100 text-blue-800';
+    case 'C':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'D':
+      return 'bg-orange-100 text-orange-800';
+    case 'E':
+      return 'bg-red-100 text-red-800';
+  }
+};
+
+const getResultLabel = (result: OverallResult) => {
+  switch (result) {
+    case 'A':
+      return '異常なし';
+    case 'B':
+      return '軽度異常';
+    case 'C':
+      return '要経過観察';
+    case 'D':
+      return '要精密検査';
+    case 'E':
+      return '要治療';
+  }
+};
+
+// レポート用グラフデータ
+const findingsRateData = [
+  { year: '2022', rate: 42 },
+  { year: '2023', rate: 45 },
+  { year: '2024', rate: 38 },
+];
+
+const stressByDepartmentData = [
+  { department: '営業部', stressFactors: 48, stressResponse: 62, support: 28 },
+  { department: '開発部', stressFactors: 52, stressResponse: 58, support: 32 },
+  { department: '人事部', stressFactors: 38, stressResponse: 45, support: 35 },
+  { department: '総務部', stressFactors: 35, stressResponse: 42, support: 36 },
+];
+
+const checkupResultDistribution = [
+  { name: 'A: 異常なし', value: 30, color: '#22c55e' },
+  { name: 'B: 軽度異常', value: 35, color: '#3b82f6' },
+  { name: 'C: 要経過観察', value: 20, color: '#eab308' },
+  { name: 'D: 要精密検査', value: 10, color: '#f97316' },
+  { name: 'E: 要治療', value: 5, color: '#ef4444' },
+];
+
+export default function HealthPage() {
+  const router = useRouter();
+  const params = useParams();
+  const locale = params?.locale as string || 'ja';
+
+  const [activeTab, setActiveTab] = useState('checkups');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterResult, setFilterResult] = useState<string>('all');
+  const [filterDepartment, setFilterDepartment] = useState<string>('all');
+  const [selectedCheckup, setSelectedCheckup] = useState<HealthCheckup | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  // 統計データを計算
+  const stats = useMemo(() => {
+    const totalEmployees = demoCheckups.length;
+    const completed = demoCheckups.length;
+    const requiresReexam = demoCheckups.filter((c) => c.requiresReexam).length;
+    const requiresTreatment = demoCheckups.filter((c) => c.requiresTreatment).length;
+    const highStress = demoStressChecks.filter((s) => s.isHighStress).length;
+
+    return {
+      totalEmployees,
+      completed,
+      completionRate: Math.round((completed / totalEmployees) * 100),
+      requiresReexam,
+      requiresTreatment,
+      highStress,
+    };
+  }, []);
+
+  // フィルタリングされた健康診断データ
+  const filteredCheckups = useMemo(() => {
+    return demoCheckups.filter((checkup) => {
+      const matchesSearch =
+        checkup.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        checkup.department.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesResult = filterResult === 'all' || checkup.overallResult === filterResult;
+      const matchesDepartment = filterDepartment === 'all' || checkup.department === filterDepartment;
+      return matchesSearch && matchesResult && matchesDepartment;
+    });
+  }, [searchQuery, filterResult, filterDepartment]);
+
+  // フィルタリングされたストレスチェックデータ
+  const filteredStressChecks = useMemo(() => {
+    return demoStressChecks.filter((check) => {
+      const matchesSearch =
+        check.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        check.department.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesDepartment = filterDepartment === 'all' || check.department === filterDepartment;
+      return matchesSearch && matchesDepartment;
+    });
+  }, [searchQuery, filterDepartment]);
+
+  // 部門リスト
+  const departments = useMemo(() => {
+    const depts = new Set(demoCheckups.map((c) => c.department));
+    return Array.from(depts);
+  }, []);
+
+  const handleViewDetails = (checkup: HealthCheckup) => {
+    setSelectedCheckup(checkup);
+    setDetailDialogOpen(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* ヘッダー */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">健康管理</h1>
+          <p className="text-muted-foreground">
+            従業員の健康診断・ストレスチェックを管理します
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            レポート出力
+          </Button>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            健診結果登録
+          </Button>
+        </div>
+      </div>
+
+      {/* 統計カード */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">対象社員</CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalEmployees}名</div>
+            <p className="text-xs text-muted-foreground">年度対象者</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">受診率</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{stats.completionRate}%</div>
+            <p className="text-xs text-muted-foreground">{stats.completed}名 受診完了</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">要再検査</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{stats.requiresReexam}名</div>
+            <p className="text-xs text-muted-foreground">フォローアップ必要</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">要治療</CardTitle>
+            <XCircle className="h-4 w-4 text-red-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.requiresTreatment}名</div>
+            <p className="text-xs text-muted-foreground">医療機関受診推奨</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">高ストレス者</CardTitle>
+            <Brain className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{stats.highStress}名</div>
+            <p className="text-xs text-muted-foreground">面談対象者</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">ストレスチェック</CardTitle>
+            <Activity className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {Math.round((demoStressChecks.filter((s) => s.status !== 'pending').length / demoStressChecks.length) * 100)}%
+            </div>
+            <p className="text-xs text-muted-foreground">回答率</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* メインコンテンツ */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="checkups">
+            <Heart className="mr-2 h-4 w-4" />
+            健康診断
+          </TabsTrigger>
+          <TabsTrigger value="stress">
+            <Brain className="mr-2 h-4 w-4" />
+            ストレスチェック
+          </TabsTrigger>
+          <TabsTrigger value="followup">
+            <Clock className="mr-2 h-4 w-4" />
+            フォローアップ
+          </TabsTrigger>
+          <TabsTrigger value="reports">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            レポート
+          </TabsTrigger>
+        </TabsList>
+
+        {/* 検索・フィルター */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="氏名・部門で検索..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="部門" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全ての部門</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept} value={dept}>
+                  {dept}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {activeTab === 'checkups' && (
+            <Select value={filterResult} onValueChange={setFilterResult}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="判定結果" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全ての結果</SelectItem>
+                <SelectItem value="A">A: 異常なし</SelectItem>
+                <SelectItem value="B">B: 軽度異常</SelectItem>
+                <SelectItem value="C">C: 要経過観察</SelectItem>
+                <SelectItem value="D">D: 要精密検査</SelectItem>
+                <SelectItem value="E">E: 要治療</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {/* 健康診断タブ */}
+        <TabsContent value="checkups">
+          <Card>
+            <CardHeader>
+              <CardTitle>健康診断結果一覧</CardTitle>
+              <CardDescription>
+                {filteredCheckups.length}件の健康診断結果
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>氏名</TableHead>
+                      <TableHead>部門</TableHead>
+                      <TableHead>受診日</TableHead>
+                      <TableHead>総合判定</TableHead>
+                      <TableHead>所見</TableHead>
+                      <TableHead>フォロー状況</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCheckups.map((checkup) => (
+                      <TableRow key={checkup.id}>
+                        <TableCell className="font-medium">{checkup.userName}</TableCell>
+                        <TableCell>{checkup.department}</TableCell>
+                        <TableCell>
+                          {format(checkup.checkupDate, 'yyyy/MM/dd', { locale: ja })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getResultBadgeColor(checkup.overallResult)}>
+                            {checkup.overallResult}: {getResultLabel(checkup.overallResult)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1 flex-wrap">
+                            {checkup.requiresReexam && (
+                              <Badge variant="outline" className="border-orange-500 text-orange-600">
+                                要再検査
+                              </Badge>
+                            )}
+                            {checkup.requiresTreatment && (
+                              <Badge variant="outline" className="border-red-500 text-red-600">
+                                要治療
+                              </Badge>
+                            )}
+                            {checkup.findings.map((finding, i) => (
+                              <Badge key={i} variant="secondary">
+                                {finding}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              checkup.followUpStatus === 'completed'
+                                ? 'default'
+                                : checkup.followUpStatus === 'scheduled'
+                                ? 'outline'
+                                : 'secondary'
+                            }
+                          >
+                            {checkup.followUpStatus === 'completed'
+                              ? '完了'
+                              : checkup.followUpStatus === 'scheduled'
+                              ? '予定あり'
+                              : 'なし'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(checkup)}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            詳細
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ストレスチェックタブ */}
+        <TabsContent value="stress">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle>ストレスチェック結果一覧</CardTitle>
+                <CardDescription>
+                  2024年度 ストレスチェック実施状況
+                </CardDescription>
+              </div>
+              <Button onClick={() => router.push(`/${locale}/health/stress-check/take`)}>
+                <Play className="mr-2 h-4 w-4" />
+                ストレスチェックを受検
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>氏名</TableHead>
+                      <TableHead>部門</TableHead>
+                      <TableHead>回答日</TableHead>
+                      <TableHead>ストレス要因</TableHead>
+                      <TableHead>心身の反応</TableHead>
+                      <TableHead>周囲のサポート</TableHead>
+                      <TableHead>判定</TableHead>
+                      <TableHead>面談</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStressChecks.map((check) => (
+                      <TableRow key={check.id}>
+                        <TableCell className="font-medium">{check.userName}</TableCell>
+                        <TableCell>{check.department}</TableCell>
+                        <TableCell>
+                          {check.status === 'pending'
+                            ? '-'
+                            : format(check.checkDate, 'yyyy/MM/dd', { locale: ja })}
+                        </TableCell>
+                        <TableCell>
+                          {check.status === 'pending' ? '-' : `${check.stressFactorsScore}点`}
+                        </TableCell>
+                        <TableCell>
+                          {check.status === 'pending' ? '-' : `${check.stressResponseScore}点`}
+                        </TableCell>
+                        <TableCell>
+                          {check.status === 'pending' ? '-' : `${check.socialSupportScore}点`}
+                        </TableCell>
+                        <TableCell>
+                          {check.status === 'pending' ? (
+                            <Badge variant="secondary">未回答</Badge>
+                          ) : check.isHighStress ? (
+                            <Badge className="bg-red-100 text-red-800">高ストレス</Badge>
+                          ) : (
+                            <Badge className="bg-green-100 text-green-800">正常</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {check.interviewRequested ? (
+                            <Badge className="bg-purple-100 text-purple-800">
+                              {check.interviewDate
+                                ? format(check.interviewDate, 'M/d', { locale: ja }) + ' 予定'
+                                : '希望あり'}
+                            </Badge>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* フォローアップタブ */}
+        <TabsContent value="followup">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  要再検査者リスト
+                </CardTitle>
+                <CardDescription>精密検査が必要な方</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {demoCheckups
+                    .filter((c) => c.requiresReexam)
+                    .map((checkup) => (
+                      <div
+                        key={checkup.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">{checkup.userName}</p>
+                          <p className="text-sm text-muted-foreground">{checkup.department}</p>
+                          <div className="flex gap-1 mt-1">
+                            {checkup.findings.map((finding, i) => (
+                              <Badge key={i} variant="outline" className="text-xs">
+                                {finding}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm">
+                          フォロー記録
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-purple-600" />
+                  高ストレス者リスト
+                </CardTitle>
+                <CardDescription>面談対象者</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {demoStressChecks
+                    .filter((s) => s.isHighStress)
+                    .map((check) => (
+                      <div
+                        key={check.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">{check.userName}</p>
+                          <p className="text-sm text-muted-foreground">{check.department}</p>
+                          {check.interviewRequested && (
+                            <Badge className="mt-1 bg-purple-100 text-purple-800">
+                              面談希望あり
+                            </Badge>
+                          )}
+                        </div>
+                        <Button variant="outline" size="sm">
+                          面談記録
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* レポートタブ */}
+        <TabsContent value="reports">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* 有所見率推移グラフ */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  有所見率推移
+                </CardTitle>
+                <CardDescription>過去3年間の推移</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={findingsRateData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="year" />
+                      <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
+                      <Tooltip formatter={(value) => [`${value}%`, '有所見率']} />
+                      <Legend />
+                      <Line type="monotone" dataKey="rate" stroke="#8884d8" strokeWidth={2} name="有所見率" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 健康診断結果分布 */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Heart className="h-5 w-5" />
+                  健康診断結果分布
+                </CardTitle>
+                <CardDescription>判定結果の割合</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={checkupResultDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name.split(':')[0]} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {checkupResultDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [`${value}人`, name]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 部門別ストレス傾向 */}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  部門別ストレス傾向
+                </CardTitle>
+                <CardDescription>部門ごとのストレス状況比較（高スコア = 高ストレス / 低サポート）</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={stressByDepartmentData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="department" />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="stressFactors" fill="#f97316" name="ストレス要因" />
+                      <Bar dataKey="stressResponse" fill="#ef4444" name="心身の反応" />
+                      <Bar dataKey="support" fill="#22c55e" name="周囲のサポート" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* レポート出力 */}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>レポート出力</CardTitle>
+                <CardDescription>各種帳票をダウンロードできます</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
+                    <FileText className="h-6 w-6" />
+                    <span>健康診断結果一覧</span>
+                    <span className="text-xs text-muted-foreground">Excel形式</span>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
+                    <FileText className="h-6 w-6" />
+                    <span>有所見者リスト</span>
+                    <span className="text-xs text-muted-foreground">Excel形式</span>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
+                    <FileText className="h-6 w-6" />
+                    <span>ストレスチェック結果</span>
+                    <span className="text-xs text-muted-foreground">Excel形式</span>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
+                    <FileText className="h-6 w-6" />
+                    <span>産業医報告書</span>
+                    <span className="text-xs text-muted-foreground">PDF形式</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* 健康診断詳細ダイアログ */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>健康診断結果詳細</DialogTitle>
+            <DialogDescription>
+              {selectedCheckup?.userName} さんの健康診断結果
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCheckup && (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">基本情報</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">氏名</span>
+                      <span className="font-medium">{selectedCheckup.userName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">部門</span>
+                      <span>{selectedCheckup.department}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">受診日</span>
+                      <span>
+                        {format(selectedCheckup.checkupDate, 'yyyy年MM月dd日', { locale: ja })}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">医療機関</span>
+                      <span>{selectedCheckup.medicalInstitution}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">判定結果</h4>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge className={`text-lg px-3 py-1 ${getResultBadgeColor(selectedCheckup.overallResult)}`}>
+                      {selectedCheckup.overallResult}: {getResultLabel(selectedCheckup.overallResult)}
+                    </Badge>
+                  </div>
+                  {selectedCheckup.requiresReexam && (
+                    <Badge variant="outline" className="border-orange-500 text-orange-600 mr-2">
+                      要再検査
+                    </Badge>
+                  )}
+                  {selectedCheckup.requiresTreatment && (
+                    <Badge variant="outline" className="border-red-500 text-red-600">
+                      要治療
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">身体計測</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">身長</p>
+                    <p className="text-lg font-medium">{selectedCheckup.height} cm</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">体重</p>
+                    <p className="text-lg font-medium">{selectedCheckup.weight} kg</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">BMI</p>
+                    <p className="text-lg font-medium">{selectedCheckup.bmi?.toFixed(1)}</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">血圧</p>
+                    <p className="text-lg font-medium">
+                      {selectedCheckup.bloodPressureSystolic}/{selectedCheckup.bloodPressureDiastolic}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedCheckup.findings.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">所見</h4>
+                  <div className="flex gap-2 flex-wrap">
+                    {selectedCheckup.findings.map((finding, i) => (
+                      <Badge key={i} variant="secondary">
+                        {finding}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedCheckup.doctorOpinion && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">医師所見</h4>
+                  <p className="p-3 bg-muted rounded-lg text-sm">
+                    {selectedCheckup.doctorOpinion}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+                  閉じる
+                </Button>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  PDFダウンロード
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
