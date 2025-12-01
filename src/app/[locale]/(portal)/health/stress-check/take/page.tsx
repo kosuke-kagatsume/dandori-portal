@@ -18,7 +18,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, Clock, Info } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, Clock, Info, CalendarIcon, UserCheck } from 'lucide-react';
+import { format } from 'date-fns';
+import { ja } from 'date-fns/locale';
 
 // 厚労省標準57問版ストレスチェック質問
 // A群: 仕事のストレス要因に関する質問（17問）
@@ -139,6 +152,13 @@ export default function StressCheckTakePage() {
     isHighStress: boolean;
   } | null>(null);
 
+  // 面談申込み用state
+  const [showInterviewDialog, setShowInterviewDialog] = useState(false);
+  const [interviewRequestSubmitting, setInterviewRequestSubmitting] = useState(false);
+  const [interviewRequestSubmitted, setInterviewRequestSubmitted] = useState(false);
+  const [preferredDate, setPreferredDate] = useState<Date | undefined>(undefined);
+  const [interviewReason, setInterviewReason] = useState('');
+
   const totalPages = Math.ceil(QUESTIONS.length / QUESTIONS_PER_PAGE);
 
   const currentQuestions = useMemo(() => {
@@ -244,6 +264,36 @@ export default function StressCheckTakePage() {
     return category === 'C' ? ANSWER_OPTIONS_C : ANSWER_OPTIONS_AB;
   };
 
+  // 面談申込みハンドラ
+  const handleInterviewRequest = async () => {
+    setInterviewRequestSubmitting(true);
+
+    // デモモード: 少し遅延してから成功とする
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // TODO: 実際のAPI呼び出し
+    // await fetch('/api/health/stress-checks/interview-request', {
+    //   method: 'POST',
+    //   body: JSON.stringify({
+    //     preferredDate,
+    //     reason: interviewReason,
+    //     stressFactorsScore: result?.stressFactorsScore,
+    //     stressResponseScore: result?.stressResponseScore,
+    //     socialSupportScore: result?.socialSupportScore,
+    //   }),
+    // });
+
+    console.log('面談申込み完了:', {
+      preferredDate,
+      reason: interviewReason,
+      result,
+    });
+
+    setInterviewRequestSubmitting(false);
+    setShowInterviewDialog(false);
+    setInterviewRequestSubmitted(true);
+  };
+
   if (showResult && result) {
     return (
       <div className="space-y-6">
@@ -304,7 +354,7 @@ export default function StressCheckTakePage() {
               </Card>
             </div>
 
-            {result.isHighStress && (
+            {result.isHighStress && !interviewRequestSubmitted && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5" />
@@ -314,9 +364,34 @@ export default function StressCheckTakePage() {
                       高ストレス状態の可能性があります。希望される場合は、産業医との面談を申し込むことができます。
                       面談では、ストレスの原因や対処法について相談できます。
                     </p>
-                    <Button className="mt-3" variant="destructive" size="sm">
+                    <Button
+                      className="mt-3"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowInterviewDialog(true)}
+                    >
+                      <UserCheck className="h-4 w-4 mr-2" />
                       面談を申し込む
                     </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {interviewRequestSubmitted && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-green-800">面談申込みを受け付けました</h4>
+                    <p className="text-sm text-green-600 mt-1">
+                      産業医との面談申込みが完了しました。
+                      {preferredDate && (
+                        <span>希望日時: {format(preferredDate, 'yyyy年MM月dd日', { locale: ja })}</span>
+                      )}
+                      <br />
+                      担当者から後日、面談日時の調整についてご連絡いたします。
+                    </p>
                   </div>
                 </div>
               </div>
@@ -481,6 +556,91 @@ export default function StressCheckTakePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* 面談申込みダイアログ */}
+      <Dialog open={showInterviewDialog} onOpenChange={setShowInterviewDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCheck className="h-5 w-5" />
+              産業医面談の申込み
+            </DialogTitle>
+            <DialogDescription>
+              ストレスチェックの結果に基づき、産業医との面談を申し込むことができます。
+              面談は本人の希望に基づいて行われ、会社に結果は通知されません。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>面談希望日（任意）</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {preferredDate
+                      ? format(preferredDate, 'yyyy年MM月dd日', { locale: ja })
+                      : '希望日を選択してください'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={preferredDate}
+                    onSelect={setPreferredDate}
+                    disabled={(date) => date < new Date() || date.getDay() === 0 || date.getDay() === 6}
+                    locale={ja}
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                土日祝日は選択できません。面談日は産業医のスケジュールに応じて調整される場合があります。
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="interview-reason">相談したい内容（任意）</Label>
+              <Textarea
+                id="interview-reason"
+                placeholder="例: 業務量が多く、疲労を感じることが多い。睡眠の質が悪い気がする。"
+                value={interviewReason}
+                onChange={(e) => setInterviewReason(e.target.value)}
+                rows={4}
+              />
+              <p className="text-xs text-muted-foreground">
+                面談時の参考にさせていただきます。具体的に書いていただくと、より適切な対応ができます。
+              </p>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                <strong>個人情報の取り扱いについて</strong><br />
+                面談の内容および結果は、労働安全衛生法に基づき厳重に管理されます。
+                本人の同意なく事業者に通知されることはありません。
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowInterviewDialog(false)}
+              disabled={interviewRequestSubmitting}
+            >
+              キャンセル
+            </Button>
+            <Button
+              onClick={handleInterviewRequest}
+              disabled={interviewRequestSubmitting}
+            >
+              {interviewRequestSubmitting ? '申込み中...' : '面談を申し込む'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

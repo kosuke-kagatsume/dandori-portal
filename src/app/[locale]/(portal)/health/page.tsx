@@ -26,9 +26,16 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { CalendarIcon } from 'lucide-react';
 import {
   Heart,
   Plus,
@@ -49,6 +56,20 @@ import {
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import {
+  exportHealthCheckupsToCSV,
+  exportFindingsListToCSV,
+  exportStressChecksToCSV,
+  type HealthCheckupExport,
+  type StressCheckExport,
+} from '@/lib/csv/csv-export';
+import {
+  downloadIndustrialPhysicianReportPDF,
+  downloadHighStressListPDF,
+  downloadHealthCheckupSummaryPDF,
+  type HealthCheckupForPDF,
+  type StressCheckForPDF,
+} from '@/lib/pdf/health-report-pdf';
 
 // 健康診断の結果タイプ
 type OverallResult = 'A' | 'B' | 'C' | 'D' | 'E';
@@ -214,6 +235,30 @@ const checkupResultDistribution = [
   { name: 'E: 要治療', value: 5, color: '#ef4444' },
 ];
 
+// フォロー記録用の型
+interface FollowUpRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  followUpDate: Date | undefined;
+  status: 'scheduled' | 'completed' | 'cancelled';
+  notes: string;
+  nextFollowUpDate: Date | undefined;
+}
+
+// 面談記録用の型
+interface InterviewRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  interviewDate: Date | undefined;
+  interviewType: 'stress_interview' | 'health_guidance' | 'return_to_work';
+  doctorName: string;
+  notes: string;
+  outcome: string;
+  nextAction: string;
+}
+
 export default function HealthPage() {
   const router = useRouter();
   const params = useParams();
@@ -225,6 +270,45 @@ export default function HealthPage() {
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
   const [selectedCheckup, setSelectedCheckup] = useState<HealthCheckup | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  // フォロー記録ダイアログ用state
+  const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
+  const [selectedFollowUpUser, setSelectedFollowUpUser] = useState<{ id: string; name: string } | null>(null);
+  const [followUpRecord, setFollowUpRecord] = useState<Partial<FollowUpRecord>>({
+    followUpDate: undefined,
+    status: 'scheduled',
+    notes: '',
+    nextFollowUpDate: undefined,
+  });
+
+  // 面談記録ダイアログ用state
+  const [interviewDialogOpen, setInterviewDialogOpen] = useState(false);
+  const [selectedInterviewUser, setSelectedInterviewUser] = useState<{ id: string; name: string } | null>(null);
+  const [interviewRecord, setInterviewRecord] = useState<Partial<InterviewRecord>>({
+    interviewDate: undefined,
+    interviewType: 'stress_interview',
+    doctorName: '',
+    notes: '',
+    outcome: '',
+    nextAction: '',
+  });
+
+  // 健診結果登録ダイアログ用state
+  const [checkupRegistrationDialogOpen, setCheckupRegistrationDialogOpen] = useState(false);
+  const [newCheckup, setNewCheckup] = useState({
+    userName: '',
+    department: '',
+    checkupDate: undefined as Date | undefined,
+    medicalInstitution: '',
+    overallResult: 'A' as OverallResult,
+    requiresReexam: false,
+    requiresTreatment: false,
+    height: '',
+    weight: '',
+    bloodPressureSystolic: '',
+    bloodPressureDiastolic: '',
+    doctorOpinion: '',
+  });
 
   // 統計データを計算
   const stats = useMemo(() => {
@@ -278,6 +362,260 @@ export default function HealthPage() {
     setDetailDialogOpen(true);
   };
 
+  // フォロー記録ダイアログを開く
+  const handleOpenFollowUpDialog = (userId: string, userName: string) => {
+    setSelectedFollowUpUser({ id: userId, name: userName });
+    setFollowUpRecord({
+      followUpDate: new Date(),
+      status: 'scheduled',
+      notes: '',
+      nextFollowUpDate: undefined,
+    });
+    setFollowUpDialogOpen(true);
+  };
+
+  // フォロー記録を保存
+  const handleSaveFollowUp = () => {
+    // デモモードでは保存したふりをする
+    console.log('フォロー記録を保存:', {
+      userId: selectedFollowUpUser?.id,
+      userName: selectedFollowUpUser?.name,
+      ...followUpRecord,
+    });
+    setFollowUpDialogOpen(false);
+    // TODO: 実際のAPI呼び出しを実装
+  };
+
+  // 面談記録ダイアログを開く
+  const handleOpenInterviewDialog = (userId: string, userName: string) => {
+    setSelectedInterviewUser({ id: userId, name: userName });
+    setInterviewRecord({
+      interviewDate: new Date(),
+      interviewType: 'stress_interview',
+      doctorName: '',
+      notes: '',
+      outcome: '',
+      nextAction: '',
+    });
+    setInterviewDialogOpen(true);
+  };
+
+  // 面談記録を保存
+  const handleSaveInterview = () => {
+    // デモモードでは保存したふりをする
+    console.log('面談記録を保存:', {
+      userId: selectedInterviewUser?.id,
+      userName: selectedInterviewUser?.name,
+      ...interviewRecord,
+    });
+    setInterviewDialogOpen(false);
+    // TODO: 実際のAPI呼び出しを実装
+  };
+
+  // 健診結果を保存
+  const handleSaveCheckup = () => {
+    // デモモードでは保存したふりをする
+    console.log('健診結果を保存:', newCheckup);
+    setCheckupRegistrationDialogOpen(false);
+    // フォームをリセット
+    setNewCheckup({
+      userName: '',
+      department: '',
+      checkupDate: undefined,
+      medicalInstitution: '',
+      overallResult: 'A',
+      requiresReexam: false,
+      requiresTreatment: false,
+      height: '',
+      weight: '',
+      bloodPressureSystolic: '',
+      bloodPressureDiastolic: '',
+      doctorOpinion: '',
+    });
+    // TODO: 実際のAPI呼び出しを実装
+  };
+
+  // CSV出力ハンドラー
+  const handleExportHealthCheckups = () => {
+    const exportData: HealthCheckupExport[] = filteredCheckups.map((checkup) => ({
+      id: checkup.id,
+      userId: checkup.userId,
+      userName: checkup.userName,
+      departmentName: checkup.department,
+      checkupDate: format(checkup.checkupDate, 'yyyy-MM-dd'),
+      checkupType: checkup.checkupType,
+      medicalInstitution: checkup.medicalInstitution,
+      fiscalYear: checkup.checkupDate.getFullYear(),
+      overallResult: checkup.overallResult,
+      requiresReexam: checkup.requiresReexam,
+      requiresTreatment: checkup.requiresTreatment,
+      requiresGuidance: checkup.requiresGuidance || false,
+      height: checkup.height,
+      weight: checkup.weight,
+      bmi: checkup.bmi,
+      bloodPressureSystolic: checkup.bloodPressureSystolic,
+      bloodPressureDiastolic: checkup.bloodPressureDiastolic,
+      followUpStatus: checkup.followUpStatus,
+      findings: checkup.findings,
+    }));
+    exportHealthCheckupsToCSV(exportData);
+  };
+
+  const handleExportFindingsList = () => {
+    const exportData: HealthCheckupExport[] = filteredCheckups.map((checkup) => ({
+      id: checkup.id,
+      userId: checkup.userId,
+      userName: checkup.userName,
+      departmentName: checkup.department,
+      checkupDate: format(checkup.checkupDate, 'yyyy-MM-dd'),
+      checkupType: checkup.checkupType,
+      medicalInstitution: checkup.medicalInstitution,
+      fiscalYear: checkup.checkupDate.getFullYear(),
+      overallResult: checkup.overallResult,
+      requiresReexam: checkup.requiresReexam,
+      requiresTreatment: checkup.requiresTreatment,
+      requiresGuidance: checkup.requiresGuidance || false,
+      height: checkup.height,
+      weight: checkup.weight,
+      bmi: checkup.bmi,
+      bloodPressureSystolic: checkup.bloodPressureSystolic,
+      bloodPressureDiastolic: checkup.bloodPressureDiastolic,
+      followUpStatus: checkup.followUpStatus,
+      findings: checkup.findings,
+    }));
+    exportFindingsListToCSV(exportData);
+  };
+
+  const handleExportStressChecks = () => {
+    const exportData: StressCheckExport[] = filteredStressChecks.map((check) => ({
+      id: check.id,
+      userId: check.userId,
+      userName: check.userName,
+      departmentName: check.department,
+      fiscalYear: check.fiscalYear,
+      checkDate: format(check.checkDate, 'yyyy-MM-dd'),
+      status: check.status,
+      stressFactorsScore: check.stressScore.stressFactors,
+      stressResponseScore: check.stressScore.stressResponse,
+      socialSupportScore: check.stressScore.socialSupport,
+      totalScore: check.stressScore.total,
+      isHighStress: check.isHighStress,
+      highStressReason: check.highStressReason,
+      interviewRequested: check.interviewRequested,
+      interviewScheduled: check.interviewScheduled || false,
+      interviewCompleted: check.interviewCompleted || false,
+    }));
+    exportStressChecksToCSV(exportData);
+  };
+
+  // PDF出力ハンドラー
+  const handleExportIndustrialPhysicianReportPDF = async () => {
+    const checkupData: HealthCheckupForPDF[] = filteredCheckups.map((checkup) => ({
+      id: checkup.id,
+      userId: checkup.userId,
+      userName: checkup.userName,
+      departmentName: checkup.department,
+      checkupDate: checkup.checkupDate,
+      checkupType: checkup.checkupType,
+      medicalInstitution: checkup.medicalInstitution,
+      fiscalYear: checkup.checkupDate.getFullYear(),
+      overallResult: checkup.overallResult,
+      requiresReexam: checkup.requiresReexam,
+      requiresTreatment: checkup.requiresTreatment,
+      requiresGuidance: checkup.requiresGuidance || false,
+      height: checkup.height,
+      weight: checkup.weight,
+      bmi: checkup.bmi,
+      bloodPressureSystolic: checkup.bloodPressureSystolic,
+      bloodPressureDiastolic: checkup.bloodPressureDiastolic,
+      followUpStatus: checkup.followUpStatus,
+      findings: checkup.findings?.map((f) => ({
+        category: f,
+        finding: f,
+        severity: 'warning',
+      })),
+    }));
+
+    const stressData: StressCheckForPDF[] = filteredStressChecks.map((check) => ({
+      id: check.id,
+      userId: check.userId,
+      userName: check.userName,
+      departmentName: check.department,
+      fiscalYear: check.fiscalYear,
+      checkDate: check.checkDate,
+      status: check.status,
+      stressFactorsScore: check.stressScore.stressFactors,
+      stressResponseScore: check.stressScore.stressResponse,
+      socialSupportScore: check.stressScore.socialSupport,
+      totalScore: check.stressScore.total,
+      isHighStress: check.isHighStress,
+      highStressReason: check.highStressReason,
+      interviewRequested: check.interviewRequested,
+      interviewScheduled: check.interviewScheduled || false,
+      interviewCompleted: check.interviewCompleted || false,
+    }));
+
+    await downloadIndustrialPhysicianReportPDF(
+      checkupData,
+      stressData,
+      new Date().getFullYear(),
+      '株式会社サンプル'
+    );
+  };
+
+  const handleExportHighStressListPDF = async () => {
+    const stressData: StressCheckForPDF[] = filteredStressChecks.map((check) => ({
+      id: check.id,
+      userId: check.userId,
+      userName: check.userName,
+      departmentName: check.department,
+      fiscalYear: check.fiscalYear,
+      checkDate: check.checkDate,
+      status: check.status,
+      stressFactorsScore: check.stressScore.stressFactors,
+      stressResponseScore: check.stressScore.stressResponse,
+      socialSupportScore: check.stressScore.socialSupport,
+      totalScore: check.stressScore.total,
+      isHighStress: check.isHighStress,
+      highStressReason: check.highStressReason,
+      interviewRequested: check.interviewRequested,
+      interviewScheduled: check.interviewScheduled || false,
+      interviewCompleted: check.interviewCompleted || false,
+    }));
+
+    await downloadHighStressListPDF(stressData, new Date().getFullYear());
+  };
+
+  const handleExportHealthCheckupSummaryPDF = async () => {
+    const checkupData: HealthCheckupForPDF[] = filteredCheckups.map((checkup) => ({
+      id: checkup.id,
+      userId: checkup.userId,
+      userName: checkup.userName,
+      departmentName: checkup.department,
+      checkupDate: checkup.checkupDate,
+      checkupType: checkup.checkupType,
+      medicalInstitution: checkup.medicalInstitution,
+      fiscalYear: checkup.checkupDate.getFullYear(),
+      overallResult: checkup.overallResult,
+      requiresReexam: checkup.requiresReexam,
+      requiresTreatment: checkup.requiresTreatment,
+      requiresGuidance: checkup.requiresGuidance || false,
+      height: checkup.height,
+      weight: checkup.weight,
+      bmi: checkup.bmi,
+      bloodPressureSystolic: checkup.bloodPressureSystolic,
+      bloodPressureDiastolic: checkup.bloodPressureDiastolic,
+      followUpStatus: checkup.followUpStatus,
+      findings: checkup.findings?.map((f) => ({
+        category: f,
+        finding: f,
+        severity: 'warning',
+      })),
+    }));
+
+    await downloadHealthCheckupSummaryPDF(checkupData, new Date().getFullYear());
+  };
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -293,7 +631,7 @@ export default function HealthPage() {
             <Download className="mr-2 h-4 w-4" />
             レポート出力
           </Button>
-          <Button>
+          <Button onClick={() => setCheckupRegistrationDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             健診結果登録
           </Button>
@@ -633,7 +971,11 @@ export default function HealthPage() {
                             ))}
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenFollowUpDialog(checkup.userId, checkup.userName)}
+                        >
                           フォロー記録
                         </Button>
                       </div>
@@ -668,7 +1010,11 @@ export default function HealthPage() {
                             </Badge>
                           )}
                         </div>
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenInterviewDialog(check.userId, check.userName)}
+                        >
                           面談記録
                         </Button>
                       </div>
@@ -775,25 +1121,59 @@ export default function HealthPage() {
                 <CardDescription>各種帳票をダウンロードできます</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
-                    <FileText className="h-6 w-6" />
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex flex-col gap-2"
+                    onClick={handleExportHealthCheckups}
+                  >
+                    <Download className="h-6 w-6" />
                     <span>健康診断結果一覧</span>
-                    <span className="text-xs text-muted-foreground">Excel形式</span>
+                    <span className="text-xs text-muted-foreground">CSV形式</span>
                   </Button>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
-                    <FileText className="h-6 w-6" />
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex flex-col gap-2"
+                    onClick={handleExportFindingsList}
+                  >
+                    <Download className="h-6 w-6" />
                     <span>有所見者リスト</span>
-                    <span className="text-xs text-muted-foreground">Excel形式</span>
+                    <span className="text-xs text-muted-foreground">CSV形式</span>
                   </Button>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
-                    <FileText className="h-6 w-6" />
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex flex-col gap-2"
+                    onClick={handleExportStressChecks}
+                  >
+                    <Download className="h-6 w-6" />
                     <span>ストレスチェック結果</span>
-                    <span className="text-xs text-muted-foreground">Excel形式</span>
+                    <span className="text-xs text-muted-foreground">CSV形式</span>
                   </Button>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex flex-col gap-2"
+                    onClick={handleExportIndustrialPhysicianReportPDF}
+                  >
                     <FileText className="h-6 w-6" />
                     <span>産業医報告書</span>
+                    <span className="text-xs text-muted-foreground">PDF形式</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex flex-col gap-2"
+                    onClick={handleExportHighStressListPDF}
+                  >
+                    <FileText className="h-6 w-6" />
+                    <span>高ストレス者一覧</span>
+                    <span className="text-xs text-muted-foreground">PDF形式</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-auto py-4 flex flex-col gap-2"
+                    onClick={handleExportHealthCheckupSummaryPDF}
+                  >
+                    <FileText className="h-6 w-6" />
+                    <span>健診サマリー</span>
                     <span className="text-xs text-muted-foreground">PDF形式</span>
                   </Button>
                 </div>
@@ -915,6 +1295,433 @@ export default function HealthPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* フォロー記録ダイアログ */}
+      <Dialog open={followUpDialogOpen} onOpenChange={setFollowUpDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>フォロー記録</DialogTitle>
+            <DialogDescription>
+              {selectedFollowUpUser?.name} さんのフォロー状況を記録します
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>フォロー日</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !followUpRecord.followUpDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {followUpRecord.followUpDate
+                      ? format(followUpRecord.followUpDate, 'yyyy年MM月dd日', { locale: ja })
+                      : '日付を選択'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={followUpRecord.followUpDate}
+                    onSelect={(date) =>
+                      setFollowUpRecord({ ...followUpRecord, followUpDate: date })
+                    }
+                    locale={ja}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>ステータス</Label>
+              <Select
+                value={followUpRecord.status}
+                onValueChange={(value: 'scheduled' | 'completed' | 'cancelled') =>
+                  setFollowUpRecord({ ...followUpRecord, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scheduled">予定</SelectItem>
+                  <SelectItem value="completed">完了</SelectItem>
+                  <SelectItem value="cancelled">キャンセル</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>フォロー内容・メモ</Label>
+              <Textarea
+                placeholder="フォローの内容を記録してください..."
+                value={followUpRecord.notes}
+                onChange={(e) =>
+                  setFollowUpRecord({ ...followUpRecord, notes: e.target.value })
+                }
+                rows={4}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>次回フォロー予定日</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !followUpRecord.nextFollowUpDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {followUpRecord.nextFollowUpDate
+                      ? format(followUpRecord.nextFollowUpDate, 'yyyy年MM月dd日', { locale: ja })
+                      : '日付を選択（任意）'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={followUpRecord.nextFollowUpDate}
+                    onSelect={(date) =>
+                      setFollowUpRecord({ ...followUpRecord, nextFollowUpDate: date })
+                    }
+                    locale={ja}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFollowUpDialogOpen(false)}>
+              キャンセル
+            </Button>
+            <Button onClick={handleSaveFollowUp}>保存</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 面談記録ダイアログ */}
+      <Dialog open={interviewDialogOpen} onOpenChange={setInterviewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>面談記録</DialogTitle>
+            <DialogDescription>
+              {selectedInterviewUser?.name} さんとの面談内容を記録します
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>面談日</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !interviewRecord.interviewDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {interviewRecord.interviewDate
+                      ? format(interviewRecord.interviewDate, 'yyyy年MM月dd日', { locale: ja })
+                      : '日付を選択'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={interviewRecord.interviewDate}
+                    onSelect={(date) =>
+                      setInterviewRecord({ ...interviewRecord, interviewDate: date })
+                    }
+                    locale={ja}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>面談種別</Label>
+              <Select
+                value={interviewRecord.interviewType}
+                onValueChange={(value: 'stress_interview' | 'health_guidance' | 'return_to_work') =>
+                  setInterviewRecord({ ...interviewRecord, interviewType: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stress_interview">ストレスチェック面談</SelectItem>
+                  <SelectItem value="health_guidance">保健指導</SelectItem>
+                  <SelectItem value="return_to_work">復職面談</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>担当医師・保健師名</Label>
+              <Input
+                placeholder="担当者名を入力"
+                value={interviewRecord.doctorName}
+                onChange={(e) =>
+                  setInterviewRecord({ ...interviewRecord, doctorName: e.target.value })
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>面談内容</Label>
+              <Textarea
+                placeholder="面談の内容を記録してください..."
+                value={interviewRecord.notes}
+                onChange={(e) =>
+                  setInterviewRecord({ ...interviewRecord, notes: e.target.value })
+                }
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>面談結果・所見</Label>
+              <Textarea
+                placeholder="面談の結果や所見を記録してください..."
+                value={interviewRecord.outcome}
+                onChange={(e) =>
+                  setInterviewRecord({ ...interviewRecord, outcome: e.target.value })
+                }
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>今後の対応・アクション</Label>
+              <Textarea
+                placeholder="今後必要な対応やアクションを記録してください..."
+                value={interviewRecord.nextAction}
+                onChange={(e) =>
+                  setInterviewRecord({ ...interviewRecord, nextAction: e.target.value })
+                }
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInterviewDialogOpen(false)}>
+              キャンセル
+            </Button>
+            <Button onClick={handleSaveInterview}>保存</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 健診結果登録ダイアログ */}
+      <Dialog open={checkupRegistrationDialogOpen} onOpenChange={setCheckupRegistrationDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>健康診断結果登録</DialogTitle>
+            <DialogDescription>
+              新しい健康診断結果を登録します
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>社員名</Label>
+                <Input
+                  placeholder="社員名を入力"
+                  value={newCheckup.userName}
+                  onChange={(e) =>
+                    setNewCheckup({ ...newCheckup, userName: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>部門</Label>
+                <Select
+                  value={newCheckup.department}
+                  onValueChange={(value) =>
+                    setNewCheckup({ ...newCheckup, department: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="部門を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>受診日</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !newCheckup.checkupDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {newCheckup.checkupDate
+                        ? format(newCheckup.checkupDate, 'yyyy年MM月dd日', { locale: ja })
+                        : '日付を選択'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={newCheckup.checkupDate}
+                      onSelect={(date) =>
+                        setNewCheckup({ ...newCheckup, checkupDate: date })
+                      }
+                      locale={ja}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>医療機関名</Label>
+                <Input
+                  placeholder="医療機関名を入力"
+                  value={newCheckup.medicalInstitution}
+                  onChange={(e) =>
+                    setNewCheckup({ ...newCheckup, medicalInstitution: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>総合判定</Label>
+                <Select
+                  value={newCheckup.overallResult}
+                  onValueChange={(value: OverallResult) =>
+                    setNewCheckup({ ...newCheckup, overallResult: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">A: 異常なし</SelectItem>
+                    <SelectItem value="B">B: 軽度異常</SelectItem>
+                    <SelectItem value="C">C: 要経過観察</SelectItem>
+                    <SelectItem value="D">D: 要精密検査</SelectItem>
+                    <SelectItem value="E">E: 要治療</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newCheckup.requiresReexam}
+                    onChange={(e) =>
+                      setNewCheckup({ ...newCheckup, requiresReexam: e.target.checked })
+                    }
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm">要再検査</span>
+                </label>
+              </div>
+              <div className="space-y-2 flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newCheckup.requiresTreatment}
+                    onChange={(e) =>
+                      setNewCheckup({ ...newCheckup, requiresTreatment: e.target.checked })
+                    }
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <span className="text-sm">要治療</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>身長 (cm)</Label>
+                <Input
+                  type="number"
+                  placeholder="170.0"
+                  value={newCheckup.height}
+                  onChange={(e) =>
+                    setNewCheckup({ ...newCheckup, height: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>体重 (kg)</Label>
+                <Input
+                  type="number"
+                  placeholder="65.0"
+                  value={newCheckup.weight}
+                  onChange={(e) =>
+                    setNewCheckup({ ...newCheckup, weight: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>最高血圧</Label>
+                <Input
+                  type="number"
+                  placeholder="120"
+                  value={newCheckup.bloodPressureSystolic}
+                  onChange={(e) =>
+                    setNewCheckup({ ...newCheckup, bloodPressureSystolic: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>最低血圧</Label>
+                <Input
+                  type="number"
+                  placeholder="80"
+                  value={newCheckup.bloodPressureDiastolic}
+                  onChange={(e) =>
+                    setNewCheckup({ ...newCheckup, bloodPressureDiastolic: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>医師所見</Label>
+              <Textarea
+                placeholder="医師の所見を入力してください..."
+                value={newCheckup.doctorOpinion}
+                onChange={(e) =>
+                  setNewCheckup({ ...newCheckup, doctorOpinion: e.target.value })
+                }
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCheckupRegistrationDialogOpen(false)}>
+              キャンセル
+            </Button>
+            <Button onClick={handleSaveCheckup}>登録</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

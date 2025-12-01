@@ -830,3 +830,383 @@ export const exportLicenseAssignmentsToCSV = (
     };
   }
 };
+
+// ===== 健康管理データ型定義 =====
+
+export interface HealthCheckupExport {
+  id: string;
+  userId: string;
+  userName: string;
+  departmentName?: string;
+  checkupDate: string;
+  checkupType: string;
+  medicalInstitution: string;
+  fiscalYear: number;
+  overallResult: string;
+  requiresReexam: boolean;
+  requiresTreatment: boolean;
+  requiresGuidance: boolean;
+  height?: number;
+  weight?: number;
+  bmi?: number;
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  followUpStatus?: string;
+  findings?: { category: string; finding: string; severity: string }[];
+}
+
+export interface StressCheckExport {
+  id: string;
+  userId: string;
+  userName: string;
+  departmentName?: string;
+  fiscalYear: number;
+  checkDate: string;
+  status: string;
+  stressFactorsScore: number;
+  stressResponseScore: number;
+  socialSupportScore: number;
+  totalScore: number;
+  isHighStress: boolean;
+  highStressReason?: string;
+  interviewRequested: boolean;
+  interviewScheduled: boolean;
+  interviewCompleted: boolean;
+}
+
+// ===== 健康診断ラベル変換関数 =====
+
+const getCheckupTypeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    regular: '定期健康診断',
+    hiring: '雇入れ時健康診断',
+    specific: '特定健康診査',
+  };
+  return labels[type] || type;
+};
+
+const getOverallResultLabel = (result: string): string => {
+  const labels: Record<string, string> = {
+    A: 'A（異常なし）',
+    B: 'B（軽度異常）',
+    C: 'C（要経過観察）',
+    D: 'D（要精密検査）',
+    E: 'E（要治療）',
+  };
+  return labels[result] || result;
+};
+
+const getFollowUpStatusLabel = (status: string | undefined): string => {
+  if (!status) return '';
+  const labels: Record<string, string> = {
+    none: '対応不要',
+    scheduled: '対応予定',
+    completed: '対応完了',
+  };
+  return labels[status] || status;
+};
+
+const getStressCheckStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    pending: '未受検',
+    completed: '受検済',
+    interview_recommended: '面談推奨',
+  };
+  return labels[status] || status;
+};
+
+// ===== 健康診断結果CSV出力 =====
+
+export const exportHealthCheckupsToCSV = (
+  checkups: HealthCheckupExport[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    const headers = [
+      '社員ID',
+      '社員名',
+      '部門',
+      '受診日',
+      '健診種別',
+      '医療機関',
+      '年度',
+      '総合判定',
+      '要再検査',
+      '要治療',
+      '要保健指導',
+      '身長(cm)',
+      '体重(kg)',
+      'BMI',
+      '血圧（収縮期）',
+      '血圧（拡張期）',
+      'フォロー状況',
+      '所見',
+    ];
+
+    const rows = checkups.map((checkup) => [
+      checkup.userId,
+      checkup.userName,
+      checkup.departmentName || '',
+      checkup.checkupDate,
+      getCheckupTypeLabel(checkup.checkupType),
+      checkup.medicalInstitution,
+      checkup.fiscalYear,
+      getOverallResultLabel(checkup.overallResult),
+      checkup.requiresReexam ? '要' : '不要',
+      checkup.requiresTreatment ? '要' : '不要',
+      checkup.requiresGuidance ? '要' : '不要',
+      checkup.height || '',
+      checkup.weight || '',
+      checkup.bmi || '',
+      checkup.bloodPressureSystolic || '',
+      checkup.bloodPressureDiastolic || '',
+      getFollowUpStatusLabel(checkup.followUpStatus),
+      checkup.findings?.map((f) => `${f.category}:${f.finding}`).join('; ') || '',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `health_checkups_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('健康診断結果データ', checkups.length);
+
+    return {
+      success: true,
+      recordCount: checkups.length,
+    };
+  } catch (error) {
+    console.error('Failed to export health checkups CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '健康診断結果CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+// ===== 有所見者リストCSV出力 =====
+
+export const exportFindingsListToCSV = (
+  checkups: HealthCheckupExport[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    // 有所見者のみをフィルタリング（C, D, E判定、または要再検査、要治療）
+    const withFindings = checkups.filter(
+      (c) =>
+        ['C', 'D', 'E'].includes(c.overallResult) ||
+        c.requiresReexam ||
+        c.requiresTreatment
+    );
+
+    const headers = [
+      '社員ID',
+      '社員名',
+      '部門',
+      '受診日',
+      '総合判定',
+      '要再検査',
+      '要治療',
+      '要保健指導',
+      '所見カテゴリ',
+      '所見内容',
+      '重症度',
+      'フォロー状況',
+    ];
+
+    const rows: (string | number)[][] = [];
+
+    withFindings.forEach((checkup) => {
+      if (checkup.findings && checkup.findings.length > 0) {
+        // 所見がある場合は所見ごとに行を作成
+        checkup.findings.forEach((finding) => {
+          rows.push([
+            checkup.userId,
+            checkup.userName,
+            checkup.departmentName || '',
+            checkup.checkupDate,
+            getOverallResultLabel(checkup.overallResult),
+            checkup.requiresReexam ? '要' : '不要',
+            checkup.requiresTreatment ? '要' : '不要',
+            checkup.requiresGuidance ? '要' : '不要',
+            finding.category,
+            finding.finding,
+            finding.severity === 'critical' ? '重度' : finding.severity === 'warning' ? '注意' : '軽度',
+            getFollowUpStatusLabel(checkup.followUpStatus),
+          ]);
+        });
+      } else {
+        // 所見がない場合は1行だけ作成
+        rows.push([
+          checkup.userId,
+          checkup.userName,
+          checkup.departmentName || '',
+          checkup.checkupDate,
+          getOverallResultLabel(checkup.overallResult),
+          checkup.requiresReexam ? '要' : '不要',
+          checkup.requiresTreatment ? '要' : '不要',
+          checkup.requiresGuidance ? '要' : '不要',
+          '',
+          '',
+          '',
+          getFollowUpStatusLabel(checkup.followUpStatus),
+        ]);
+      }
+    });
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `findings_list_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('有所見者リストデータ', withFindings.length);
+
+    return {
+      success: true,
+      recordCount: withFindings.length,
+    };
+  } catch (error) {
+    console.error('Failed to export findings list CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '有所見者リストCSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+// ===== ストレスチェック結果CSV出力 =====
+
+export const exportStressChecksToCSV = (
+  stressChecks: StressCheckExport[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    const headers = [
+      '社員ID',
+      '社員名',
+      '部門',
+      '年度',
+      '受検日',
+      'ステータス',
+      'ストレス要因スコア',
+      'ストレス反応スコア',
+      '周囲サポートスコア',
+      '総合スコア',
+      '高ストレス判定',
+      '高ストレス理由',
+      '面談申込み',
+      '面談予約済',
+      '面談完了',
+    ];
+
+    const rows = stressChecks.map((check) => [
+      check.userId,
+      check.userName,
+      check.departmentName || '',
+      check.fiscalYear,
+      check.checkDate,
+      getStressCheckStatusLabel(check.status),
+      check.stressFactorsScore,
+      check.stressResponseScore,
+      check.socialSupportScore,
+      check.totalScore,
+      check.isHighStress ? '該当' : '非該当',
+      check.highStressReason || '',
+      check.interviewRequested ? 'あり' : 'なし',
+      check.interviewScheduled ? 'あり' : 'なし',
+      check.interviewCompleted ? 'あり' : 'なし',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `stress_checks_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('ストレスチェック結果データ', stressChecks.length);
+
+    return {
+      success: true,
+      recordCount: stressChecks.length,
+    };
+  } catch (error) {
+    console.error('Failed to export stress checks CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'ストレスチェック結果CSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
+
+// ===== 高ストレス者リストCSV出力 =====
+
+export const exportHighStressListToCSV = (
+  stressChecks: StressCheckExport[],
+  filename?: string
+): CSVExportResult => {
+  try {
+    // 高ストレス者のみをフィルタリング
+    const highStress = stressChecks.filter((c) => c.isHighStress);
+
+    const headers = [
+      '社員ID',
+      '社員名',
+      '部門',
+      '年度',
+      '受検日',
+      'ストレス要因スコア',
+      'ストレス反応スコア',
+      '周囲サポートスコア',
+      '総合スコア',
+      '高ストレス理由',
+      '面談申込み',
+      '面談予約済',
+      '面談完了',
+      '対応状況',
+    ];
+
+    const rows = highStress.map((check) => [
+      check.userId,
+      check.userName,
+      check.departmentName || '',
+      check.fiscalYear,
+      check.checkDate,
+      check.stressFactorsScore,
+      check.stressResponseScore,
+      check.socialSupportScore,
+      check.totalScore,
+      check.highStressReason || '',
+      check.interviewRequested ? 'あり' : 'なし',
+      check.interviewScheduled ? 'あり' : 'なし',
+      check.interviewCompleted ? 'あり' : 'なし',
+      check.interviewCompleted
+        ? '対応完了'
+        : check.interviewScheduled
+        ? '面談予定'
+        : check.interviewRequested
+        ? '面談申込済'
+        : '未対応',
+    ]);
+
+    const csvString = generateCSVString(headers, rows);
+    const defaultFilename = `high_stress_list_${getCurrentDate()}.csv`;
+    downloadCSV(csvString, filename || defaultFilename);
+
+    // 監査ログ記録
+    exportAudit.csv('高ストレス者リストデータ', highStress.length);
+
+    return {
+      success: true,
+      recordCount: highStress.length,
+    };
+  } catch (error) {
+    console.error('Failed to export high stress list CSV:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '高ストレス者リストCSVの出力に失敗しました',
+      recordCount: 0,
+    };
+  }
+};
