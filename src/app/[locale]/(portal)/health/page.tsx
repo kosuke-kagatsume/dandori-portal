@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useUserStore } from '@/lib/store/user-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -115,72 +116,41 @@ interface StressCheck {
   interviewDate?: Date;
 }
 
-// デモデータ
-const generateDemoCheckups = (): HealthCheckup[] => {
-  const users = [
-    { id: 'user1', name: '田中太郎', department: '営業部' },
-    { id: 'user2', name: '鈴木花子', department: '開発部' },
-    { id: 'user3', name: '山田次郎', department: '人事部' },
-    { id: 'user4', name: '佐藤美咲', department: '営業部' },
-    { id: 'user5', name: '高橋健一', department: '開発部' },
-    { id: 'user6', name: '伊藤真理', department: '総務部' },
-    { id: 'user7', name: '渡辺誠', department: '開発部' },
-    { id: 'user8', name: '小林由美', department: '営業部' },
-  ];
+// APIからのレスポンス型
+interface APIHealthCheckup {
+  id: string;
+  userId: string;
+  userName: string;
+  checkupDate: string;
+  checkupType: string;
+  medicalInstitution: string;
+  overallResult: string;
+  requiresReexam: boolean;
+  requiresTreatment: boolean;
+  height?: number;
+  weight?: number;
+  bmi?: number;
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  followUpStatus?: string;
+  doctorOpinion?: string;
+  findings?: Array<{ finding: string }>;
+}
 
-  return users.map((user, i) => ({
-    id: `checkup-${i + 1}`,
-    userId: user.id,
-    userName: user.name,
-    department: user.department,
-    checkupDate: new Date(2024, 8 + Math.floor(i / 3), 10 + i * 2),
-    checkupType: 'regular' as CheckupType,
-    medicalInstitution: '東京メディカルセンター',
-    overallResult: (['A', 'A', 'B', 'B', 'C', 'A', 'B', 'D'] as OverallResult[])[i],
-    requiresReexam: i === 4 || i === 7,
-    requiresTreatment: i === 7,
-    height: 165 + Math.floor(Math.random() * 20),
-    weight: 55 + Math.floor(Math.random() * 25),
-    bmi: 20 + Math.random() * 8,
-    bloodPressureSystolic: 110 + Math.floor(Math.random() * 40),
-    bloodPressureDiastolic: 70 + Math.floor(Math.random() * 20),
-    followUpStatus: i === 4 ? 'scheduled' : i === 7 ? 'none' : 'completed',
-    doctorOpinion: i === 7 ? '血圧が高めのため、医療機関での受診をお勧めします。' : undefined,
-    findings: i === 4 ? ['脂質異常'] : i === 7 ? ['高血圧', '高血糖'] : [],
-  }));
-};
-
-const generateDemoStressChecks = (): StressCheck[] => {
-  const users = [
-    { id: 'user1', name: '田中太郎', department: '営業部' },
-    { id: 'user2', name: '鈴木花子', department: '開発部' },
-    { id: 'user3', name: '山田次郎', department: '人事部' },
-    { id: 'user4', name: '佐藤美咲', department: '営業部' },
-    { id: 'user5', name: '高橋健一', department: '開発部' },
-    { id: 'user6', name: '伊藤真理', department: '総務部' },
-    { id: 'user7', name: '渡辺誠', department: '開発部' },
-    { id: 'user8', name: '小林由美', department: '営業部' },
-  ];
-
-  return users.map((user, i) => ({
-    id: `stress-${i + 1}`,
-    userId: user.id,
-    userName: user.name,
-    department: user.department,
-    fiscalYear: 2024,
-    checkDate: new Date(2024, 10, 1 + i * 2),
-    status: i === 0 ? 'pending' : i === 3 ? 'interview_recommended' : 'completed',
-    stressFactorsScore: 30 + Math.floor(Math.random() * 30),
-    stressResponseScore: 50 + Math.floor(Math.random() * 40),
-    socialSupportScore: 15 + Math.floor(Math.random() * 15),
-    isHighStress: i === 3 || i === 6,
-    interviewRequested: i === 3,
-    interviewDate: i === 3 ? new Date(2024, 11, 15) : undefined,
-  }));
-};
-
-const demoCheckups = generateDemoCheckups();
-const demoStressChecks = generateDemoStressChecks();
+interface APIStressCheck {
+  id: string;
+  userId: string;
+  userName: string;
+  fiscalYear: number;
+  checkDate: string;
+  status: string;
+  stressFactorsScore?: number;
+  stressResponseScore?: number;
+  socialSupportScore?: number;
+  isHighStress: boolean;
+  interviewRequested: boolean;
+  interviewDate?: string;
+}
 
 // 結果バッジの色を取得
 const getResultBadgeColor = (result: OverallResult) => {
@@ -263,6 +233,13 @@ export default function HealthPage() {
   const router = useRouter();
   const params = useParams();
   const locale = params?.locale as string || 'ja';
+  const currentUser = useUserStore(state => state.currentUser);
+  const tenantId = currentUser?.tenantId || '';
+
+  // APIからのデータ
+  const [checkups, setCheckups] = useState<HealthCheckup[]>([]);
+  const [stressChecks, setStressChecks] = useState<StressCheck[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState('checkups');
   const [searchQuery, setSearchQuery] = useState('');
@@ -270,6 +247,77 @@ export default function HealthPage() {
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
   const [selectedCheckup, setSelectedCheckup] = useState<HealthCheckup | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  // APIからデータを取得
+  const fetchData = useCallback(async () => {
+    if (!tenantId) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // 健康診断データを取得
+      const checkupsRes = await fetch(`/api/health/checkups?tenantId=${tenantId}`);
+      if (checkupsRes.ok) {
+        const checkupsData = await checkupsRes.json();
+        const apiCheckups: APIHealthCheckup[] = checkupsData.data || [];
+        // APIデータをコンポーネント用の型に変換
+        const mappedCheckups: HealthCheckup[] = apiCheckups.map(c => ({
+          id: c.id,
+          userId: c.userId,
+          userName: c.userName,
+          department: '', // APIにdepartmentがない場合は空文字
+          checkupDate: new Date(c.checkupDate),
+          checkupType: (c.checkupType as CheckupType) || 'regular',
+          medicalInstitution: c.medicalInstitution,
+          overallResult: (c.overallResult as OverallResult) || 'A',
+          requiresReexam: c.requiresReexam,
+          requiresTreatment: c.requiresTreatment,
+          height: c.height,
+          weight: c.weight,
+          bmi: c.bmi,
+          bloodPressureSystolic: c.bloodPressureSystolic,
+          bloodPressureDiastolic: c.bloodPressureDiastolic,
+          followUpStatus: (c.followUpStatus as FollowUpStatus) || 'none',
+          doctorOpinion: c.doctorOpinion,
+          findings: c.findings?.map(f => f.finding) || [],
+        }));
+        setCheckups(mappedCheckups);
+      }
+
+      // ストレスチェックデータを取得
+      const stressRes = await fetch(`/api/health/stress-checks?tenantId=${tenantId}`);
+      if (stressRes.ok) {
+        const stressData = await stressRes.json();
+        const apiStress: APIStressCheck[] = stressData.data || [];
+        const mappedStress: StressCheck[] = apiStress.map(s => ({
+          id: s.id,
+          userId: s.userId,
+          userName: s.userName,
+          department: '', // APIにdepartmentがない場合は空文字
+          fiscalYear: s.fiscalYear,
+          checkDate: new Date(s.checkDate),
+          status: (s.status as StressCheck['status']) || 'pending',
+          stressFactorsScore: s.stressFactorsScore || 0,
+          stressResponseScore: s.stressResponseScore || 0,
+          socialSupportScore: s.socialSupportScore || 0,
+          isHighStress: s.isHighStress,
+          interviewRequested: s.interviewRequested,
+          interviewDate: s.interviewDate ? new Date(s.interviewDate) : undefined,
+        }));
+        setStressChecks(mappedStress);
+      }
+    } catch (error) {
+      console.error('健康管理データの取得に失敗しました:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // フォロー記録ダイアログ用state
   const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
@@ -312,25 +360,25 @@ export default function HealthPage() {
 
   // 統計データを計算
   const stats = useMemo(() => {
-    const totalEmployees = demoCheckups.length;
-    const completed = demoCheckups.length;
-    const requiresReexam = demoCheckups.filter((c) => c.requiresReexam).length;
-    const requiresTreatment = demoCheckups.filter((c) => c.requiresTreatment).length;
-    const highStress = demoStressChecks.filter((s) => s.isHighStress).length;
+    const totalEmployees = checkups.length || 0;
+    const completed = checkups.length || 0;
+    const requiresReexam = checkups.filter((c) => c.requiresReexam).length;
+    const requiresTreatment = checkups.filter((c) => c.requiresTreatment).length;
+    const highStress = stressChecks.filter((s) => s.isHighStress).length;
 
     return {
       totalEmployees,
       completed,
-      completionRate: Math.round((completed / totalEmployees) * 100),
+      completionRate: totalEmployees > 0 ? Math.round((completed / totalEmployees) * 100) : 0,
       requiresReexam,
       requiresTreatment,
       highStress,
     };
-  }, []);
+  }, [checkups, stressChecks]);
 
   // フィルタリングされた健康診断データ
   const filteredCheckups = useMemo(() => {
-    return demoCheckups.filter((checkup) => {
+    return checkups.filter((checkup) => {
       const matchesSearch =
         checkup.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         checkup.department.toLowerCase().includes(searchQuery.toLowerCase());
@@ -338,24 +386,24 @@ export default function HealthPage() {
       const matchesDepartment = filterDepartment === 'all' || checkup.department === filterDepartment;
       return matchesSearch && matchesResult && matchesDepartment;
     });
-  }, [searchQuery, filterResult, filterDepartment]);
+  }, [checkups, searchQuery, filterResult, filterDepartment]);
 
   // フィルタリングされたストレスチェックデータ
   const filteredStressChecks = useMemo(() => {
-    return demoStressChecks.filter((check) => {
+    return stressChecks.filter((check) => {
       const matchesSearch =
         check.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         check.department.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDepartment = filterDepartment === 'all' || check.department === filterDepartment;
       return matchesSearch && matchesDepartment;
     });
-  }, [searchQuery, filterDepartment]);
+  }, [stressChecks, searchQuery, filterDepartment]);
 
   // 部門リスト
   const departments = useMemo(() => {
-    const depts = new Set(demoCheckups.map((c) => c.department));
+    const depts = new Set(checkups.map((c) => c.department).filter(Boolean));
     return Array.from(depts);
-  }, []);
+  }, [checkups]);
 
   const handleViewDetails = (checkup: HealthCheckup) => {
     setSelectedCheckup(checkup);
@@ -495,15 +543,15 @@ export default function HealthPage() {
       fiscalYear: check.fiscalYear,
       checkDate: format(check.checkDate, 'yyyy-MM-dd'),
       status: check.status,
-      stressFactorsScore: check.stressScore.stressFactors,
-      stressResponseScore: check.stressScore.stressResponse,
-      socialSupportScore: check.stressScore.socialSupport,
-      totalScore: check.stressScore.total,
+      stressFactorsScore: check.stressFactorsScore,
+      stressResponseScore: check.stressResponseScore,
+      socialSupportScore: check.socialSupportScore,
+      totalScore: check.stressFactorsScore + check.stressResponseScore + check.socialSupportScore,
       isHighStress: check.isHighStress,
-      highStressReason: check.highStressReason,
+      highStressReason: check.isHighStress ? 'ストレス度合いが高い' : undefined,
       interviewRequested: check.interviewRequested,
-      interviewScheduled: check.interviewScheduled || false,
-      interviewCompleted: check.interviewCompleted || false,
+      interviewScheduled: false,
+      interviewCompleted: false,
     }));
     exportStressChecksToCSV(exportData);
   };
@@ -544,15 +592,15 @@ export default function HealthPage() {
       fiscalYear: check.fiscalYear,
       checkDate: check.checkDate,
       status: check.status,
-      stressFactorsScore: check.stressScore.stressFactors,
-      stressResponseScore: check.stressScore.stressResponse,
-      socialSupportScore: check.stressScore.socialSupport,
-      totalScore: check.stressScore.total,
+      stressFactorsScore: check.stressFactorsScore,
+      stressResponseScore: check.stressResponseScore,
+      socialSupportScore: check.socialSupportScore,
+      totalScore: check.stressFactorsScore + check.stressResponseScore + check.socialSupportScore,
       isHighStress: check.isHighStress,
-      highStressReason: check.highStressReason,
+      highStressReason: check.isHighStress ? 'ストレス度合いが高い' : undefined,
       interviewRequested: check.interviewRequested,
-      interviewScheduled: check.interviewScheduled || false,
-      interviewCompleted: check.interviewCompleted || false,
+      interviewScheduled: false,
+      interviewCompleted: false,
     }));
 
     await downloadIndustrialPhysicianReportPDF(
@@ -572,15 +620,15 @@ export default function HealthPage() {
       fiscalYear: check.fiscalYear,
       checkDate: check.checkDate,
       status: check.status,
-      stressFactorsScore: check.stressScore.stressFactors,
-      stressResponseScore: check.stressScore.stressResponse,
-      socialSupportScore: check.stressScore.socialSupport,
-      totalScore: check.stressScore.total,
+      stressFactorsScore: check.stressFactorsScore,
+      stressResponseScore: check.stressResponseScore,
+      socialSupportScore: check.socialSupportScore,
+      totalScore: check.stressFactorsScore + check.stressResponseScore + check.socialSupportScore,
       isHighStress: check.isHighStress,
-      highStressReason: check.highStressReason,
+      highStressReason: check.isHighStress ? 'ストレス度合いが高い' : undefined,
       interviewRequested: check.interviewRequested,
-      interviewScheduled: check.interviewScheduled || false,
-      interviewCompleted: check.interviewCompleted || false,
+      interviewScheduled: false,
+      interviewCompleted: false,
     }));
 
     await downloadHighStressListPDF(stressData, new Date().getFullYear());
@@ -702,7 +750,9 @@ export default function HealthPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {Math.round((demoStressChecks.filter((s) => s.status !== 'pending').length / demoStressChecks.length) * 100)}%
+              {stressChecks.length > 0
+                ? Math.round((stressChecks.filter((s) => s.status !== 'pending').length / stressChecks.length) * 100)
+                : 0}%
             </div>
             <p className="text-xs text-muted-foreground">回答率</p>
           </CardContent>
@@ -953,7 +1003,7 @@ export default function HealthPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {demoCheckups
+                  {checkups
                     .filter((c) => c.requiresReexam)
                     .map((checkup) => (
                       <div
@@ -980,6 +1030,11 @@ export default function HealthPage() {
                         </Button>
                       </div>
                     ))}
+                  {checkups.filter((c) => c.requiresReexam).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      要再検査者はいません
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -994,7 +1049,7 @@ export default function HealthPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {demoStressChecks
+                  {stressChecks
                     .filter((s) => s.isHighStress)
                     .map((check) => (
                       <div
@@ -1019,6 +1074,11 @@ export default function HealthPage() {
                         </Button>
                       </div>
                     ))}
+                  {stressChecks.filter((s) => s.isHighStress).length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      高ストレス者はいません
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Mail, Phone, Calendar, Building, Shield, CreditCard, Download, Clock, TrendingUp, Users, Edit } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Calendar, Building, Shield, CreditCard, Download, Clock, TrendingUp, Edit, Loader2 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { useSaaSStore } from '@/lib/store/saas-store';
 import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
@@ -16,53 +16,63 @@ import { usePayrollStore } from '@/lib/store/payroll-store';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
 import { categoryLabels } from '@/types/saas';
 import { exportUserSaaSToCSV } from '@/lib/utils/csv-export';
-import { generateMockUsers, generateUserAttendanceHistory, generateUserPayrollHistory } from '@/lib/mock-data';
 import { toast } from 'sonner';
+import type { User } from '@/types';
 
 export default function UserDetailPage({ params }: { params: { id: string; locale: string } }) {
   const router = useRouter();
   const { users, setUsers } = useUserStore();
   const { getUserSaaSDetails, getUserTotalCost } = useSaaSStore();
-  const { records: attendanceRecords, addOrUpdateRecord: addAttendanceRecord } = useAttendanceHistoryStore();
-  const { calculations: payrollCalculations, addMultipleCalculations } = usePayrollStore();
+  const { records: attendanceRecords } = useAttendanceHistoryStore();
+  const { calculations: payrollCalculations } = usePayrollStore();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // ストアが空の場合、モックデータを生成
+  // 現在のユーザーからtenantIdを取得
+  const currentUser = useUserStore(state => state.currentUser);
+  const tenantId = currentUser?.tenantId || '';
+
+  // API経由でユーザーデータを取得
   useEffect(() => {
-    if (users.length === 0) {
-      const mockUsers = generateMockUsers();
-      setUsers(mockUsers);
-    }
-  }, [users.length, setUsers]);
+    const fetchUser = async () => {
+      if (!params.id) {
+        setLoading(false);
+        return;
+      }
 
-  // ユーザー詳細表示時に、そのユーザーのデータがない場合は生成
-  useEffect(() => {
-    const user = users.find((u) => u.id === params.id);
-    if (!user) return;
+      try {
+        // ユーザー詳細を取得
+        const response = await fetch(`/api/users/${params.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          const apiUser: User = data.data;
+          if (apiUser) {
+            // ストア内のユーザーを更新（存在しない場合は追加）
+            const existingUserIndex = users.findIndex(u => u.id === apiUser.id);
+            if (existingUserIndex === -1) {
+              setUsers([...users, apiUser]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('ユーザーデータの取得に失敗しました:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // 勤怠データがない場合は生成
-    const userAttendanceData = attendanceRecords.filter(r => r.userId === user.id);
-    if (userAttendanceData.length === 0) {
-      const mockAttendance = generateUserAttendanceHistory(user.id, user.name, 6);
-      mockAttendance.forEach(record => {
-        addAttendanceRecord(record);
-      });
+    // ストアにユーザーがない場合のみAPIから取得
+    const existingUser = users.find(u => u.id === params.id);
+    if (!existingUser) {
+      fetchUser();
+    } else {
+      setLoading(false);
     }
+  }, [params.id, users, setUsers]);
 
-    // 給与データがない場合は生成
-    const userPayrollData = payrollCalculations.filter(c => c.employeeId === user.id);
-    if (userPayrollData.length === 0) {
-      const mockPayroll = generateUserPayrollHistory(
-        user.id,
-        user.name,
-        user.department || '未所属',
-        user.position || '一般社員',
-        12
-      );
-      addMultipleCalculations(mockPayroll);
-    }
-  }, [params.id, users, attendanceRecords, payrollCalculations, addAttendanceRecord, addMultipleCalculations]);
+  // 勤怠・給与データはストアから取得（現在はストアにデータがあれば使用、なければ空表示）
+  // 将来的にはAPIから取得するように変更可能
 
   // ユーザー情報を取得
   const user = useMemo(() => {
@@ -133,6 +143,15 @@ export default function UserDetailPage({ params }: { params: { id: string; local
       recordCount: userPayrollCalculations.length,
     };
   }, [userPayrollCalculations]);
+
+  // ローディング中
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6 flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!user) {
     return (

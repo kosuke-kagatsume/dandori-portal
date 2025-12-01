@@ -156,8 +156,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
+    // デバッグ用：エラー詳細を返す（本番ではコメントアウト）
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'ログインに失敗しました' },
+      { success: false, error: 'ログインに失敗しました', debug: errorMessage },
       { status: 500 }
     );
   }

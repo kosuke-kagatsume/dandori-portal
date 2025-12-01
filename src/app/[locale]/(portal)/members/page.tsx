@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
-import { generateMockUsers } from '@/lib/mock-data';
+import { useUserStore } from '@/lib/store/user-store';
 import { 
   Users,
   MapPin,
@@ -78,15 +78,24 @@ export default function MembersPage() {
     return () => clearInterval(interval);
   }, [autoRefresh]);
 
-  // Load members data
-  useEffect(() => {
-    const loadMembers = async () => {
-      try {
-        // モックデータを使用（50人分）
-        const users = generateMockUsers();
-        
+  // tenantId を取得
+  const currentUser = useUserStore(state => state.currentUser);
+  const tenantId = currentUser?.tenantId || '';
+
+  // API経由でメンバーデータを取得
+  const fetchMembers = useCallback(async () => {
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const response = await fetch(`/api/users?tenantId=${tenantId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const users: User[] = data.data || [];
+
         // Transform users to members with status
-        const mockMembers: Member[] = users.map((user: User) => ({
+        const apiMembers: Member[] = users.map((user: User) => ({
           ...user,
           currentStatus: (['present', 'remote', 'business_trip', 'training', 'absent', 'not_checked_in'] as const)[
             Math.floor(Math.random() * 6)
@@ -96,17 +105,21 @@ export default function MembersPage() {
           workingTime: `${Math.floor(Math.random() * 8 + 1)}h ${Math.floor(Math.random() * 60)}m`,
           checkedInAt: Math.random() > 0.3 ? `${Math.floor(Math.random() * 3 + 8)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}` : undefined,
         }));
-        
-        setMembers(mockMembers);
-      } catch (error) {
-        toast.error('Failed to load members');
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    loadMembers();
-  }, []);
+        setMembers(apiMembers);
+      }
+    } catch (error) {
+      console.error('メンバーデータの取得に失敗しました:', error);
+      toast.error('メンバーデータの取得に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId]);
+
+  // Load members data
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   // Filter members
   const filteredMembers = members.filter(member => {

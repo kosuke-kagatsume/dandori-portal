@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
-import { generateMockUsers } from '@/lib/mock-data';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import {
   MoreHorizontal,
@@ -83,16 +82,34 @@ export default function UsersPage() {
     admin: users.filter(u => u.roles?.includes('admin')).length,
   }), [users]);
 
-  // Load users from store (already loaded via zustand persist)
-  useEffect(() => {
-    // ユーザーストアが空の場合、デモデータを生成
-    if (users.length === 0) {
-      console.log('[Demo] Generating initial user data...');
-      const mockUsers = generateMockUsers(50); // 50人のデモユーザーを生成
-      setUsers(mockUsers);
+  // currentUserからtenantIdを取得
+  const currentUser = useUserStore(state => state.currentUser);
+  const tenantId = currentUser?.tenantId || '';
+
+  // APIからユーザーを取得
+  const fetchUsers = useCallback(async () => {
+    if (!tenantId) {
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  }, [users.length, setUsers]);
+
+    try {
+      const response = await fetch(`/api/users?tenantId=${tenantId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const apiUsers: User[] = data.data || [];
+        setUsers(apiUsers);
+      }
+    } catch (error) {
+      console.error('ユーザーデータの取得に失敗しました:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [tenantId, setUsers]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleRetireUser = async (retiredDate: string, reason: string) => {
     if (!retiringUser) return;
