@@ -94,26 +94,37 @@ export async function POST(request: NextRequest) {
     }
 
     // 本番モード: Prismaでユーザーを検索
+    console.log('Searching for user with email:', email);
     const user = await prisma.user.findFirst({
       where: { email },
     });
 
+    console.log('User found:', user ? 'YES' : 'NO');
+    if (user) {
+      console.log('User ID:', user.id);
+      console.log('User has passwordHash:', user.passwordHash ? 'YES' : 'NO');
+    }
+
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'メールアドレスまたはパスワードが正しくありません' },
+        { success: false, error: 'メールアドレスまたはパスワードが正しくありません', debug: 'user_not_found' },
         { status: 401 }
       );
     }
 
     // パスワードの検証（passwordHashがある場合）
     if (user.passwordHash) {
+      console.log('Comparing password with hash...');
       const isValid = await bcrypt.compare(password, user.passwordHash);
+      console.log('Password valid:', isValid ? 'YES' : 'NO');
       if (!isValid) {
         return NextResponse.json(
-          { success: false, error: 'メールアドレスまたはパスワードが正しくありません' },
+          { success: false, error: 'メールアドレスまたはパスワードが正しくありません', debug: 'password_mismatch' },
           { status: 401 }
         );
       }
+    } else {
+      console.log('No passwordHash set for user, allowing login');
     }
 
     // JWTトークン生成
