@@ -12,81 +12,70 @@ import {
   CACHE_TTL,
   CACHE_PREFIX,
 } from '@/lib/cache/redis';
+import { demoLegalUpdates as importedDemoLegalUpdates } from '@/lib/demo-legal-updates';
 
-// デモ用の法令・制度更新データ
-const demoLegalUpdates = [
-  {
-    id: 'legal-001',
-    title: '育児・介護休業法の改正',
-    description: '男性育休取得促進のための改正。出生時育児休業（産後パパ育休）の創設、育児休業の分割取得が可能に。',
-    category: '労務',
-    effectiveDate: new Date('2024-04-01'),
-    relatedLaws: ['育児・介護休業法'],
-    affectedAreas: ['人事', '勤怠管理', '給与計算'],
-    priority: 'high',
-    referenceUrl: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000130583.html',
-    publishedAt: new Date('2024-01-15'),
-    tenantStatus: { status: 'completed', notes: '就業規則を改定済み', completedAt: new Date('2024-03-15'), completedBy: '人事部' },
+// デモ用の法令・制度更新データ（demo-legal-updates.tsから変換）
+const demoLegalUpdates = importedDemoLegalUpdates.map((update, index) => ({
+  id: `legal-${String(index + 1).padStart(3, '0')}`,
+  title: update.title,
+  description: update.description,
+  // カテゴリは英語キーをそのまま保持（フロントエンドで日本語変換）
+  category: update.category,
+  effectiveDate: new Date(update.effectiveDate),
+  relatedLaws: update.lawName || null,
+  affectedAreas: update.affectedAreas,
+  priority: update.importance === 'critical' ? 'high' :
+            update.importance === 'high' ? 'high' :
+            update.importance === 'medium' ? 'medium' : 'low',
+  referenceUrl: update.referenceUrl || null,
+  publishedAt: new Date(update.effectiveDate),
+  tenantStatus: {
+    status: update.status === 'applied' ? 'completed' :
+            update.status === 'preparing' ? 'in_progress' : 'pending',
+    notes: update.systemUpdateDetails || null,
+    completedAt: update.status === 'applied' ? new Date(update.effectiveDate) : null,
+    completedBy: update.status === 'applied' ? update.createdBy : null,
   },
-  {
-    id: 'legal-002',
-    title: '電子帳簿保存法の改正',
-    description: '電子取引データの保存義務化。2024年1月からの本格施行に伴う対応が必要。',
-    category: '税務',
-    effectiveDate: new Date('2024-01-01'),
-    relatedLaws: ['電子帳簿保存法'],
-    affectedAreas: ['経理', '総務'],
-    priority: 'high',
-    referenceUrl: 'https://www.nta.go.jp/law/joho-zeikaishaku/sonota/jirei/index.htm',
-    publishedAt: new Date('2023-10-01'),
-    tenantStatus: { status: 'completed', notes: '電子保存システム導入完了', completedAt: new Date('2023-12-20'), completedBy: '経理部' },
-  },
-  {
-    id: 'legal-003',
-    title: '働き方改革関連法（時間外労働上限規制）',
-    description: '建設業・運送業への時間外労働上限規制適用開始（2024年問題）。',
-    category: '労務',
-    effectiveDate: new Date('2024-04-01'),
-    relatedLaws: ['労働基準法'],
-    affectedAreas: ['人事', '勤怠管理'],
-    priority: 'high',
-    referenceUrl: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000148322.html',
-    publishedAt: new Date('2023-06-01'),
-    tenantStatus: { status: 'in_progress', notes: '勤怠システムの設定変更中', completedAt: null, completedBy: null },
-  },
-  {
-    id: 'legal-004',
-    title: '社会保険適用拡大',
-    description: '従業員101人以上の企業でパート・アルバイトへの社会保険適用拡大。2024年10月からは51人以上に。',
-    category: '社会保険',
-    effectiveDate: new Date('2024-10-01'),
-    relatedLaws: ['健康保険法', '厚生年金保険法'],
-    affectedAreas: ['人事', '給与計算'],
-    priority: 'medium',
-    referenceUrl: 'https://www.nenkin.go.jp/service/kounen/tekiyo/jigyosho/tanjikan.html',
-    publishedAt: new Date('2024-04-01'),
-    tenantStatus: { status: 'pending', notes: null, completedAt: null, completedBy: null },
-  },
-  {
-    id: 'legal-005',
-    title: '定額減税の実施',
-    description: '2024年6月から所得税・住民税の定額減税を実施。給与計算システムの対応が必要。',
-    category: '税務',
-    effectiveDate: new Date('2024-06-01'),
-    relatedLaws: ['所得税法', '地方税法'],
-    affectedAreas: ['給与計算', '経理'],
-    priority: 'high',
-    referenceUrl: 'https://www.nta.go.jp/users/gensen/teigakugenzei/index.htm',
-    publishedAt: new Date('2024-03-01'),
-    tenantStatus: { status: 'completed', notes: '給与システム対応済み', completedAt: new Date('2024-05-28'), completedBy: '経理部' },
-  },
-];
+}));
 
 // GET /api/legal-updates - テナント用：公開済み法令一覧取得（自社のステータス込み）
 export async function GET(request: NextRequest) {
   try {
     // デモモードの場合はデモデータを返す
     if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      const { searchParams } = new URL(request.url);
+      const category = searchParams.get('category');
+      const status = searchParams.get('status');
+      const year = searchParams.get('year');
+
+      // フィルタリング
+      let filteredData = [...demoLegalUpdates];
+
+      // カテゴリでフィルタ
+      if (category && category !== 'all') {
+        filteredData = filteredData.filter((d) => d.category === category);
+      }
+
+      // 年度でフィルタ
+      if (year && year !== 'all') {
+        const yearNum = parseInt(year);
+        filteredData = filteredData.filter((d) => {
+          const effectiveYear = d.effectiveDate.getFullYear();
+          return effectiveYear === yearNum;
+        });
+      }
+
+      // ステータスでフィルタ
+      if (status && status !== 'all') {
+        filteredData = filteredData.filter((d) => {
+          if (status === 'pending') {
+            return d.tenantStatus.status === 'pending';
+          }
+          return d.tenantStatus.status === status;
+        });
+      }
+
+      // 全体の統計（フィルタ前のデータで計算）
       const stats = {
         total: demoLegalUpdates.length,
         completed: demoLegalUpdates.filter((d) => d.tenantStatus.status === 'completed').length,
@@ -94,12 +83,12 @@ export async function GET(request: NextRequest) {
         pending: demoLegalUpdates.filter((d) => d.tenantStatus.status === 'pending').length,
       };
 
-      return successResponse(demoLegalUpdates, {
-        count: demoLegalUpdates.length,
+      return successResponse(filteredData, {
+        count: filteredData.length,
         pagination: {
           page: 1,
           limit: 20,
-          total: demoLegalUpdates.length,
+          total: filteredData.length,
           totalPages: 1,
         },
         stats,

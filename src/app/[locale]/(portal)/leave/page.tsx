@@ -80,21 +80,32 @@ export default function LeavePage() {
   const currentUserId = '1'; // 現在のユーザー（田中太郎）
   const currentYear = new Date().getFullYear();
 
-  // 初期化：サンプルデータの作成
+  // 初期化：破損データのリセットとサンプルデータの作成
   useEffect(() => {
     setLoading(true);
 
-    // 休暇残数の初期化（まだ初期化されていない場合）
-    const balance = getLeaveBalance(currentUserId, currentYear);
-    if (!balance) {
-      initializeLeaveBalance(currentUserId, currentYear, 20);
+    const store = useLeaveManagementStore.getState();
+
+    // データが明らかに破損している場合（使用日数が付与日数を大幅に超えている場合）はリセット
+    const balance = store.getLeaveBalance(currentUserId, currentYear);
+    const isDataCorrupted = balance && balance.paidLeave.used > 30; // 30日を超える使用は異常
+
+    if (isDataCorrupted || store.requests.length > 20) {
+      // 破損データをクリア
+      console.log('Corrupted leave data detected, resetting...');
+      store.clearAll();
     }
 
-    // サンプルデータの追加（ストアが空の場合）
-    if (requests.length === 0) {
-      const { createLeaveRequest } = useLeaveManagementStore.getState();
+    // 休暇残数の初期化（まだ初期化されていない場合）
+    const currentBalance = store.getLeaveBalance(currentUserId, currentYear);
+    if (!currentBalance) {
+      store.initializeLeaveBalance(currentUserId, currentYear, 20);
+    }
 
-      // サンプルデータ
+    // サンプルデータは requests が空の場合のみ追加
+    const currentRequests = store.requests;
+    if (currentRequests.length === 0) {
+      // まだデータがない場合のみサンプルを追加
       const sampleRequests = [
         {
           userId: '1',
@@ -104,9 +115,7 @@ export default function LeavePage() {
           endDate: '2025-01-22',
           days: 3,
           reason: '家族旅行のため',
-          status: 'approved' as const,
-          approver: '山田部長',
-          approvedDate: '2025-01-15',
+          status: 'pending' as const, // pendingのままにして、usedには含めない
         },
         {
           userId: '1',
@@ -116,9 +125,7 @@ export default function LeavePage() {
           endDate: '2025-01-10',
           days: 1,
           reason: '体調不良',
-          status: 'approved' as const,
-          approver: '山田部長',
-          approvedDate: '2025-01-11',
+          status: 'pending' as const,
         },
         {
           userId: '1',
@@ -138,13 +145,11 @@ export default function LeavePage() {
           endDate: '2025-01-03',
           days: 5,
           reason: '年末年始休暇',
-          status: 'approved' as const,
-          approver: '山田部長',
-          approvedDate: '2024-12-20',
+          status: 'pending' as const,
         },
       ];
 
-      sampleRequests.forEach(req => createLeaveRequest(req));
+      sampleRequests.forEach(req => store.createLeaveRequest(req));
     }
 
     setLoading(false);

@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit),
       },
       stats,
+      cacheSeconds: 300, // 5分キャッシュ
     });
   } catch (error) {
     return handleApiError(error, 'お知らせ一覧の取得');

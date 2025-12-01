@@ -24,13 +24,16 @@ export async function GET() {
     if (demoSessionCookie) {
       try {
         const demoUser = JSON.parse(demoSessionCookie.value);
-        return NextResponse.json({
+        const response = NextResponse.json({
           success: true,
           data: {
             user: demoUser,
           },
           mode: 'demo',
         });
+        // 60秒キャッシュ（stale-while-revalidateで120秒）
+        response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
+        return response;
       } catch {
         // Invalid demo session, continue to check access token
       }
@@ -38,7 +41,7 @@ export async function GET() {
 
     // デモモードの場合、Cookieがなくてもデフォルトユーザーを返す
     if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         data: {
           user: {
@@ -52,6 +55,8 @@ export async function GET() {
         },
         mode: 'demo',
       });
+      response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
+      return response;
     }
 
     // Check for access token
