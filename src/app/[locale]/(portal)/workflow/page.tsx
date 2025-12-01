@@ -125,14 +125,9 @@ export default function WorkflowPage() {
     getStatistics,
   } = useWorkflowStore();
 
-  // Zustand persistのhydration（SSR対応）
+  // Zustand persistのhydration（SSR対応）とデモデータ初期化を統合
   useEffect(() => {
     useWorkflowStore.persist.rehydrate();
-  }, []);
-
-  // デモデータの初期化
-  useEffect(() => {
-    console.log('Component mounted, initializing demo data...');
     initializeDemoData();
   }, [initializeDemoData]);
 
@@ -155,21 +150,10 @@ export default function WorkflowPage() {
   );
 
   // 統計情報
-  const stats = useMemo(() => {
-    const result = getStatistics(currentUserId);
-    console.log('Statistics calculated:', result);
-    return result;
-  }, [getStatistics, currentUserId, requests]);
-
-  // デバッグ用ログ
-  useEffect(() => {
-    console.log('Workflow data updated:', {
-      totalRequests: requests.length,
-      pendingApprovals: pendingApprovals.length,
-      myRequests: myRequests.length,
-      delegatedApprovals: delegatedApprovals.length,
-    });
-  }, [requests, pendingApprovals, myRequests, delegatedApprovals]);
+  const stats = useMemo(() =>
+    getStatistics(currentUserId),
+    [getStatistics, currentUserId, requests]
+  );
 
   // エスカレーション監視（1分ごと）
   useEffect(() => {

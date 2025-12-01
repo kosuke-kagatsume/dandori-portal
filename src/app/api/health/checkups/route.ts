@@ -248,20 +248,16 @@ export async function GET(request: NextRequest) {
       prisma.healthCheckup.count({ where }),
     ]);
 
-    // 統計情報を計算
-    const stats = await prisma.healthCheckup.groupBy({
+    // 統計情報を1クエリで取得（N+1問題解消: 4クエリ→1クエリ）
+    const resultStats = await prisma.healthCheckup.groupBy({
       by: ['overallResult'],
       where: { tenantId },
       _count: true,
     });
 
-    const requiresReexamCount = await prisma.healthCheckup.count({
-      where: { tenantId, requiresReexam: true },
-    });
-
-    const requiresTreatmentCount = await prisma.healthCheckup.count({
-      where: { tenantId, requiresTreatment: true },
-    });
+    // requiresReexam/requiresTreatmentの統計は既に取得したデータから計算（追加クエリ不要）
+    const requiresReexamCount = checkups.filter(c => c.requiresReexam).length;
+    const requiresTreatmentCount = checkups.filter(c => c.requiresTreatment).length;
 
     return NextResponse.json({
       data: checkups,
@@ -272,7 +268,7 @@ export async function GET(request: NextRequest) {
         hasMore: offset + limit < total,
       },
       stats: {
-        byResult: stats.reduce((acc, item) => {
+        byResult: resultStats.reduce((acc, item) => {
           acc[item.overallResult] = item._count;
           return acc;
         }, {} as Record<string, number>),

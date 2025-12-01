@@ -253,25 +253,15 @@ export async function GET(request: NextRequest) {
       prisma.stressCheck.count({ where }),
     ]);
 
-    // 統計情報を計算
+    // 統計情報を計算（N+1問題解消: 5クエリ→2クエリ）
     const currentYear = new Date().getFullYear();
-    const stats = await Promise.all([
-      // 受検率（今年度）
-      prisma.stressCheck.count({
-        where: { tenantId, fiscalYear: currentYear, status: 'completed' },
-      }),
+
+    // 1. ユーザー総数（受検率計算用）
+    // 2. ステータス別集計（groupByで一度に取得）
+    const [totalUsers, statusCounts] = await Promise.all([
       prisma.user.count({
         where: { tenantId, status: 'active' },
       }),
-      // 高ストレス者数
-      prisma.stressCheck.count({
-        where: { tenantId, fiscalYear: currentYear, isHighStress: true },
-      }),
-      // 面談希望者数
-      prisma.stressCheck.count({
-        where: { tenantId, fiscalYear: currentYear, interviewRequested: true },
-      }),
-      // ステータス別
       prisma.stressCheck.groupBy({
         by: ['status'],
         where: { tenantId, fiscalYear: currentYear },
@@ -279,7 +269,10 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const [completedCount, totalUsers, highStressCount, interviewRequestedCount, statusCounts] = stats;
+    // 取得済みデータからインメモリで計算（追加クエリ不要）
+    const completedCount = stressChecks.filter(s => s.status === 'completed').length;
+    const highStressCount = stressChecks.filter(s => s.isHighStress).length;
+    const interviewRequestedCount = stressChecks.filter(s => s.interviewRequested).length;
 
     return NextResponse.json({
       data: stressChecks,
