@@ -12,7 +12,24 @@ const TOKEN_EXPIRY = 60 * 60 * 24; // 24 hours in seconds
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // デバッグ：リクエストボディの生テキストを取得
+    const rawText = await request.text();
+    console.log('Login request raw body length:', rawText.length);
+    console.log('Login request raw body (first 100 chars):', rawText.substring(0, 100));
+
+    // JSONパース
+    let body;
+    try {
+      body = JSON.parse(rawText);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.error('Raw body causing error:', rawText);
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON in request body', debug: String(parseError) },
+        { status: 400 }
+      );
+    }
+
     const { email, password } = body;
 
     if (!email || !password) {
