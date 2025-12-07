@@ -1480,3 +1480,288 @@ model AnnouncementRead {
   @@index([tenantId, userId])
   @@map("announcement_reads")
 }
+
+// ========================================
+// 従業員プロフィール・マイアカウント
+// ========================================
+
+// 従業員プロフィール（会社管理情報）
+model EmployeeProfile {
+  id       String @id @default(cuid())
+  tenantId String
+  userId   String @unique // 1ユーザー1プロフィール
+
+  // 基本情報（会社管理）
+  employeeNumber String? // 社員番号
+  nameKana       String? // 氏名（カナ）
+  birthDate      DateTime? @db.Date // 生年月日
+  gender         String? // male, female, other, prefer_not_to_say
+
+  // 連絡先（会社管理）
+  phone            String? // 電話番号
+  mobilePhone      String? // 携帯電話
+  postalCode       String? // 郵便番号
+  address          String? // 住所
+  addressKana      String? // 住所（カナ）
+
+  // 緊急連絡先
+  emergencyContactName         String? // 緊急連絡先氏名
+  emergencyContactRelation     String? // 続柄
+  emergencyContactPhone        String? // 緊急連絡先電話番号
+
+  // 銀行口座情報
+  bankName       String? // 銀行名
+  bankBranch     String? // 支店名
+  bankAccountType String? // ordinary（普通）, current（当座）
+  bankAccountNumber String? // 口座番号
+  bankAccountHolder String? // 口座名義
+
+  // 通勤情報
+  commuteMethod   String? // train, bus, car, bicycle, walk, other
+  commuteRoute    String? @db.Text // 通勤経路詳細
+  commuteDistance Float? // 通勤距離（km）
+  commuteCost     Int? // 通勤費（円/月）
+
+  // 雇用情報
+  employmentType  String? // full_time, part_time, contract, temporary
+  contractEndDate DateTime? @db.Date // 契約終了日（契約社員の場合）
+
+  // 統計情報（キャッシュ）
+  completedProjectsCount Int @default(0)
+  teamMembersCount       Int @default(0)
+  yearsOfExperience      Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  certifications Certification[]
+  skills         EmployeeSkill[]
+  experiences    WorkExperience[]
+  achievements   Achievement[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([tenantId, employeeNumber])
+  @@map("employee_profiles")
+}
+
+// 資格・免許・認定
+model Certification {
+  id        String @id @default(cuid())
+  tenantId  String
+  profileId String
+  userId    String // 非正規化（検索用）
+
+  // 資格情報
+  name           String // 資格名
+  organization   String // 発行機関
+  issueDate      DateTime @db.Date // 取得日
+  expiryDate     DateTime? @db.Date // 有効期限（nullは無期限）
+  credentialId   String? // 認定番号
+
+  // ステータス
+  status String @default("active") // active, expiring, expired
+
+  // 添付ファイル
+  documentUrl  String? // 証明書ファイルURL
+  documentName String? // ファイル名
+  documentSize String? // ファイルサイズ
+
+  // メモ
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profile EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([profileId])
+  @@index([userId])
+  @@index([tenantId, status])
+  @@index([tenantId, expiryDate])
+  @@map("certifications")
+}
+
+// スキル・専門性
+model EmployeeSkill {
+  id        String @id @default(cuid())
+  tenantId  String
+  profileId String
+  userId    String // 非正規化（検索用）
+
+  // スキル情報
+  name     String // スキル名
+  category String // クラウド, フロントエンド, バックエンド, データベース, BI, CRM, マーケティング, etc.
+  level    Int    @default(50) // 熟練度（0-100）
+
+  // 自己評価・他者評価
+  selfAssessment     Int? // 自己評価
+  managerAssessment  Int? // 上司評価
+  assessedAt         DateTime? // 評価日
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profile EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, name]) // 同一プロフィール内でスキル名は重複不可
+  @@index([tenantId])
+  @@index([profileId])
+  @@index([userId])
+  @@index([tenantId, category])
+  @@map("employee_skills")
+}
+
+// 経歴（職歴）
+model WorkExperience {
+  id        String @id @default(cuid())
+  tenantId  String
+  profileId String
+  userId    String // 非正規化（検索用）
+
+  // 経歴情報
+  position    String // 役職
+  company     String // 会社名
+  startDate   DateTime @db.Date // 開始日
+  endDate     DateTime? @db.Date // 終了日（nullは現在）
+  isCurrent   Boolean @default(false) // 現職フラグ
+  description String? @db.Text // 職務内容
+
+  // 実績
+  achievements String[] // 主な成果
+
+  // 使用スキル
+  skills String[] // タグとして使用したスキル
+
+  // 表示順序
+  sortOrder Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profile EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([profileId])
+  @@index([userId])
+  @@index([tenantId, isCurrent])
+  @@map("work_experiences")
+}
+
+// 実績・成果
+model Achievement {
+  id        String @id @default(cuid())
+  tenantId  String
+  profileId String
+  userId    String // 非正規化（検索用）
+
+  // 実績情報
+  title       String // タイトル
+  description String? @db.Text // 説明
+  date        DateTime @db.Date // 達成日
+  category    String? // project, award, publication, patent, etc.
+
+  // 添付ファイル
+  attachments Json? // [{name, url, size}]
+
+  // 公開設定
+  isPublic Boolean @default(true) // 社内公開
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profile EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([profileId])
+  @@index([userId])
+  @@index([tenantId, category])
+  @@map("achievements")
+}
+
+// 変更申請（従業員情報の変更リクエスト）
+model EmployeeChangeRequest {
+  id       String @id @default(cuid())
+  tenantId String
+  userId   String // 申請者
+
+  // 変更内容
+  requestType String // basic_info, certification, skill, experience, achievement
+  fieldName   String? // 変更フィールド名（basic_infoの場合）
+  currentValue String? @db.Text // 現在の値
+  newValue    String @db.Text // 新しい値
+  reason      String? @db.Text // 変更理由
+
+  // 添付ファイル（資格証明書など）
+  attachments Json? // [{name, url, size}]
+
+  // ステータス
+  status String @default("pending") // pending, approved, rejected, cancelled
+
+  // 承認情報
+  reviewedBy     String? // 承認者ID
+  reviewedByName String? // 承認者名
+  reviewedAt     DateTime? // 承認日時
+  reviewComment  String? @db.Text // 承認/却下コメント
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([tenantId, status])
+  @@index([tenantId, requestType])
+  @@map("employee_change_requests")
+}
+
+// マイアカウント設定（ユーザー個人設定）
+model UserAccountSettings {
+  id       String @id @default(cuid())
+  tenantId String
+  userId   String @unique // 1ユーザー1設定
+
+  // プロフィール設定（ユーザーが自由に編集可能）
+  displayName String? // 表示名（ニックネーム）
+  avatar      String? // プロフィール画像URL
+  bio         String? @db.Text // 自己紹介
+
+  // 外観設定
+  theme       String @default("system") // light, dark, system
+  language    String @default("ja") // ja, en
+  timezone    String @default("Asia/Tokyo")
+  dateFormat  String @default("YYYY/MM/DD")
+  timeFormat  String @default("24h") // 12h, 24h
+
+  // 通知設定
+  emailNotifications    Boolean @default(true)
+  pushNotifications     Boolean @default(true)
+  workflowNotifications Boolean @default(true) // ワークフロー通知
+  leaveNotifications    Boolean @default(true) // 休暇通知
+  systemNotifications   Boolean @default(true) // システム通知
+  announcementNotifications Boolean @default(true) // お知らせ通知
+
+  // セキュリティ設定
+  twoFactorEnabled  Boolean @default(false)
+  twoFactorSecret   String? // 暗号化された2FAシークレット
+  passwordChangedAt DateTime? // 最終パスワード変更日時
+
+  // セッション情報（参考用）
+  lastLoginAt     DateTime? // 最終ログイン日時
+  lastLoginIp     String? // 最終ログインIP
+  lastLoginDevice String? // 最終ログインデバイス
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("user_account_settings")
+}

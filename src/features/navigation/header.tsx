@@ -9,12 +9,9 @@ import {
   Bell,
   User,
   LogOut,
-  Settings,
-  Palette,
   Globe,
-  Moon,
-  Sun,
   Command,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -237,13 +234,13 @@ export function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/profile`)}>
+                <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/account`)}>
                   <User className="mr-2 h-4 w-4" />
-                  <span>{t('profile')}</span>
+                  <span>マイアカウント</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/settings`)}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>{t('settings')}</span>
+                <DropdownMenuItem onClick={() => router.push(`/${currentLocale}/profile`)}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>従業員情報</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
