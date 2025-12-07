@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   successResponse,
@@ -39,19 +39,7 @@ export async function GET(request: NextRequest) {
     const certifications = await prisma.certification.findMany({
       where,
       include: {
-        profile: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                department: true,
-                position: true,
-              },
-            },
-          },
-        },
+        profile: true,
         notifications: {
           orderBy: { createdAt: 'desc' },
           take: 1,
@@ -63,6 +51,20 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { expiryDate: 'asc' },
     });
+
+    // userIdリストを収集してユーザー情報を一括取得
+    const userIds = [...new Set(certifications.map(c => c.userId))];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        department: true,
+        position: true,
+      },
+    });
+    const userMap = new Map(users.map(u => [u.id, u]));
 
     // 残り日数を計算して追加
     const result = certifications.map((cert) => {
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
         isExpired: daysUntilExpiry !== null && daysUntilExpiry < 0,
         hasOpenRenewal: cert.renewals.length > 0,
         lastNotification: cert.notifications[0] || null,
-        user: cert.profile?.user || null,
+        user: userMap.get(cert.userId) || null,
       };
     });
 

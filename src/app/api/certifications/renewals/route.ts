@@ -23,23 +23,25 @@ export async function GET(request: NextRequest) {
       include: {
         certification: {
           include: {
-            profile: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    department: true,
-                  },
-                },
-              },
-            },
+            profile: true,
           },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // ユーザー情報を一括取得
+    const userIds = [...new Set(renewals.map(r => r.userId))];
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        department: true,
+      },
+    });
+    const userMap = new Map(users.map(u => [u.id, u]));
 
     // ステータス別カウント
     const counts = {
@@ -50,7 +52,10 @@ export async function GET(request: NextRequest) {
     };
 
     return successResponse({
-      renewals,
+      renewals: renewals.map(r => ({
+        ...r,
+        user: userMap.get(r.userId) || null,
+      })),
       counts,
     });
   } catch (error) {

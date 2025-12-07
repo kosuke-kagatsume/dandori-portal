@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   successResponse,
@@ -91,17 +91,7 @@ export async function GET(request: NextRequest) {
           expiryDate: { gte: now, lte: in30Days },
         },
         include: {
-          profile: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  department: true,
-                },
-              },
-            },
-          },
+          profile: true,
         },
         orderBy: { expiryDate: 'asc' },
         take: 10,
@@ -115,17 +105,7 @@ export async function GET(request: NextRequest) {
         expiryDate: { lt: now, not: null },
       },
       include: {
-        profile: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                department: true,
-              },
-            },
-          },
-        },
+        profile: true,
       },
       orderBy: { expiryDate: 'desc' },
       take: 10,
@@ -140,22 +120,28 @@ export async function GET(request: NextRequest) {
       include: {
         certification: {
           include: {
-            profile: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    department: true,
-                  },
-                },
-              },
-            },
+            profile: true,
           },
         },
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    // ユーザー情報を一括取得
+    const allUserIds = new Set<string>();
+    expiringCertifications.forEach(c => allUserIds.add(c.userId));
+    expiredCertifications.forEach(c => allUserIds.add(c.userId));
+    pendingRenewals.forEach(r => allUserIds.add(r.userId));
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: [...allUserIds] } },
+      select: {
+        id: true,
+        name: true,
+        department: true,
+      },
+    });
+    const userMap = new Map(users.map(u => [u.id, u]));
 
     return successResponse({
       counts: {
@@ -171,18 +157,18 @@ export async function GET(request: NextRequest) {
         daysUntilExpiry: cert.expiryDate
           ? Math.ceil((new Date(cert.expiryDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
           : null,
-        user: cert.profile?.user || null,
+        user: userMap.get(cert.userId) || null,
       })),
       expiredCertifications: expiredCertifications.map((cert) => ({
         ...cert,
         daysSinceExpiry: cert.expiryDate
           ? Math.ceil((now.getTime() - new Date(cert.expiryDate).getTime()) / (1000 * 60 * 60 * 24))
           : null,
-        user: cert.profile?.user || null,
+        user: userMap.get(cert.userId) || null,
       })),
       pendingRenewals: pendingRenewals.map((renewal) => ({
         ...renewal,
-        user: renewal.certification.profile?.user || null,
+        user: userMap.get(renewal.userId) || null,
       })),
       recentNotifications,
     });
