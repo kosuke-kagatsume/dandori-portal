@@ -1575,7 +1575,9 @@ model Certification {
   updatedAt DateTime @updatedAt
 
   // Relations
-  profile EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profile       EmployeeProfile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  notifications CertificationNotification[]
+  renewals      CertificationRenewal[]
 
   @@index([tenantId])
   @@index([profileId])
@@ -1764,4 +1766,121 @@ model UserAccountSettings {
   @@index([tenantId])
   @@index([userId])
   @@map("user_account_settings")
+}
+
+// ==============================================
+// 資格有効期限通知・更新確認システム
+// ==============================================
+
+// 資格通知設定（テナント単位）
+model CertificationNotificationSettings {
+  id       String @id @default(cuid())
+  tenantId String @unique
+
+  // 通知タイミング（期限前日数の配列）
+  notificationDays Int[] @default([90, 60, 30, 14, 7])
+
+  // 通知チャネル設定
+  enableEmailNotification Boolean @default(true)
+  enablePushNotification  Boolean @default(true)
+  enableInAppNotification Boolean @default(true)
+
+  // エスカレーション設定（何日前から上長・人事に通知するか）
+  escalateToManagerDays Int @default(30) // 30日前から上長に通知
+  escalateToHrDays      Int @default(14) // 14日前から人事に通知
+
+  // 自動ステータス更新設定
+  autoUpdateStatus         Boolean @default(true) // 期限切れ時に自動でステータス変更
+  warningThresholdDays     Int     @default(30) // expiringステータスに変更する日数
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("certification_notification_settings")
+}
+
+// 資格通知履歴
+model CertificationNotification {
+  id              String @id @default(cuid())
+  tenantId        String
+  certificationId String
+  userId          String
+
+  // 通知タイプと期限
+  notificationType  String // early, standard, warning, urgent, final, expired
+  daysUntilExpiry   Int    // 通知時点での残り日数
+
+  // 通知状態
+  sentAt         DateTime? // 送信日時
+  readAt         DateTime? // 既読日時
+  acknowledgedAt DateTime? // 確認済み日時（本人が「対応する」をクリック）
+
+  // 通知チャネル別送信状態
+  emailSent  Boolean @default(false)
+  pushSent   Boolean @default(false)
+  inAppSent  Boolean @default(false)
+
+  // エスカレーション
+  escalatedToManager Boolean @default(false) // 上長に通知済み
+  escalatedToHr      Boolean @default(false) // 人事に通知済み
+  managerNotifiedAt  DateTime? // 上長通知日時
+  hrNotifiedAt       DateTime? // 人事通知日時
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  certification Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([certificationId])
+  @@index([tenantId, userId])
+  @@index([tenantId, notificationType])
+  @@index([sentAt])
+  @@map("certification_notifications")
+}
+
+// 資格更新申請
+model CertificationRenewal {
+  id              String @id @default(cuid())
+  tenantId        String
+  certificationId String
+  userId          String
+
+  // 更新後の情報
+  newIssueDate     DateTime  @db.Date // 新しい発行日
+  newExpiryDate    DateTime? @db.Date // 新しい有効期限
+  newCredentialId  String?            // 新しい認定番号
+  newDocumentUrl   String?            // 新しい証明書ファイルURL
+  newDocumentName  String?            // ファイル名
+
+  // 申請備考
+  notes String? @db.Text
+
+  // ステータス管理
+  status String @default("pending") // pending, under_review, approved, rejected
+
+  // 審査情報
+  reviewedBy     String?   // 審査者ID
+  reviewedByName String?   // 審査者名
+  reviewedAt     DateTime? // 審査日時
+  reviewComment  String?   @db.Text // 審査コメント
+
+  // 確認チェックリスト（管理者が確認した項目）
+  documentVerified     Boolean @default(false) // 証明書の真正性確認
+  dateVerified         Boolean @default(false) // 日付の整合性確認
+  organizationVerified Boolean @default(false) // 発行機関の確認
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  certification Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([certificationId])
+  @@index([tenantId, status])
+  @@index([tenantId, userId, status])
+  @@map("certification_renewals")
 }
