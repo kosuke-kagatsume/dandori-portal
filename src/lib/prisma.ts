@@ -76,7 +76,11 @@ function getDatasourceUrl(): string {
 
 // Prismaクライアントの作成
 function createPrismaClient() {
-  const datasourceUrl = getDatasourceUrl();
+  // 開発環境でのログ出力用
+  if (process.env.NODE_ENV === 'development') {
+    const poolConfig = getConnectionPoolConfig();
+    console.log(`[Prisma] Connection pool config: limit=${poolConfig.connectionLimit}, connect_timeout=${poolConfig.connectTimeout}ms, pool_timeout=${poolConfig.poolTimeout}ms`);
+  }
 
   const client = new PrismaClient({
     log:
@@ -87,8 +91,7 @@ function createPrismaClient() {
             { level: 'warn', emit: 'stdout' },
           ]
         : [{ level: 'error', emit: 'stdout' }],
-    // データソースURLを動的に設定（接続プールパラメータ付き）
-    datasourceUrl: datasourceUrl || undefined,
+    // DATABASE_URLは.envから自動読み込み（datasourceUrlは指定しない）
   });
 
   // 開発環境でクエリイベントをリッスン

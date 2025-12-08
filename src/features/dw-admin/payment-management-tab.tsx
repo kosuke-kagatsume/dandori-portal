@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,44 +21,60 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  DollarSign,
   Search,
   Download,
   CheckCircle,
   AlertCircle,
   FileText,
   FileSpreadsheet,
+  Loader2,
 } from 'lucide-react';
-import { useInvoiceStore } from '@/lib/store/invoice-store';
-import { RecordPaymentDialog } from '@/features/billing/record-payment-dialog';
-import { InvoiceDetailModal } from '@/features/billing/invoice-detail-modal';
-import { downloadReceiptPDF } from '@/lib/pdf/receipt-pdf';
-import { downloadInvoicePDF } from '@/lib/pdf/invoice-pdf';
-import { exportInvoicesToCSV, exportInvoiceDetailsToCSV } from '@/lib/dw-admin/invoice-export';
-import type { InvoiceData } from '@/lib/billing/invoice-generator';
+import { useInvoices, createPayment, type Invoice } from '@/hooks/use-dw-admin-api';
 import { toast } from 'sonner';
 
 export function PaymentManagementTab() {
-  const { getAllInvoices, getStats, initializeInvoices } = useInvoiceStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'sent' | 'paid' | 'overdue'>('all');
-  const [recordPaymentDialogOpen, setRecordPaymentDialogOpen] = useState(false);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // 初期化
-  useEffect(() => {
-    initializeInvoices();
-  }, [initializeInvoices]);
+  // APIからデータ取得
+  const { data: invoicesData, isLoading, error, mutate } = useInvoices();
 
-  // 全請求書を取得
-  const allInvoices = getAllInvoices();
+  // データ取得中
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">読み込み中...</span>
+      </div>
+    );
+  }
+
+  // エラー
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <p className="text-red-600">データの取得に失敗しました</p>
+        <Button variant="outline" className="mt-4" onClick={() => mutate()}>
+          再読み込み
+        </Button>
+      </div>
+    );
+  }
+
+  const invoices = invoicesData?.data?.invoices || [];
+  const summary = invoicesData?.data?.summary || {
+    totalAmount: 0,
+    paidAmount: 0,
+    unpaidAmount: 0,
+    overdueCount: 0,
+  };
 
   // フィルタリング
-  const filteredInvoices = allInvoices.filter((invoice) => {
+  const filteredInvoices = invoices.filter((invoice) => {
     // 検索フィルター
     const matchesSearch =
-      invoice.tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (invoice.tenantName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
       invoice.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase());
 
     // ステータスフィルター
@@ -75,63 +91,17 @@ export function PaymentManagementTab() {
     return matchesSearch && matchesStatus;
   });
 
-  // 統計
-  const stats = getStats();
-  const overdueInvoices = allInvoices.filter((inv) => {
-    const isOverdue = inv.status !== 'paid' && new Date(inv.dueDate) < new Date();
-    return isOverdue;
-  });
-
-  const handleRecordPayment = (invoice: InvoiceData) => {
-    setSelectedInvoice(invoice);
-    setRecordPaymentDialogOpen(true);
-  };
-
-  const handleViewDetail = (invoice: InvoiceData) => {
-    setSelectedInvoice(invoice);
-    setDetailModalOpen(true);
-  };
-
-  const handleDownloadReceipt = async (invoice: InvoiceData) => {
-    if (invoice.status !== 'paid') {
-      toast.error('支払い済みの請求書のみ領収書を発行できます');
-      return;
-    }
-
+  const handleRecordPayment = async (invoice: Invoice) => {
     try {
-      await downloadReceiptPDF(invoice);
-      toast.success('領収書をダウンロードしました');
-    } catch (error) {
-      toast.error('領収書のダウンロードに失敗しました');
-    }
-  };
-
-  const handleDownloadInvoicePDF = async (invoice: InvoiceData) => {
-    try {
-      await downloadInvoicePDF(invoice);
-      toast.success('請求書PDFをダウンロードしました');
-    } catch (error) {
-      toast.error('請求書PDFのダウンロードに失敗しました');
-    }
-  };
-
-  // CSV出力（一覧）
-  const handleExportCSV = () => {
-    const result = exportInvoicesToCSV(filteredInvoices);
-    if (result.success) {
-      toast.success(`${result.recordCount}件の請求書をCSV出力しました`);
-    } else {
-      toast.error(result.error || 'CSV出力に失敗しました');
-    }
-  };
-
-  // CSV出力（明細付き）
-  const handleExportDetailsCSV = () => {
-    const result = exportInvoiceDetailsToCSV(filteredInvoices);
-    if (result.success) {
-      toast.success(`${result.recordCount}件の請求書明細をCSV出力しました`);
-    } else {
-      toast.error(result.error || 'CSV出力に失敗しました');
+      await createPayment({
+        invoiceId: invoice.id,
+        amount: invoice.total,
+        paymentMethod: 'bank_transfer',
+      });
+      toast.success('支払いを記録しました');
+      mutate();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '支払いの記録に失敗しました');
     }
   };
 
@@ -154,7 +124,7 @@ export function PaymentManagementTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalInvoices}</div>
+            <div className="text-2xl font-bold">{invoices.length}</div>
           </CardContent>
         </Card>
 
@@ -166,7 +136,7 @@ export function PaymentManagementTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              ¥{stats.unpaidAmount.toLocaleString()}
+              ¥{summary.unpaidAmount.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -179,7 +149,7 @@ export function PaymentManagementTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {overdueInvoices.length}
+              {summary.overdueCount}
             </div>
           </CardContent>
         </Card>
@@ -192,7 +162,7 @@ export function PaymentManagementTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              ¥{(stats.totalAmount - stats.unpaidAmount).toLocaleString()}
+              ¥{summary.paidAmount.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -209,7 +179,7 @@ export function PaymentManagementTab() {
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue />
           </SelectTrigger>
@@ -221,11 +191,11 @@ export function PaymentManagementTab() {
           </SelectContent>
         </Select>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportCSV}>
+          <Button variant="outline" disabled>
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             CSV出力
           </Button>
-          <Button variant="outline" onClick={handleExportDetailsCSV}>
+          <Button variant="outline" disabled>
             <FileText className="h-4 w-4 mr-2" />
             明細CSV
           </Button>
@@ -272,7 +242,7 @@ export function PaymentManagementTab() {
                           {invoice.invoiceNumber}
                         </code>
                       </TableCell>
-                      <TableCell className="font-medium">{invoice.tenantName}</TableCell>
+                      <TableCell className="font-medium">{invoice.tenantName || '-'}</TableCell>
                       <TableCell>
                         {new Date(invoice.billingMonth).toLocaleDateString('ja-JP', {
                           year: 'numeric',
@@ -309,7 +279,7 @@ export function PaymentManagementTab() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleViewDetail(invoice)}
+                            disabled
                           >
                             <FileText className="h-3 w-3 mr-1" />
                             詳細
@@ -317,7 +287,7 @@ export function PaymentManagementTab() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDownloadInvoicePDF(invoice)}
+                            disabled
                           >
                             <Download className="h-3 w-3 mr-1" />
                             PDF
@@ -336,7 +306,7 @@ export function PaymentManagementTab() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleDownloadReceipt(invoice)}
+                              disabled
                             >
                               <Download className="h-3 w-3 mr-1" />
                               領収書
@@ -352,28 +322,6 @@ export function PaymentManagementTab() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* 支払い記録ダイアログ */}
-      <RecordPaymentDialog
-        invoice={selectedInvoice}
-        open={recordPaymentDialogOpen}
-        onClose={() => {
-          setRecordPaymentDialogOpen(false);
-          setSelectedInvoice(null);
-        }}
-      />
-
-      {/* 請求書詳細モーダル */}
-      <InvoiceDetailModal
-        invoice={selectedInvoice}
-        open={detailModalOpen}
-        onClose={() => {
-          setDetailModalOpen(false);
-          setSelectedInvoice(null);
-        }}
-        onDownloadPDF={handleDownloadInvoicePDF}
-        readOnly={false}
-      />
     </div>
   );
 }

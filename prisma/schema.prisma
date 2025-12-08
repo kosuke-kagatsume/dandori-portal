@@ -331,8 +331,10 @@ model Invoice {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  items  InvoiceItem[]
+  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items     InvoiceItem[]
+  payments  Payment[]
+  reminders InvoiceReminder[]
 
   @@index([tenantId])
   @@index([status])
@@ -1883,4 +1885,251 @@ model CertificationRenewal {
   @@index([tenantId, status])
   @@index([tenantId, userId, status])
   @@map("certification_renewals")
+}
+
+// ========================================
+// ダッシュボード本番実装用モデル
+// ========================================
+
+// 支払い記録（請求書への入金管理）
+model Payment {
+  id        String @id @default(cuid())
+  tenantId  String
+  invoiceId String
+
+  // 支払い情報
+  amount       Int      // 支払い金額（税込・円）
+  paymentDate  DateTime @db.Date // 支払日
+  paymentMethod String   @default("bank_transfer") // bank_transfer, credit_card, other
+
+  // ステータス
+  status String @default("completed") // pending, completed, failed, refunded
+
+  // 参照情報
+  transactionId String? // 外部トランザクションID
+  notes         String? @db.Text
+
+  // 確認情報
+  confirmedBy     String? // 確認者ID
+  confirmedByName String? // 確認者名
+  confirmedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([tenantId, paymentDate])
+  @@index([tenantId, status])
+  @@map("payments")
+}
+
+// 請求リマインダー（自動送信管理）
+model InvoiceReminder {
+  id        String @id @default(cuid())
+  tenantId  String
+  invoiceId String
+
+  // リマインダー設定
+  reminderType    String // first, second, final
+  scheduledDate   DateTime @db.Date // 送信予定日
+  daysBeforeDue   Int // 支払期限の何日前か
+
+  // 送信状態
+  status    String    @default("scheduled") // scheduled, sent, cancelled
+  sentAt    DateTime?
+  sentTo    String? // 送信先メールアドレス
+
+  // エラー情報
+  errorMessage String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@map("invoice_reminders")
+}
+
+// 統合アクティビティフィード（ダッシュボード用）
+model ActivityFeed {
+  id       String @id @default(cuid())
+  tenantId String
+
+  // アクティビティ情報
+  activityType String // attendance_checkin, attendance_checkout, leave_request, leave_approved, workflow_submitted, workflow_approved, etc.
+  title        String
+  description  String?
+  icon         String? // Lucide icon name
+
+  // 関連情報
+  userId   String? // 関連ユーザーID
+  userName String? // 関連ユーザー名
+  resourceType String? // attendance, leave, workflow, announcement, etc.
+  resourceId   String? // 関連リソースID
+
+  // 表示設定
+  priority   String @default("normal") // high, normal, low
+  isPublic   Boolean @default(true) // テナント全体に表示
+  targetRoles String[] // 対象ロール（空の場合は全員）
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, activityType])
+  @@index([tenantId, userId])
+  @@map("activity_feeds")
+}
+
+// DW管理通知（Super Admin用）
+model DWNotification {
+  id String @id @default(cuid())
+
+  // 通知内容
+  type        String // payment_received, payment_overdue, tenant_created, tenant_suspended, system_alert
+  title       String
+  description String? @db.Text
+  priority    String  @default("normal") // high, normal, low
+
+  // 関連情報
+  tenantId   String? // 関連テナントID
+  tenantName String? // 関連テナント名
+  invoiceId  String? // 関連請求書ID
+  amount     Int? // 関連金額
+
+  // ステータス
+  isRead     Boolean @default(false)
+  readAt     DateTime?
+  readBy     String? // 閲覧者ID
+
+  // アクション
+  actionUrl   String? // 詳細ページへのリンク
+  actionLabel String? // アクションボタンラベル
+
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+  @@index([type])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("dw_notifications")
+}
+
+// 勤怠日次集計（パフォーマンス用キャッシュ）
+model DailyAttendanceMetric {
+  id       String @id @default(cuid())
+  tenantId String
+  date     DateTime @db.Date
+
+  // 集計データ
+  totalEmployees   Int @default(0) // 対象従業員数
+  presentCount     Int @default(0) // 出勤者数
+  absentCount      Int @default(0) // 欠勤者数
+  leaveCount       Int @default(0) // 休暇者数
+  lateCount        Int @default(0) // 遅刻者数
+  earlyLeaveCount  Int @default(0) // 早退者数
+  remoteCount      Int @default(0) // リモートワーク数
+
+  // 時間集計
+  totalWorkMinutes     Int @default(0) // 総労働時間（分）
+  totalOvertimeMinutes Int @default(0) // 総残業時間（分）
+  avgWorkMinutes       Int @default(0) // 平均労働時間（分）
+
+  // 出勤率
+  attendanceRate Float @default(0) // 出勤率（%）
+
+  // 集計時刻
+  calculatedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, date])
+  @@index([tenantId])
+  @@index([tenantId, date])
+  @@map("daily_attendance_metrics")
+}
+
+// 健診月次集計（ダッシュボード用）
+model HealthCheckupSummary {
+  id       String @id @default(cuid())
+  tenantId String
+  fiscalYear Int
+  month      Int // 1-12
+
+  // 受診状況
+  totalEmployees    Int @default(0) // 対象従業員数
+  completedCount    Int @default(0) // 受診完了数
+  pendingCount      Int @default(0) // 未受診数
+  completionRate    Float @default(0) // 受診率（%）
+
+  // 判定結果集計
+  resultACount Int @default(0) // A判定
+  resultBCount Int @default(0) // B判定
+  resultCCount Int @default(0) // C判定
+  resultDCount Int @default(0) // D判定
+  resultECount Int @default(0) // E判定
+
+  // フォローアップ状況
+  requiresReexamCount    Int @default(0) // 要再検査
+  requiresTreatmentCount Int @default(0) // 要治療
+  requiresGuidanceCount  Int @default(0) // 要保健指導
+
+  // 集計時刻
+  calculatedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, fiscalYear, month])
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+  @@map("health_checkup_summaries")
+}
+
+// ストレスチェック集計（ダッシュボード用）
+model StressCheckSummary {
+  id       String @id @default(cuid())
+  tenantId String
+  fiscalYear Int
+
+  // 実施状況
+  totalEmployees   Int @default(0) // 対象従業員数
+  completedCount   Int @default(0) // 受検完了数
+  pendingCount     Int @default(0) // 未受検数
+  completionRate   Float @default(0) // 受検率（%）
+
+  // 高ストレス者状況
+  highStressCount     Int @default(0) // 高ストレス者数
+  highStressRate      Float @default(0) // 高ストレス者率（%）
+
+  // 面談状況
+  interviewRequestedCount Int @default(0) // 面談申出数
+  interviewScheduledCount Int @default(0) // 面談予定数
+  interviewCompletedCount Int @default(0) // 面談完了数
+
+  // 平均スコア
+  avgStressFactorsScore  Float? // A群平均
+  avgStressResponseScore Float? // B群平均
+  avgSocialSupportScore  Float? // C群平均
+
+  // 集計時刻
+  calculatedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, fiscalYear])
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+  @@map("stress_check_summaries")
 }

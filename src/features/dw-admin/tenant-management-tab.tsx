@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,54 +14,54 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, Plus, Search, Users, DollarSign, Calendar, Edit, Globe } from 'lucide-react';
-import { useAdminTenantStore, TenantWithStats } from '@/lib/store/admin-tenant-store';
-import { useInvoiceStore } from '@/lib/store/invoice-store';
-import { CreateTenantDialog } from '@/features/billing/create-tenant-dialog';
-import { EditTenantDialog } from '@/features/billing/edit-tenant-dialog';
+import { Building2, Plus, Search, Globe, AlertCircle, Loader2 } from 'lucide-react';
+import { useTenants, useTenantStats } from '@/hooks/use-dw-admin-api';
 
 export function TenantManagementTab() {
   const router = useRouter();
-  const { tenants, initializeTenants } = useAdminTenantStore();
-  const { getInvoicesByTenant, getStats, initializeInvoices } = useInvoiceStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingTenant, setEditingTenant] = useState<TenantWithStats | null>(null);
 
-  // 初期化
-  useEffect(() => {
-    initializeTenants();
-    initializeInvoices();
-  }, [initializeTenants, initializeInvoices]);
+  // APIからデータ取得
+  const { data: tenantsData, isLoading: tenantsLoading, error: tenantsError, mutate } = useTenants();
+  const { data: statsData } = useTenantStats();
+
+  // ローディング中
+  if (tenantsLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">読み込み中...</span>
+      </div>
+    );
+  }
+
+  // エラー
+  if (tenantsError) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <p className="text-red-600">データの取得に失敗しました</p>
+        <Button variant="outline" className="mt-4" onClick={() => mutate()}>
+          再読み込み
+        </Button>
+      </div>
+    );
+  }
+
+  const tenants = tenantsData?.data?.tenants || [];
+  const stats = statsData?.data;
 
   // 検索フィルター
   const filteredTenants = tenants.filter((tenant) =>
     tenant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tenant.id.toLowerCase().includes(searchQuery.toLowerCase())
+    tenant.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (tenant.subdomain && tenant.subdomain.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // 各テナントの統計を取得
-  const getTenantStats = (tenantId: string) => {
-    const invoices = getInvoicesByTenant(tenantId);
-    const stats = getStats(tenantId);
-    const latestInvoice = invoices[0]; // 最新の請求書
-
-    return {
-      invoiceCount: stats.totalInvoices,
-      totalAmount: stats.totalAmount,
-      unpaidAmount: stats.unpaidAmount,
-      overdueCount: stats.overdueCount,
-      latestInvoiceDate: latestInvoice?.billingMonth,
-    };
-  };
-
-  // 編集ダイアログを開く
-  const handleEditTenant = (tenant: TenantWithStats, e: React.MouseEvent) => {
-    e.stopPropagation(); // 行クリックイベントを止める
-    setEditingTenant(tenant);
-    setEditDialogOpen(true);
-  };
+  // 統計計算
+  const totalAmount = tenants.reduce((sum, t) => sum + t.totalAmount, 0);
+  const unpaidAmount = tenants.reduce((sum, t) => sum + t.unpaidAmount, 0);
+  const overdueTenantsCount = tenants.filter((t) => t.overdueCount > 0).length;
 
   return (
     <div className="space-y-6">
@@ -73,7 +73,7 @@ export function TenantManagementTab() {
             全テナントの管理と請求状況の確認
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
+        <Button disabled>
           <Plus className="mr-2 h-4 w-4" />
           新規テナント作成
         </Button>
@@ -88,22 +88,19 @@ export function TenantManagementTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" suppressHydrationWarning>{tenants.length}</div>
+            <div className="text-2xl font-bold">{stats?.overview?.totalTenants || tenants.length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              総請求額（今月）
+              総請求額
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" suppressHydrationWarning>
-              ¥{tenants.reduce((sum, tenant) => {
-                const stats = getStats(tenant.id);
-                return sum + stats.totalAmount;
-              }, 0).toLocaleString()}
+            <div className="text-2xl font-bold">
+              ¥{totalAmount.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -115,11 +112,8 @@ export function TenantManagementTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600" suppressHydrationWarning>
-              ¥{tenants.reduce((sum, tenant) => {
-                const stats = getStats(tenant.id);
-                return sum + stats.unpaidAmount;
-              }, 0).toLocaleString()}
+            <div className="text-2xl font-bold text-yellow-600">
+              ¥{unpaidAmount.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -131,11 +125,8 @@ export function TenantManagementTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600" suppressHydrationWarning>
-              {tenants.filter(tenant => {
-                const stats = getStats(tenant.id);
-                return stats.overdueCount > 0;
-              }).length}
+            <div className="text-2xl font-bold text-red-600">
+              {overdueTenantsCount}
             </div>
           </CardContent>
         </Card>
@@ -145,7 +136,7 @@ export function TenantManagementTab() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="テナント名またはIDで検索..."
+          placeholder="テナント名またはサブドメインで検索..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -166,26 +157,24 @@ export function TenantManagementTab() {
               <TableRow>
                 <TableHead>テナント</TableHead>
                 <TableHead>サブドメイン</TableHead>
+                <TableHead>ユーザー数</TableHead>
                 <TableHead>請求書</TableHead>
                 <TableHead>総請求額</TableHead>
                 <TableHead>未払い額</TableHead>
-                <TableHead>最新請求月</TableHead>
                 <TableHead>ステータス</TableHead>
-                <TableHead className="text-right">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTenants.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     テナントが見つかりませんでした
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredTenants.map((tenant) => {
-                  const stats = getTenantStats(tenant.id);
-                  const hasOverdue = stats.overdueCount > 0;
-                  const hasUnpaid = stats.unpaidAmount > 0;
+                  const hasOverdue = tenant.overdueCount > 0;
+                  const hasUnpaid = tenant.unpaidAmount > 0;
 
                   return (
                     <TableRow
@@ -209,47 +198,38 @@ export function TenantManagementTab() {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell suppressHydrationWarning>
-                        {stats.invoiceCount}件
+                      <TableCell>
+                        {tenant.userCount}名
                       </TableCell>
-                      <TableCell suppressHydrationWarning>
-                        ¥{stats.totalAmount.toLocaleString()}
+                      <TableCell>
+                        {tenant.invoiceCount}件
                       </TableCell>
-                      <TableCell suppressHydrationWarning>
+                      <TableCell>
+                        ¥{tenant.totalAmount.toLocaleString()}
+                      </TableCell>
+                      <TableCell>
                         <span className={hasUnpaid ? 'text-yellow-600 font-medium' : ''}>
-                          ¥{stats.unpaidAmount.toLocaleString()}
+                          ¥{tenant.unpaidAmount.toLocaleString()}
                         </span>
-                      </TableCell>
-                      <TableCell suppressHydrationWarning>
-                        {stats.latestInvoiceDate ? (
-                          new Date(stats.latestInvoiceDate).toLocaleDateString('ja-JP', {
-                            year: 'numeric',
-                            month: 'long',
-                          })
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
                       </TableCell>
                       <TableCell>
                         {hasOverdue ? (
                           <Badge variant="destructive">期限超過</Badge>
                         ) : hasUnpaid ? (
                           <Badge variant="default">未払いあり</Badge>
-                        ) : (
+                        ) : tenant.settings?.status === 'trial' ? (
+                          <Badge variant="secondary">トライアル</Badge>
+                        ) : tenant.settings?.status === 'active' ? (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                             正常
                           </Badge>
+                        ) : tenant.settings?.status === 'suspended' ? (
+                          <Badge variant="destructive">停止中</Badge>
+                        ) : (
+                          <Badge variant="outline">
+                            {tenant.settings?.status || '不明'}
+                          </Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => handleEditTenant(tenant, e)}
-                        >
-                          <Edit className="h-4 w-4 mr-1" />
-                          編集
-                        </Button>
                       </TableCell>
                     </TableRow>
                   );
@@ -259,19 +239,6 @@ export function TenantManagementTab() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* テナント作成ダイアログ */}
-      <CreateTenantDialog
-        open={createDialogOpen}
-        onClose={() => setCreateDialogOpen(false)}
-      />
-
-      {/* テナント編集ダイアログ */}
-      <EditTenantDialog
-        open={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        tenant={editingTenant}
-      />
     </div>
   );
 }
