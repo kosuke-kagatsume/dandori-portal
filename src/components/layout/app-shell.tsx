@@ -66,7 +66,10 @@ export function AppShell({ children }: AppShellProps) {
     // ただし、既にデータが存在する場合はスキップ（承認後のデータを保護）
     if (currentUser?.roles?.includes('applicant')) {
       // localStorageをチェック（zustand-persistが保存している）
-      const existingData = localStorage.getItem('onboarding-storage');
+      // SSR時はlocalStorageが存在しないためチェック
+      const existingData = typeof window !== 'undefined'
+        ? localStorage.getItem('onboarding-storage')
+        : null;
 
       if (!existingData) {
         // データが存在しない場合のみ初期化
