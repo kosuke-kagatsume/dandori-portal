@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import {
   successResponse,
   handleApiError,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
+
+// DW管理API用の独立したPrismaクライアント
+const prisma = new PrismaClient();
 
 // GET /api/dw-admin/legal-updates - 法令一覧取得（DW管理用）
 export async function GET(request: NextRequest) {

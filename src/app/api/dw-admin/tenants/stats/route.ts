@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+// DW管理API用の独立したPrismaクライアント
+const prisma = new PrismaClient();
 
 /**
  * DW管理 - テナント統計API

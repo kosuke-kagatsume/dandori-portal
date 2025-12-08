@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+// DW管理API用の独立したPrismaクライアント
+const prisma = new PrismaClient();
 
 // GET /api/dw-admin/legal-updates/[id] - 法令詳細取得
 export async function GET(
