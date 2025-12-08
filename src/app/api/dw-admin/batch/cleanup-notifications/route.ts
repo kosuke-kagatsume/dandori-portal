@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const activityCutoff = new Date(now);
     activityCutoff.setDate(activityCutoff.getDate() - 90);
 
-    const activityToDelete = await prismaClient.dWActivity.count({
+    const activityToDelete = await prismaClient.activityFeed.count({
       where: {
         createdAt: { lt: activityCutoff },
       },
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       deletedUnread = unreadResult.count;
 
       // 古いアクティビティを削除
-      const activityResult = await prismaClient.dWActivity.deleteMany({
+      const activityResult = await prismaClient.activityFeed.deleteMany({
         where: {
           createdAt: { lt: activityCutoff },
         },
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     const unreadNotificationsCount = await prismaClient.dWNotification.count({
       where: { isRead: false },
     });
-    const totalActivities = await prismaClient.dWActivity.count();
+    const totalActivities = await prismaClient.activityFeed.count();
 
     return NextResponse.json({
       success: true,
