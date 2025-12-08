@@ -16,10 +16,12 @@ import {
 } from '@/components/ui/table';
 import { Building2, Plus, Search, Globe, AlertCircle, Loader2 } from 'lucide-react';
 import { useTenants, useTenantStats } from '@/hooks/use-dw-admin-api';
+import { CreateTenantDialog } from '@/features/billing/create-tenant-dialog';
 
 export function TenantManagementTab() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // APIからデータ取得
   const { data: tenantsData, isLoading: tenantsLoading, error: tenantsError, mutate } = useTenants();
@@ -48,8 +50,8 @@ export function TenantManagementTab() {
     );
   }
 
-  const tenants = tenantsData?.data?.tenants || [];
-  const stats = statsData?.data;
+  const tenants = tenantsData?.tenants || [];
+  const stats = statsData;
 
   // 検索フィルター
   const filteredTenants = tenants.filter((tenant) =>
@@ -73,7 +75,7 @@ export function TenantManagementTab() {
             全テナントの管理と請求状況の確認
           </p>
         </div>
-        <Button disabled>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           新規テナント作成
         </Button>
@@ -239,6 +241,15 @@ export function TenantManagementTab() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* テナント作成ダイアログ */}
+      <CreateTenantDialog
+        open={isCreateDialogOpen}
+        onClose={() => {
+          setIsCreateDialogOpen(false);
+          mutate(); // テナント一覧を再取得
+        }}
+      />
     </div>
   );
 }
