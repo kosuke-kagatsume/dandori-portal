@@ -106,6 +106,12 @@ export async function PATCH(
       updateData.retiredDate = new Date(body.retiredDate);
     }
 
+    // roles配列からrole（単数）への同期
+    // フロントエンドはroles配列を送信するが、認証システムはroleフィールドを使用
+    if (body.roles && Array.isArray(body.roles) && body.roles.length > 0) {
+      updateData.role = body.roles[0]; // 最初の権限をプライマリ権限として設定
+    }
+
     // ユーザー更新
     const user = await prisma.user.update({
       where: { id: params.id },
