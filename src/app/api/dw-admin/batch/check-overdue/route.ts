@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+// バッチ処理用の独立したPrismaクライアント
+const prismaClient = new PrismaClient();
 
 /**
  * DW管理 - 支払い期限チェックバッチAPI
@@ -24,7 +27,7 @@ export async function POST(request: NextRequest) {
     today.setHours(0, 0, 0, 0);
 
     // 期限超過の未払い請求書を検出
-    const overdueInvoices = await prisma.invoice.findMany({
+    const overdueInvoices = await prismaClient.invoice.findMany({
       where: {
         status: { in: ['draft', 'sent'] },
         dueDate: { lt: today },
@@ -53,7 +56,7 @@ export async function POST(request: NextRequest) {
 
       // ステータスを「overdue」に更新
       if (invoice.status !== 'overdue') {
-        await prisma.invoice.update({
+        await prismaClient.invoice.update({
           where: { id: invoice.id },
           data: { status: 'overdue' },
         });
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest) {
       else priority = 'low';
 
       // 既存の未読通知があるかチェック
-      const existingNotification = await prisma.dWNotification.findFirst({
+      const existingNotification = await prismaClient.dWNotification.findFirst({
         where: {
           invoiceId: invoice.id,
           type: 'payment_overdue',
@@ -79,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       if (!existingNotification) {
         // 新しい通知を作成
-        await prisma.dWNotification.create({
+        await prismaClient.dWNotification.create({
           data: {
             type: 'payment_overdue',
             title: `支払い期限超過（${daysOverdue}日）`,
@@ -93,7 +96,7 @@ export async function POST(request: NextRequest) {
         action = 'notification_created';
       } else if (existingNotification.priority !== priority) {
         // 優先度を更新
-        await prisma.dWNotification.update({
+        await prismaClient.dWNotification.update({
           where: { id: existingNotification.id },
           data: { priority },
         });
@@ -114,7 +117,7 @@ export async function POST(request: NextRequest) {
     const sevenDaysLater = new Date(today);
     sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
 
-    const upcomingDueInvoices = await prisma.invoice.findMany({
+    const upcomingDueInvoices = await prismaClient.invoice.findMany({
       where: {
         status: { in: ['draft', 'sent'] },
         dueDate: {
@@ -142,7 +145,7 @@ export async function POST(request: NextRequest) {
 
       // 3日以内の場合は通知を作成
       if (daysUntilDue <= 3) {
-        const existingNotification = await prisma.dWNotification.findFirst({
+        const existingNotification = await prismaClient.dWNotification.findFirst({
           where: {
             invoiceId: invoice.id,
             type: 'payment_reminder',
@@ -151,7 +154,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (!existingNotification) {
-          await prisma.dWNotification.create({
+          await prismaClient.dWNotification.create({
             data: {
               type: 'payment_reminder',
               title: `支払い期限まもなく（${daysUntilDue}日）`,

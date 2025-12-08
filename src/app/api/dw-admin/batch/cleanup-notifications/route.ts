@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+// バッチ処理用の独立したPrismaクライアント
+const prismaClient = new PrismaClient();
 
 /**
  * DW管理 - 通知クリーンアップバッチAPI
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
     unreadCutoff.setDate(unreadCutoff.getDate() - unreadDaysToKeep);
 
     // 削除対象の既読通知をカウント
-    const readToDelete = await prisma.dWNotification.count({
+    const readToDelete = await prismaClient.dWNotification.count({
       where: {
         isRead: true,
         createdAt: { lt: readCutoff },
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
     // 削除対象の未読通知をカウント
-    const unreadToDelete = await prisma.dWNotification.count({
+    const unreadToDelete = await prismaClient.dWNotification.count({
       where: {
         isRead: false,
         createdAt: { lt: unreadCutoff },
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
     const activityCutoff = new Date(now);
     activityCutoff.setDate(activityCutoff.getDate() - 90);
 
-    const activityToDelete = await prisma.dWActivity.count({
+    const activityToDelete = await prismaClient.dWActivity.count({
       where: {
         createdAt: { lt: activityCutoff },
       },
@@ -74,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     if (!dryRun) {
       // 既読通知を削除
-      const readResult = await prisma.dWNotification.deleteMany({
+      const readResult = await prismaClient.dWNotification.deleteMany({
         where: {
           isRead: true,
           createdAt: { lt: readCutoff },
@@ -83,7 +86,7 @@ export async function POST(request: NextRequest) {
       deletedRead = readResult.count;
 
       // 古い未読通知を削除
-      const unreadResult = await prisma.dWNotification.deleteMany({
+      const unreadResult = await prismaClient.dWNotification.deleteMany({
         where: {
           isRead: false,
           createdAt: { lt: unreadCutoff },
@@ -92,7 +95,7 @@ export async function POST(request: NextRequest) {
       deletedUnread = unreadResult.count;
 
       // 古いアクティビティを削除
-      const activityResult = await prisma.dWActivity.deleteMany({
+      const activityResult = await prismaClient.dWActivity.deleteMany({
         where: {
           createdAt: { lt: activityCutoff },
         },
@@ -101,13 +104,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 現在の統計
-    const readNotificationsCount = await prisma.dWNotification.count({
+    const readNotificationsCount = await prismaClient.dWNotification.count({
       where: { isRead: true },
     });
-    const unreadNotificationsCount = await prisma.dWNotification.count({
+    const unreadNotificationsCount = await prismaClient.dWNotification.count({
       where: { isRead: false },
     });
-    const totalActivities = await prisma.dWActivity.count();
+    const totalActivities = await prismaClient.dWActivity.count();
 
     return NextResponse.json({
       success: true,

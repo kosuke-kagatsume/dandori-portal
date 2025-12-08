@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+// バッチ処理用の独立したPrismaクライアント
+const prismaClient = new PrismaClient();
 
 /**
  * DW管理 - 請求書自動生成バッチAPI
@@ -31,7 +34,7 @@ export async function POST(request: NextRequest) {
     const targetMonth = billingMonth || getPreviousMonth();
 
     // アクティブなテナントを取得
-    const tenants = await prisma.tenant.findMany({
+    const tenants = await prismaClient.tenant.findMany({
       where: {
         settings: {
           status: 'active',
@@ -57,7 +60,7 @@ export async function POST(request: NextRequest) {
     for (const tenant of tenants) {
       try {
         // 既存の請求書をチェック
-        const existingInvoice = await prisma.invoice.findFirst({
+        const existingInvoice = await prismaClient.invoice.findFirst({
           where: {
             tenantId: tenant.id,
             billingMonth: new Date(`${targetMonth}-01`),
@@ -101,7 +104,7 @@ export async function POST(request: NextRequest) {
         const dueDate = getEndOfNextMonth(targetMonth);
 
         // 請求書作成
-        const invoice = await prisma.invoice.create({
+        const invoice = await prismaClient.invoice.create({
           data: {
             tenantId: tenant.id,
             invoiceNumber,
@@ -122,7 +125,7 @@ export async function POST(request: NextRequest) {
         });
 
         // 通知作成
-        await prisma.dWNotification.create({
+        await prismaClient.dWNotification.create({
           data: {
             type: 'invoice_created',
             title: `請求書が作成されました`,
@@ -135,7 +138,7 @@ export async function POST(request: NextRequest) {
         });
 
         // アクティビティ記録
-        await prisma.dWActivity.create({
+        await prismaClient.dWActivity.create({
           data: {
             tenantId: tenant.id,
             activityType: 'invoice_generated',
