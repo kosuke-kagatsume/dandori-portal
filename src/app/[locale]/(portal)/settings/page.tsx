@@ -11,8 +11,6 @@ import {
   FileText,
   GitBranch,
   ShieldCheck,
-  Sun,
-  Languages,
   Clock,
   Mail,
 } from 'lucide-react';
@@ -23,8 +21,6 @@ import { toast } from 'sonner';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { SimpleSettings, defaultSettings } from '@/features/settings/types';
 import {
-  AppearanceTab,
-  RegionalTab,
   SystemTab,
   CompanyTab,
   PayrollTab,
@@ -159,16 +155,8 @@ export default function SettingsPage() {
         </Alert>
       )}
 
-      <Tabs defaultValue="appearance" className="space-y-4 w-full">
-        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-10 gap-1">
-          <TabsTrigger value="appearance" className="flex-1 sm:flex-none min-w-[100px]">
-            <Sun className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">外観</span>
-          </TabsTrigger>
-          <TabsTrigger value="regional" className="flex-1 sm:flex-none min-w-[100px]">
-            <Languages className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">地域</span>
-          </TabsTrigger>
+      <Tabs defaultValue="company" className="space-y-4 w-full">
+        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-1">
           <TabsTrigger value="company" className="flex-1 sm:flex-none min-w-[100px]">
             <Building2 className="w-4 h-4 sm:mr-1" />
             <span className="hidden sm:inline">会社</span>
@@ -226,14 +214,6 @@ export default function SettingsPage() {
             </TabsTrigger>
           )}
         </TabsList>
-
-        <TabsContent value="appearance">
-          <AppearanceTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
-        </TabsContent>
-
-        <TabsContent value="regional">
-          <RegionalTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
-        </TabsContent>
 
         <TabsContent value="company">
           <CompanyTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />

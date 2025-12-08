@@ -361,7 +361,21 @@ const createUserStore = () => {
           }
 
           // プロダクションモード: REST API でユーザー情報を取得
-          const response = await fetch('/api/auth/me');
+          const response = await fetch('/api/auth/me', {
+            credentials: 'include', // クッキーを送信
+          });
+
+          // 401の場合は未認証として静かに処理（エラーをスローしない）
+          if (response.status === 401) {
+            set({
+              currentUser: null,
+              accessToken: null,
+              refreshToken: null,
+              isLoading: false
+            });
+            return;
+          }
+
           const result = await response.json();
 
           if (!response.ok || !result.success) {

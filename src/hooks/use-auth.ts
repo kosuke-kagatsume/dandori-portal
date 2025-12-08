@@ -22,7 +22,16 @@ export function useAuth() {
     const getUser = async () => {
       try {
         // REST APIからユーザー情報を取得
-        const response = await fetch('/api/auth/me');
+        const response = await fetch('/api/auth/me', {
+          credentials: 'include', // クッキーを送信
+        });
+
+        // 401エラーは静かに処理
+        if (response.status === 401) {
+          setUser(null);
+          return;
+        }
+
         const data = await response.json();
 
         if (data.success && data.data?.user) {
@@ -43,7 +52,10 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
     } catch (error) {
       console.error('Logout error:', error);
     }
