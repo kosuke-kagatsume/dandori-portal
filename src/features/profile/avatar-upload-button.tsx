@@ -10,8 +10,22 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { uploadAvatar, validateImageFile } from '@/lib/storage/avatar-upload';
+import { validateImageFile } from '@/lib/storage/avatar-upload';
 import { CameraCapture } from '@/components/camera/camera-capture';
+
+// API経由でアバターをアップロード
+async function uploadAvatarViaAPI(userId: string, file: File): Promise<{ success: boolean; url?: string; error?: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('userId', userId);
+
+  const response = await fetch('/api/upload/avatar', {
+    method: 'POST',
+    body: formData,
+  });
+
+  return response.json();
+}
 
 interface AvatarUploadButtonProps {
   userId: string;
@@ -61,7 +75,7 @@ export function AvatarUploadButton({
     toast.loading('画像をアップロード中...');
 
     try {
-      const result = await uploadAvatar({ userId, file });
+      const result = await uploadAvatarViaAPI(userId, file);
 
       if (result.success && result.url) {
         toast.dismiss();
