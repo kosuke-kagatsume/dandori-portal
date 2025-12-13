@@ -6,6 +6,7 @@
  */
 
 import { jsPDF } from 'jspdf';
+import { loadJapaneseFont, setJapaneseFont } from './font-loader';
 
 // 健康診断データ型
 export interface HealthCheckupForPDF {
@@ -90,6 +91,10 @@ export const generateIndustrialPhysicianReportPDF = async (
     unit: 'mm',
     format: 'a4',
   });
+
+  // 日本語フォントを読み込んで設定
+  await loadJapaneseFont(doc);
+  setJapaneseFont(doc);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   let yPos = 20;
@@ -373,6 +378,10 @@ export const generateHighStressListPDF = async (
     format: 'a4',
   });
 
+  // 日本語フォントを読み込んで設定
+  await loadJapaneseFont(doc);
+  setJapaneseFont(doc);
+
   const pageWidth = doc.internal.pageSize.getWidth();
   let yPos = 20;
 
@@ -475,6 +484,10 @@ export const generateHealthCheckupSummaryPDF = async (
     unit: 'mm',
     format: 'a4',
   });
+
+  // 日本語フォントを読み込んで設定
+  await loadJapaneseFont(doc);
+  setJapaneseFont(doc);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   let yPos = 20;

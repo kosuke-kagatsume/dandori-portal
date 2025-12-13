@@ -23,8 +23,9 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
-import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
+import { hasPermission as hasDemoPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
+import { ROLE_LABELS } from '@/lib/rbac';
 import { QuickCheckIn } from '@/features/dashboard/quick-check-in';
 import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
 import {
@@ -45,17 +46,37 @@ import {
 } from '@/components/dashboard/role-based-charts';
 
 export function DashboardContent() {
-  const { currentDemoUser, switchDemoRole } = useUserStore();
+  const { currentUser, currentDemoUser, switchDemoRole } = useUserStore();
   // 初期値を確実に設定（SSR/CSR一致のため）
   const [effectiveDemoUser, setEffectiveDemoUser] = useState(demoUsers.employee);
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // 本番ユーザーのロールを取得
+  const getCurrentUserRole = (): UserRole => {
+    // 本番ユーザーがいる場合はそのロールを使用
+    if (currentUser?.roles && currentUser.roles.length > 0) {
+      return currentUser.roles[0] as UserRole;
+    }
+    // デモユーザーの場合
+    if (effectiveDemoUser) {
+      return effectiveDemoUser.role as UserRole;
+    }
+    return 'employee';
+  };
+
+  const currentUserRole = getCurrentUserRole();
+
   // 初期化時にローカルストレージから役割を読み込み
   useEffect(() => {
     setMounted(true);
 
-    // localStorageへの安全なアクセス
+    // 本番ユーザーがいる場合はデモモードの初期化をスキップ
+    if (currentUser?.roles && currentUser.roles.length > 0) {
+      return;
+    }
+
+    // localStorageへの安全なアクセス（デモモードのみ）
     if (typeof window !== 'undefined') {
       try {
         const storedRole = localStorage.getItem('demo-role') as UserRole;
@@ -72,14 +93,14 @@ export function DashboardContent() {
         setEffectiveDemoUser(demoUsers.employee);
       }
     }
-  }, []); // 依存配列を空にして初回のみ実行
+  }, [currentUser]); // currentUserを依存配列に追加
 
   // currentDemoUserの変更を監視してeffectiveDemoUserを同期
   useEffect(() => {
-    if (mounted && currentDemoUser) {
+    if (mounted && currentDemoUser && !currentUser) {
       setEffectiveDemoUser(currentDemoUser);
     }
-  }, [currentDemoUser, mounted]);
+  }, [currentDemoUser, mounted, currentUser]);
 
   // 固定の日本語翻訳関数
   const t = (key: string) => {
@@ -155,11 +176,21 @@ export function DashboardContent() {
     { id: 12, user: '山口隆', action: '経費申請を提出', time: '9時間前', type: 'expense' as const },
   ];
 
-  // 権限チェック（effectiveDemoUserを使用）
-  const canViewAll = hasPermission(effectiveDemoUser, 'view_all');
-  const canViewTeam = hasPermission(effectiveDemoUser, 'view_team');
-  const canApprove = hasPermission(effectiveDemoUser, 'approve_requests');
-  const canManageSystem = hasPermission(effectiveDemoUser, 'manage_system');
+  // 権限チェック（本番ユーザーのロールを使用）
+  const rolePermissions: Record<UserRole, { viewAll: boolean; viewTeam: boolean; approve: boolean; manageSystem: boolean }> = {
+    employee: { viewAll: false, viewTeam: false, approve: false, manageSystem: false },
+    manager: { viewAll: false, viewTeam: true, approve: true, manageSystem: false },
+    executive: { viewAll: true, viewTeam: true, approve: true, manageSystem: false },
+    hr: { viewAll: true, viewTeam: true, approve: true, manageSystem: false },
+    admin: { viewAll: true, viewTeam: true, approve: true, manageSystem: true },
+    applicant: { viewAll: false, viewTeam: false, approve: false, manageSystem: false },
+  };
+
+  const permissions = rolePermissions[currentUserRole] || rolePermissions.employee;
+  const canViewAll = permissions.viewAll;
+  const canViewTeam = permissions.viewTeam;
+  const canApprove = permissions.approve;
+  const canManageSystem = permissions.manageSystem;
 
   // マウント完了までローディング表示
   if (!mounted) {
@@ -185,7 +216,7 @@ export function DashboardContent() {
 
       {/* Role-based KPI Cards */}
       <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 ${
-        effectiveDemoUser.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
+        currentUserRole === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
       }`}>
         {/* Card 1: 従業員数/チームメンバー数 */}
         <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
@@ -310,7 +341,7 @@ export function DashboardContent() {
       </div>
 
       {/* 一般社員専用の追加情報 */}
-      {effectiveDemoUser?.role === 'employee' && (
+      {currentUserRole === 'employee' && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -336,7 +367,7 @@ export function DashboardContent() {
       )}
 
       {/* 権限別グラフセクション */}
-      {effectiveDemoUser?.role === 'employee' && (
+      {currentUserRole === 'employee' && (
         <>
           <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">個人統計</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
@@ -349,7 +380,7 @@ export function DashboardContent() {
         </>
       )}
 
-      {effectiveDemoUser?.role === 'manager' && (
+      {currentUserRole === 'manager' && (
         <>
           <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">チーム統計</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
@@ -362,7 +393,7 @@ export function DashboardContent() {
         </>
       )}
 
-      {effectiveDemoUser?.role === 'hr' && (
+      {currentUserRole === 'hr' && (
         <>
           <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">全社統計</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
@@ -376,7 +407,7 @@ export function DashboardContent() {
         </>
       )}
 
-      {effectiveDemoUser?.role === 'admin' && (
+      {currentUserRole === 'admin' && (
         <>
           <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">システム統計</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
@@ -527,7 +558,7 @@ export function DashboardContent() {
         <CardHeader>
           <CardTitle>クイックアクション</CardTitle>
           <CardDescription>
-            {effectiveDemoUser ? `${roleDisplayNames[effectiveDemoUser.role]}として実行可能な操作` : 'よく使う操作をすばやく実行できます'}
+            {currentUser ? `${ROLE_LABELS[currentUserRole]}として実行可能な操作` : 'よく使う操作をすばやく実行できます'}
           </CardDescription>
         </CardHeader>
         <CardContent>

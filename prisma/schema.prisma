@@ -1,12 +1,3 @@
-// Dandori Portal Database Schema
-// HR領域特化のデータベーススキーマ（マルチテナント完全対応）
-//
-// 🏢 マルチテナント設計:
-// - すべての主要テーブルに tenant_id を含む
-// - RDS PostgreSQL で Row Level Security (RLS) 対応
-// - 複合インデックスでクエリパフォーマンス最適化
-// - 20社×30名規模（600ユーザー）に最適化
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
@@ -17,252 +8,768 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// テナント（会社）
-model Tenant {
-  id           String   @id @default(cuid())
-  name         String
-  subdomain    String?  @unique // サブドメイン（例: dandori-work, sample-corp）
-  logo         String?
-  timezone     String   @default("Asia/Tokyo")
-  closingDay   String   @default("末") // 末, 20, 15, 任意
-  weekStartDay Int      @default(1) // 0=日曜, 1=月曜
+model achievements {
+  id                String            @id
+  tenantId          String
+  profileId         String
+  userId            String
+  title             String
+  description       String?
+  date              DateTime          @db.Date
+  category          String?
+  attachments       Json?
+  isPublic          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  employee_profiles employee_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([tenantId, category])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model activity_feeds {
+  id           String   @id
+  tenantId     String
+  activityType String
+  title        String
+  description  String?
+  icon         String?
+  userId       String?
+  userName     String?
+  resourceType String?
+  resourceId   String?
+  priority     String   @default("normal")
+  isPublic     Boolean  @default(true)
+  targetRoles  String[]
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 
-  // Relations
-  users         User[]
-  orgUnits      OrgUnit[]
-  attendance    Attendance[]
-  pricingTiers  PricingTier[]
-  invoices      Invoice[]
-  settings      TenantSettings?
-  userHistories UserHistory[]
-
-  @@index([subdomain])
-  @@map("tenants")
-}
-
-// 組織単位（会社、部門、部、チーム）
-model OrgUnit {
-  id          String   @id @default(cuid())
-  tenantId    String
-  name        String
-  parentId    String?
-  level       Int      @default(0)
-  headUserId  String?
-  type        String // company, division, department, team
-  memberCount Int      @default(0)
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  parent   OrgUnit?  @relation("OrgUnitHierarchy", fields: [parentId], references: [id])
-  children OrgUnit[] @relation("OrgUnitHierarchy")
-  users    User[]
-
+  @@index([tenantId, activityType])
+  @@index([tenantId, createdAt])
   @@index([tenantId])
-  @@index([parentId])
-  @@index([tenantId, parentId]) // 複合インデックス（組織階層検索用）
-  @@index([tenantId, isActive]) // 複合インデックス（有効組織検索用）
-  @@map("org_units")
+  @@index([tenantId, userId])
 }
 
-// ユーザー
-model User {
-  id               String    @id @default(cuid())
-  tenantId         String
-  email            String    @unique
-  passwordHash     String? // bcrypt hashed password for authentication
-  name             String
-  phone            String?
-  hireDate         DateTime?
-  unitId           String?
-  role             String?   @default("employee") // Primary role: admin, hr, manager, employee
-  roles            String[] // JSON配列: ["employee", "admin"]
-  status           String    @default("active") // active, inactive, suspended, retired
-  retiredDate      DateTime?
-  retirementReason String? // voluntary, company, contract_end, retirement_age, other
-  timezone         String    @default("Asia/Tokyo")
-  avatar           String?
-  position         String?
-  department       String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+model announcement_reads {
+  id                String        @id
+  tenantId          String
+  announcementId    String
+  userId            String
+  readAt            DateTime      @default(now())
+  actionCompleted   Boolean       @default(false)
+  actionCompletedAt DateTime?
+  announcements     announcements @relation(fields: [announcementId], references: [id], onDelete: Cascade)
 
-  // Relations
-  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  orgUnit    OrgUnit?     @relation(fields: [unitId], references: [id])
-  attendance Attendance[]
-
+  @@unique([announcementId, userId])
+  @@index([announcementId])
   @@index([tenantId])
-  @@index([unitId])
-  @@index([email])
-  @@index([tenantId, status]) // 複合インデックス（ステータス別ユーザー検索用）
-  @@map("users")
+  @@index([tenantId, userId])
+  @@index([userId])
 }
 
-// 勤怠記録
-model Attendance {
-  id                String    @id @default(cuid())
+model announcements {
+  id                 String               @id
+  tenantId           String
+  title              String
+  content            String
+  type               String               @default("general")
+  priority           String               @default("normal")
+  target             String               @default("all")
+  targetDepartments  String[]
+  targetRoles        String[]
+  published          Boolean              @default(false)
+  publishedAt        DateTime?
+  startDate          DateTime             @db.Date
+  endDate            DateTime?            @db.Date
+  requiresAction     Boolean              @default(false)
+  actionLabel        String?
+  actionUrl          String?
+  actionDeadline     DateTime?            @db.Date
+  createdBy          String
+  createdByName      String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  announcement_reads announcement_reads[]
+
+  @@index([published, startDate, endDate])
+  @@index([tenantId])
+  @@index([tenantId, published])
+  @@index([tenantId, startDate])
+}
+
+model approval_flow_approvers {
+  id                  String              @id
+  stepId              String
+  approverType        String
+  approverId          String?
+  approverRole        String?
+  positionLevel       Int?
+  order               Int                 @default(1)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime
+  approval_flow_steps approval_flow_steps @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  @@index([stepId])
+}
+
+model approval_flow_conditions {
+  id                        String                    @id
+  flowId                    String
+  field                     String
+  operator                  String
+  value                     Float
+  description               String?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime
+  approval_flow_definitions approval_flow_definitions @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@index([flowId])
+}
+
+model approval_flow_definitions {
+  id                       String                     @id
+  tenantId                 String
+  name                     String
+  description              String?
+  documentType             String
+  flowType                 String
+  useOrganizationHierarchy Boolean                    @default(false)
+  organizationLevels       Int?
+  isActive                 Boolean                    @default(true)
+  isDefault                Boolean                    @default(false)
+  priority                 Int                        @default(1)
+  createdBy                String
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  approval_flow_conditions approval_flow_conditions[]
+  approval_flow_steps      approval_flow_steps[]
+
+  @@index([tenantId, documentType])
+  @@index([tenantId, documentType, isActive])
+  @@index([tenantId])
+}
+
+model approval_flow_steps {
+  id                        String                    @id
+  flowId                    String
+  stepNumber                Int
+  name                      String
+  executionMode             String                    @default("serial")
+  requiredApprovals         Int                       @default(1)
+  timeoutHours              Int?
+  allowDelegate             Boolean                   @default(true)
+  allowSkip                 Boolean                   @default(false)
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime
+  approval_flow_approvers   approval_flow_approvers[]
+  approval_flow_definitions approval_flow_definitions @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  @@index([flowId])
+  @@index([flowId, stepNumber])
+}
+
+model approval_steps {
+  id                String            @id
+  tenantId          String
+  workflowId        String
+  order             Int
+  approverRole      String
+  approverId        String?
+  approverName      String?
+  status            String            @default("pending")
+  actionDate        DateTime?
+  comments          String?
+  executionMode     String            @default("sequential")
+  timeoutHours      Int?
+  isEscalated       Boolean           @default(false)
+  escalatedTo       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  workflow_requests workflow_requests @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([approverId])
+  @@index([status])
+  @@index([tenantId, approverId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([workflowId])
+}
+
+model attendance {
+  id                String    @id
   tenantId          String
   userId            String
-  date              DateTime  @db.Date // YYYY-MM-DD形式
-  checkIn           DateTime? // 出勤時刻
-  checkOut          DateTime? // 退勤時刻
-  breakStart        DateTime? // 休憩開始時刻
-  breakEnd          DateTime? // 休憩終了時刻
+  date              DateTime  @db.Date
+  checkIn           DateTime?
+  checkOut          DateTime?
+  breakStart        DateTime?
+  breakEnd          DateTime?
   totalBreakMinutes Int       @default(0)
   workMinutes       Int       @default(0)
   overtimeMinutes   Int       @default(0)
-  workLocation      String    @default("office") // office, home, client, other
-  checkInLocation   Json? // GPS位置情報 {latitude, longitude, address, timestamp}
-  checkOutLocation  Json? // GPS位置情報 {latitude, longitude, address, timestamp}
-  status            String    @default("present") // present, absent, holiday, leave, late, early
+  workLocation      String    @default("office")
+  status            String    @default("present")
   memo              String?
-  approvalStatus    String? // pending, approved, rejected
+  approvalStatus    String?
   approvalReason    String?
   createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  updatedAt         DateTime
+  checkInLocation   Json?
+  checkOutLocation  Json?
+  tenants           tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users             users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, date]) // 1ユーザー1日1レコード
-  @@index([tenantId])
-  @@index([userId])
-  @@index([tenantId, userId]) // 複合インデックス（マルチテナント最適化）
-  @@index([tenantId, date]) // 複合インデックス（日付範囲検索用）
+  @@unique([userId, date])
   @@index([date])
   @@index([status])
-  @@map("attendance")
+  @@index([tenantId, date])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([userId])
 }
 
-// ワークフロー申請
-model WorkflowRequest {
-  id            String    @id @default(cuid())
-  tenantId      String
-  requesterId   String // 申請者ID
-  requesterName String // 申請者名
-  department    String? // 部署
-  type          String // leave, overtime, expense, business_trip, purchase, attendance_correction
-  title         String // 申請タイトル
-  description   String? // 申請内容
-  amount        Float? // 金額（経費・購買申請用）
-  days          Int? // 日数（休暇申請用）
-  hours         Float? // 時間数（残業申請用）
-  details       Json? // その他詳細情報
-  status        String    @default("pending") // pending, in_progress, approved, rejected, withdrawn
-  currentStep   Int       @default(0)
-  priority      String    @default("medium") // low, medium, high, urgent
-  dueDate       DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relations
-  approvalSteps   ApprovalStep[]
-  timelineEntries TimelineEntry[]
+model attendance_settings {
+  id                       String   @id
+  tenantId                 String   @unique
+  workStartTime            String   @default("09:00")
+  workEndTime              String   @default("18:00")
+  breakStartTime           String   @default("12:00")
+  breakEndTime             String   @default("13:00")
+  breakDurationMinutes     Int      @default(60)
+  enableFlexTime           Boolean  @default(false)
+  coreTimeStart            String?
+  coreTimeEnd              String?
+  overtimeThresholdMinutes Int      @default(480)
+  maxOvertimeHoursPerMonth Int      @default(45)
+  allowRemoteCheckIn       Boolean  @default(true)
+  requireLocationOnCheckIn Boolean  @default(false)
+  allowEarlyCheckIn        Boolean  @default(true)
+  earlyCheckInMinutes      Int      @default(30)
+  weeklyHolidays           String[] @default(["saturday", "sunday"])
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime
 
   @@index([tenantId])
-  @@index([requesterId])
-  @@index([tenantId, requesterId]) // 複合インデックス（ユーザー別申請一覧用）
-  @@index([tenantId, status]) // 複合インデックス（ステータス別検索用）
-  @@index([status])
+}
+
+model certification_notification_settings {
+  id                      String   @id
+  tenantId                String   @unique
+  notificationDays        Int[]    @default([90, 60, 30, 14, 7])
+  enableEmailNotification Boolean  @default(true)
+  enablePushNotification  Boolean  @default(true)
+  enableInAppNotification Boolean  @default(true)
+  escalateToManagerDays   Int      @default(30)
+  escalateToHrDays        Int      @default(14)
+  autoUpdateStatus        Boolean  @default(true)
+  warningThresholdDays    Int      @default(30)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime
+}
+
+model certification_notifications {
+  id                 String         @id
+  tenantId           String
+  certificationId    String
+  userId             String
+  notificationType   String
+  daysUntilExpiry    Int
+  sentAt             DateTime?
+  readAt             DateTime?
+  acknowledgedAt     DateTime?
+  emailSent          Boolean        @default(false)
+  pushSent           Boolean        @default(false)
+  inAppSent          Boolean        @default(false)
+  escalatedToManager Boolean        @default(false)
+  escalatedToHr      Boolean        @default(false)
+  managerNotifiedAt  DateTime?
+  hrNotifiedAt       DateTime?
+  createdAt          DateTime       @default(now())
+  certifications     certifications @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@index([certificationId])
+  @@index([sentAt])
+  @@index([tenantId])
+  @@index([tenantId, notificationType])
+  @@index([tenantId, userId])
+  @@index([userId])
+}
+
+model certification_renewals {
+  id                   String         @id
+  tenantId             String
+  certificationId      String
+  userId               String
+  newIssueDate         DateTime       @db.Date
+  newExpiryDate        DateTime?      @db.Date
+  newCredentialId      String?
+  newDocumentUrl       String?
+  newDocumentName      String?
+  notes                String?
+  status               String         @default("pending")
+  reviewedBy           String?
+  reviewedByName       String?
+  reviewedAt           DateTime?
+  reviewComment        String?
+  documentVerified     Boolean        @default(false)
+  dateVerified         Boolean        @default(false)
+  organizationVerified Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime
+  certifications       certifications @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+
+  @@index([certificationId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, userId, status])
+  @@index([userId])
+}
+
+model certifications {
+  id                          String                        @id
+  tenantId                    String
+  profileId                   String
+  userId                      String
+  name                        String
+  organization                String
+  issueDate                   DateTime                      @db.Date
+  expiryDate                  DateTime?                     @db.Date
+  credentialId                String?
+  status                      String                        @default("active")
+  documentUrl                 String?
+  documentName                String?
+  documentSize                String?
+  notes                       String?
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime
+  certification_notifications certification_notifications[]
+  certification_renewals      certification_renewals[]
+  employee_profiles           employee_profiles             @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([tenantId, expiryDate])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([userId])
+}
+
+model company_settings {
+  id                  String    @id
+  tenantId            String    @unique
+  name                String
+  nameKana            String?
+  postalCode          String?
+  address             String?
+  phone               String?
+  fax                 String?
+  email               String?
+  corporateNumber     String?
+  representativeName  String?
+  representativeTitle String?
+  taxOffice           String?
+  taxOfficeCode       String?
+  fiscalYearEnd       String?
+  foundedDate         DateTime? @db.Date
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime
+
+  @@index([tenantId])
+}
+
+model daily_attendance_metrics {
+  id                   String   @id
+  tenantId             String
+  date                 DateTime @db.Date
+  totalEmployees       Int      @default(0)
+  presentCount         Int      @default(0)
+  absentCount          Int      @default(0)
+  leaveCount           Int      @default(0)
+  lateCount            Int      @default(0)
+  earlyLeaveCount      Int      @default(0)
+  remoteCount          Int      @default(0)
+  totalWorkMinutes     Int      @default(0)
+  totalOvertimeMinutes Int      @default(0)
+  avgWorkMinutes       Int      @default(0)
+  attendanceRate       Float    @default(0)
+  calculatedAt         DateTime @default(now())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+
+  @@unique([tenantId, date])
+  @@index([tenantId, date])
+  @@index([tenantId])
+}
+
+model departments {
+  id        String   @id
+  tenantId  String
+  name      String
+  parentId  String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, sortOrder])
+}
+
+model dw_notifications {
+  id          String    @id
+  type        String
+  title       String
+  description String?
+  priority    String    @default("normal")
+  tenantId    String?
+  tenantName  String?
+  invoiceId   String?
+  amount      Int?
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  readBy      String?
+  actionUrl   String?
+  actionLabel String?
+  createdAt   DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([isRead])
+  @@index([tenantId])
   @@index([type])
-  @@index([createdAt])
-  @@map("workflow_requests")
 }
 
-// 承認ステップ
-model ApprovalStep {
-  id            String    @id @default(cuid())
-  tenantId      String // 非正規化（パフォーマンス最適化）
-  workflowId    String
-  order         Int // ステップの順序（0始まり）
-  approverRole  String // direct_manager, hr_manager, finance_manager, etc.
-  approverId    String? // 承認者ID
-  approverName  String? // 承認者名
-  status        String    @default("pending") // pending, approved, rejected, skipped
-  actionDate    DateTime? // 承認/却下日時
-  comments      String? // コメント
-  executionMode String    @default("sequential") // sequential, parallel
-  timeoutHours  Int? // タイムアウト時間
-  isEscalated   Boolean   @default(false)
-  escalatedTo   String? // エスカレーション先
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relations
-  workflow WorkflowRequest @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([workflowId])
-  @@index([tenantId, approverId]) // 複合インデックス（承認者別タスク一覧用）
-  @@index([tenantId, status]) // 複合インデックス（ステータス別検索用）
-  @@index([approverId])
-  @@index([status])
-  @@map("approval_steps")
-}
-
-// タイムライン（履歴）
-model TimelineEntry {
-  id         String   @id @default(cuid())
-  tenantId   String // 非正規化（パフォーマンス最適化）
-  workflowId String
-  action     String // created, submitted, approved, rejected, returned, escalated, etc.
-  actorId    String? // アクション実行者ID
-  actorName  String? // アクション実行者名
-  details    String? // 詳細情報
-  createdAt  DateTime @default(now())
-
-  // Relations
-  workflow WorkflowRequest @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([workflowId])
-  @@index([tenantId, createdAt]) // 複合インデックス（テナント別タイムライン）
-  @@index([createdAt])
-  @@map("timeline_entries")
-}
-
-// 休暇申請
-model LeaveRequest {
-  id             String    @id @default(cuid())
+model employee_change_requests {
+  id             String    @id
   tenantId       String
   userId         String
-  userName       String
-  type           String // paid, sick, special, compensatory, half_day_am, half_day_pm
-  startDate      DateTime  @db.Date
-  endDate        DateTime  @db.Date
-  days           Float // 日数（0.5の半休も対応）
-  reason         String
-  attachments    Json? // 添付ファイル情報（診断書など）[{id, name, size, type, url, uploadedAt}]
-  status         String    @default("draft") // draft, pending, approved, rejected, cancelled
-  approver       String? // 承認者ID
-  approverName   String? // 承認者名
-  approvedDate   DateTime?
-  rejectedReason String?
+  requestType    String
+  fieldName      String?
+  currentValue   String?
+  newValue       String
+  reason         String?
+  attachments    Json?
+  status         String    @default("pending")
+  reviewedBy     String?
+  reviewedByName String?
+  reviewedAt     DateTime?
+  reviewComment  String?
   createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  updatedAt      DateTime
 
   @@index([tenantId])
+  @@index([tenantId, requestType])
+  @@index([tenantId, status])
   @@index([userId])
-  @@index([tenantId, userId]) // 複合インデックス（ユーザー別休暇一覧用）
-  @@index([tenantId, status]) // 複合インデックス（ステータス別検索用）
-  @@index([tenantId, startDate]) // 複合インデックス（日付範囲検索用）
-  @@index([status])
-  @@index([startDate])
-  @@index([endDate])
-  @@map("leave_requests")
 }
 
-// 休暇残数
-model LeaveBalance {
-  id                         String   @id @default(cuid())
+model employee_profiles {
+  id                       String             @id
+  tenantId                 String
+  userId                   String             @unique
+  employeeNumber           String?
+  nameKana                 String?
+  birthDate                DateTime?          @db.Date
+  gender                   String?
+  phone                    String?
+  mobilePhone              String?
+  postalCode               String?
+  address                  String?
+  addressKana              String?
+  emergencyContactName     String?
+  emergencyContactRelation String?
+  emergencyContactPhone    String?
+  bankName                 String?
+  bankBranch               String?
+  bankAccountType          String?
+  bankAccountNumber        String?
+  bankAccountHolder        String?
+  commuteMethod            String?
+  commuteRoute             String?
+  commuteDistance          Float?
+  commuteCost              Int?
+  employmentType           String?
+  contractEndDate          DateTime?          @db.Date
+  completedProjectsCount   Int                @default(0)
+  teamMembersCount         Int                @default(0)
+  yearsOfExperience        Int                @default(0)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime
+  achievements             achievements[]
+  certifications           certifications[]
+  employee_skills          employee_skills[]
+  work_experiences         work_experiences[]
+
+  @@index([tenantId, employeeNumber])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model employee_skills {
+  id                String            @id
+  tenantId          String
+  profileId         String
+  userId            String
+  name              String
+  category          String
+  level             Int               @default(50)
+  selfAssessment    Int?
+  managerAssessment Int?
+  assessedAt        DateTime?
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  employee_profiles employee_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, name])
+  @@index([profileId])
+  @@index([tenantId, category])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model employment_types {
+  id        String   @id
+  tenantId  String
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model general_assets {
+  id                 String           @id
+  tenantId           String
+  assetNumber        String
+  category           String
+  name               String
+  manufacturer       String?
+  model              String?
+  serialNumber       String?
+  specifications     Json?
+  assignedUserId     String?
+  assignedUserName   String?
+  assignedDate       DateTime?        @db.Date
+  ownershipType      String           @default("owned")
+  purchaseDate       DateTime?        @db.Date
+  purchaseCost       Int?
+  leaseCompany       String?
+  leaseMonthlyCost   Int?
+  leaseStartDate     DateTime?        @db.Date
+  leaseEndDate       DateTime?        @db.Date
+  warrantyExpiration DateTime?        @db.Date
+  status             String           @default("active")
+  notes              String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime
+  repair_records     repair_records[]
+
+  @@unique([tenantId, assetNumber])
+  @@index([tenantId, assignedUserId])
+  @@index([tenantId, category])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model health_access_logs {
+  id           String   @id
+  tenantId     String
+  userId       String
+  targetUserId String
+  resourceType String
+  resourceId   String?
+  action       String
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([targetUserId])
+  @@index([tenantId, createdAt])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model health_checkup_summaries {
+  id                     String   @id
+  tenantId               String
+  fiscalYear             Int
+  month                  Int
+  totalEmployees         Int      @default(0)
+  completedCount         Int      @default(0)
+  pendingCount           Int      @default(0)
+  completionRate         Float    @default(0)
+  resultACount           Int      @default(0)
+  resultBCount           Int      @default(0)
+  resultCCount           Int      @default(0)
+  resultDCount           Int      @default(0)
+  resultECount           Int      @default(0)
+  requiresReexamCount    Int      @default(0)
+  requiresTreatmentCount Int      @default(0)
+  requiresGuidanceCount  Int      @default(0)
+  calculatedAt           DateTime @default(now())
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime
+
+  @@unique([tenantId, fiscalYear, month])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId])
+}
+
+model health_checkups {
+  id                     String            @id
+  tenantId               String
+  userId                 String
+  userName               String
+  checkupDate            DateTime          @db.Date
+  checkupType            String
+  medicalInstitution     String?
+  fiscalYear             Int
+  overallResult          String
+  requiresReexam         Boolean           @default(false)
+  requiresTreatment      Boolean           @default(false)
+  requiresGuidance       Boolean           @default(false)
+  height                 Float?
+  weight                 Float?
+  bmi                    Float?
+  waistCircumference     Float?
+  eyesightLeft           Float?
+  eyesightRight          Float?
+  hearingLeft            String?
+  hearingRight           String?
+  bloodPressureSystolic  Int?
+  bloodPressureDiastolic Int?
+  bloodGlucose           Float?
+  hba1c                  Float?
+  triglycerides          Float?
+  hdlCholesterol         Float?
+  ldlCholesterol         Float?
+  got                    Float?
+  gpt                    Float?
+  gammaGtp               Float?
+  uricAcid               Float?
+  urinaryProtein         String?
+  urinaryGlucose         String?
+  followUpStatus         String            @default("none")
+  followUpDate           DateTime?         @db.Date
+  followUpNotes          String?
+  doctorOpinion          String?
+  workRestriction        String?
+  attachments            Json?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime
+  health_findings        health_findings[]
+
+  @@index([tenantId, checkupDate])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([userId])
+}
+
+model health_findings {
+  id              String          @id
+  checkupId       String
+  category        String
+  finding         String
+  severity        String
+  recommendation  String?
+  createdAt       DateTime        @default(now())
+  health_checkups health_checkups @relation(fields: [checkupId], references: [id], onDelete: Cascade)
+
+  @@index([checkupId])
+}
+
+model health_settings {
+  id                        String   @id
+  tenantId                  String   @unique
+  checkupPeriodStart        Int      @default(4)
+  checkupPeriodEnd          Int      @default(3)
+  checkupReminderDays       Int      @default(30)
+  requireCheckupForNewHires Boolean  @default(true)
+  stressCheckPeriodStart    Int      @default(10)
+  stressCheckPeriodEnd      Int      @default(11)
+  stressCheckReminderDays   Int      @default(14)
+  stressCheckRequired       Boolean  @default(true)
+  highStressThresholdA      Int      @default(77)
+  highStressThresholdB      Int      @default(63)
+  allowSelfView             Boolean  @default(true)
+  allowManagerViewStatus    Boolean  @default(true)
+  allowHrViewStats          Boolean  @default(true)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime
+}
+
+model invoice_items {
+  id          String   @id
+  invoiceId   String
+  description String
+  quantity    Int
+  unitPrice   Int
+  amount      Int
+  period      String?
+  invoices    invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model invoice_reminders {
+  id            String    @id
+  tenantId      String
+  invoiceId     String
+  reminderType  String
+  scheduledDate DateTime  @db.Date
+  daysBeforeDue Int
+  status        String    @default("scheduled")
+  sentAt        DateTime?
+  sentTo        String?
+  errorMessage  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  invoices      invoices  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@index([tenantId])
+}
+
+model invoices {
+  id                String              @id
+  invoiceNumber     String              @unique
+  tenantId          String
+  billingMonth      DateTime            @db.Date
+  subtotal          Int
+  tax               Int
+  total             Int
+  status            String              @default("draft")
+  dueDate           DateTime            @db.Date
+  paidDate          DateTime?           @db.Date
+  sentDate          DateTime?
+  billingEmail      String
+  memo              String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  invoice_items     invoice_items[]
+  invoice_reminders invoice_reminders[]
+  tenants           tenants             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payments          payments[]
+
+  @@index([billingMonth])
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([tenantId, billingMonth])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model leave_balances {
+  id                         String   @id
   tenantId                   String
   userId                     String
   year                       Int
@@ -280,1856 +787,751 @@ model LeaveBalance {
   compensatoryLeaveUsed      Float    @default(0)
   compensatoryLeaveRemaining Float    @default(0)
   createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  updatedAt                  DateTime
 
   @@unique([userId, year])
   @@index([tenantId])
+  @@index([tenantId, userId])
   @@index([userId])
-  @@index([tenantId, userId]) // 複合インデックス（ユーザー別休暇残数検索用）
-  @@map("leave_balances")
 }
 
-// ========================================
-// テナント管理・請求書機能
-// ========================================
+model leave_requests {
+  id             String    @id
+  tenantId       String
+  userId         String
+  userName       String
+  type           String
+  startDate      DateTime  @db.Date
+  endDate        DateTime  @db.Date
+  days           Float
+  reason         String
+  attachments    Json?
+  status         String    @default("draft")
+  approver       String?
+  approverName   String?
+  approvedDate   DateTime?
+  rejectedReason String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime
 
-// 料金テーブル（各テナントごとにカスタマイズ可能）
-model PricingTier {
-  id           String   @id @default(cuid())
-  tenantId     String? // nullの場合はデフォルト料金
-  name         String // "1-10人", "11-50人", "51人以上"
-  minUsers     Int // 最小ユーザー数
-  maxUsers     Int? // 最大ユーザー数（nullの場合は無制限）
-  pricePerUser Int // 1人あたりの料金（税抜・円）
-  order        Int      @default(0) // 表示順序
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@map("pricing_tiers")
-}
-
-// 請求書
-model Invoice {
-  id            String    @id @default(cuid())
-  invoiceNumber String    @unique // INV-2025-11-001
-  tenantId      String
-  billingMonth  DateTime  @db.Date // 請求月（2025-11-01）
-  subtotal      Int // 小計（税抜・円）
-  tax           Int // 消費税（円）
-  total         Int // 合計（税込・円）
-  status        String    @default("draft") // draft, sent, paid
-  dueDate       DateTime  @db.Date // 支払い期限
-  paidDate      DateTime? @db.Date // 支払日
-  sentDate      DateTime? // メール送信日時
-  billingEmail  String // 請求先メールアドレス
-  memo          String? // メモ
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relations
-  tenant    Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  items     InvoiceItem[]
-  payments  Payment[]
-  reminders InvoiceReminder[]
-
-  @@index([tenantId])
+  @@index([endDate])
+  @@index([startDate])
   @@index([status])
-  @@index([billingMonth])
-  @@index([invoiceNumber])
-  @@index([tenantId, billingMonth]) // 複合インデックス（テナント別請求書検索用）
-  @@index([tenantId, status]) // 複合インデックス（ステータス別検索用）
-  @@map("invoices")
-}
-
-// 請求明細
-model InvoiceItem {
-  id          String  @id @default(cuid())
-  invoiceId   String
-  description String // "アクティブユーザー 49名（11/1-11/30）"
-  quantity    Int // ユーザー数
-  unitPrice   Int // 単価（税抜・円）
-  amount      Int // 金額（税抜・円）
-  period      String? // "2025-11-01 〜 2025-11-30"
-
-  // Relations
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  @@index([invoiceId])
-  @@map("invoice_items")
-}
-
-// ユーザー履歴（日割り計算用）
-model UserHistory {
-  id          String   @id @default(cuid())
-  tenantId    String
-  userId      String
-  action      String // added, activated, deactivated, deleted
-  date        DateTime @db.Date // 操作日
-  userCount   Int // 操作後のアクティブユーザー数
-  dailyCharge Int // 日次料金（税込・円）
-  memo        String?
-  createdAt   DateTime @default(now())
-
-  // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
   @@index([tenantId])
+  @@index([tenantId, startDate])
+  @@index([tenantId, status])
+  @@index([tenantId, userId])
   @@index([userId])
-  @@index([date])
-  @@index([tenantId, date]) // 複合インデックス（テナント別課金履歴検索用）
-  @@map("user_histories")
 }
 
-// テナント設定
-model TenantSettings {
-  id                String    @id @default(cuid())
-  tenantId          String    @unique
-  trialEndDate      DateTime? @db.Date // 無料トライアル終了日
-  contractStartDate DateTime? @db.Date // 契約開始日
-  contractEndDate   DateTime? @db.Date // 契約終了日
-  billingEmail      String? // 請求先メールアドレス
-  customPricing     Boolean   @default(false) // カスタム料金設定フラグ
-  status            String    @default("trial") // trial, active, suspended, cancelled
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  // Relations
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@map("tenant_settings")
-}
-
-// ========================================
-// マスタデータ（部署・役職・雇用形態）
-// ========================================
-
-// 部署マスタ
-model Department {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  parentId  String? // 親部署ID（階層構造用）
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations（自己参照は削除してシンプル化）
-
-  @@unique([tenantId, name]) // 同一テナント内で部署名は重複不可
-  @@index([tenantId])
-  @@index([tenantId, isActive])
-  @@index([tenantId, sortOrder])
-  @@map("departments")
-}
-
-// 役職マスタ
-model Position {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  level     Int      @default(1) // 役職レベル（1: 一般, 2: 主任, 3: 係長, 4: 課長, 5: 部長, 6: 役員, 7: 代表）
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([tenantId, name]) // 同一テナント内で役職名は重複不可
-  @@index([tenantId])
-  @@index([tenantId, isActive])
-  @@index([tenantId, level])
-  @@map("positions")
-}
-
-// 雇用形態マスタ
-model EmploymentType {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([tenantId, name]) // 同一テナント内で雇用形態名は重複不可
-  @@index([tenantId])
-  @@index([tenantId, isActive])
-  @@map("employment_types")
-}
-
-// ========================================
-// 承認フロー定義
-// ========================================
-
-// 承認フロー定義（マスタ）
-model ApprovalFlowDefinition {
-  id                       String   @id @default(cuid())
-  tenantId                 String
-  name                     String // フロー名
-  description              String? // 説明
-  documentType             String // leave_request, overtime_request, expense_claim, business_trip, purchase_request
-  flowType                 String // organization（組織連動）, custom（カスタム）
-  useOrganizationHierarchy Boolean  @default(false) // 組織連動型の場合true
-  organizationLevels       Int? // 組織連動型: 何階層上まで承認が必要か（1-5）
-  isActive                 Boolean  @default(true)
-  isDefault                Boolean  @default(false) // このドキュメントタイプのデフォルトフロー
-  priority                 Int      @default(1) // 優先度（条件分岐時の判定順）
-  createdBy                String // 作成者ID
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
-
-  // Relations
-  steps      ApprovalFlowStep[]
-  conditions ApprovalFlowCondition[]
-
-  // Note: デフォルトフローの一意性はアプリケーションレベルで制御
-  @@index([tenantId])
-  @@index([tenantId, documentType])
-  @@index([tenantId, documentType, isActive])
-  @@map("approval_flow_definitions")
-}
-
-// 承認フローステップ定義（カスタム型用）
-model ApprovalFlowStep {
-  id                String   @id @default(cuid())
-  flowId            String
-  stepNumber        Int // ステップ番号（1始まり）
-  name              String // ステップ名（例: 直属上司承認、部長承認）
-  executionMode     String   @default("serial") // serial（順次）, parallel（並列）
-  requiredApprovals Int      @default(1) // 必要承認数（並列時）
-  timeoutHours      Int? // タイムアウト時間
-  allowDelegate     Boolean  @default(true) // 代理承認を許可
-  allowSkip         Boolean  @default(false) // スキップを許可
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  // Relations
-  flow      ApprovalFlowDefinition @relation(fields: [flowId], references: [id], onDelete: Cascade)
-  approvers ApprovalFlowApprover[]
-
-  @@index([flowId])
-  @@index([flowId, stepNumber])
-  @@map("approval_flow_steps")
-}
-
-// 承認フローステップの承認者定義
-model ApprovalFlowApprover {
-  id            String   @id @default(cuid())
-  stepId        String
-  approverType  String // user（特定ユーザー）, role（役職）, position_level（役職レベル以上）
-  approverId    String? // approverType=userの場合: ユーザーID
-  approverRole  String? // approverType=roleの場合: manager, hr, finance等
-  positionLevel Int? // approverType=position_levelの場合: 役職レベル
-  order         Int      @default(1) // 承認者の順序（並列時）
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  step ApprovalFlowStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
-
-  @@index([stepId])
-  @@map("approval_flow_approvers")
-}
-
-// 承認フロー適用条件
-model ApprovalFlowCondition {
-  id          String   @id @default(cuid())
-  flowId      String
-  field       String // 条件判定フィールド（amount, days, hours等）
-  operator    String // 演算子（gte, lte, gt, lt, eq, ne）
-  value       Float // 比較値
-  description String? // 条件の説明（例: 5日以上の休暇）
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  flow ApprovalFlowDefinition @relation(fields: [flowId], references: [id], onDelete: Cascade)
-
-  @@index([flowId])
-  @@map("approval_flow_conditions")
-}
-
-// ========================================
-// 会社設定（Company Settings）
-// ========================================
-
-// 会社情報
-model CompanySettings {
-  id       String @id @default(cuid())
-  tenantId String @unique // 1テナント1設定
-
-  // 基本情報
-  name       String // 会社名
-  nameKana   String? // 会社名（カナ）
-  postalCode String? // 郵便番号
-  address    String? // 住所
-  phone      String? // 電話番号
-  fax        String? // FAX番号
-  email      String? // メールアドレス
-
-  // 法人情報
-  corporateNumber     String? // 法人番号（13桁）
-  representativeName  String? // 代表者名
-  representativeTitle String? // 代表者役職
-
-  // 税務情報
-  taxOffice     String? // 所轄税務署
-  taxOfficeCode String? // 税務署コード
-
-  // その他
-  fiscalYearEnd String? // 決算月（MM形式）
-  foundedDate   DateTime? @db.Date // 設立日
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tenantId])
-  @@map("company_settings")
-}
-
-// 給与設定
-model PayrollSettings {
-  id       String @id @default(cuid())
-  tenantId String @unique // 1テナント1設定
-
-  // 支給日設定
-  paymentDay     Int    @default(25) // 支給日（1-31）
-  paymentDayType String @default("current") // current（当月払い）/ next（翌月払い）
-
-  // 締め日設定
-  closingDay Int @default(31) // 締め日（1-31、末日は31）
-
-  // 給与体系
-  defaultPayType String @default("monthly") // monthly / hourly / daily
-
-  // 時間設定
-  standardWorkHours Float @default(8) // 所定労働時間/日
-  standardWorkDays  Int   @default(20) // 所定労働日数/月
-
-  // 控除設定
-  enableHealthInsurance     Boolean @default(true) // 健康保険
-  enablePensionInsurance    Boolean @default(true) // 厚生年金
-  enableEmploymentInsurance Boolean @default(true) // 雇用保険
-  enableIncomeTax           Boolean @default(true) // 所得税
-  enableResidentTax         Boolean @default(true) // 住民税
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tenantId])
-  @@map("payroll_settings")
-}
-
-// 勤怠設定
-model AttendanceSettings {
-  id       String @id @default(cuid())
-  tenantId String @unique // 1テナント1設定
-
-  // 勤務時間設定
-  workStartTime        String @default("09:00") // 始業時刻
-  workEndTime          String @default("18:00") // 終業時刻
-  breakStartTime       String @default("12:00") // 休憩開始時刻
-  breakEndTime         String @default("13:00") // 休憩終了時刻
-  breakDurationMinutes Int    @default(60) // 休憩時間（分）
-
-  // フレックス設定
-  enableFlexTime Boolean @default(false) // フレックス制度
-  coreTimeStart  String? // コアタイム開始
-  coreTimeEnd    String? // コアタイム終了
-
-  // 残業設定
-  overtimeThresholdMinutes Int @default(480) // 残業計算開始（分）= 8時間
-  maxOvertimeHoursPerMonth Int @default(45) // 月間残業上限（時間）
-
-  // 打刻設定
-  allowRemoteCheckIn       Boolean @default(true) // リモート打刻許可
-  requireLocationOnCheckIn Boolean @default(false) // 位置情報必須
-  allowEarlyCheckIn        Boolean @default(true) // 早出打刻許可
-  earlyCheckInMinutes      Int     @default(30) // 早出許容時間（分）
-
-  // 休日設定
-  weeklyHolidays String[] @default(["saturday", "sunday"]) // 週休日
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tenantId])
-  @@map("attendance_settings")
-}
-
-// 年末調整設定
-model YearEndAdjustmentSettings {
-  id       String @id @default(cuid())
-  tenantId String @unique // 1テナント1設定
-
-  // 年末調整期間
-  adjustmentStartMonth Int @default(11) // 開始月（通常11月）
-  adjustmentEndMonth   Int @default(12) // 終了月（通常12月）
-
-  // 控除項目
-  enableBasicDeduction           Boolean @default(true) // 基礎控除
-  enableSpouseDeduction          Boolean @default(true) // 配偶者控除
-  enableDependentDeduction       Boolean @default(true) // 扶養控除
-  enableInsuranceDeduction       Boolean @default(true) // 生命保険料控除
-  enableSocialInsuranceDeduction Boolean @default(true) // 社会保険料控除
-
-  // 源泉徴収票設定
-  withholdingSlipFormat String  @default("standard") // standard / detailed
-  includeQRCode         Boolean @default(false) // QRコード付与（e-Tax対応）
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tenantId])
-  @@map("year_end_adjustment_settings")
-}
-
-// ========================================
-// 法令・制度更新（DW社一括管理 → 全テナント配信）
-// ========================================
-
-// 法令・制度更新マスタ（DW社が管理）
-model LegalUpdate {
-  id String @id @default(cuid())
-
-  // 基本情報
-  title       String // タイトル
-  description String? @db.Text // 詳細説明
-  category    String // tax（税務）, labor（労務）, social_insurance（社会保険）, payroll（給与計算）, attendance（勤怠管理）, safety（安全衛生）, other（その他）
-
-  // 施行情報
-  effectiveDate DateTime @db.Date // 施行日
-  relatedLaws   String? // 関連法令名
-  affectedAreas String[] // 影響範囲（例: ["人事管理", "雇用管理"]）
-
-  // 優先度・ステータス
-  priority    String    @default("medium") // high, medium, low
-  isPublished Boolean   @default(false) // 公開フラグ
-  publishedAt DateTime? // 公開日時
-
-  // 参考情報
-  referenceUrl String? // 参考URL（官報・省庁サイト等）
-  attachments  Json? // 添付ファイル情報
-
-  // メタ情報
-  createdBy String? // 作成者（DW社スタッフID）
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  tenantStatuses TenantLegalStatus[]
+model legal_updates {
+  id                    String                  @id
+  title                 String
+  description           String?
+  category              String
+  effectiveDate         DateTime                @db.Date
+  relatedLaws           String?
+  affectedAreas         String[]
+  priority              String                  @default("medium")
+  isPublished           Boolean                 @default(false)
+  publishedAt           DateTime?
+  referenceUrl          String?
+  attachments           Json?
+  createdBy             String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  tenant_legal_statuses tenant_legal_statuses[]
 
   @@index([category])
   @@index([effectiveDate])
+  @@index([isPublished, effectiveDate])
   @@index([isPublished])
   @@index([priority])
-  @@index([isPublished, effectiveDate])
-  @@map("legal_updates")
 }
 
-// テナント別の法令対応状況
-model TenantLegalStatus {
-  id            String @id @default(cuid())
-  tenantId      String
-  legalUpdateId String
-
-  // 対応状況
-  status      String    @default("pending") // pending（未対応）, in_progress（対応中）, completed（対応済み）
-  notes       String?   @db.Text // メモ・備考
-  completedAt DateTime? // 対応完了日時
-  completedBy String? // 対応完了者
-
-  // メタ情報
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  legalUpdate LegalUpdate @relation(fields: [legalUpdateId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, legalUpdateId]) // 1テナント1法令に対して1レコード
-  @@index([tenantId])
-  @@index([legalUpdateId])
-  @@index([tenantId, status])
-  @@map("tenant_legal_statuses")
-}
-
-// ========================================
-// 資産管理（車両・PC）
-// ========================================
-
-// 業者マスタ
-model Vendor {
-  id            String   @id @default(cuid())
-  tenantId      String
-  name          String // 業者名
-  phone         String? // 電話番号
-  address       String? // 住所
-  contactPerson String? // 担当者名
-  email         String? // メールアドレス
-  rating        Int? // 評価（1-5）
-  notes         String?  @db.Text // メモ
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  // Relations
-  maintenanceRecords MaintenanceRecord[]
+model maintenance_records {
+  id              String    @id
+  tenantId        String
+  vehicleId       String
+  type            String
+  date            DateTime  @db.Date
+  mileage         Int?
+  cost            Int
+  vendorId        String?
+  description     String?
+  nextDueDate     DateTime? @db.Date
+  nextDueMileage  Int?
+  tireType        String?
+  performedBy     String?
+  performedByName String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+  vehicles        vehicles  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vendors         vendors?  @relation(fields: [vendorId], references: [id])
 
   @@index([tenantId])
-  @@index([tenantId, name])
-  @@map("vendors")
+  @@index([tenantId, type])
+  @@index([tenantId, vehicleId])
+  @@index([vehicleId])
 }
 
-// 車両マスタ
-model Vehicle {
-  id            String  @id @default(cuid())
-  tenantId      String
-  vehicleNumber String // 車両番号（社内管理番号）
-  licensePlate  String // ナンバープレート
-  make          String // メーカー
-  model         String // 車種
-  year          Int // 年式
-  color         String? // 色
-
-  // 割当情報
-  assignedUserId   String? // 割当ユーザーID
-  assignedUserName String? // 割当ユーザー名（参照用）
-  assignedDate     DateTime? @db.Date // 割当日
-
-  // 所有・リース情報
-  ownershipType    String    @default("owned") // owned, leased, rental
-  purchaseDate     DateTime? @db.Date // 購入日
-  purchaseCost     Int? // 購入価格
-  leaseCompany     String? // リース会社
-  leaseMonthlyCost Int? // リース月額
-  leaseStartDate   DateTime? @db.Date // リース開始日
-  leaseEndDate     DateTime? @db.Date // リース終了日
-  leaseContact     String? // リース担当者
-  leasePhone       String? // リース電話番号
-
-  // 期限管理
-  inspectionDate  DateTime? @db.Date // 次回車検日
-  maintenanceDate DateTime? @db.Date // 次回点検日
-  insuranceDate   DateTime? @db.Date // 保険更新日
-
-  // タイヤ情報
-  currentTireType String    @default("summer") // summer, winter
-  tireChangeDate  DateTime? @db.Date // 次回タイヤ履き替え予定日
-
-  // ステータス
-  status String @default("active") // active, maintenance, retired
-
-  // 走行距離管理
-  mileageTracking Boolean @default(true) // 走行距離管理ON/OFF
-  currentMileage  Int? // 現在の総走行距離
-
-  notes     String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  monthlyMileages    MonthlyMileage[]
-  maintenanceRecords MaintenanceRecord[]
-
-  @@unique([tenantId, vehicleNumber])
-  @@index([tenantId])
-  @@index([tenantId, status])
-  @@index([tenantId, assignedUserId])
-  @@map("vehicles")
-}
-
-// 月次走行距離
-model MonthlyMileage {
-  id             String   @id @default(cuid())
+model monthly_mileages {
+  id             String   @id
   tenantId       String
   vehicleId      String
-  month          String // YYYY-MM
-  distance       Int // km
-  recordedBy     String? // 記録者ID
-  recordedByName String? // 記録者名
+  month          String
+  distance       Int
+  recordedBy     String?
+  recordedByName String?
   createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  // Relations
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  updatedAt      DateTime
+  vehicles       vehicles @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
   @@unique([vehicleId, month])
   @@index([tenantId])
   @@index([vehicleId])
-  @@map("monthly_mileages")
 }
 
-// メンテナンス記録
-model MaintenanceRecord {
-  id              String    @id @default(cuid())
+model org_units {
+  id              String      @id
   tenantId        String
-  vehicleId       String
-  type            String // oil_change, tire_change, inspection, shaken, repair, other
-  date            DateTime  @db.Date
-  mileage         Int? // 実施時の走行距離
-  cost            Int // 費用
-  vendorId        String? // 業者ID
-  description     String? // 説明
-  nextDueDate     DateTime? @db.Date // 次回実施予定日
-  nextDueMileage  Int? // 次回実施予定距離
-  tireType        String? // summer, winter（タイヤ交換時）
-  performedBy     String? // 作業者ID
-  performedByName String? // 作業者名
-  notes           String?   @db.Text
+  name            String
+  parentId        String?
+  level           Int         @default(0)
+  headUserId      String?
+  type            String
+  memberCount     Int         @default(0)
+  description     String?
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime
+  org_units       org_units?  @relation("org_unitsToorg_units", fields: [parentId], references: [id])
+  other_org_units org_units[] @relation("org_unitsToorg_units")
+  tenants         tenants     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users           users[]
+
+  @@index([parentId])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, parentId])
+}
+
+model payments {
+  id              String    @id
+  tenantId        String
+  invoiceId       String
+  amount          Int
+  paymentDate     DateTime  @db.Date
+  paymentMethod   String    @default("bank_transfer")
+  status          String    @default("completed")
+  transactionId   String?
+  notes           String?
+  confirmedBy     String?
+  confirmedByName String?
+  confirmedAt     DateTime?
   createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  updatedAt       DateTime
+  invoices        invoices  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  // Relations
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  vendor  Vendor? @relation(fields: [vendorId], references: [id])
-
+  @@index([invoiceId])
   @@index([tenantId])
-  @@index([vehicleId])
-  @@index([tenantId, vehicleId])
-  @@index([tenantId, type])
-  @@map("maintenance_records")
+  @@index([tenantId, paymentDate])
+  @@index([tenantId, status])
 }
 
-// PC資産
-model PCAsset {
-  id           String  @id @default(cuid())
-  tenantId     String
-  assetNumber  String // 資産番号
-  manufacturer String // メーカー
-  model        String // 型番
-  serialNumber String // シリアル番号
-  cpu          String? // CPU
-  memory       String? // メモリ
-  storage      String? // ストレージ
-  os           String? // OS
+model payroll_settings {
+  id                        String   @id
+  tenantId                  String   @unique
+  paymentDay                Int      @default(25)
+  paymentDayType            String   @default("current")
+  closingDay                Int      @default(31)
+  defaultPayType            String   @default("monthly")
+  standardWorkHours         Float    @default(8)
+  standardWorkDays          Int      @default(20)
+  enableHealthInsurance     Boolean  @default(true)
+  enablePensionInsurance    Boolean  @default(true)
+  enableEmploymentInsurance Boolean  @default(true)
+  enableIncomeTax           Boolean  @default(true)
+  enableResidentTax         Boolean  @default(true)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime
 
-  // 割当情報
-  assignedUserId   String? // 割当ユーザーID
-  assignedUserName String? // 割当ユーザー名（参照用）
-  assignedDate     DateTime? @db.Date // 割当日
+  @@index([tenantId])
+}
 
-  // 所有・リース情報
-  ownershipType    String    @default("owned") // owned, leased, rental
-  purchaseDate     DateTime? @db.Date // 購入日
-  purchaseCost     Int? // 購入価格
-  leaseCompany     String? // リース会社
-  leaseMonthlyCost Int? // リース月額
-  leaseStartDate   DateTime? @db.Date // リース開始日
-  leaseEndDate     DateTime? @db.Date // リース終了日
-  leaseContact     String? // リース担当者
-  leasePhone       String? // リース電話番号
-
-  // 期限管理
-  warrantyExpiration DateTime? @db.Date // 保証期限
-
-  // ステータス
-  status String @default("active") // active, maintenance, retired
-
-  notes     String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  softwareLicenses SoftwareLicense[]
-  repairRecords    RepairRecord[]
+model pc_assets {
+  id                 String              @id
+  tenantId           String
+  assetNumber        String
+  manufacturer       String
+  model              String
+  serialNumber       String
+  cpu                String?
+  memory             String?
+  storage            String?
+  os                 String?
+  assignedUserId     String?
+  assignedUserName   String?
+  assignedDate       DateTime?           @db.Date
+  ownershipType      String              @default("owned")
+  purchaseDate       DateTime?           @db.Date
+  purchaseCost       Int?
+  leaseCompany       String?
+  leaseMonthlyCost   Int?
+  leaseStartDate     DateTime?           @db.Date
+  leaseEndDate       DateTime?           @db.Date
+  leaseContact       String?
+  leasePhone         String?
+  warrantyExpiration DateTime?           @db.Date
+  status             String              @default("active")
+  notes              String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime
+  repair_records     repair_records[]
+  software_licenses  software_licenses[]
 
   @@unique([tenantId, assetNumber])
+  @@index([tenantId, assignedUserId])
   @@index([tenantId])
   @@index([tenantId, status])
-  @@index([tenantId, assignedUserId])
-  @@map("pc_assets")
 }
 
-// 汎用資産（モニター、プリンター、スマートフォン等）
-model GeneralAsset {
-  id             String  @id @default(cuid())
-  tenantId       String
-  assetNumber    String // 資産番号
-  category       String // monitor, printer, phone, tablet, network_device, other
-  name           String // 資産名
-  manufacturer   String? // メーカー
-  model          String? // 型番
-  serialNumber   String? // シリアル番号
-  specifications Json? // 仕様詳細（カテゴリ別）
-
-  // 割当情報
-  assignedUserId   String? // 割当ユーザーID
-  assignedUserName String? // 割当ユーザー名（参照用）
-  assignedDate     DateTime? @db.Date // 割当日
-
-  // 所有・リース情報
-  ownershipType    String    @default("owned") // owned, leased, rental
-  purchaseDate     DateTime? @db.Date // 購入日
-  purchaseCost     Int? // 購入価格
-  leaseCompany     String? // リース会社
-  leaseMonthlyCost Int? // リース月額
-  leaseStartDate   DateTime? @db.Date // リース開始日
-  leaseEndDate     DateTime? @db.Date // リース終了日
-
-  // 期限管理
-  warrantyExpiration DateTime? @db.Date // 保証期限
-
-  // ステータス
-  status String @default("active") // active, maintenance, retired
-
-  notes     String?  @db.Text
+model positions {
+  id        String   @id
+  tenantId  String
+  name      String
+  level     Int      @default(1)
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  repairRecords RepairRecord[]
-
-  @@unique([tenantId, assetNumber])
-  @@index([tenantId])
-  @@index([tenantId, category])
-  @@index([tenantId, status])
-  @@index([tenantId, assignedUserId])
-  @@map("general_assets")
-}
-
-// 修理記録（PC・その他資産共通）
-model RepairRecord {
-  id       String @id @default(cuid())
-  tenantId String
-
-  // 資産参照（PC または 汎用資産）
-  pcAssetId      String? // PC資産ID
-  generalAssetId String? // 汎用資産ID
-
-  // 修理情報
-  repairType  String // screen, battery, keyboard, storage, power_supply, network, other
-  date        DateTime @db.Date
-  cost        Int // 費用
-  vendorId    String? // 業者ID
-  vendorName  String? // 業者名（参照用）
-  symptom     String? // 症状
-  description String? // 作業内容
-
-  // ステータス
-  status        String    @default("completed") // pending, in_progress, completed
-  completedDate DateTime? @db.Date // 完了日
-
-  performedBy     String? // 作業者ID
-  performedByName String? // 作業者名
-  notes           String?  @db.Text
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  // Relations
-  pcAsset      PCAsset?      @relation(fields: [pcAssetId], references: [id], onDelete: Cascade)
-  generalAsset GeneralAsset? @relation(fields: [generalAssetId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([pcAssetId])
-  @@index([generalAssetId])
-  @@index([tenantId, repairType])
-  @@index([tenantId, date])
-  @@map("repair_records")
-}
-
-// ソフトウェアライセンス（PC紐づけ）
-model SoftwareLicense {
-  id             String    @id @default(cuid())
-  tenantId       String
-  pcAssetId      String
-  softwareName   String // ソフトウェア名
-  licenseKey     String? // ライセンスキー
-  expirationDate DateTime? @db.Date // 期限
-  monthlyCost    Int? // 月額費用
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  // Relations
-  pcAsset PCAsset @relation(fields: [pcAssetId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([pcAssetId])
-  @@map("software_licenses")
-}
-
-// ========================================
-// SaaS管理
-// ========================================
-
-// SaaSサービスマスタ
-model SaaSService {
-  id          String  @id @default(cuid())
-  tenantId    String
-  name        String // サービス名
-  category    String // communication, productivity, development, design, hr, finance, marketing, sales, security, storage, other
-  vendor      String? // ベンダー名
-  website     String? // 公式サイト
-  logo        String? // ロゴURL
-  description String? @db.Text
-
-  // 契約タイプ
-  licenseType String // user-based, fixed, usage-based
-
-  // セキュリティ情報
-  securityRating String? // A, B, C, D
-  ssoEnabled     Boolean @default(false)
-  mfaEnabled     Boolean @default(false)
-
-  // 管理情報
-  adminEmail        String?
-  supportUrl        String?
-  contractStartDate DateTime? @db.Date
-  contractEndDate   DateTime? @db.Date
-  autoRenew         Boolean   @default(false)
-
-  // ステータス
-  isActive Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  plans        SaaSLicensePlan[]
-  assignments  SaaSLicenseAssignment[]
-  monthlyCosts SaaSMonthlyCost[]
+  updatedAt DateTime
 
   @@unique([tenantId, name])
   @@index([tenantId])
-  @@index([tenantId, category])
   @@index([tenantId, isActive])
-  @@map("saas_services")
+  @@index([tenantId, level])
 }
 
-// SaaSライセンスプラン
-model SaaSLicensePlan {
-  id           String   @id @default(cuid())
-  tenantId     String
-  serviceId    String
-  planName     String // プラン名
-  billingCycle String // monthly, yearly
-  pricePerUser Int? // ユーザー単価（user-based）
-  fixedPrice   Int? // 固定価格（fixed）
-  currency     String   @default("JPY") // JPY, USD
-  maxUsers     Int? // 最大ユーザー数
-  features     String[] // 機能リスト
-  isActive     Boolean  @default(true)
+model pricing_tiers {
+  id           String   @id
+  tenantId     String?
+  name         String
+  minUsers     Int
+  maxUsers     Int?
+  pricePerUser Int
+  order        Int      @default(0)
   createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Relations
-  service     SaaSService             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  assignments SaaSLicenseAssignment[]
+  updatedAt    DateTime
+  tenants      tenants? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
-  @@index([serviceId])
-  @@map("saas_license_plans")
 }
 
-// SaaSライセンス割り当て
-model SaaSLicenseAssignment {
-  id        String @id @default(cuid())
-  tenantId  String
-  serviceId String
-  planId    String
+model repair_records {
+  id              String          @id
+  tenantId        String
+  pcAssetId       String?
+  generalAssetId  String?
+  repairType      String
+  date            DateTime        @db.Date
+  cost            Int
+  vendorId        String?
+  vendorName      String?
+  symptom         String?
+  description     String?
+  status          String          @default("completed")
+  completedDate   DateTime?       @db.Date
+  performedBy     String?
+  performedByName String?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  general_assets  general_assets? @relation(fields: [generalAssetId], references: [id], onDelete: Cascade)
+  pc_assets       pc_assets?      @relation(fields: [pcAssetId], references: [id], onDelete: Cascade)
 
-  // ユーザーライセンス型の場合
-  userId    String? // ユーザーID
-  userName  String? // ユーザー名（参照用）
-  userEmail String? // アカウントメールアドレス
-
-  // 固定契約型の場合
-  departmentId   String? // 部署ID
-  departmentName String? // 部署名（参照用）
-
-  // ステータス
-  status       String    @default("active") // active, inactive, pending
-  assignedDate DateTime  @db.Date
-  revokedDate  DateTime? @db.Date
-
-  // 使用状況
-  lastUsedAt DateTime?
-  usageCount Int? // 月次使用回数
-
-  notes     String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  service SaaSService     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  plan    SaaSLicensePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-
+  @@index([generalAssetId])
+  @@index([pcAssetId])
+  @@index([tenantId, date])
   @@index([tenantId])
-  @@index([serviceId])
+  @@index([tenantId, repairType])
+}
+
+model saas_license_assignments {
+  id                 String             @id
+  tenantId           String
+  serviceId          String
+  planId             String
+  userId             String?
+  userName           String?
+  userEmail          String?
+  departmentId       String?
+  departmentName     String?
+  status             String             @default("active")
+  assignedDate       DateTime           @db.Date
+  revokedDate        DateTime?          @db.Date
+  lastUsedAt         DateTime?
+  usageCount         Int?
+  notes              String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  saas_license_plans saas_license_plans @relation(fields: [planId], references: [id], onDelete: Cascade)
+  saas_services      saas_services      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
   @@index([planId])
-  @@index([tenantId, userId])
+  @@index([serviceId])
+  @@index([tenantId])
   @@index([tenantId, status])
-  @@map("saas_license_assignments")
+  @@index([tenantId, userId])
 }
 
-// SaaS月次コスト記録
-model SaaSMonthlyCost {
-  id               String   @id @default(cuid())
+model saas_license_plans {
+  id                       String                     @id
+  tenantId                 String
+  serviceId                String
+  planName                 String
+  billingCycle             String
+  pricePerUser             Int?
+  fixedPrice               Int?
+  currency                 String                     @default("JPY")
+  maxUsers                 Int?
+  features                 String[]
+  isActive                 Boolean                    @default(true)
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  saas_license_assignments saas_license_assignments[]
+  saas_services            saas_services              @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([serviceId])
+  @@index([tenantId])
+}
+
+model saas_monthly_costs {
+  id               String        @id
   tenantId         String
   serviceId        String
-  period           String // YYYY-MM
-  userLicenseCount Int      @default(0)
-  userLicenseCost  Int      @default(0)
-  fixedCost        Int      @default(0)
-  usageCost        Int      @default(0)
-  totalCost        Int      @default(0)
-  currency         String   @default("JPY")
-  activeUserIds    String[] // アクティブユーザーIDリスト
-  inactiveUserIds  String[] // 非アクティブユーザーIDリスト
-  notes            String?  @db.Text
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Relations
-  service SaaSService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  period           String
+  userLicenseCount Int           @default(0)
+  userLicenseCost  Int           @default(0)
+  fixedCost        Int           @default(0)
+  usageCost        Int           @default(0)
+  totalCost        Int           @default(0)
+  currency         String        @default("JPY")
+  activeUserIds    String[]
+  inactiveUserIds  String[]
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime
+  saas_services    saas_services @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@unique([serviceId, period])
-  @@index([tenantId])
   @@index([serviceId])
+  @@index([tenantId])
   @@index([tenantId, period])
-  @@map("saas_monthly_costs")
 }
 
-// ========================================
-// 健康管理（Health Management）
-// ========================================
+model saas_services {
+  id                       String                     @id
+  tenantId                 String
+  name                     String
+  category                 String
+  vendor                   String?
+  website                  String?
+  logo                     String?
+  description              String?
+  licenseType              String
+  securityRating           String?
+  ssoEnabled               Boolean                    @default(false)
+  mfaEnabled               Boolean                    @default(false)
+  adminEmail               String?
+  supportUrl               String?
+  contractStartDate        DateTime?                  @db.Date
+  contractEndDate          DateTime?                  @db.Date
+  autoRenew                Boolean                    @default(false)
+  isActive                 Boolean                    @default(true)
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime
+  saas_license_assignments saas_license_assignments[]
+  saas_license_plans       saas_license_plans[]
+  saas_monthly_costs       saas_monthly_costs[]
 
-// 健康診断
-model HealthCheckup {
-  id       String @id @default(cuid())
-  tenantId String
-  userId   String
-  userName String // 非正規化（参照用）
-
-  // 受診情報
-  checkupDate        DateTime @db.Date // 受診日
-  checkupType        String // regular（定期健診）, hiring（雇入時健診）, specific（特定健診）
-  medicalInstitution String? // 医療機関名
-  fiscalYear         Int // 年度
-
-  // 結果概要
-  overallResult     String // A, B, C, D, E（総合判定）
-  requiresReexam    Boolean @default(false) // 要再検査
-  requiresTreatment Boolean @default(false) // 要治療
-  requiresGuidance  Boolean @default(false) // 要保健指導
-
-  // 身体測定
-  height             Float? // 身長(cm)
-  weight             Float? // 体重(kg)
-  bmi                Float? // BMI
-  waistCircumference Float? // 腹囲(cm)
-  eyesightLeft       Float? // 視力（左）
-  eyesightRight      Float? // 視力（右）
-  hearingLeft        String? // 聴力（左）normal/abnormal
-  hearingRight       String? // 聴力（右）normal/abnormal
-
-  // 血圧
-  bloodPressureSystolic  Int? // 収縮期血圧
-  bloodPressureDiastolic Int? // 拡張期血圧
-
-  // 血液検査
-  bloodGlucose   Float? // 空腹時血糖
-  hba1c          Float? // HbA1c
-  triglycerides  Float? // 中性脂肪
-  hdlCholesterol Float? // HDLコレステロール
-  ldlCholesterol Float? // LDLコレステロール
-  got            Float? // GOT(AST)
-  gpt            Float? // GPT(ALT)
-  gammaGtp       Float? // γ-GTP
-  uricAcid       Float? // 尿酸
-
-  // 尿検査
-  urinaryProtein String? // 尿蛋白 -, +-, +, ++, +++
-  urinaryGlucose String? // 尿糖 -, +-, +, ++, +++
-
-  // フォローアップ
-  followUpStatus String    @default("none") // none, scheduled, completed
-  followUpDate   DateTime? @db.Date // フォローアップ予定日
-  followUpNotes  String?   @db.Text // フォローアップメモ
-
-  // 産業医意見
-  doctorOpinion   String? @db.Text // 産業医所見
-  workRestriction String? // none, partial, full（就業制限）
-
-  // 添付ファイル
-  attachments Json? // 添付ファイル情報
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  findings HealthFinding[]
-
+  @@unique([tenantId, name])
+  @@index([tenantId, category])
   @@index([tenantId])
-  @@index([userId])
-  @@index([tenantId, userId])
-  @@index([tenantId, fiscalYear])
-  @@index([tenantId, checkupDate])
-  @@map("health_checkups")
+  @@index([tenantId, isActive])
 }
 
-// 健康診断所見
-model HealthFinding {
-  id             String   @id @default(cuid())
-  checkupId      String
-  category       String // 検査カテゴリ（blood_pressure, blood_sugar, lipid, liver, etc.）
-  finding        String // 所見内容
-  severity       String // normal, caution, warning, critical
-  recommendation String? // 推奨事項
-  createdAt      DateTime @default(now())
+model software_licenses {
+  id             String    @id
+  tenantId       String
+  pcAssetId      String
+  softwareName   String
+  licenseKey     String?
+  expirationDate DateTime? @db.Date
+  monthlyCost    Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime
+  pc_assets      pc_assets @relation(fields: [pcAssetId], references: [id], onDelete: Cascade)
 
-  // Relations
-  checkup HealthCheckup @relation(fields: [checkupId], references: [id], onDelete: Cascade)
-
-  @@index([checkupId])
-  @@map("health_findings")
-}
-
-// ストレスチェック
-model StressCheck {
-  id       String @id @default(cuid())
-  tenantId String
-  userId   String
-  userName String // 非正規化（参照用）
-
-  // 実施情報
-  fiscalYear Int // 年度
-  checkDate  DateTime? @db.Date // 受検日
-  status     String    @default("pending") // pending, in_progress, completed, interview_recommended
-
-  // スコア（厚労省標準57問版）
-  stressFactorsScore  Int? // A群: 仕事のストレス要因（17問 17-68点）
-  stressResponseScore Int? // B群: 心身のストレス反応（29問 29-116点）
-  socialSupportScore  Int? // C群: 周囲のサポート（9問 9-36点）
-  totalScore          Int? // 合計スコア
-
-  // 判定
-  isHighStress     Boolean @default(false) // 高ストレス者判定
-  highStressReason String? // 高ストレス判定理由
-
-  // 面談
-  interviewRequested   Boolean   @default(false) // 面談申出
-  interviewRequestedAt DateTime?
-  interviewScheduled   Boolean   @default(false) // 面談予定
-  interviewScheduledAt DateTime?
-  interviewCompleted   Boolean   @default(false) // 面談完了
-  interviewCompletedAt DateTime?
-  interviewNotes       String?   @db.Text // 面談記録
-
-  // 産業医意見
-  doctorName    String? // 実施者名
-  doctorOpinion String? @db.Text // 産業医意見
-
-  // 回答データ（匿名化のため詳細は保存しない選択も可能）
-  responses Json? // 回答データ（オプション）
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([tenantId, userId, fiscalYear]) // 1人1年度1回
+  @@index([pcAssetId])
   @@index([tenantId])
-  @@index([userId])
-  @@index([tenantId, fiscalYear])
-  @@index([tenantId, isHighStress])
-  @@map("stress_checks")
 }
 
-// ストレスチェック質問マスタ
-model StressCheckQuestion {
-  id             String   @id @default(cuid())
-  tenantId       String? // nullの場合はシステム共通
-  questionNumber Int // 質問番号（1-57）
-  category       String // A（ストレス要因）, B（ストレス反応）, C（サポート）
-  subcategory    String // 小分類
-  questionText   String // 質問文
-  isReverse      Boolean  @default(false) // 逆転項目
+model stress_check_questions {
+  id             String   @id
+  tenantId       String?
+  questionNumber Int
+  category       String
+  subcategory    String
+  questionText   String
+  isReverse      Boolean  @default(false)
   sortOrder      Int      @default(0)
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  updatedAt      DateTime
 
   @@unique([tenantId, questionNumber])
-  @@index([tenantId])
   @@index([category])
-  @@map("stress_check_questions")
-}
-
-// 健康管理設定
-model HealthSettings {
-  id       String @id @default(cuid())
-  tenantId String @unique
-
-  // 健康診断設定
-  checkupPeriodStart        Int     @default(4) // 受診期間開始月
-  checkupPeriodEnd          Int     @default(3) // 受診期間終了月
-  checkupReminderDays       Int     @default(30) // リマインド日数
-  requireCheckupForNewHires Boolean @default(true) // 雇入時健診必須
-
-  // ストレスチェック設定
-  stressCheckPeriodStart  Int     @default(10) // 実施期間開始月
-  stressCheckPeriodEnd    Int     @default(11) // 実施期間終了月
-  stressCheckReminderDays Int     @default(14) // リマインド日数
-  stressCheckRequired     Boolean @default(true) // 実施義務（50人以上）
-
-  // 高ストレス者判定基準
-  highStressThresholdA Int @default(77) // A+B群の合計点
-  highStressThresholdB Int @default(63) // B群のみ
-
-  // アクセス権限
-  allowSelfView          Boolean @default(true) // 本人閲覧可
-  allowManagerViewStatus Boolean @default(true) // 上司の受診状況閲覧可
-  allowHrViewStats       Boolean @default(true) // 人事の統計閲覧可
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("health_settings")
-}
-
-// 健康管理閲覧ログ（要配慮個人情報のため）
-model HealthAccessLog {
-  id           String   @id @default(cuid())
-  tenantId     String
-  userId       String // 閲覧者
-  targetUserId String // 閲覧対象
-  resourceType String // checkup, stress_check, report
-  resourceId   String? // 対象リソースID
-  action       String // view, export, print
-  ipAddress    String?
-  userAgent    String?
-  createdAt    DateTime @default(now())
-
   @@index([tenantId])
-  @@index([userId])
-  @@index([targetUserId])
-  @@index([tenantId, createdAt])
-  @@map("health_access_logs")
 }
 
-// ========================================
-// お知らせ（Announcements）
-// ========================================
-
-// お知らせ
-model Announcement {
-  id       String @id @default(cuid())
-  tenantId String
-
-  // コンテンツ
-  title    String // タイトル
-  content  String @db.Text // 本文
-  type     String @default("general") // general, system, emergency, event, policy
-  priority String @default("normal") // high, normal, low
-
-  // 対象者設定
-  target            String   @default("all") // all, department, role
-  targetDepartments String[] // 対象部署リスト（target=departmentの場合）
-  targetRoles       String[] // 対象ロールリスト（target=roleの場合）
-
-  // 公開設定
-  published   Boolean   @default(false)
-  publishedAt DateTime?
-  startDate   DateTime  @db.Date // 表示開始日
-  endDate     DateTime? @db.Date // 表示終了日
-
-  // アクション設定
-  requiresAction Boolean   @default(false) // アクション必須フラグ
-  actionLabel    String? // アクションボタンラベル
-  actionUrl      String? // アクションURL
-  actionDeadline DateTime? @db.Date // アクション期限
-
-  // 作成者情報
-  createdBy     String // 作成者ID
-  createdByName String? // 作成者名（非正規化）
-
-  // タイムスタンプ
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  reads AnnouncementRead[]
-
-  @@index([tenantId])
-  @@index([tenantId, published])
-  @@index([tenantId, startDate])
-  @@index([published, startDate, endDate])
-  @@map("announcements")
-}
-
-// お知らせ既読状態
-model AnnouncementRead {
-  id             String @id @default(cuid())
-  tenantId       String
-  announcementId String
-  userId         String
-
-  // 既読情報
-  readAt DateTime @default(now())
-
-  // アクション完了（requiresAction=trueの場合）
-  actionCompleted   Boolean   @default(false)
-  actionCompletedAt DateTime?
-
-  // Relations
-  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
-
-  @@unique([announcementId, userId]) // 1ユーザー1お知らせに対して1レコード
-  @@index([tenantId])
-  @@index([announcementId])
-  @@index([userId])
-  @@index([tenantId, userId])
-  @@map("announcement_reads")
-}
-
-// ========================================
-// 従業員プロフィール・マイアカウント
-// ========================================
-
-// 従業員プロフィール（会社管理情報）
-model EmployeeProfile {
-  id       String @id @default(cuid())
-  tenantId String
-  userId   String @unique // 1ユーザー1プロフィール
-
-  // 基本情報（会社管理）
-  employeeNumber String? // 社員番号
-  nameKana       String? // 氏名（カナ）
-  birthDate      DateTime? @db.Date // 生年月日
-  gender         String? // male, female, other, prefer_not_to_say
-
-  // 連絡先（会社管理）
-  phone            String? // 電話番号
-  mobilePhone      String? // 携帯電話
-  postalCode       String? // 郵便番号
-  address          String? // 住所
-  addressKana      String? // 住所（カナ）
-
-  // 緊急連絡先
-  emergencyContactName         String? // 緊急連絡先氏名
-  emergencyContactRelation     String? // 続柄
-  emergencyContactPhone        String? // 緊急連絡先電話番号
-
-  // 銀行口座情報
-  bankName       String? // 銀行名
-  bankBranch     String? // 支店名
-  bankAccountType String? // ordinary（普通）, current（当座）
-  bankAccountNumber String? // 口座番号
-  bankAccountHolder String? // 口座名義
-
-  // 通勤情報
-  commuteMethod   String? // train, bus, car, bicycle, walk, other
-  commuteRoute    String? @db.Text // 通勤経路詳細
-  commuteDistance Float? // 通勤距離（km）
-  commuteCost     Int? // 通勤費（円/月）
-
-  // 雇用情報
-  employmentType  String? // full_time, part_time, contract, temporary
-  contractEndDate DateTime? @db.Date // 契約終了日（契約社員の場合）
-
-  // 統計情報（キャッシュ）
-  completedProjectsCount Int @default(0)
-  teamMembersCount       Int @default(0)
-  yearsOfExperience      Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  certifications Certification[]
-  skills         EmployeeSkill[]
-  experiences    WorkExperience[]
-  achievements   Achievement[]
-
-  @@index([tenantId])
-  @@index([userId])
-  @@index([tenantId, employeeNumber])
-  @@map("employee_profiles")
-}
-
-// 資格・免許・認定
-model Certification {
-  id        String @id @default(cuid())
-  tenantId  String
-  profileId String
-  userId    String // 非正規化（検索用）
-
-  // 資格情報
-  name           String // 資格名
-  organization   String // 発行機関
-  issueDate      DateTime @db.Date // 取得日
-  expiryDate     DateTime? @db.Date // 有効期限（nullは無期限）
-  credentialId   String? // 認定番号
-
-  // ステータス
-  status String @default("active") // active, expiring, expired
-
-  // 添付ファイル
-  documentUrl  String? // 証明書ファイルURL
-  documentName String? // ファイル名
-  documentSize String? // ファイルサイズ
-
-  // メモ
-  notes String? @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  profile       EmployeeProfile           @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  notifications CertificationNotification[]
-  renewals      CertificationRenewal[]
-
-  @@index([tenantId])
-  @@index([profileId])
-  @@index([userId])
-  @@index([tenantId, status])
-  @@index([tenantId, expiryDate])
-  @@map("certifications")
-}
-
-// スキル・専門性
-model EmployeeSkill {
-  id        String @id @default(cuid())
-  tenantId  String
-  profileId String
-  userId    String // 非正規化（検索用）
-
-  // スキル情報
-  name     String // スキル名
-  category String // クラウド, フロントエンド, バックエンド, データベース, BI, CRM, マーケティング, etc.
-  level    Int    @default(50) // 熟練度（0-100）
-
-  // 自己評価・他者評価
-  selfAssessment     Int? // 自己評価
-  managerAssessment  Int? // 上司評価
-  assessedAt         DateTime? // 評価日
-
-  notes String? @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  profile EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@unique([profileId, name]) // 同一プロフィール内でスキル名は重複不可
-  @@index([tenantId])
-  @@index([profileId])
-  @@index([userId])
-  @@index([tenantId, category])
-  @@map("employee_skills")
-}
-
-// 経歴（職歴）
-model WorkExperience {
-  id        String @id @default(cuid())
-  tenantId  String
-  profileId String
-  userId    String // 非正規化（検索用）
-
-  // 経歴情報
-  position    String // 役職
-  company     String // 会社名
-  startDate   DateTime @db.Date // 開始日
-  endDate     DateTime? @db.Date // 終了日（nullは現在）
-  isCurrent   Boolean @default(false) // 現職フラグ
-  description String? @db.Text // 職務内容
-
-  // 実績
-  achievements String[] // 主な成果
-
-  // 使用スキル
-  skills String[] // タグとして使用したスキル
-
-  // 表示順序
-  sortOrder Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  profile EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([profileId])
-  @@index([userId])
-  @@index([tenantId, isCurrent])
-  @@map("work_experiences")
-}
-
-// 実績・成果
-model Achievement {
-  id        String @id @default(cuid())
-  tenantId  String
-  profileId String
-  userId    String // 非正規化（検索用）
-
-  // 実績情報
-  title       String // タイトル
-  description String? @db.Text // 説明
-  date        DateTime @db.Date // 達成日
-  category    String? // project, award, publication, patent, etc.
-
-  // 添付ファイル
-  attachments Json? // [{name, url, size}]
-
-  // 公開設定
-  isPublic Boolean @default(true) // 社内公開
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  profile EmployeeProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([profileId])
-  @@index([userId])
-  @@index([tenantId, category])
-  @@map("achievements")
-}
-
-// 変更申請（従業員情報の変更リクエスト）
-model EmployeeChangeRequest {
-  id       String @id @default(cuid())
-  tenantId String
-  userId   String // 申請者
-
-  // 変更内容
-  requestType String // basic_info, certification, skill, experience, achievement
-  fieldName   String? // 変更フィールド名（basic_infoの場合）
-  currentValue String? @db.Text // 現在の値
-  newValue    String @db.Text // 新しい値
-  reason      String? @db.Text // 変更理由
-
-  // 添付ファイル（資格証明書など）
-  attachments Json? // [{name, url, size}]
-
-  // ステータス
-  status String @default("pending") // pending, approved, rejected, cancelled
-
-  // 承認情報
-  reviewedBy     String? // 承認者ID
-  reviewedByName String? // 承認者名
-  reviewedAt     DateTime? // 承認日時
-  reviewComment  String? @db.Text // 承認/却下コメント
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tenantId])
-  @@index([userId])
-  @@index([tenantId, status])
-  @@index([tenantId, requestType])
-  @@map("employee_change_requests")
-}
-
-// マイアカウント設定（ユーザー個人設定）
-model UserAccountSettings {
-  id       String @id @default(cuid())
-  tenantId String
-  userId   String @unique // 1ユーザー1設定
-
-  // プロフィール設定（ユーザーが自由に編集可能）
-  displayName String? // 表示名（ニックネーム）
-  avatar      String? // プロフィール画像URL
-  bio         String? @db.Text // 自己紹介
-
-  // 外観設定
-  theme       String @default("system") // light, dark, system
-  language    String @default("ja") // ja, en
-  timezone    String @default("Asia/Tokyo")
-  dateFormat  String @default("YYYY/MM/DD")
-  timeFormat  String @default("24h") // 12h, 24h
-
-  // 通知設定
-  emailNotifications    Boolean @default(true)
-  pushNotifications     Boolean @default(true)
-  workflowNotifications Boolean @default(true) // ワークフロー通知
-  leaveNotifications    Boolean @default(true) // 休暇通知
-  systemNotifications   Boolean @default(true) // システム通知
-  announcementNotifications Boolean @default(true) // お知らせ通知
-
-  // セキュリティ設定
-  twoFactorEnabled  Boolean @default(false)
-  twoFactorSecret   String? // 暗号化された2FAシークレット
-  passwordChangedAt DateTime? // 最終パスワード変更日時
-
-  // セッション情報（参考用）
-  lastLoginAt     DateTime? // 最終ログイン日時
-  lastLoginIp     String? // 最終ログインIP
-  lastLoginDevice String? // 最終ログインデバイス
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tenantId])
-  @@index([userId])
-  @@map("user_account_settings")
-}
-
-// ==============================================
-// 資格有効期限通知・更新確認システム
-// ==============================================
-
-// 資格通知設定（テナント単位）
-model CertificationNotificationSettings {
-  id       String @id @default(cuid())
-  tenantId String @unique
-
-  // 通知タイミング（期限前日数の配列）
-  notificationDays Int[] @default([90, 60, 30, 14, 7])
-
-  // 通知チャネル設定
-  enableEmailNotification Boolean @default(true)
-  enablePushNotification  Boolean @default(true)
-  enableInAppNotification Boolean @default(true)
-
-  // エスカレーション設定（何日前から上長・人事に通知するか）
-  escalateToManagerDays Int @default(30) // 30日前から上長に通知
-  escalateToHrDays      Int @default(14) // 14日前から人事に通知
-
-  // 自動ステータス更新設定
-  autoUpdateStatus         Boolean @default(true) // 期限切れ時に自動でステータス変更
-  warningThresholdDays     Int     @default(30) // expiringステータスに変更する日数
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("certification_notification_settings")
-}
-
-// 資格通知履歴
-model CertificationNotification {
-  id              String @id @default(cuid())
-  tenantId        String
-  certificationId String
-  userId          String
-
-  // 通知タイプと期限
-  notificationType  String // early, standard, warning, urgent, final, expired
-  daysUntilExpiry   Int    // 通知時点での残り日数
-
-  // 通知状態
-  sentAt         DateTime? // 送信日時
-  readAt         DateTime? // 既読日時
-  acknowledgedAt DateTime? // 確認済み日時（本人が「対応する」をクリック）
-
-  // 通知チャネル別送信状態
-  emailSent  Boolean @default(false)
-  pushSent   Boolean @default(false)
-  inAppSent  Boolean @default(false)
-
-  // エスカレーション
-  escalatedToManager Boolean @default(false) // 上長に通知済み
-  escalatedToHr      Boolean @default(false) // 人事に通知済み
-  managerNotifiedAt  DateTime? // 上長通知日時
-  hrNotifiedAt       DateTime? // 人事通知日時
-
-  createdAt DateTime @default(now())
-
-  // Relations
-  certification Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([userId])
-  @@index([certificationId])
-  @@index([tenantId, userId])
-  @@index([tenantId, notificationType])
-  @@index([sentAt])
-  @@map("certification_notifications")
-}
-
-// 資格更新申請
-model CertificationRenewal {
-  id              String @id @default(cuid())
-  tenantId        String
-  certificationId String
-  userId          String
-
-  // 更新後の情報
-  newIssueDate     DateTime  @db.Date // 新しい発行日
-  newExpiryDate    DateTime? @db.Date // 新しい有効期限
-  newCredentialId  String?            // 新しい認定番号
-  newDocumentUrl   String?            // 新しい証明書ファイルURL
-  newDocumentName  String?            // ファイル名
-
-  // 申請備考
-  notes String? @db.Text
-
-  // ステータス管理
-  status String @default("pending") // pending, under_review, approved, rejected
-
-  // 審査情報
-  reviewedBy     String?   // 審査者ID
-  reviewedByName String?   // 審査者名
-  reviewedAt     DateTime? // 審査日時
-  reviewComment  String?   @db.Text // 審査コメント
-
-  // 確認チェックリスト（管理者が確認した項目）
-  documentVerified     Boolean @default(false) // 証明書の真正性確認
-  dateVerified         Boolean @default(false) // 日付の整合性確認
-  organizationVerified Boolean @default(false) // 発行機関の確認
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  certification Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([userId])
-  @@index([certificationId])
-  @@index([tenantId, status])
-  @@index([tenantId, userId, status])
-  @@map("certification_renewals")
-}
-
-// ========================================
-// ダッシュボード本番実装用モデル
-// ========================================
-
-// 支払い記録（請求書への入金管理）
-model Payment {
-  id        String @id @default(cuid())
-  tenantId  String
-  invoiceId String
-
-  // 支払い情報
-  amount       Int      // 支払い金額（税込・円）
-  paymentDate  DateTime @db.Date // 支払日
-  paymentMethod String   @default("bank_transfer") // bank_transfer, credit_card, other
-
-  // ステータス
-  status String @default("completed") // pending, completed, failed, refunded
-
-  // 参照情報
-  transactionId String? // 外部トランザクションID
-  notes         String? @db.Text
-
-  // 確認情報
-  confirmedBy     String? // 確認者ID
-  confirmedByName String? // 確認者名
-  confirmedAt     DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([invoiceId])
-  @@index([tenantId, paymentDate])
-  @@index([tenantId, status])
-  @@map("payments")
-}
-
-// 請求リマインダー（自動送信管理）
-model InvoiceReminder {
-  id        String @id @default(cuid())
-  tenantId  String
-  invoiceId String
-
-  // リマインダー設定
-  reminderType    String // first, second, final
-  scheduledDate   DateTime @db.Date // 送信予定日
-  daysBeforeDue   Int // 支払期限の何日前か
-
-  // 送信状態
-  status    String    @default("scheduled") // scheduled, sent, cancelled
-  sentAt    DateTime?
-  sentTo    String? // 送信先メールアドレス
-
-  // エラー情報
-  errorMessage String? @db.Text
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relations
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  @@index([tenantId])
-  @@index([invoiceId])
-  @@index([status])
-  @@index([scheduledDate])
-  @@map("invoice_reminders")
-}
-
-// 統合アクティビティフィード（ダッシュボード用）
-model ActivityFeed {
-  id       String @id @default(cuid())
-  tenantId String
-
-  // アクティビティ情報
-  activityType String // attendance_checkin, attendance_checkout, leave_request, leave_approved, workflow_submitted, workflow_approved, etc.
-  title        String
-  description  String?
-  icon         String? // Lucide icon name
-
-  // 関連情報
-  userId   String? // 関連ユーザーID
-  userName String? // 関連ユーザー名
-  resourceType String? // attendance, leave, workflow, announcement, etc.
-  resourceId   String? // 関連リソースID
-
-  // 表示設定
-  priority   String @default("normal") // high, normal, low
-  isPublic   Boolean @default(true) // テナント全体に表示
-  targetRoles String[] // 対象ロール（空の場合は全員）
-
-  createdAt DateTime @default(now())
-
-  @@index([tenantId])
-  @@index([tenantId, createdAt])
-  @@index([tenantId, activityType])
-  @@index([tenantId, userId])
-  @@map("activity_feeds")
-}
-
-// DW管理通知（Super Admin用）
-model DWNotification {
-  id String @id @default(cuid())
-
-  // 通知内容
-  type        String // payment_received, payment_overdue, tenant_created, tenant_suspended, system_alert
-  title       String
-  description String? @db.Text
-  priority    String  @default("normal") // high, normal, low
-
-  // 関連情報
-  tenantId   String? // 関連テナントID
-  tenantName String? // 関連テナント名
-  invoiceId  String? // 関連請求書ID
-  amount     Int? // 関連金額
-
-  // ステータス
-  isRead     Boolean @default(false)
-  readAt     DateTime?
-  readBy     String? // 閲覧者ID
-
-  // アクション
-  actionUrl   String? // 詳細ページへのリンク
-  actionLabel String? // アクションボタンラベル
-
-  createdAt DateTime @default(now())
-
-  @@index([isRead])
-  @@index([type])
-  @@index([tenantId])
-  @@index([createdAt])
-  @@map("dw_notifications")
-}
-
-// 勤怠日次集計（パフォーマンス用キャッシュ）
-model DailyAttendanceMetric {
-  id       String @id @default(cuid())
-  tenantId String
-  date     DateTime @db.Date
-
-  // 集計データ
-  totalEmployees   Int @default(0) // 対象従業員数
-  presentCount     Int @default(0) // 出勤者数
-  absentCount      Int @default(0) // 欠勤者数
-  leaveCount       Int @default(0) // 休暇者数
-  lateCount        Int @default(0) // 遅刻者数
-  earlyLeaveCount  Int @default(0) // 早退者数
-  remoteCount      Int @default(0) // リモートワーク数
-
-  // 時間集計
-  totalWorkMinutes     Int @default(0) // 総労働時間（分）
-  totalOvertimeMinutes Int @default(0) // 総残業時間（分）
-  avgWorkMinutes       Int @default(0) // 平均労働時間（分）
-
-  // 出勤率
-  attendanceRate Float @default(0) // 出勤率（%）
-
-  // 集計時刻
-  calculatedAt DateTime @default(now())
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([tenantId, date])
-  @@index([tenantId])
-  @@index([tenantId, date])
-  @@map("daily_attendance_metrics")
-}
-
-// 健診月次集計（ダッシュボード用）
-model HealthCheckupSummary {
-  id       String @id @default(cuid())
-  tenantId String
-  fiscalYear Int
-  month      Int // 1-12
-
-  // 受診状況
-  totalEmployees    Int @default(0) // 対象従業員数
-  completedCount    Int @default(0) // 受診完了数
-  pendingCount      Int @default(0) // 未受診数
-  completionRate    Float @default(0) // 受診率（%）
-
-  // 判定結果集計
-  resultACount Int @default(0) // A判定
-  resultBCount Int @default(0) // B判定
-  resultCCount Int @default(0) // C判定
-  resultDCount Int @default(0) // D判定
-  resultECount Int @default(0) // E判定
-
-  // フォローアップ状況
-  requiresReexamCount    Int @default(0) // 要再検査
-  requiresTreatmentCount Int @default(0) // 要治療
-  requiresGuidanceCount  Int @default(0) // 要保健指導
-
-  // 集計時刻
-  calculatedAt DateTime @default(now())
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([tenantId, fiscalYear, month])
-  @@index([tenantId])
-  @@index([tenantId, fiscalYear])
-  @@map("health_checkup_summaries")
-}
-
-// ストレスチェック集計（ダッシュボード用）
-model StressCheckSummary {
-  id       String @id @default(cuid())
-  tenantId String
-  fiscalYear Int
-
-  // 実施状況
-  totalEmployees   Int @default(0) // 対象従業員数
-  completedCount   Int @default(0) // 受検完了数
-  pendingCount     Int @default(0) // 未受検数
-  completionRate   Float @default(0) // 受検率（%）
-
-  // 高ストレス者状況
-  highStressCount     Int @default(0) // 高ストレス者数
-  highStressRate      Float @default(0) // 高ストレス者率（%）
-
-  // 面談状況
-  interviewRequestedCount Int @default(0) // 面談申出数
-  interviewScheduledCount Int @default(0) // 面談予定数
-  interviewCompletedCount Int @default(0) // 面談完了数
-
-  // 平均スコア
-  avgStressFactorsScore  Float? // A群平均
-  avgStressResponseScore Float? // B群平均
-  avgSocialSupportScore  Float? // C群平均
-
-  // 集計時刻
-  calculatedAt DateTime @default(now())
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model stress_check_summaries {
+  id                      String   @id
+  tenantId                String
+  fiscalYear              Int
+  totalEmployees          Int      @default(0)
+  completedCount          Int      @default(0)
+  pendingCount            Int      @default(0)
+  completionRate          Float    @default(0)
+  highStressCount         Int      @default(0)
+  highStressRate          Float    @default(0)
+  interviewRequestedCount Int      @default(0)
+  interviewScheduledCount Int      @default(0)
+  interviewCompletedCount Int      @default(0)
+  avgStressFactorsScore   Float?
+  avgStressResponseScore  Float?
+  avgSocialSupportScore   Float?
+  calculatedAt            DateTime @default(now())
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime
 
   @@unique([tenantId, fiscalYear])
-  @@index([tenantId])
   @@index([tenantId, fiscalYear])
-  @@map("stress_check_summaries")
+  @@index([tenantId])
+}
+
+model stress_checks {
+  id                   String    @id
+  tenantId             String
+  userId               String
+  userName             String
+  fiscalYear           Int
+  checkDate            DateTime? @db.Date
+  status               String    @default("pending")
+  stressFactorsScore   Int?
+  stressResponseScore  Int?
+  socialSupportScore   Int?
+  totalScore           Int?
+  isHighStress         Boolean   @default(false)
+  highStressReason     String?
+  interviewRequested   Boolean   @default(false)
+  interviewRequestedAt DateTime?
+  interviewScheduled   Boolean   @default(false)
+  interviewScheduledAt DateTime?
+  interviewCompleted   Boolean   @default(false)
+  interviewCompletedAt DateTime?
+  interviewNotes       String?
+  doctorName           String?
+  doctorOpinion        String?
+  responses            Json?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime
+
+  @@unique([tenantId, userId, fiscalYear])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId])
+  @@index([tenantId, isHighStress])
+  @@index([userId])
+}
+
+model tenant_legal_statuses {
+  id            String        @id
+  tenantId      String
+  legalUpdateId String
+  status        String        @default("pending")
+  notes         String?
+  completedAt   DateTime?
+  completedBy   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  legal_updates legal_updates @relation(fields: [legalUpdateId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, legalUpdateId])
+  @@index([legalUpdateId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model tenant_settings {
+  id                String    @id
+  tenantId          String    @unique
+  trialEndDate      DateTime? @db.Date
+  contractStartDate DateTime? @db.Date
+  contractEndDate   DateTime? @db.Date
+  billingEmail      String?
+  customPricing     Boolean   @default(false)
+  status            String    @default("trial")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime
+  tenants           tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model tenants {
+  id              String           @id
+  name            String
+  logo            String?
+  timezone        String           @default("Asia/Tokyo")
+  closingDay      String           @default("末")
+  weekStartDay    Int              @default(1)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  subdomain       String?          @unique
+  attendance      attendance[]
+  invoices        invoices[]
+  org_units       org_units[]
+  pricing_tiers   pricing_tiers[]
+  tenant_settings tenant_settings?
+  user_histories  user_histories[]
+  users           users[]
+
+  @@index([subdomain])
+}
+
+model timeline_entries {
+  id                String            @id
+  tenantId          String
+  workflowId        String
+  action            String
+  actorId           String?
+  actorName         String?
+  details           String?
+  createdAt         DateTime          @default(now())
+  workflow_requests workflow_requests @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([tenantId, createdAt])
+  @@index([tenantId])
+  @@index([workflowId])
+}
+
+model user_account_settings {
+  id                        String    @id
+  tenantId                  String
+  userId                    String    @unique
+  displayName               String?
+  avatar                    String?
+  bio                       String?
+  theme                     String    @default("system")
+  language                  String    @default("ja")
+  timezone                  String    @default("Asia/Tokyo")
+  dateFormat                String    @default("YYYY/MM/DD")
+  timeFormat                String    @default("24h")
+  emailNotifications        Boolean   @default(true)
+  pushNotifications         Boolean   @default(true)
+  workflowNotifications     Boolean   @default(true)
+  leaveNotifications        Boolean   @default(true)
+  systemNotifications       Boolean   @default(true)
+  announcementNotifications Boolean   @default(true)
+  twoFactorEnabled          Boolean   @default(false)
+  twoFactorSecret           String?
+  passwordChangedAt         DateTime?
+  lastLoginAt               DateTime?
+  lastLoginIp               String?
+  lastLoginDevice           String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime
+
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model user_histories {
+  id          String   @id
+  tenantId    String
+  userId      String
+  action      String
+  date        DateTime @db.Date
+  userCount   Int
+  dailyCharge Int
+  memo        String?
+  createdAt   DateTime @default(now())
+  tenants     tenants  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([date])
+  @@index([tenantId, date])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model users {
+  id               String       @id
+  tenantId         String
+  email            String       @unique
+  name             String
+  phone            String?
+  hireDate         DateTime?
+  unitId           String?
+  roles            String[]
+  status           String       @default("active")
+  retiredDate      DateTime?
+  retirementReason String?
+  timezone         String       @default("Asia/Tokyo")
+  avatar           String?
+  position         String?
+  department       String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime
+  passwordHash     String?
+  role             String?      @default("employee")
+  attendance       attendance[]
+  tenants          tenants      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  org_units        org_units?   @relation(fields: [unitId], references: [id])
+
+  @@index([email])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([unitId])
+}
+
+model vehicles {
+  id                  String                @id
+  tenantId            String
+  vehicleNumber       String
+  licensePlate        String
+  make                String
+  model               String
+  year                Int
+  color               String?
+  assignedUserId      String?
+  assignedUserName    String?
+  assignedDate        DateTime?             @db.Date
+  ownershipType       String                @default("owned")
+  purchaseDate        DateTime?             @db.Date
+  purchaseCost        Int?
+  leaseCompany        String?
+  leaseMonthlyCost    Int?
+  leaseStartDate      DateTime?             @db.Date
+  leaseEndDate        DateTime?             @db.Date
+  leaseContact        String?
+  leasePhone          String?
+  inspectionDate      DateTime?             @db.Date
+  maintenanceDate     DateTime?             @db.Date
+  insuranceDate       DateTime?             @db.Date
+  currentTireType     String                @default("summer")
+  status              String                @default("active")
+  mileageTracking     Boolean               @default(true)
+  currentMileage      Int?
+  notes               String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  tireChangeDate      DateTime?             @db.Date
+  maintenance_records maintenance_records[]
+  monthly_mileages    monthly_mileages[]
+
+  @@unique([tenantId, vehicleNumber])
+  @@index([tenantId, assignedUserId])
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model vendors {
+  id                  String                @id
+  tenantId            String
+  name                String
+  phone               String?
+  address             String?
+  contactPerson       String?
+  email               String?
+  rating              Int?
+  notes               String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  maintenance_records maintenance_records[]
+
+  @@index([tenantId])
+  @@index([tenantId, name])
+}
+
+model work_experiences {
+  id                String            @id
+  tenantId          String
+  profileId         String
+  userId            String
+  position          String
+  company           String
+  startDate         DateTime          @db.Date
+  endDate           DateTime?         @db.Date
+  isCurrent         Boolean           @default(false)
+  description       String?
+  achievements      String[]
+  skills            String[]
+  sortOrder         Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  employee_profiles employee_profiles @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@index([tenantId])
+  @@index([tenantId, isCurrent])
+  @@index([userId])
+}
+
+model workflow_requests {
+  id               String             @id
+  tenantId         String
+  requesterId      String
+  requesterName    String
+  department       String?
+  type             String
+  title            String
+  description      String?
+  amount           Float?
+  days             Int?
+  hours            Float?
+  details          Json?
+  status           String             @default("pending")
+  currentStep      Int                @default(0)
+  priority         String             @default("medium")
+  dueDate          DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  approval_steps   approval_steps[]
+  timeline_entries timeline_entries[]
+
+  @@index([createdAt])
+  @@index([requesterId])
+  @@index([status])
+  @@index([tenantId])
+  @@index([tenantId, requesterId])
+  @@index([tenantId, status])
+  @@index([type])
+}
+
+model year_end_adjustment_settings {
+  id                             String   @id
+  tenantId                       String   @unique
+  adjustmentStartMonth           Int      @default(11)
+  adjustmentEndMonth             Int      @default(12)
+  enableBasicDeduction           Boolean  @default(true)
+  enableSpouseDeduction          Boolean  @default(true)
+  enableDependentDeduction       Boolean  @default(true)
+  enableInsuranceDeduction       Boolean  @default(true)
+  enableSocialInsuranceDeduction Boolean  @default(true)
+  withholdingSlipFormat          String   @default("standard")
+  includeQRCode                  Boolean  @default(false)
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime
+
+  @@index([tenantId])
 }

@@ -44,50 +44,85 @@ export interface TodayAttendanceStatus {
   memo?: string;
   needsApproval?: boolean;
   approvalReason?: string;
+  // 日付変更検出用
+  recordDate?: string;
 }
 
 interface AttendanceStore {
   // 今日の打刻状況
   todayStatus: TodayAttendanceStatus;
-  
+
   // 勤怠記録の更新
   updateTodayStatus: (status: Partial<TodayAttendanceStatus>) => void;
-  
+
   // 出勤打刻
   checkIn: (workLocation: 'office' | 'home' | 'client' | 'other') => Promise<void>;
-  
+
   // 休憩開始
   startBreak: () => Promise<void>;
-  
+
   // 休憩終了
   endBreak: () => Promise<void>;
-  
+
   // 退勤打刻
   checkOut: (memo?: string) => Promise<void>;
-  
+
   // 今日の勤怠記録を取得
   getTodayRecord: () => AttendanceRecord | null;
-  
+
+  // 日付変更をチェックしてリセット
+  checkAndResetForNewDay: () => void;
+
+  // 手動リセット（デバッグ/テスト用）
+  resetTodayStatus: () => void;
+
   // 勤怠記録リストの更新通知
   onAttendanceUpdate: (() => void) | null;
   setOnAttendanceUpdate: (callback: () => void) => void;
 }
 
+// 今日の日付を取得（YYYY-MM-DD形式）
+const getTodayDateString = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+// 初期状態
+const getInitialTodayStatus = (): TodayAttendanceStatus => ({
+  status: 'notStarted',
+  totalBreakTime: 0,
+  workLocation: 'office',
+  recordDate: getTodayDateString(),
+});
+
 export const useAttendanceStore = create<AttendanceStore>()(
   persist(
     (set, get) => ({
-      todayStatus: {
-        status: 'notStarted',
-        totalBreakTime: 0,
-        workLocation: 'office',
-      },
-      
+      todayStatus: getInitialTodayStatus(),
+
       onAttendanceUpdate: null,
-      
+
       setOnAttendanceUpdate: (callback) => {
         set({ onAttendanceUpdate: callback });
       },
-      
+
+      // 日付変更をチェックしてリセット
+      checkAndResetForNewDay: () => {
+        const { todayStatus } = get();
+        const today = getTodayDateString();
+
+        // recordDateが設定されていない、または日付が変わっている場合はリセット
+        if (!todayStatus.recordDate || todayStatus.recordDate !== today) {
+          console.log('[AttendanceStore] 日付変更を検出。本日の勤怠状況をリセットします。');
+          set({ todayStatus: getInitialTodayStatus() });
+        }
+      },
+
+      // 手動リセット
+      resetTodayStatus: () => {
+        set({ todayStatus: getInitialTodayStatus() });
+      },
+
       updateTodayStatus: (status) => {
         set((state) => ({
           todayStatus: { ...state.todayStatus, ...status }
@@ -124,6 +159,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             workLocation,
             needsApproval: isLate,
             approvalReason: isLate ? '遅刻のため承認が必要です' : undefined,
+            recordDate: getTodayDateString(),
           }
         }));
 

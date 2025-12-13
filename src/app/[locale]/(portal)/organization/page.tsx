@@ -36,13 +36,13 @@ import { useOrganizationStore } from '@/lib/store/organization-store';
 import { useUserStore } from '@/lib/store';
 import { demoTransferHistories } from '@/lib/demo-organization';
 import { unifiedOrganizationTree, unifiedOrganizationMembers } from '@/lib/unified-organization-data';
-import { hasPermission } from '@/lib/demo-users';
+import { hasPermission as hasRbacPermission, type UserRole } from '@/lib/rbac';
 import type { OrganizationNode, OrganizationMember } from '@/types';
 
 export default function OrganizationPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const { currentDemoUser } = useUserStore();
+  const { currentUser, currentDemoUser } = useUserStore();
   
   const {
     organizationTree,
@@ -70,12 +70,22 @@ export default function OrganizationPage() {
     initializeTransferHistories(demoTransferHistories);
   }, [organizationTree, allMembers.length, setOrganizationTree, initializeTransferHistories]);
 
-  // 権限チェック
-  const canManageOrganization = currentDemoUser && hasPermission(currentDemoUser, 'manage_system');
-  const canViewAll = currentDemoUser && (
-    hasPermission(currentDemoUser, 'view_all') || 
-    hasPermission(currentDemoUser, 'manage_system')
-  );
+  // 権限チェック - 本番ユーザーとデモユーザー両方に対応
+  const getUserRole = (): UserRole | null => {
+    // 本番ユーザーの場合
+    if (currentUser?.roles && currentUser.roles.length > 0) {
+      return currentUser.roles[0] as UserRole;
+    }
+    // デモユーザーの場合（フォールバック）
+    if (currentDemoUser) {
+      return currentDemoUser.role as UserRole;
+    }
+    return null;
+  };
+
+  const userRole = getUserRole();
+  const canManageOrganization = userRole && hasRbacPermission(userRole, 'organization:write');
+  const canViewAll = userRole && hasRbacPermission(userRole, 'organization:read');
 
   // 組織統計の計算
   const organizationStats = {

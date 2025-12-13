@@ -1060,7 +1060,7 @@ export default function AssetsPage() {
                   <CardDescription>モニター、プリンター、スマートフォンなど（{generalAssets.length}台）</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" disabled>
+                  <Button variant="outline" onClick={() => toast.info('その他資産の新規登録機能は準備中です')}>
                     <Plus className="mr-2 h-4 w-4" />
                     新規登録
                   </Button>

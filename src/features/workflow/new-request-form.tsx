@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, UseFormReturn, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { WorkflowType, WorkflowRequest, ApproverRole } from '@/lib/workflow-store';
+import { useUserStore } from '@/lib/store/user-store';
 import {
   Dialog,
   DialogContent,
@@ -144,8 +145,37 @@ export function NewRequestForm({
   const [approvalFlow, setApprovalFlow] = useState<Array<{
     role: ApproverRole;
     name: string;
+    id: string;
     required: boolean;
   }>>([]);
+
+  // DBからユーザーを取得
+  const { users, fetchUsers } = useUserStore();
+
+  // ユーザーをロールでフィルタリング
+  const approversByRole = useMemo(() => {
+    // ロールに基づいて承認者を選択
+    const managers = users.filter(u => u.roles?.includes('manager') && u.status === 'active');
+    const hrs = users.filter(u => u.roles?.includes('hr') && u.status === 'active');
+    const admins = users.filter(u => u.roles?.includes('admin') && u.status === 'active');
+    const executives = users.filter(u => u.roles?.includes('executive') && u.status === 'active');
+
+    return {
+      direct_manager: managers[0] || hrs[0] || admins[0],
+      department_head: managers[0] || executives[0] || admins[0],
+      hr_manager: hrs[0] || admins[0],
+      finance_manager: hrs[0] || admins[0], // 経理がない場合は人事またはadminが代行
+      general_manager: executives[0] || admins[0],
+      ceo: admins[0],
+    };
+  }, [users]);
+
+  // ユーザーリストを取得
+  useEffect(() => {
+    if (open && users.length === 0) {
+      fetchUsers().catch(console.error);
+    }
+  }, [open, users.length, fetchUsers]);
 
   // ダイアログが閉じられた時に状態をリセット
   React.useEffect(() => {
@@ -179,58 +209,96 @@ export function NewRequestForm({
     resolver: zodResolver(getSchema()),
   });
 
+  // 承認者を取得するヘルパー関数
+  const getApproverInfo = (role: ApproverRole): { id: string; name: string } => {
+    const approver = approversByRole[role];
+    if (approver) {
+      return { id: approver.id, name: approver.name };
+    }
+    // フォールバック: DBにユーザーがいない場合
+    const roleNames: Record<ApproverRole, string> = {
+      direct_manager: '直属上司',
+      department_head: '部門長',
+      hr_manager: '人事部長',
+      finance_manager: '経理部長',
+      general_manager: '役員',
+      ceo: '社長',
+    };
+    return { id: 'unknown', name: roleNames[role] || '承認者' };
+  };
+
   // 承認フローの自動設定
   const setupApprovalFlow = (type: WorkflowType, details: Record<string, unknown>) => {
-    const flow: Array<{ role: ApproverRole; name: string; required: boolean }> = [];
-    
+    const flow: Array<{ role: ApproverRole; name: string; id: string; required: boolean }> = [];
+
     // 直属上司は必須
-    flow.push({ role: 'direct_manager', name: '田中太郎', required: true });
-    
+    const directManager = getApproverInfo('direct_manager');
+    flow.push({ role: 'direct_manager', name: directManager.name, id: directManager.id, required: true });
+
     // 申請タイプと条件に応じて承認者を追加
     switch (type) {
       case 'leave_request':
         if (details.days > 3) {
-          flow.push({ role: 'department_head', name: '山田部長', required: true });
+          const deptHead = getApproverInfo('department_head');
+          flow.push({ role: 'department_head', name: deptHead.name, id: deptHead.id, required: true });
         }
         if (details.days > 5) {
-          flow.push({ role: 'hr_manager', name: '人事部長', required: true });
+          const hrManager = getApproverInfo('hr_manager');
+          flow.push({ role: 'hr_manager', name: hrManager.name, id: hrManager.id, required: true });
         }
         break;
-        
+
       case 'expense_claim':
         if (details.amount > 50000) {
-          flow.push({ role: 'department_head', name: '山田部長', required: true });
+          const deptHead = getApproverInfo('department_head');
+          flow.push({ role: 'department_head', name: deptHead.name, id: deptHead.id, required: true });
         }
         if (details.amount > 100000) {
-          flow.push({ role: 'finance_manager', name: '経理部長', required: true });
+          const financeManager = getApproverInfo('finance_manager');
+          flow.push({ role: 'finance_manager', name: financeManager.name, id: financeManager.id, required: true });
         }
         if (details.amount > 500000) {
-          flow.push({ role: 'general_manager', name: '役員', required: true });
+          const generalManager = getApproverInfo('general_manager');
+          flow.push({ role: 'general_manager', name: generalManager.name, id: generalManager.id, required: true });
         }
         break;
-        
+
       case 'overtime_request':
         if (details.hours > 20) {
-          flow.push({ role: 'department_head', name: '山田部長', required: true });
-          flow.push({ role: 'hr_manager', name: '人事部長', required: true });
+          const deptHead = getApproverInfo('department_head');
+          const hrManager = getApproverInfo('hr_manager');
+          flow.push({ role: 'department_head', name: deptHead.name, id: deptHead.id, required: true });
+          flow.push({ role: 'hr_manager', name: hrManager.name, id: hrManager.id, required: true });
         }
         break;
-        
+
       case 'business_trip':
-        flow.push({ role: 'department_head', name: '山田部長', required: true });
+        const deptHead = getApproverInfo('department_head');
+        flow.push({ role: 'department_head', name: deptHead.name, id: deptHead.id, required: true });
         if (details.estimatedCost > 200000 || details.transportation === 'airplane') {
-          flow.push({ role: 'general_manager', name: '役員', required: true });
+          const generalManager = getApproverInfo('general_manager');
+          flow.push({ role: 'general_manager', name: generalManager.name, id: generalManager.id, required: true });
         }
         break;
-        
+
       case 'remote_work':
-        if (differenceInDays(details.endDate, details.startDate) > 30) {
-          flow.push({ role: 'department_head', name: '山田部長', required: true });
-          flow.push({ role: 'hr_manager', name: '人事部長', required: true });
+        if (differenceInDays(details.endDate as Date, details.startDate as Date) > 30) {
+          const deptHead2 = getApproverInfo('department_head');
+          const hrManager2 = getApproverInfo('hr_manager');
+          flow.push({ role: 'department_head', name: deptHead2.name, id: deptHead2.id, required: true });
+          flow.push({ role: 'hr_manager', name: hrManager2.name, id: hrManager2.id, required: true });
         }
+        break;
+
+      // 各種変更申請のデフォルト: 人事部承認
+      case 'bank_account_change':
+      case 'family_info_change':
+      case 'commute_route_change':
+        const hrForChange = getApproverInfo('hr_manager');
+        flow.push({ role: 'hr_manager', name: hrForChange.name, id: hrForChange.id, required: true });
         break;
     }
-    
+
     setApprovalFlow(flow);
   };
 
@@ -250,16 +318,10 @@ export function NewRequestForm({
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
-  // 承認者ロール→ユーザーIDのマッピング（デモ用）
+  // 承認者ロール→ユーザーIDのマッピング（DBから取得した値を使用）
   const getApproverIdByRole = (role: ApproverRole): string => {
-    const roleToUserIdMap: Record<ApproverRole, string> = {
-      direct_manager: '2',      // 佐藤部長（manager）
-      department_head: '2',     // 佐藤部長（manager）
-      hr_manager: '3',          // 山田人事（hr）
-      finance_manager: '3',     // 山田人事（hr）- デモ用に人事が兼任
-      general_manager: '4',     // システム管理者（admin）
-    };
-    return roleToUserIdMap[role] || '2'; // デフォルトはmanager
+    const approver = approversByRole[role];
+    return approver?.id || 'unknown';
   };
 
   const handleSubmit = async (data: Record<string, unknown>) => {
@@ -282,7 +344,7 @@ export function NewRequestForm({
           id: `step-${index}`,
           order: index,
           approverRole: step.role,
-          approverId: getApproverIdByRole(step.role),
+          approverId: step.id, // 直接approvalFlowから取得したIDを使用
           approverName: step.name,
           status: 'pending',
           isOptional: !step.required,

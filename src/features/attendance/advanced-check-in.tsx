@@ -55,13 +55,27 @@ export function AdvancedCheckIn() {
   const [workingHours, setWorkingHours] = useState(0);
   
   // Zustand store の使用
-  const { 
-    todayStatus, 
-    checkIn, 
-    startBreak, 
-    endBreak, 
-    checkOut 
+  const {
+    todayStatus,
+    checkIn,
+    startBreak,
+    endBreak,
+    checkOut,
+    checkAndResetForNewDay
   } = useAttendanceStore();
+
+  // 初回マウント時と1分ごとに日付変更をチェック
+  useEffect(() => {
+    // 初回チェック
+    checkAndResetForNewDay();
+
+    // 1分ごとに日付変更をチェック
+    const dateCheckTimer = setInterval(() => {
+      checkAndResetForNewDay();
+    }, 60000);
+
+    return () => clearInterval(dateCheckTimer);
+  }, [checkAndResetForNewDay]);
 
   // 1秒ごとに時刻を更新
   useEffect(() => {

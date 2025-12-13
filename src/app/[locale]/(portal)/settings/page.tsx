@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
-import { hasPermission } from '@/lib/demo-users';
+import type { UserRole } from '@/types';
 import { toast } from 'sonner';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import { SimpleSettings, defaultSettings } from '@/features/settings/types';
@@ -49,36 +49,52 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<SimpleSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // ページロード時にlocalStorageから役職を読み込む
+  // ユーザーロールを取得（本番ユーザーまたはデモユーザー）
+  const getUserRole = (): UserRole | null => {
+    // 本番ユーザーがいる場合はそのロールを使用
+    if (currentUser?.roles && currentUser.roles.length > 0) {
+      return currentUser.roles[0] as UserRole;
+    }
+    // デモユーザーの場合（フォールバック）
+    if (currentDemoUser) {
+      return currentDemoUser.role as UserRole;
+    }
+    return null;
+  };
+
+  const userRole = getUserRole();
+
+  // ページロード時にlocalStorageから役職を読み込む（デモモードのみ）
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !currentUser) {
       const storedRole = localStorage.getItem('demo-role') as any;
       if (storedRole && !currentDemoUser) {
         switchDemoRole(storedRole);
       }
     }
-  }, [currentDemoUser, switchDemoRole]);
+  }, [currentDemoUser, switchDemoRole, currentUser]);
 
-  // 権限チェック
+  // 権限チェック（本番ユーザーとデモユーザー両方に対応）
   const canManageSystem = useMemo(() => {
-    return hasPermission(currentDemoUser, 'manage_system');
-  }, [currentDemoUser]);
+    return userRole === 'admin';
+  }, [userRole]);
 
   // 請求情報の閲覧権限（システム管理者と人事担当）
   const canViewBilling = useMemo(() => {
-    if (!currentDemoUser) return false;
-    const role = currentDemoUser.role;
-    return role === 'admin' || role === 'hr';
-  }, [currentDemoUser]);
+    if (!userRole) return false;
+    return userRole === 'admin' || userRole === 'hr';
+  }, [userRole]);
 
   // DW社管理者権限（全テナント管理）
-  // TODO: 実際のプロダクションでは、ユーザーに isSuperAdmin フラグまたは専用ロールを追加
   const isSuperAdmin = useMemo(() => {
-    if (!currentDemoUser) return false;
-    // デモでは admin ロールかつ特定のユーザーIDの場合のみ
-    // 実際には、テナントが 'dw_company' などの特別な値を持つか、ユーザーに super_admin フラグがある
-    return currentDemoUser.role === 'admin' && currentDemoUser.id === 'demo-admin';
-  }, [currentDemoUser]);
+    if (!userRole) return false;
+    // 本番ユーザーの場合: adminロールを持っているかチェック
+    // デモユーザーの場合: 従来のロジック
+    if (currentUser) {
+      return userRole === 'admin';
+    }
+    return currentDemoUser?.role === 'admin' && currentDemoUser?.id === 'demo-admin';
+  }, [userRole, currentUser, currentDemoUser]);
 
   // 設定の読み込み
   useEffect(() => {

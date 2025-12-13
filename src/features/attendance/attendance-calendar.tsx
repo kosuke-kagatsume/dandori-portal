@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { MountGate } from '@/components/common/MountGate';
+import { toast } from 'sonner';
 
 interface AttendanceRecord {
   date: Date;
@@ -445,7 +446,17 @@ export function AttendanceCalendar({ records }: AttendanceCalendarProps) {
               )}
 
               <div className="pt-4">
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setSheetOpen(false);
+                    toast.info('勤怠修正申請', {
+                      description: '勤怠の修正はワークフローから申請してください。サイドバーの「ワークフロー」→「新規申請」から行えます。',
+                      duration: 5000,
+                    });
+                  }}
+                >
                   <Edit className="mr-2 h-4 w-4" />
                   記録を修正
                 </Button>
