@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     // 本番モード: Prismaでユーザーを検索
     console.log('Searching for user with email:', email);
-    const user = await prisma.user.findFirst({
+    const user = await prisma.users.findFirst({
       where: { email },
     });
 

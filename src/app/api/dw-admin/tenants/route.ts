@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // テナント一覧を取得
-    const tenants = await prisma.tenant.findMany({
+    const tenants = await prisma.tenants.findMany({
       where: {
         ...(search && {
           OR: [
@@ -31,13 +31,13 @@ export async function GET(request: NextRequest) {
           ],
         }),
         ...(status && {
-          settings: {
+          tenant_settings: {
             status: status,
           },
         }),
       },
       include: {
-        settings: {
+        tenant_settings: {
           select: {
             status: true,
             trialEndDate: true,
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 総件数
-    const total = await prisma.tenant.count({
+    const total = await prisma.tenants.count({
       where: {
         ...(search && {
           OR: [
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
           ],
         }),
         ...(status && {
-          settings: {
+          tenant_settings: {
             status: status,
           },
         }),
@@ -81,13 +81,13 @@ export async function GET(request: NextRequest) {
     // 各テナントの請求情報を集計
     const tenantsWithStats = await Promise.all(
       tenants.map(async (tenant) => {
-        const invoiceStats = await prisma.invoice.aggregate({
+        const invoiceStats = await prisma.invoices.aggregate({
           where: { tenantId: tenant.id },
           _sum: { total: true },
           _count: true,
         });
 
-        const unpaidStats = await prisma.invoice.aggregate({
+        const unpaidStats = await prisma.invoices.aggregate({
           where: {
             tenantId: tenant.id,
             status: { notIn: ['paid', 'cancelled'] },
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
           _count: true,
         });
 
-        const overdueCount = await prisma.invoice.count({
+        const overdueCount = await prisma.invoices.count({
           where: {
             tenantId: tenant.id,
             status: 'overdue',
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
           id: tenant.id,
           name: tenant.name,
           subdomain: tenant.subdomain,
-          settings: tenant.settings,
+          settings: tenant.tenant_settings,
           userCount: tenant._count.users,
           invoiceCount: tenant._count.invoices,
           totalAmount: invoiceStats._sum.total || 0,
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     );
 
     // ステータス別集計
-    const statusCounts = await prisma.tenantSettings.groupBy({
+    const statusCounts = await prisma.tenant_settings.groupBy({
       by: ['status'],
       _count: true,
     });
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
 
     // サブドメインの重複チェック
     if (subdomain) {
-      const existing = await prisma.tenant.findFirst({
+      const existing = await prisma.tenants.findFirst({
         where: { subdomain },
       });
       if (existing) {
@@ -206,14 +206,14 @@ export async function POST(request: NextRequest) {
 
     // トランザクションでテナントと設定を作成
     const tenant = await prisma.$transaction(async (tx) => {
-      const newTenant = await tx.tenant.create({
+      const newTenant = await tx.tenants.create({
         data: {
           name,
           subdomain,
         },
       });
 
-      await tx.tenantSettings.create({
+      await tx.tenant_settings.create({
         data: {
           tenantId: newTenant.id,
           status,
@@ -224,10 +224,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return tx.tenant.findUnique({
+      return tx.tenants.findUnique({
         where: { id: newTenant.id },
         include: {
-          settings: true,
+          tenant_settings: true,
         },
       });
     });

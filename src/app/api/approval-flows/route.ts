@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 総件数取得
-    const total = await prisma.approvalFlowDefinition.count({ where });
+    const total = await prisma.approval_flow_definitions.count({ where });
 
     // 承認フロー一覧取得（条件付きで詳細データ取得）
-    const flows = await prisma.approvalFlowDefinition.findMany({
+    const flows = await prisma.approval_flow_definitions.findMany({
       where,
       select: {
         id: true,
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
 
     // デフォルトフローの一意性チェック
     if (isDefault) {
-      const existingDefault = await prisma.approvalFlowDefinition.findFirst({
+      const existingDefault = await prisma.approval_flow_definitions.findFirst({
         where: {
           tenantId,
           documentType,
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
 
       if (existingDefault) {
         // 既存のデフォルトを解除
-        await prisma.approvalFlowDefinition.update({
+        await prisma.approval_flow_definitions.update({
           where: { id: existingDefault.id },
           data: { isDefault: false },
         });
@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
     }
 
     // フロー作成（ステップと条件も同時作成）
-    const flow = await prisma.approvalFlowDefinition.create({
+    const flow = await prisma.approval_flow_definitions.create({
       data: {
         tenantId,
         name,

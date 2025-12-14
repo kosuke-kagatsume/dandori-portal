@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     if (vehicleId) where.vehicleId = vehicleId;
     if (month) where.month = month;
 
-    const mileages = await prisma.monthlyMileage.findMany({
+    const mileages = await prisma.monthly_mileages.findMany({
       where,
       include: {
         vehicle: {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 既存レコードがあれば更新、なければ作成（upsert）
-    const mileage = await prisma.monthlyMileage.upsert({
+    const mileage = await prisma.monthly_mileages.upsert({
       where: {
         vehicleId_month: {
           vehicleId,

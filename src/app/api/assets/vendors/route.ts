@@ -57,10 +57,10 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { tenantId };
 
     // 総件数取得（ページネーション用）
-    const total = await prisma.vendor.count({ where });
+    const total = await prisma.vendors.count({ where });
 
     // 一覧用：必要最小限のフィールドのみ取得
-    const vendors = await prisma.vendor.findMany({
+    const vendors = await prisma.vendors.findMany({
       where,
       select: {
         id: true,
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       return handleApiError(new Error('業者名は必須です'), '業者登録');
     }
 
-    const vendor = await prisma.vendor.create({
+    const vendor = await prisma.vendors.create({
       data: {
         tenantId,
         name,

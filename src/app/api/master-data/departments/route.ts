@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
     const where = { tenantId };
 
     // 総件数取得
-    const total = await prisma.department.count({ where });
+    const total = await prisma.departments.count({ where });
 
     // 部署一覧取得（select最適化）
-    const departments = await prisma.department.findMany({
+    const departments = await prisma.departments.findMany({
       where,
       select: {
         id: true,
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'tenantIdとnameは必須です' }, { status: 400 });
     }
 
-    const department = await prisma.department.create({
+    const department = await prisma.departments.create({
       data: {
         tenantId,
         name,
@@ -89,7 +89,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'idは必須です' }, { status: 400 });
     }
 
-    const department = await prisma.department.update({
+    const department = await prisma.departments.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
@@ -116,7 +116,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'idは必須です' }, { status: 400 });
     }
 
-    await prisma.department.delete({
+    await prisma.departments.delete({
       where: { id },
     });
 

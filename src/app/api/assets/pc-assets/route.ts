@@ -82,10 +82,10 @@ export async function GET(request: NextRequest) {
     if (ownershipType) where.ownershipType = ownershipType;
 
     // 総件数取得（ページネーション用）
-    const total = await prisma.pCAsset.count({ where });
+    const total = await prisma.pc_assets.count({ where });
 
     // 一覧用：必要最小限のフィールドのみ取得
-    const pcAssets = await prisma.pCAsset.findMany({
+    const pcAssets = await prisma.pc_assets.findMany({
       where,
       select: {
         id: true,
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pcAsset = await prisma.pCAsset.create({
+    const pcAsset = await prisma.pc_assets.create({
       data: {
         tenantId,
         assetNumber,

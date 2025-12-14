@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // データベースからサブドメインに対応するテナントを検索
-    const tenant = await prisma.tenant.findUnique({
+    const tenant = await prisma.tenants.findUnique({
       where: { subdomain },
       select: {
         id: true,

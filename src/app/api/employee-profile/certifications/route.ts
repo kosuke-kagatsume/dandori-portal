@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
     if (userId) where.userId = userId;
     if (status && status !== 'all') where.status = status;
 
-    const total = await prisma.certification.count({ where });
+    const total = await prisma.certifications.count({ where });
 
-    const certifications = await prisma.certification.findMany({
+    const certifications = await prisma.certifications.findMany({
       where,
       orderBy: [{ status: 'asc' }, { expiryDate: 'asc' }],
       skip,
@@ -92,12 +92,12 @@ export async function POST(request: NextRequest) {
     }
 
     // プロフィールIDを取得（なければ作成）
-    let profile = await prisma.employeeProfile.findUnique({
+    let profile = await prisma.employee_profiles.findUnique({
       where: { userId },
     });
 
     if (!profile) {
-      profile = await prisma.employeeProfile.create({
+      profile = await prisma.employee_profiles.create({
         data: {
           tenantId: tenantId || 'tenant-demo-001',
           userId,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const certification = await prisma.certification.create({
+    const certification = await prisma.certifications.create({
       data: {
         tenantId: tenantId || profile.tenantId,
         profileId: profile.id,

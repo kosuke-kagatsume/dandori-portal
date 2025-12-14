@@ -69,10 +69,10 @@ export async function GET(request: NextRequest) {
     if (type) where.type = type;
 
     // 総件数取得
-    const total = await prisma.maintenanceRecord.count({ where });
+    const total = await prisma.maintenance_records.count({ where });
 
     // メンテナンス記録一覧取得（select最適化）
-    const records = await prisma.maintenanceRecord.findMany({
+    const records = await prisma.maintenance_records.findMany({
       where,
       select: {
         id: true,
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const record = await prisma.maintenanceRecord.create({
+    const record = await prisma.maintenance_records.create({
       data: {
         tenantId,
         vehicleId,

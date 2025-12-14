@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const invoice = await prisma.invoice.findUnique({
+    const invoice = await prisma.invoices.findUnique({
       where: { id },
       include: {
         tenant: {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             id: true,
             name: true,
             subdomain: true,
-            settings: {
+            tenant_settings: {
               select: {
                 billingEmail: true,
               },
@@ -95,7 +95,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     } = body;
 
     // 請求書存在確認
-    const existingInvoice = await prisma.invoice.findUnique({
+    const existingInvoice = await prisma.invoices.findUnique({
       where: { id },
     });
 
@@ -148,7 +148,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const invoice = await prisma.invoice.update({
+    const invoice = await prisma.invoices.update({
       where: { id },
       data: updateData,
       include: {
@@ -194,7 +194,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
 
     // 請求書存在確認
-    const existingInvoice = await prisma.invoice.findUnique({
+    const existingInvoice = await prisma.invoices.findUnique({
       where: { id },
       include: {
         payments: true,
@@ -226,9 +226,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // 関連データを含めて削除
     await prisma.$transaction([
-      prisma.invoiceReminder.deleteMany({ where: { invoiceId: id } }),
-      prisma.invoiceItem.deleteMany({ where: { invoiceId: id } }),
-      prisma.invoice.delete({ where: { id } }),
+      prisma.invoice_reminders.deleteMany({ where: { invoiceId: id } }),
+      prisma.invoice_items.deleteMany({ where: { invoiceId: id } }),
+      prisma.invoices.delete({ where: { id } }),
     ]);
 
     return NextResponse.json({

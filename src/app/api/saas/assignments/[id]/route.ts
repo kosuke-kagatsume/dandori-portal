@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const assignment = await prisma.saaSLicenseAssignment.findUnique({
+    const assignment = await prisma.saas_license_assignments.findUnique({
       where: { id: params.id },
       include: {
         service: true,
@@ -58,7 +58,7 @@ export async function PUT(
       notes,
     } = body;
 
-    const assignment = await prisma.saaSLicenseAssignment.update({
+    const assignment = await prisma.saas_license_assignments.update({
       where: { id: params.id },
       data: {
         planId,
@@ -106,7 +106,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await prisma.saaSLicenseAssignment.delete({
+    await prisma.saas_license_assignments.delete({
       where: { id: params.id },
     });
 

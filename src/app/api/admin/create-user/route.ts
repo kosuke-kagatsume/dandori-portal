@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 既存ユーザーチェック
-    const existingUser = await prisma.user.findFirst({
+    const existingUser = await prisma.users.findFirst({
       where: { email },
     });
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // ユーザーを作成
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email,
         name,

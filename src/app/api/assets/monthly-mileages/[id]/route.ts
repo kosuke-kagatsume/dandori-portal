@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const mileage = await prisma.monthlyMileage.findUnique({
+    const mileage = await prisma.monthly_mileages.findUnique({
       where: { id: params.id },
       include: {
         vehicle: {
@@ -59,7 +59,7 @@ export async function PUT(
       recordedByName,
     } = body;
 
-    const mileage = await prisma.monthlyMileage.update({
+    const mileage = await prisma.monthly_mileages.update({
       where: { id: params.id },
       data: {
         distance: distance !== undefined ? parseInt(distance, 10) : undefined,
@@ -100,7 +100,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await prisma.monthlyMileage.delete({
+    await prisma.monthly_mileages.delete({
       where: { id: params.id },
     });
 

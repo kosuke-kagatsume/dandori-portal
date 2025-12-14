@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (userId) where.userId = userId;
     if (unreadOnly) where.readAt = null;
 
-    const notifications = await prisma.certificationNotification.findMany({
+    const notifications = await prisma.certification_notifications.findMany({
       where,
       include: {
         certification: {
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 未読数を取得
-    const unreadCount = await prisma.certificationNotification.count({
+    const unreadCount = await prisma.certification_notifications.count({
       where: {
         ...where,
         readAt: null,
@@ -66,13 +66,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 通知設定を取得
-    let settings = await prisma.certificationNotificationSettings.findUnique({
+    let settings = await prisma.certification_notification_settings.findUnique({
       where: { tenantId: tenantId || 'tenant-demo-001' },
     });
 
     // 設定がなければデフォルト値で作成
     if (!settings) {
-      settings = await prisma.certificationNotificationSettings.create({
+      settings = await prisma.certification_notification_settings.create({
         data: { tenantId: tenantId || 'tenant-demo-001' },
       });
     }
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const escalateToHr = daysUntilExpiry <= settings.escalateToHrDays;
 
     // 通知作成
-    const notification = await prisma.certificationNotification.create({
+    const notification = await prisma.certification_notifications.create({
       data: {
         tenantId: tenantId || 'tenant-demo-001',
         certificationId,
@@ -135,7 +135,7 @@ export async function PATCH(request: NextRequest) {
       updateData.readAt = new Date(); // 確認済みなら既読も
     }
 
-    const notification = await prisma.certificationNotification.update({
+    const notification = await prisma.certification_notifications.update({
       where: { id },
       data: updateData,
     });

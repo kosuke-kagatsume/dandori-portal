@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         tenant: {
-          include: { settings: true },
+          include: { tenant_settings: true },
         },
       },
     });

@@ -17,7 +17,7 @@ export async function GET(
       where.year = parseInt(year, 10);
     }
 
-    const balances = await prisma.leaveBalance.findMany({
+    const balances = await prisma.leave_balances.findMany({
       where,
       orderBy: {
         year: 'desc',
@@ -71,7 +71,7 @@ export async function PUT(
     }
 
     // 既存の残数を確認
-    const existingBalance = await prisma.leaveBalance.findFirst({
+    const existingBalance = await prisma.leave_balances.findFirst({
       where: {
         userId,
         year: parseInt(String(year), 10),
@@ -112,7 +112,7 @@ export async function PUT(
     }
 
     // 更新
-    const balance = await prisma.leaveBalance.update({
+    const balance = await prisma.leave_balances.update({
       where: { id: existingBalance.id },
       data: updateData,
     });

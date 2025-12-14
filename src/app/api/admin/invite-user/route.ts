@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 既存ユーザーチェック
-    const existingUser = await prisma.user.findFirst({
+    const existingUser = await prisma.users.findFirst({
       where: { email },
     });
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     const inviteExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7日後
 
     // ユーザーを招待状態で作成
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email,
         name,

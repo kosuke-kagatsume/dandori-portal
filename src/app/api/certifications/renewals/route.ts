@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (userId) where.userId = userId;
     if (status) where.status = status;
 
-    const renewals = await prisma.certificationRenewal.findMany({
+    const renewals = await prisma.certification_renewals.findMany({
       where,
       include: {
         certification: {
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     // ユーザー情報を一括取得
     const userIds = [...new Set(renewals.map(r => r.userId))];
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       where: { id: { in: userIds } },
       select: {
         id: true,
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 既存の未処理申請がないか確認
-    const existingRenewal = await prisma.certificationRenewal.findFirst({
+    const existingRenewal = await prisma.certification_renewals.findFirst({
       where: {
         certificationId,
         status: { in: ['pending', 'under_review'] },
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const renewal = await prisma.certificationRenewal.create({
+    const renewal = await prisma.certification_renewals.create({
       data: {
         tenantId: tenantId || 'tenant-demo-001',
         certificationId,
@@ -154,7 +154,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 申請を取得
-    const renewal = await prisma.certificationRenewal.findUnique({
+    const renewal = await prisma.certification_renewals.findUnique({
       where: { id },
       include: { certification: true },
     });
@@ -170,7 +170,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'start_review') {
       // 審査開始
-      updatedRenewal = await prisma.certificationRenewal.update({
+      updatedRenewal = await prisma.certification_renewals.update({
         where: { id },
         data: {
           status: 'under_review',
@@ -214,7 +214,7 @@ export async function PATCH(request: NextRequest) {
       });
     } else if (action === 'reject') {
       // 却下
-      updatedRenewal = await prisma.certificationRenewal.update({
+      updatedRenewal = await prisma.certification_renewals.update({
         where: { id },
         data: {
           status: 'rejected',
@@ -227,7 +227,7 @@ export async function PATCH(request: NextRequest) {
       });
     } else if (action === 'update_checklist') {
       // チェックリスト更新
-      updatedRenewal = await prisma.certificationRenewal.update({
+      updatedRenewal = await prisma.certification_renewals.update({
         where: { id },
         data: {
           documentVerified: documentVerified ?? renewal.documentVerified,

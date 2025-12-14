@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // プロフィールを取得（関連データ含む）
-    let profile = await prisma.employeeProfile.findUnique({
+    let profile = await prisma.employee_profiles.findUnique({
       where: { userId },
       include: {
         certifications: {
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     // プロフィールが存在しない場合は作成
     if (!profile) {
-      profile = await prisma.employeeProfile.create({
+      profile = await prisma.employee_profiles.create({
         data: {
           tenantId,
           userId,
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ユーザー基本情報も取得
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -96,14 +96,14 @@ export async function PUT(request: NextRequest) {
     }
 
     // 既存のプロフィールを確認
-    const existing = await prisma.employeeProfile.findUnique({
+    const existing = await prisma.employee_profiles.findUnique({
       where: { userId },
     });
 
     let profile;
     if (existing) {
       // 更新
-      profile = await prisma.employeeProfile.update({
+      profile = await prisma.employee_profiles.update({
         where: { userId },
         data: {
           ...data,
@@ -118,7 +118,7 @@ export async function PUT(request: NextRequest) {
       });
     } else {
       // 作成
-      profile = await prisma.employeeProfile.create({
+      profile = await prisma.employee_profiles.create({
         data: {
           tenantId: tenantId || 'tenant-demo-001',
           userId,

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (userId) where.userId = userId;
     if (category && category !== 'all') where.category = category;
 
-    const skills = await prisma.employeeSkill.findMany({
+    const skills = await prisma.employee_skills.findMany({
       where,
       orderBy: [{ category: 'asc' }, { level: 'desc' }],
     });
@@ -58,12 +58,12 @@ export async function POST(request: NextRequest) {
     }
 
     // プロフィールIDを取得（なければ作成）
-    let profile = await prisma.employeeProfile.findUnique({
+    let profile = await prisma.employee_profiles.findUnique({
       where: { userId },
     });
 
     if (!profile) {
-      profile = await prisma.employeeProfile.create({
+      profile = await prisma.employee_profiles.create({
         data: {
           tenantId: tenantId || 'tenant-demo-001',
           userId,
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const skill = await prisma.employeeSkill.create({
+    const skill = await prisma.employee_skills.create({
       data: {
         tenantId: tenantId || profile.tenantId,
         profileId: profile.id,
@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const skill = await prisma.employeeSkill.update({
+    const skill = await prisma.employee_skills.update({
       where: { id },
       data: {
         ...data,
@@ -133,7 +133,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await prisma.employeeSkill.delete({
+    await prisma.employee_skills.delete({
       where: { id },
     });
 

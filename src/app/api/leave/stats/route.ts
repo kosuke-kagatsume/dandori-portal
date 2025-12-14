@@ -43,17 +43,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 休暇申請データを取得
-    const leaveRequests = await prisma.leaveRequest.findMany({
+    const leaveRequests = await prisma.leave_requests.findMany({
       where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            department: true,
-          },
-        },
-      },
     });
 
     // ステータス別集計
@@ -96,11 +87,11 @@ export async function GET(request: NextRequest) {
       }
 
       // タイプ別集計
-      if (!typeCounts[leave.leaveType]) {
-        typeCounts[leave.leaveType] = { count: 0, days: 0 };
+      if (!typeCounts[leave.type]) {
+        typeCounts[leave.type] = { count: 0, days: 0 };
       }
-      typeCounts[leave.leaveType].count++;
-      typeCounts[leave.leaveType].days += days;
+      typeCounts[leave.type].count++;
+      typeCounts[leave.type].days += days;
 
       // 月別集計（開始月で集計）
       const month = start.getMonth();
@@ -109,8 +100,8 @@ export async function GET(request: NextRequest) {
         monthlyStats[month].days += days;
       }
 
-      // 部門別集計
-      const dept = leave.user.department || '未設定';
+      // 部門別集計（userNameから部門を取得できないため、未設定として扱う）
+      const dept = '未設定';
       if (!departmentStats[dept]) {
         departmentStats[dept] = { count: 0, days: 0 };
       }
@@ -145,9 +136,9 @@ export async function GET(request: NextRequest) {
       .map((leave) => ({
         id: leave.id,
         userId: leave.userId,
-        userName: leave.user.name,
-        department: leave.user.department,
-        leaveType: leave.leaveType,
+        userName: leave.userName,
+        department: null,
+        leaveType: leave.type,
         startDate: leave.startDate,
         endDate: leave.endDate,
         reason: leave.reason,
@@ -179,8 +170,8 @@ export async function GET(request: NextRequest) {
         pendingRequests: pendingRequests.slice(0, 10), // 最新10件
         onLeaveToday: onLeaveToday.map((leave) => ({
           userId: leave.userId,
-          userName: leave.user.name,
-          leaveType: leave.leaveType,
+          userName: leave.userName,
+          leaveType: leave.type,
           endDate: leave.endDate,
         })),
       },

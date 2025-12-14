@@ -84,11 +84,11 @@ export async function GET(request: NextRequest) {
     if (ownershipType) where.ownershipType = ownershipType;
 
     // 総件数取得（ページネーション用）
-    const total = await prisma.vehicle.count({ where });
+    const total = await prisma.vehicles.count({ where });
 
     // 一覧用：必要最小限のフィールドのみ取得
     // 詳細用：関連データも含める
-    const vehicles = await prisma.vehicle.findMany({
+    const vehicles = await prisma.vehicles.findMany({
       where,
       select: {
         id: true,
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const vehicle = await prisma.vehicle.create({
+    const vehicle = await prisma.vehicles.create({
       data: {
         tenantId,
         vehicleNumber,

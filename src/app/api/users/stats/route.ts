@@ -35,33 +35,33 @@ export async function GET(request: NextRequest) {
       newUsersLastMonth,
     ] = await Promise.all([
       // 総ユーザー数
-      prisma.user.count({
+      prisma.users.count({
         where: { tenantId },
       }),
 
       // ロール別集計
-      prisma.user.groupBy({
+      prisma.users.groupBy({
         by: ['role'],
         where: { tenantId },
         _count: true,
       }),
 
       // 部門別集計
-      prisma.user.groupBy({
+      prisma.users.groupBy({
         by: ['department'],
         where: { tenantId },
         _count: true,
       }),
 
       // ステータス別集計
-      prisma.user.groupBy({
+      prisma.users.groupBy({
         by: ['status'],
         where: { tenantId },
         _count: true,
       }),
 
       // 今月の新規ユーザー
-      prisma.user.count({
+      prisma.users.count({
         where: {
           tenantId,
           createdAt: { gte: thisMonthStart },
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // 先月の新規ユーザー
-      prisma.user.count({
+      prisma.users.count({
         where: {
           tenantId,
           createdAt: {

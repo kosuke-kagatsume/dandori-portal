@@ -25,7 +25,7 @@ export async function POST(
     }
 
     // 休暇申請取得
-    const leaveRequest = await prisma.leaveRequest.findUnique({
+    const leaveRequest = await prisma.leave_requests.findUnique({
       where: { id },
     });
 
@@ -40,7 +40,7 @@ export async function POST(
     }
 
     // 承認状態を更新
-    const updatedRequest = await prisma.leaveRequest.update({
+    const updatedRequest = await prisma.leave_requests.update({
       where: { id },
       data: {
         status: 'approved',

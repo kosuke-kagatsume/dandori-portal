@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       data: {
         cleanupAt: now.toISOString(),
         dryRun,
-        settings: {
+        tenant_settings: {
           readDaysToKeep,
           unreadDaysToKeep,
           activityDaysToKeep: 90,

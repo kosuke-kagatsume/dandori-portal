@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // 承認者でフィルター（ApprovalStepとのリレーション経由）
     if (approverId) {
-      where.approvalSteps = {
+      where.approval_steps = {
         some: {
           approverId: approverId,
           status: 'pending',
@@ -43,10 +43,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 総件数取得
-    const total = await prisma.workflowRequest.count({ where });
+    const total = await prisma.workflow_requests.count({ where });
 
     // ワークフロー一覧取得（select最適化）
-    const workflows = await prisma.workflowRequest.findMany({
+    const workflows = await prisma.workflow_requests.findMany({
       where,
       select: {
         id: true,
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
         dueDate: true,
         createdAt: true,
         updatedAt: true,
-        approvalSteps: {
+        approval_steps: {
           orderBy: { order: 'asc' },
           select: {
             id: true,
@@ -76,11 +76,11 @@ export async function GET(request: NextRequest) {
             approverName: true,
             status: true,
             executionMode: true,
-            comment: true,
-            approvedAt: true,
+            comments: true,
+            actionDate: true,
           },
         },
-        timelineEntries: {
+        timeline_entries: {
           orderBy: { createdAt: 'desc' },
           take: 5,
           select: {
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       details,
       priority = 'medium',
       dueDate,
-      approvalSteps,
+      approval_steps,
     } = body;
 
     // バリデーション
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ワークフロー作成（承認ステップとタイムラインも同時作成）
-    const workflow = await prisma.workflowRequest.create({
+    const workflow = await prisma.workflow_requests.create({
       data: {
         tenantId,
         requesterId,
@@ -165,8 +165,9 @@ export async function POST(request: NextRequest) {
         dueDate: dueDate ? new Date(dueDate) : null,
         status: 'pending',
         currentStep: 0,
-        approvalSteps: {
-          create: approvalSteps?.map((step: any, index: number) => ({
+        approval_steps: {
+          create: approval_steps?.map((step: any, index: number) => ({
+            tenantId,
             order: index,
             approverRole: step.approverRole,
             approverId: step.approverId,
@@ -176,8 +177,9 @@ export async function POST(request: NextRequest) {
             timeoutHours: step.timeoutHours,
           })) || [],
         },
-        timelineEntries: {
+        timeline_entries: {
           create: {
+            tenantId,
             action: 'created',
             actorId: requesterId,
             actorName: requesterName,
@@ -186,12 +188,12 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        approvalSteps: {
+        approval_steps: {
           orderBy: {
             order: 'asc',
           },
         },
-        timelineEntries: {
+        timeline_entries: {
           orderBy: {
             createdAt: 'desc',
           },

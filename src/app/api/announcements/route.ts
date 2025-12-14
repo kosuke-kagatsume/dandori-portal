@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 総件数
-    const total = await prisma.announcement.count({ where });
+    const total = await prisma.announcements.count({ where });
 
     // お知らせ一覧取得
-    const announcements = await prisma.announcement.findMany({
+    const announcements = await prisma.announcements.findMany({
       where,
       include: {
         reads: {
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
     // 統計
     const stats = {
       total,
-      published: await prisma.announcement.count({ where: { tenantId, published: true } }),
-      draft: await prisma.announcement.count({ where: { tenantId, published: false } }),
+      published: await prisma.announcements.count({ where: { tenantId, published: true } }),
+      draft: await prisma.announcements.count({ where: { tenantId, published: false } }),
     };
 
     return successResponse(announcements, {
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       return errorResponse(validation.error, 400);
     }
 
-    const announcement = await prisma.announcement.create({
+    const announcement = await prisma.announcements.create({
       data: {
         tenantId,
         title: body.title,

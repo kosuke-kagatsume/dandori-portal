@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const record = await prisma.maintenanceRecord.findUnique({
+    const record = await prisma.maintenance_records.findUnique({
       where: { id: params.id },
       include: {
         vehicle: {
@@ -76,7 +76,7 @@ export async function PUT(
       notes,
     } = body;
 
-    const record = await prisma.maintenanceRecord.update({
+    const record = await prisma.maintenance_records.update({
       where: { id: params.id },
       data: {
         type,
@@ -132,7 +132,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await prisma.maintenanceRecord.delete({
+    await prisma.maintenance_records.delete({
       where: { id: params.id },
     });
 

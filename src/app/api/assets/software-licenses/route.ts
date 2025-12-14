@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { tenantId };
     if (pcAssetId) where.pcAssetId = pcAssetId;
 
-    const licenses = await prisma.softwareLicense.findMany({
+    const licenses = await prisma.software_licenses.findMany({
       where,
       include: {
         pcAsset: {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const license = await prisma.softwareLicense.create({
+    const license = await prisma.software_licenses.create({
       data: {
         tenantId,
         pcAssetId,

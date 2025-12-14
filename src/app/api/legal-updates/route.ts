@@ -136,10 +136,10 @@ export async function GET(request: NextRequest) {
         }
 
         // 総件数取得
-        const total = await prisma.legalUpdate.count({ where });
+        const total = await prisma.legal_updates.count({ where });
 
         // 法令を取得（select最適化）
-        const legalUpdates = await prisma.legalUpdate.findMany({
+        const legalUpdates = await prisma.legal_updates.findMany({
           where,
           select: {
             id: true,

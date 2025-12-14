@@ -9,7 +9,7 @@ export async function GET(
   try {
     const { id } = params;
 
-    const leaveRequest = await prisma.leaveRequest.findUnique({
+    const leaveRequest = await prisma.leave_requests.findUnique({
       where: { id },
     });
 
@@ -59,7 +59,7 @@ export async function PUT(
     } = body;
 
     // 既存の申請を確認
-    const existingRequest = await prisma.leaveRequest.findUnique({
+    const existingRequest = await prisma.leave_requests.findUnique({
       where: { id },
     });
 
@@ -74,7 +74,7 @@ export async function PUT(
     }
 
     // 更新
-    const leaveRequest = await prisma.leaveRequest.update({
+    const leaveRequest = await prisma.leave_requests.update({
       where: { id },
       data: {
         type,
@@ -111,7 +111,7 @@ export async function DELETE(
   try {
     const { id } = params;
 
-    const existingRequest = await prisma.leaveRequest.findUnique({
+    const existingRequest = await prisma.leave_requests.findUnique({
       where: { id },
     });
 
@@ -125,7 +125,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.leaveRequest.delete({
+    await prisma.leave_requests.delete({
       where: { id },
     });
 

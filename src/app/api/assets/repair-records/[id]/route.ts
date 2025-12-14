@@ -10,7 +10,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
 
-    const record = await prisma.repairRecord.findFirst({
+    const record = await prisma.repair_records.findFirst({
       where: {
         id: params.id,
         tenantId,
@@ -66,7 +66,7 @@ export async function PUT(
     const body = await request.json();
 
     // 存在確認
-    const existing = await prisma.repairRecord.findFirst({
+    const existing = await prisma.repair_records.findFirst({
       where: {
         id: params.id,
         tenantId,
@@ -80,7 +80,7 @@ export async function PUT(
       );
     }
 
-    const record = await prisma.repairRecord.update({
+    const record = await prisma.repair_records.update({
       where: { id: params.id },
       data: {
         pcAssetId: body.pcAssetId || null,
@@ -140,7 +140,7 @@ export async function DELETE(
     const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
 
     // 存在確認
-    const existing = await prisma.repairRecord.findFirst({
+    const existing = await prisma.repair_records.findFirst({
       where: {
         id: params.id,
         tenantId,
@@ -154,7 +154,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.repairRecord.delete({
+    await prisma.repair_records.delete({
       where: { id: params.id },
     });
 

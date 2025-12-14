@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { tenantId };
     if (userId) where.userId = userId;
 
-    const experiences = await prisma.workExperience.findMany({
+    const experiences = await prisma.work_experiences.findMany({
       where,
       orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
     });
@@ -59,12 +59,12 @@ export async function POST(request: NextRequest) {
     }
 
     // プロフィールIDを取得（なければ作成）
-    let profile = await prisma.employeeProfile.findUnique({
+    let profile = await prisma.employee_profiles.findUnique({
       where: { userId },
     });
 
     if (!profile) {
-      profile = await prisma.employeeProfile.create({
+      profile = await prisma.employee_profiles.create({
         data: {
           tenantId: tenantId || 'tenant-demo-001',
           userId,
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const experience = await prisma.workExperience.create({
+    const experience = await prisma.work_experiences.create({
       data: {
         tenantId: tenantId || profile.tenantId,
         profileId: profile.id,
@@ -110,7 +110,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const experience = await prisma.workExperience.update({
+    const experience = await prisma.work_experiences.update({
       where: { id },
       data: {
         ...data,
@@ -139,7 +139,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await prisma.workExperience.delete({
+    await prisma.work_experiences.delete({
       where: { id },
     });
 

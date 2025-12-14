@@ -218,7 +218,7 @@ model attendance {
   checkInLocation   Json?
   checkOutLocation  Json?
   tenants           tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  users             users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              users     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([date])

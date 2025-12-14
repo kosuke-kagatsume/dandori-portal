@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       highStressCount,
     ] = await Promise.all([
       // 従業員数
-      prisma.user.count({
+      prisma.users.count({
         where: {
           tenantId,
           status: 'active',
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // 健診月次集計
-      prisma.healthCheckupSummary.findMany({
+      prisma.health_checkup_summaries.findMany({
         where: {
           tenantId,
           year,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // ストレスチェック集計
-      prisma.stressCheckSummary.findFirst({
+      prisma.stress_check_summaries.findFirst({
         where: {
           tenantId,
           year,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // 今後の健診予定（健診レコードから取得）
-      prisma.healthCheckup.findMany({
+      prisma.health_checkups.findMany({
         where: {
           tenantId,
           scheduledDate: {
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // 高ストレス者数（ストレスチェックレコードから取得）
-      prisma.stressCheck.count({
+      prisma.stress_checks.count({
         where: {
           tenantId,
           result: 'high_stress',

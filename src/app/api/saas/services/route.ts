@@ -197,10 +197,10 @@ export async function GET(request: NextRequest) {
     if (isActive !== null) where.isActive = isActive === 'true';
 
     // 総件数取得（ページネーション用）
-    const total = await prisma.saaSService.count({ where });
+    const total = await prisma.saas_services.count({ where });
 
     // 一覧用：必要最小限のフィールドのみ取得
-    const services = await prisma.saaSService.findMany({
+    const services = await prisma.saas_services.findMany({
       where,
       select: {
         id: true,
@@ -313,7 +313,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const service = await prisma.saaSService.create({
+    const service = await prisma.saas_services.create({
       data: {
         tenantId,
         name,

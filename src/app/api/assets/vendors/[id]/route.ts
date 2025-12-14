@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const vendor = await prisma.vendor.findUnique({
+    const vendor = await prisma.vendors.findUnique({
       where: { id: params.id },
       include: {
         maintenanceRecords: {
@@ -60,7 +60,7 @@ export async function PUT(
     const body = await request.json();
     const { name, phone, address, contactPerson, email, rating, notes } = body;
 
-    const vendor = await prisma.vendor.update({
+    const vendor = await prisma.vendors.update({
       where: { id: params.id },
       data: {
         name,
@@ -97,7 +97,7 @@ export async function DELETE(
 ) {
   try {
     // メンテナンス記録との関連を確認
-    const recordCount = await prisma.maintenanceRecord.count({
+    const recordCount = await prisma.maintenance_records.count({
       where: { vendorId: params.id },
     });
 
@@ -111,7 +111,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.vendor.delete({
+    await prisma.vendors.delete({
       where: { id: params.id },
     });
 

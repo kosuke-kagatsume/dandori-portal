@@ -7,10 +7,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: params.id },
       include: {
-        orgUnit: {
+        org_units: {
           select: {
             id: true,
             name: true,
@@ -18,7 +18,7 @@ export async function GET(
             level: true,
           },
         },
-        tenant: {
+        tenants: {
           select: {
             id: true,
             name: true,
@@ -64,7 +64,7 @@ export async function PATCH(
     const body = await request.json();
 
     // 存在確認
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { id: params.id },
     });
 
@@ -80,7 +80,7 @@ export async function PATCH(
 
     // メールアドレス変更時の重複チェック
     if (body.email && body.email !== existingUser.email) {
-      const emailExists = await prisma.user.findUnique({
+      const emailExists = await prisma.users.findUnique({
         where: { email: body.email },
       });
 
@@ -113,18 +113,18 @@ export async function PATCH(
     }
 
     // ユーザー更新
-    const user = await prisma.user.update({
+    const user = await prisma.users.update({
       where: { id: params.id },
       data: updateData,
       include: {
-        orgUnit: {
+        org_units: {
           select: {
             id: true,
             name: true,
             type: true,
           },
         },
-        tenant: {
+        tenants: {
           select: {
             id: true,
             name: true,
@@ -157,7 +157,7 @@ export async function DELETE(
 ) {
   try {
     // 存在確認
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { id: params.id },
     });
 
@@ -172,7 +172,7 @@ export async function DELETE(
     }
 
     // ユーザー削除
-    await prisma.user.delete({
+    await prisma.users.delete({
       where: { id: params.id },
     });
 

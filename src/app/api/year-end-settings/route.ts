@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
 
-    const settings = await prisma.yearEndAdjustmentSettings.findUnique({
+    const settings = await prisma.year_end_adjustment_settings.findUnique({
       where: { tenantId },
     });
 
@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest) {
     } = body;
 
     // upsert（存在すれば更新、なければ作成）
-    const settings = await prisma.yearEndAdjustmentSettings.upsert({
+    const settings = await prisma.year_end_adjustment_settings.upsert({
       where: { tenantId },
       update: {
         adjustmentStartMonth,

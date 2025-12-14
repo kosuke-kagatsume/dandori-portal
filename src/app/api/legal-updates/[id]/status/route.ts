@@ -16,7 +16,7 @@ export async function PUT(
     } = body;
 
     // 法令の存在確認
-    const legalUpdate = await prisma.legalUpdate.findUnique({
+    const legalUpdate = await prisma.legal_updates.findUnique({
       where: { id: params.id },
     });
 
@@ -45,7 +45,7 @@ export async function PUT(
     }
 
     // upsert（存在すれば更新、なければ作成）
-    const tenantStatus = await prisma.tenantLegalStatus.upsert({
+    const tenantStatus = await prisma.tenant_legal_statuses.upsert({
       where: {
         tenantId_legalUpdateId: {
           tenantId,
@@ -100,7 +100,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
 
-    const tenantStatus = await prisma.tenantLegalStatus.findUnique({
+    const tenantStatus = await prisma.tenant_legal_statuses.findUnique({
       where: {
         tenantId_legalUpdateId: {
           tenantId,

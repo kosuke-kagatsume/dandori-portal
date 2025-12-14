@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const legalUpdate = await prisma.legalUpdate.findUnique({
+    const legalUpdate = await prisma.legal_updates.findUnique({
       where: { id: params.id },
       include: {
         tenantStatuses: {
@@ -67,7 +67,7 @@ export async function PUT(
     } = body;
 
     // 既存レコード確認
-    const existing = await prisma.legalUpdate.findUnique({
+    const existing = await prisma.legal_updates.findUnique({
       where: { id: params.id },
     });
 
@@ -86,7 +86,7 @@ export async function PUT(
       publishedAt = null;
     }
 
-    const legalUpdate = await prisma.legalUpdate.update({
+    const legalUpdate = await prisma.legal_updates.update({
       where: { id: params.id },
       data: {
         title,
@@ -127,7 +127,7 @@ export async function DELETE(
 ) {
   try {
     // 既存レコード確認
-    const existing = await prisma.legalUpdate.findUnique({
+    const existing = await prisma.legal_updates.findUnique({
       where: { id: params.id },
       include: {
         _count: {
@@ -155,7 +155,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.legalUpdate.delete({
+    await prisma.legal_updates.delete({
       where: { id: params.id },
     });
 

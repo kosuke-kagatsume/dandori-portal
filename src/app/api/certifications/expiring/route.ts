@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       where.expiryDate = { lte: futureDate };
     }
 
-    const certifications = await prisma.certification.findMany({
+    const certifications = await prisma.certifications.findMany({
       where,
       include: {
         profile: true,
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // userIdリストを収集してユーザー情報を一括取得
     const userIds = [...new Set(certifications.map(c => c.userId))];
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       where: { id: { in: userIds } },
       select: {
         id: true,

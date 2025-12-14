@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // 支払い記録一覧を取得（tenantリレーションがないためinvoice経由でテナント名を取得）
     const [payments, total] = await Promise.all([
-      prisma.payment.findMany({
+      prisma.payments.findMany({
         where,
         include: {
           invoice: {
@@ -75,11 +75,11 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
-      prisma.payment.count({ where }),
+      prisma.payments.count({ where }),
     ]);
 
     // 集計
-    const totalAmount = await prisma.payment.aggregate({
+    const totalAmount = await prisma.payments.aggregate({
       where: {
         ...where,
         status: 'completed',
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 請求書存在確認
-    const invoice = await prisma.invoice.findUnique({
+    const invoice = await prisma.invoices.findUnique({
       where: { id: invoiceId },
       include: {
         payments: {

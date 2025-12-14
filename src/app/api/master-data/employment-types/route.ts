@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
     const where = { tenantId };
 
     // 総件数取得
-    const total = await prisma.employmentType.count({ where });
+    const total = await prisma.employment_types.count({ where });
 
     // 雇用形態一覧取得（select最適化）
-    const employmentTypes = await prisma.employmentType.findMany({
+    const employmentTypes = await prisma.employment_types.findMany({
       where,
       select: {
         id: true,
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'tenantIdとnameは必須です' }, { status: 400 });
     }
 
-    const employmentType = await prisma.employmentType.create({
+    const employmentType = await prisma.employment_types.create({
       data: {
         tenantId,
         name,
@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'idは必須です' }, { status: 400 });
     }
 
-    const employmentType = await prisma.employmentType.update({
+    const employmentType = await prisma.employment_types.update({
       where: { id },
       data: {
         ...(name !== undefined && { name }),
@@ -113,7 +113,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'idは必須です' }, { status: 400 });
     }
 
-    await prisma.employmentType.delete({
+    await prisma.employment_types.delete({
       where: { id },
     });
 

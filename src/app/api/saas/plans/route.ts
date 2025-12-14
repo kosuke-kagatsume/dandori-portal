@@ -19,10 +19,10 @@ export async function GET(request: NextRequest) {
     if (serviceId) where.serviceId = serviceId;
 
     // 総件数取得
-    const total = await prisma.saaSPlan.count({ where });
+    const total = await prisma.saas_license_plans.count({ where });
 
     // プラン一覧取得（select最適化）
-    const plans = await prisma.saaSPlan.findMany({
+    const plans = await prisma.saas_license_plans.findMany({
       where,
       select: {
         id: true,
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const plan = await prisma.saaSPlan.create({
+    const plan = await prisma.saas_license_plans.create({
       data: {
         tenantId,
         serviceId,

@@ -17,7 +17,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const tenantId = getTenantId(searchParams);
 
-    const announcement = await prisma.announcement.findFirst({
+    const announcement = await prisma.announcements.findFirst({
       where: { id, tenantId },
       include: {
         reads: {
@@ -53,7 +53,7 @@ export async function PUT(
     const body = await request.json();
 
     // 存在確認
-    const existing = await prisma.announcement.findFirst({
+    const existing = await prisma.announcements.findFirst({
       where: { id, tenantId },
     });
 
@@ -61,7 +61,7 @@ export async function PUT(
       return errorResponse('お知らせが見つかりません', 404);
     }
 
-    const announcement = await prisma.announcement.update({
+    const announcement = await prisma.announcements.update({
       where: { id },
       data: {
         ...(body.title !== undefined && { title: body.title }),
@@ -101,7 +101,7 @@ export async function DELETE(
     const tenantId = getTenantId(searchParams);
 
     // 存在確認
-    const existing = await prisma.announcement.findFirst({
+    const existing = await prisma.announcements.findFirst({
       where: { id, tenantId },
     });
 
@@ -109,7 +109,7 @@ export async function DELETE(
       return errorResponse('お知らせが見つかりません', 404);
     }
 
-    await prisma.announcement.delete({
+    await prisma.announcements.delete({
       where: { id },
     });
 

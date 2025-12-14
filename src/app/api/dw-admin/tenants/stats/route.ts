@@ -29,15 +29,15 @@ export async function GET(request: NextRequest) {
       pendingTrials,
     ] = await Promise.all([
       // 総テナント数
-      prisma.tenant.count(),
+      prisma.tenants.count(),
 
       // 総ユーザー数
-      prisma.user.count(),
+      prisma.users.count(),
 
       // テナントとそのステータス
-      prisma.tenant.findMany({
+      prisma.tenants.findMany({
         include: {
-          settings: {
+          tenant_settings: {
             select: {
               status: true,
               trialEndDate: true,
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // 今月の新規テナント
-      prisma.tenant.count({
+      prisma.tenants.count({
         where: {
           createdAt: {
             gte: thisMonthStart,
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // 今月の売上（支払い済み請求書）
-      prisma.invoice.aggregate({
+      prisma.invoices.aggregate({
         where: {
           status: 'paid',
           paidDate: {
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       }),
 
       // 先月の売上
-      prisma.invoice.aggregate({
+      prisma.invoices.aggregate({
         where: {
           status: 'paid',
           paidDate: {
@@ -89,14 +89,14 @@ export async function GET(request: NextRequest) {
       }),
 
       // 延滞請求書
-      prisma.invoice.count({
+      prisma.invoices.count({
         where: {
           status: 'overdue',
         },
       }),
 
       // トライアル終了間近（7日以内）
-      prisma.tenantSettings.count({
+      prisma.tenant_settings.count({
         where: {
           status: 'trial',
           trialEndDate: {
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     };
 
     tenantsWithSettings.forEach((tenant) => {
-      const status = tenant.settings?.status || 'trial';
+      const status = tenant.tenant_settings?.status || 'trial';
       if (status in statusCounts) {
         statusCounts[status as keyof typeof statusCounts]++;
       }

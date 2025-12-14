@@ -22,10 +22,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 総件数取得
-    const total = await prisma.user.count({ where });
+    const total = await prisma.users.count({ where });
 
     // ユーザー一覧取得（select最適化）
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       where,
       select: {
         id: true,
@@ -40,14 +40,14 @@ export async function GET(request: NextRequest) {
         hireDate: true,
         createdAt: true,
         updatedAt: true,
-        orgUnit: {
+        org_units: {
           select: {
             id: true,
             name: true,
             type: true,
           },
         },
-        tenant: {
+        tenants: {
           select: {
             id: true,
             name: true,
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // メールアドレス重複チェック
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { email },
     });
 
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ユーザー作成
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email,
         name,
@@ -136,14 +136,14 @@ export async function POST(request: NextRequest) {
         avatar,
       },
       include: {
-        orgUnit: {
+        org_units: {
           select: {
             id: true,
             name: true,
             type: true,
           },
         },
-        tenant: {
+        tenants: {
           select: {
             id: true,
             name: true,

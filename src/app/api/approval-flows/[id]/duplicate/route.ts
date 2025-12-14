@@ -10,7 +10,7 @@ export async function POST(
     const { id } = await params;
 
     // 複製元のフローを取得
-    const originalFlow = await prisma.approvalFlowDefinition.findUnique({
+    const originalFlow = await prisma.approval_flow_definitions.findUnique({
       where: { id },
       include: {
         steps: {
@@ -33,7 +33,7 @@ export async function POST(
     }
 
     // 新しいフローを作成（デフォルトはfalseに設定）
-    const newFlow = await prisma.approvalFlowDefinition.create({
+    const newFlow = await prisma.approval_flow_definitions.create({
       data: {
         tenantId: originalFlow.tenantId,
         name: `${originalFlow.name} (コピー)`,

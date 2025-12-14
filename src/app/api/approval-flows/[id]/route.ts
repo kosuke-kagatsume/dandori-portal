@@ -9,7 +9,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const flow = await prisma.approvalFlowDefinition.findUnique({
+    const flow = await prisma.approval_flow_definitions.findUnique({
       where: { id },
       include: {
         steps: {
@@ -114,7 +114,7 @@ export async function PUT(
     } = body;
 
     // 既存のフローを確認
-    const existingFlow = await prisma.approvalFlowDefinition.findUnique({
+    const existingFlow = await prisma.approval_flow_definitions.findUnique({
       where: { id },
     });
 
@@ -127,7 +127,7 @@ export async function PUT(
 
     // デフォルトフローの一意性チェック
     if (isDefault && !existingFlow.isDefault) {
-      const anotherDefault = await prisma.approvalFlowDefinition.findFirst({
+      const anotherDefault = await prisma.approval_flow_definitions.findFirst({
         where: {
           tenantId: existingFlow.tenantId,
           documentType: existingFlow.documentType,
@@ -137,7 +137,7 @@ export async function PUT(
       });
 
       if (anotherDefault) {
-        await prisma.approvalFlowDefinition.update({
+        await prisma.approval_flow_definitions.update({
           where: { id: anotherDefault.id },
           data: { isDefault: false },
         });
@@ -240,7 +240,7 @@ export async function DELETE(
     const { id } = await params;
 
     // 既存のフローを確認
-    const existingFlow = await prisma.approvalFlowDefinition.findUnique({
+    const existingFlow = await prisma.approval_flow_definitions.findUnique({
       where: { id },
     });
 
@@ -260,7 +260,7 @@ export async function DELETE(
     }
 
     // 削除（カスケードでステップ・条件も削除される）
-    await prisma.approvalFlowDefinition.delete({
+    await prisma.approval_flow_definitions.delete({
       where: { id },
     });
 

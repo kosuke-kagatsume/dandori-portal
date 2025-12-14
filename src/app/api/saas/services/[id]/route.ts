@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const service = await prisma.saaSService.findUnique({
+    const service = await prisma.saas_services.findUnique({
       where: { id: params.id },
       include: {
         plans: true,
@@ -78,7 +78,7 @@ export async function PUT(
       notes,
     } = body;
 
-    const service = await prisma.saaSService.update({
+    const service = await prisma.saas_services.update({
       where: { id: params.id },
       data: {
         name,
@@ -129,17 +129,17 @@ export async function DELETE(
 ) {
   try {
     // 関連データも削除
-    await prisma.saaSLicenseAssignment.deleteMany({
+    await prisma.saas_license_assignments.deleteMany({
       where: { serviceId: params.id },
     });
-    await prisma.saaSLicensePlan.deleteMany({
+    await prisma.saas_license_plans.deleteMany({
       where: { serviceId: params.id },
     });
-    await prisma.saaSMonthlyCost.deleteMany({
+    await prisma.saas_monthly_costs.deleteMany({
       where: { serviceId: params.id },
     });
 
-    await prisma.saaSService.delete({
+    await prisma.saas_services.delete({
       where: { id: params.id },
     });
 

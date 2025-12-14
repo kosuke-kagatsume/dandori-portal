@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const vehicle = await prisma.vehicle.findUnique({
+    const vehicle = await prisma.vehicles.findUnique({
       where: { id: params.id },
       include: {
         monthlyMileages: {
@@ -76,7 +76,7 @@ export async function PUT(
       notes,
     } = body;
 
-    const vehicle = await prisma.vehicle.update({
+    const vehicle = await prisma.vehicles.update({
       where: { id: params.id },
       data: {
         vehicleNumber,
@@ -126,14 +126,14 @@ export async function DELETE(
 ) {
   try {
     // 関連データも削除
-    await prisma.monthlyMileage.deleteMany({
+    await prisma.monthly_mileages.deleteMany({
       where: { vehicleId: params.id },
     });
-    await prisma.maintenanceRecord.deleteMany({
+    await prisma.maintenance_records.deleteMany({
       where: { vehicleId: params.id },
     });
 
-    await prisma.vehicle.delete({
+    await prisma.vehicles.delete({
       where: { id: params.id },
     });
 

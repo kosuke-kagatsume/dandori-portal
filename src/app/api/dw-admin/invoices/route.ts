@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // 請求書一覧を取得
     const [invoices, total] = await Promise.all([
-      prisma.invoice.findMany({
+      prisma.invoices.findMany({
         where,
         include: {
           tenant: {
@@ -76,11 +76,11 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
-      prisma.invoice.count({ where }),
+      prisma.invoices.count({ where }),
     ]);
 
     // 集計データを取得
-    const summaryResult = await prisma.invoice.groupBy({
+    const summaryResult = await prisma.invoices.groupBy({
       by: ['status'],
       _sum: {
         total: true,
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    const monthlyRevenue = await prisma.invoice.aggregate({
+    const monthlyRevenue = await prisma.invoices.aggregate({
       where: {
         status: 'paid',
         paidDate: {
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    await prisma.invoice.updateMany({
+    await prisma.invoices.updateMany({
       where: {
         status: 'sent',
         dueDate: {
@@ -230,10 +230,10 @@ export async function POST(request: NextRequest) {
     }
 
     // テナント存在確認
-    const tenant = await prisma.tenant.findUnique({
+    const tenant = await prisma.tenants.findUnique({
       where: { id: tenantId },
       include: {
-        settings: {
+        tenant_settings: {
           select: {
             billingEmail: true,
           },
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    const lastInvoice = await prisma.invoice.findFirst({
+    const lastInvoice = await prisma.invoices.findFirst({
       where: {
         invoiceNumber: {
           startsWith: `INV-${yearMonth}`,
@@ -275,7 +275,7 @@ export async function POST(request: NextRequest) {
     const total = subtotal + tax;
 
     // 請求書作成
-    const invoice = await prisma.invoice.create({
+    const invoice = await prisma.invoices.create({
       data: {
         tenantId,
         invoiceNumber,
@@ -284,7 +284,7 @@ export async function POST(request: NextRequest) {
         total,
         billingMonth: billingMonth ? new Date(billingMonth) : new Date(now.getFullYear(), now.getMonth(), 1),
         dueDate: dueDate ? new Date(dueDate) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // デフォルト30日後
-        billingEmail: billingEmail || tenant.settings?.billingEmail || '',
+        billingEmail: billingEmail || tenant.tenant_settings?.billingEmail || '',
         memo,
         status: 'draft',
       },

@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       const endOfMonth = new Date(year, month, 0);
 
       // 日次集計データを取得
-      const dailyMetrics = await prisma.dailyAttendanceMetric.findMany({
+      const dailyMetrics = await prisma.daily_attendance_metrics.findMany({
         where: {
           tenantId,
           date: {
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
     // 日次統計
     // テナントの従業員数を取得
-    const totalEmployees = await prisma.user.count({
+    const totalEmployees = await prisma.users.count({
       where: {
         tenantId,
         status: 'active',
@@ -164,7 +164,7 @@ export async function GET(request: NextRequest) {
     };
 
     // キャッシュ用に DailyAttendanceMetric を更新/作成
-    await prisma.dailyAttendanceMetric.upsert({
+    await prisma.daily_attendance_metrics.upsert({
       where: {
         tenantId_date: {
           tenantId,

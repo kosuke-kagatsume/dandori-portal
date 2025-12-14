@@ -90,7 +90,7 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams;
     const tenantId = getTenantId(searchParams);
 
-    const stressCheck = await prisma.stressCheck.findFirst({
+    const stressCheck = await prisma.stress_checks.findFirst({
       where: { id, tenantId },
     });
 
@@ -124,7 +124,7 @@ export async function PUT(
     const body = await request.json();
 
     // 既存チェック
-    const existing = await prisma.stressCheck.findFirst({
+    const existing = await prisma.stress_checks.findFirst({
       where: { id, tenantId },
     });
 
@@ -146,7 +146,7 @@ export async function PUT(
       doctorOpinion,
     } = body;
 
-    const stressCheck = await prisma.stressCheck.update({
+    const stressCheck = await prisma.stress_checks.update({
       where: { id },
       data: {
         interviewRequested,
@@ -184,7 +184,7 @@ export async function DELETE(
     const { id } = await params;
 
     // 既存チェック
-    const existing = await prisma.stressCheck.findFirst({
+    const existing = await prisma.stress_checks.findFirst({
       where: { id, tenantId },
     });
 
@@ -195,7 +195,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.stressCheck.delete({
+    await prisma.stress_checks.delete({
       where: { id },
     });
 

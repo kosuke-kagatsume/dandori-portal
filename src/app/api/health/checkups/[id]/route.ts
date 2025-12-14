@@ -122,7 +122,7 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams;
     const tenantId = getTenantId(searchParams);
 
-    const checkup = await prisma.healthCheckup.findFirst({
+    const checkup = await prisma.health_checkups.findFirst({
       where: { id, tenantId },
       include: {
         findings: true,
@@ -159,7 +159,7 @@ export async function PUT(
     const body = await request.json();
 
     // 既存チェック
-    const existing = await prisma.healthCheckup.findFirst({
+    const existing = await prisma.health_checkups.findFirst({
       where: { id, tenantId },
     });
 
@@ -292,7 +292,7 @@ export async function DELETE(
     const { id } = await params;
 
     // 既存チェック
-    const existing = await prisma.healthCheckup.findFirst({
+    const existing = await prisma.health_checkups.findFirst({
       where: { id, tenantId },
     });
 
@@ -303,7 +303,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.healthCheckup.delete({
+    await prisma.health_checkups.delete({
       where: { id },
     });
 

@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
 
-    const assets = await prisma.generalAsset.findMany({
+    const assets = await prisma.general_assets.findMany({
       where: { tenantId },
       include: {
         repairRecords: {
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const asset = await prisma.generalAsset.create({
+    const asset = await prisma.general_assets.create({
       data: {
         tenantId,
         assetNumber: body.assetNumber,

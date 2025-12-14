@@ -98,7 +98,7 @@ export async function GET() {
     }
 
     // Fetch user from database
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: payload.userId },
     });
 

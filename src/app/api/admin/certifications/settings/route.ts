@@ -12,13 +12,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const tenantId = getTenantId(searchParams);
 
-    let settings = await prisma.certificationNotificationSettings.findUnique({
+    let settings = await prisma.certification_notification_settings.findUnique({
       where: { tenantId },
     });
 
     // 設定がなければデフォルト値で作成
     if (!settings) {
-      settings = await prisma.certificationNotificationSettings.create({
+      settings = await prisma.certification_notification_settings.create({
         data: { tenantId },
       });
     }
@@ -47,7 +47,7 @@ export async function PUT(request: NextRequest) {
 
     const finalTenantId = tenantId || 'tenant-demo-001';
 
-    const settings = await prisma.certificationNotificationSettings.upsert({
+    const settings = await prisma.certification_notification_settings.upsert({
       where: { tenantId: finalTenantId },
       update: {
         ...(notificationDays !== undefined && { notificationDays }),

@@ -244,13 +244,13 @@ export async function GET(request: NextRequest) {
     }
 
     const [stressChecks, total] = await Promise.all([
-      prisma.stressCheck.findMany({
+      prisma.stress_checks.findMany({
         where,
         orderBy: { checkDate: 'desc' },
         take: limit,
         skip: offset,
       }),
-      prisma.stressCheck.count({ where }),
+      prisma.stress_checks.count({ where }),
     ]);
 
     // 統計情報を計算（N+1問題解消: 5クエリ→2クエリ）
@@ -259,10 +259,10 @@ export async function GET(request: NextRequest) {
     // 1. ユーザー総数（受検率計算用）
     // 2. ステータス別集計（groupByで一度に取得）
     const [totalUsers, statusCounts] = await Promise.all([
-      prisma.user.count({
+      prisma.users.count({
         where: { tenantId, status: 'active' },
       }),
-      prisma.stressCheck.groupBy({
+      prisma.stress_checks.groupBy({
         by: ['status'],
         where: { tenantId, fiscalYear: currentYear },
         _count: true,
@@ -322,7 +322,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // 既存チェック（同一年度の重複防止）
-    const existing = await prisma.stressCheck.findFirst({
+    const existing = await prisma.stress_checks.findFirst({
       where: {
         tenantId,
         userId,
@@ -338,7 +338,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stressCheck = existing
-      ? await prisma.stressCheck.update({
+      ? await prisma.stress_checks.update({
           where: { id: existing.id },
           data: {
             checkDate: new Date(),
@@ -352,7 +352,7 @@ export async function POST(request: NextRequest) {
             highStressReason,
           },
         })
-      : await prisma.stressCheck.create({
+      : await prisma.stress_checks.create({
           data: {
             tenantId,
             userId,

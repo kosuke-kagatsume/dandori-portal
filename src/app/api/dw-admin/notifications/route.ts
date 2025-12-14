@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     // 通知一覧を取得（DWNotificationにはtenantリレーションがないので、tenantNameを直接使用）
     const [notifications, total, unreadCount] = await Promise.all([
-      prisma.dWNotification.findMany({
+      prisma.dw_notifications.findMany({
         where,
         orderBy: [
           { readAt: 'asc' }, // 未読を先に
@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
-      prisma.dWNotification.count({ where }),
-      prisma.dWNotification.count({
+      prisma.dw_notifications.count({ where }),
+      prisma.dw_notifications.count({
         where: {
           ...where,
           readAt: null,
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 通知作成
-    const notification = await prisma.dWNotification.create({
+    const notification = await prisma.dw_notifications.create({
       data: {
         type,
         title,
@@ -193,7 +193,7 @@ export async function PUT(request: NextRequest) {
 
     if (markAllRead) {
       // 全て既読にする
-      await prisma.dWNotification.updateMany({
+      await prisma.dw_notifications.updateMany({
         where: {
           readAt: null,
         },
@@ -218,7 +218,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // 指定した通知を既読にする
-    await prisma.dWNotification.updateMany({
+    await prisma.dw_notifications.updateMany({
       where: {
         id: { in: ids },
         readAt: null,

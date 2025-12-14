@@ -21,12 +21,12 @@ export async function GET(request: NextRequest) {
     }
 
     // 設定を取得（なければ作成）
-    let settings = await prisma.userAccountSettings.findUnique({
+    let settings = await prisma.user_account_settings.findUnique({
       where: { userId },
     });
 
     if (!settings) {
-      settings = await prisma.userAccountSettings.create({
+      settings = await prisma.user_account_settings.create({
         data: {
           tenantId,
           userId,
@@ -56,14 +56,14 @@ export async function PUT(request: NextRequest) {
     }
 
     // 既存の設定を確認
-    const existing = await prisma.userAccountSettings.findUnique({
+    const existing = await prisma.user_account_settings.findUnique({
       where: { userId },
     });
 
     let settings;
     if (existing) {
       // 更新
-      settings = await prisma.userAccountSettings.update({
+      settings = await prisma.user_account_settings.update({
         where: { userId },
         data: {
           ...data,
@@ -72,7 +72,7 @@ export async function PUT(request: NextRequest) {
       });
     } else {
       // 作成
-      settings = await prisma.userAccountSettings.create({
+      settings = await prisma.user_account_settings.create({
         data: {
           tenantId: tenantId || 'tenant-demo-001',
           userId,
@@ -105,7 +105,7 @@ export async function PATCH(request: NextRequest) {
       // パスワード変更処理
       // TODO: AWS Cognitoと連携してパスワード変更
       // 現在はpasswordChangedAtのみ更新
-      const settings = await prisma.userAccountSettings.upsert({
+      const settings = await prisma.user_account_settings.upsert({
         where: { userId },
         update: {
           passwordChangedAt: new Date(),
@@ -126,11 +126,11 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'toggle_2fa') {
       // 2FA切り替え
-      const existing = await prisma.userAccountSettings.findUnique({
+      const existing = await prisma.user_account_settings.findUnique({
         where: { userId },
       });
 
-      const settings = await prisma.userAccountSettings.upsert({
+      const settings = await prisma.user_account_settings.upsert({
         where: { userId },
         update: {
           twoFactorEnabled: !existing?.twoFactorEnabled,
@@ -155,7 +155,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'update_notifications') {
       // 通知設定更新
-      const settings = await prisma.userAccountSettings.upsert({
+      const settings = await prisma.user_account_settings.upsert({
         where: { userId },
         update: {
           emailNotifications: data.emailNotifications,
@@ -181,7 +181,7 @@ export async function PATCH(request: NextRequest) {
 
     if (action === 'update_appearance') {
       // 外観設定更新
-      const settings = await prisma.userAccountSettings.upsert({
+      const settings = await prisma.user_account_settings.upsert({
         where: { userId },
         update: {
           theme: data.theme,

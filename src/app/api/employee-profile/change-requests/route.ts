@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
     if (status && status !== 'all') where.status = status;
     if (requestType && requestType !== 'all') where.requestType = requestType;
 
-    const total = await prisma.employeeChangeRequest.count({ where });
+    const total = await prisma.employee_change_requests.count({ where });
 
-    const changeRequests = await prisma.employeeChangeRequest.findMany({
+    const changeRequests = await prisma.employee_change_requests.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       skip,
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     // ユーザー情報を取得
     const userIds = [...new Set(changeRequests.map(r => r.userId))];
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       where: { id: { in: userIds } },
       select: { id: true, name: true, email: true, department: true },
     });
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const changeRequest = await prisma.employeeChangeRequest.create({
+    const changeRequest = await prisma.employee_change_requests.create({
       data: {
         tenantId: tenantId || 'tenant-demo-001',
         userId,
@@ -129,7 +129,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 変更申請を取得
-    const changeRequest = await prisma.employeeChangeRequest.findUnique({
+    const changeRequest = await prisma.employee_change_requests.findUnique({
       where: { id },
     });
 
@@ -143,7 +143,7 @@ export async function PATCH(request: NextRequest) {
     // 承認の場合は実際のデータを更新
     if (status === 'approved') {
       // プロフィールを取得
-      const profile = await prisma.employeeProfile.findUnique({
+      const profile = await prisma.employee_profiles.findUnique({
         where: { userId: changeRequest.userId },
       });
 
@@ -152,7 +152,7 @@ export async function PATCH(request: NextRequest) {
         const updateData: Record<string, unknown> = {};
         updateData[changeRequest.fieldName] = changeRequest.newValue;
 
-        await prisma.employeeProfile.update({
+        await prisma.employee_profiles.update({
           where: { id: profile.id },
           data: updateData,
         });
@@ -161,7 +161,7 @@ export async function PATCH(request: NextRequest) {
         try {
           const certData = JSON.parse(changeRequest.newValue);
           if (profile) {
-            await prisma.certification.create({
+            await prisma.certifications.create({
               data: {
                 tenantId: changeRequest.tenantId,
                 profileId: profile.id,
@@ -181,7 +181,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // ステータス更新
-    const updatedRequest = await prisma.employeeChangeRequest.update({
+    const updatedRequest = await prisma.employee_change_requests.update({
       where: { id },
       data: {
         status,

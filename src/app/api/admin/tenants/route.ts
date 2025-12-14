@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET() {
   try {
-    const tenants = await prisma.tenant.findMany({
+    const tenants = await prisma.tenants.findMany({
       include: {
         settings: true,
         _count: {
@@ -31,7 +31,7 @@ export async function GET() {
         timezone: tenant.timezone,
         closingDay: tenant.closingDay,
         weekStartDay: tenant.weekStartDay,
-        settings: tenant.settings,
+        settings: tenant.tenant_settings,
         userCount: tenant._count.users,
         createdAt: tenant.createdAt,
         updatedAt: tenant.updatedAt,
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // サブドメインの重複チェック
-    const existingTenant = await prisma.tenant.findUnique({
+    const existingTenant = await prisma.tenants.findUnique({
       where: { subdomain },
     });
 

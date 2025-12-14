@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [legalUpdates, total] = await Promise.all([
-      prisma.legalUpdate.findMany({
+      prisma.legal_updates.findMany({
         where,
         select: {
           id: true,
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
-      prisma.legalUpdate.count({ where }),
+      prisma.legal_updates.count({ where }),
     ]);
 
     return successResponse(legalUpdates, {
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const legalUpdate = await prisma.legalUpdate.create({
+    const legalUpdate = await prisma.legal_updates.create({
       data: {
         title,
         description,

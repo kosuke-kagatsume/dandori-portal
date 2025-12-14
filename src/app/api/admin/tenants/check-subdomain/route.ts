@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     // データベースで重複チェック
-    const existingTenant = await prisma.tenant.findUnique({
+    const existingTenant = await prisma.tenants.findUnique({
       where: { subdomain },
       select: { id: true },
     });

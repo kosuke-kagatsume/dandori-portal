@@ -70,14 +70,14 @@ export async function GET(request: NextRequest) {
       highStressTrend,
     ] = await Promise.all([
       // 健康診断の統計
-      prisma.healthCheckup.groupBy({
+      prisma.health_checkups.groupBy({
         by: ['overallResult'],
         where: { tenantId, fiscalYear: currentYear },
         _count: true,
       }),
 
       // ストレスチェックの統計
-      prisma.stressCheck.aggregate({
+      prisma.stress_checks.aggregate({
         where: { tenantId, fiscalYear: currentYear },
         _count: { id: true },
         _avg: {
@@ -90,10 +90,10 @@ export async function GET(request: NextRequest) {
       // 有所見率の推移（過去3年）
       Promise.all(
         [currentYear - 2, currentYear - 1, currentYear].map(async (year) => {
-          const total = await prisma.healthCheckup.count({
+          const total = await prisma.health_checkups.count({
             where: { tenantId, fiscalYear: year },
           });
-          const withFindings = await prisma.healthCheckup.count({
+          const withFindings = await prisma.health_checkups.count({
             where: {
               tenantId,
               fiscalYear: year,
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
           const startDate = new Date(currentYear, i, 1);
           const endDate = new Date(currentYear, i + 1, 0);
 
-          return prisma.stressCheck.count({
+          return prisma.stress_checks.count({
             where: {
               tenantId,
               fiscalYear: currentYear,
@@ -157,23 +157,23 @@ export async function GET(request: NextRequest) {
     ]);
 
     // 受診率の計算
-    const totalActiveUsers = await prisma.user.count({
+    const totalActiveUsers = await prisma.users.count({
       where: { tenantId, status: 'active' },
     });
 
-    const checkupCount = await prisma.healthCheckup.count({
+    const checkupCount = await prisma.health_checkups.count({
       where: { tenantId, fiscalYear: currentYear },
     });
 
-    const stressCheckCompletedCount = await prisma.stressCheck.count({
+    const stressCheckCompletedCount = await prisma.stress_checks.count({
       where: { tenantId, fiscalYear: currentYear, status: 'completed' },
     });
 
-    const highStressCount = await prisma.stressCheck.count({
+    const highStressCount = await prisma.stress_checks.count({
       where: { tenantId, fiscalYear: currentYear, isHighStress: true },
     });
 
-    const interviewRequestedCount = await prisma.stressCheck.count({
+    const interviewRequestedCount = await prisma.stress_checks.count({
       where: { tenantId, fiscalYear: currentYear, interviewRequested: true },
     });
 

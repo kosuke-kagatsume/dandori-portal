@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       where.year = parseInt(year, 10);
     }
 
-    const balances = await prisma.leaveBalance.findMany({
+    const balances = await prisma.leave_balances.findMany({
       where,
       orderBy: {
         year: 'desc',
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 休暇残数作成
-    const balance = await prisma.leaveBalance.create({
+    const balance = await prisma.leave_balances.create({
       data: {
         tenantId,
         userId,

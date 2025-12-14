@@ -25,10 +25,10 @@ export async function POST(
     }
 
     // ワークフロー取得
-    const workflow = await prisma.workflowRequest.findUnique({
+    const workflow = await prisma.workflow_requests.findUnique({
       where: { id },
       include: {
-        approvalSteps: {
+        approval_steps: {
           orderBy: {
             order: 'asc',
           },
@@ -47,7 +47,7 @@ export async function POST(
     }
 
     // 現在のステップを取得
-    const currentStep = workflow.approvalSteps[workflow.currentStep];
+    const currentStep = workflow.approval_steps[workflow.currentStep];
 
     if (!currentStep) {
       return NextResponse.json(
@@ -71,7 +71,7 @@ export async function POST(
     }
 
     // 承認ステップを更新
-    await prisma.approvalStep.update({
+    await prisma.approval_steps.update({
       where: { id: currentStep.id },
       data: {
         status: 'approved',
@@ -82,19 +82,19 @@ export async function POST(
 
     // 次のステップがあるか確認
     const nextStepIndex = workflow.currentStep + 1;
-    const hasNextStep = nextStepIndex < workflow.approvalSteps.length;
+    const hasNextStep = nextStepIndex < workflow.approval_steps.length;
 
     // ワークフロー状態を更新
     const newStatus = hasNextStep ? 'in_progress' : 'approved';
     const completedAt = hasNextStep ? null : new Date();
 
-    const updatedWorkflow = await prisma.workflowRequest.update({
+    const updatedWorkflow = await prisma.workflow_requests.update({
       where: { id },
       data: {
         status: newStatus,
         currentStep: hasNextStep ? nextStepIndex : workflow.currentStep,
         completedAt,
-        timelineEntries: {
+        timeline_entries: {
           create: {
             action: hasNextStep ? 'approved' : 'completed',
             actorId: approverId,
@@ -104,12 +104,12 @@ export async function POST(
         },
       },
       include: {
-        approvalSteps: {
+        approval_steps: {
           orderBy: {
             order: 'asc',
           },
         },
-        timelineEntries: {
+        timeline_entries: {
           orderBy: {
             createdAt: 'desc',
           },

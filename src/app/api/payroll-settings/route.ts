@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
 
-    const settings = await prisma.payrollSettings.findUnique({
+    const settings = await prisma.payroll_settings.findUnique({
       where: { tenantId },
     });
 
@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest) {
     } = body;
 
     // upsert（存在すれば更新、なければ作成）
-    const settings = await prisma.payrollSettings.upsert({
+    const settings = await prisma.payroll_settings.upsert({
       where: { tenantId },
       update: {
         paymentDay,

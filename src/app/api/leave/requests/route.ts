@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       where.type = type;
     }
 
-    const requests = await prisma.leaveRequest.findMany({
+    const requests = await prisma.leave_requests.findMany({
       where,
       orderBy: {
         createdAt: 'desc',
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 休暇申請作成
-    const leaveRequest = await prisma.leaveRequest.create({
+    const leaveRequest = await prisma.leave_requests.create({
       data: {
         tenantId,
         userId,

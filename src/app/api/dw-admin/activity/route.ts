@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // アクティビティ一覧を取得
     const [activities, total] = await Promise.all([
-      prisma.activityFeed.findMany({
+      prisma.activity_feeds.findMany({
         where,
         orderBy: {
           createdAt: 'desc',
@@ -56,11 +56,11 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
-      prisma.activityFeed.count({ where }),
+      prisma.activity_feeds.count({ where }),
     ]);
 
     // タイプ別の集計（直近7日間）
-    const typeCounts = await prisma.activityFeed.groupBy({
+    const typeCounts = await prisma.activity_feeds.groupBy({
       by: ['activityType'],
       _count: true,
       where: {
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     }
 
     // アクティビティ作成
-    const activity = await prisma.activityFeed.create({
+    const activity = await prisma.activity_feeds.create({
       data: {
         tenantId,
         activityType,

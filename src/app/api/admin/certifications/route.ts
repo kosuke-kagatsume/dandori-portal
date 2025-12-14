@@ -32,49 +32,49 @@ export async function GET(request: NextRequest) {
       expiringCertifications,
     ] = await Promise.all([
       // 期限切れ
-      prisma.certification.count({
+      prisma.certifications.count({
         where: {
           tenantId,
           expiryDate: { lt: now, not: null },
         },
       }),
       // 7日以内
-      prisma.certification.count({
+      prisma.certifications.count({
         where: {
           tenantId,
           expiryDate: { gte: now, lte: in7Days },
         },
       }),
       // 14日以内
-      prisma.certification.count({
+      prisma.certifications.count({
         where: {
           tenantId,
           expiryDate: { gte: now, lte: in14Days },
         },
       }),
       // 30日以内
-      prisma.certification.count({
+      prisma.certifications.count({
         where: {
           tenantId,
           expiryDate: { gte: now, lte: in30Days },
         },
       }),
       // 未処理の更新申請
-      prisma.certificationRenewal.count({
+      prisma.certification_renewals.count({
         where: {
           tenantId,
           status: 'pending',
         },
       }),
       // 審査中の更新申請
-      prisma.certificationRenewal.count({
+      prisma.certification_renewals.count({
         where: {
           tenantId,
           status: 'under_review',
         },
       }),
       // 最近の通知
-      prisma.certificationNotification.findMany({
+      prisma.certification_notifications.findMany({
         where: { tenantId },
         include: {
           certification: {
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
         take: 10,
       }),
       // 期限接近リスト（上位10件）
-      prisma.certification.findMany({
+      prisma.certifications.findMany({
         where: {
           tenantId,
           expiryDate: { gte: now, lte: in30Days },
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // 期限切れ資格リスト（上位10件）
-    const expiredCertifications = await prisma.certification.findMany({
+    const expiredCertifications = await prisma.certifications.findMany({
       where: {
         tenantId,
         expiryDate: { lt: now, not: null },
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 未処理の更新申請リスト
-    const pendingRenewals = await prisma.certificationRenewal.findMany({
+    const pendingRenewals = await prisma.certification_renewals.findMany({
       where: {
         tenantId,
         status: { in: ['pending', 'under_review'] },
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     expiredCertifications.forEach(c => allUserIds.add(c.userId));
     pendingRenewals.forEach(r => allUserIds.add(r.userId));
 
-    const users = await prisma.user.findMany({
+    const users = await prisma.users.findMany({
       where: { id: { in: [...allUserIds] } },
       select: {
         id: true,

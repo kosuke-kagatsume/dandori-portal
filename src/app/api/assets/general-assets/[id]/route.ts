@@ -10,7 +10,7 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
 
-    const asset = await prisma.generalAsset.findFirst({
+    const asset = await prisma.general_assets.findFirst({
       where: {
         id: params.id,
         tenantId,
@@ -51,7 +51,7 @@ export async function PUT(
     const body = await request.json();
 
     // 存在確認
-    const existing = await prisma.generalAsset.findFirst({
+    const existing = await prisma.general_assets.findFirst({
       where: {
         id: params.id,
         tenantId,
@@ -65,7 +65,7 @@ export async function PUT(
       );
     }
 
-    const asset = await prisma.generalAsset.update({
+    const asset = await prisma.general_assets.update({
       where: { id: params.id },
       data: {
         assetNumber: body.assetNumber,
@@ -111,7 +111,7 @@ export async function DELETE(
     const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
 
     // 存在確認
-    const existing = await prisma.generalAsset.findFirst({
+    const existing = await prisma.general_assets.findFirst({
       where: {
         id: params.id,
         tenantId,
@@ -125,7 +125,7 @@ export async function DELETE(
       );
     }
 
-    await prisma.generalAsset.delete({
+    await prisma.general_assets.delete({
       where: { id: params.id },
     });
 

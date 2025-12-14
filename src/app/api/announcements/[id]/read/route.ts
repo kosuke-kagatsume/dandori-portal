@@ -23,7 +23,7 @@ export async function POST(
     }
 
     // お知らせの存在確認
-    const announcement = await prisma.announcement.findFirst({
+    const announcement = await prisma.announcements.findFirst({
       where: { id: announcementId, tenantId },
     });
 
@@ -32,7 +32,7 @@ export async function POST(
     }
 
     // 既読レコードをupsert
-    const read = await prisma.announcementRead.upsert({
+    const read = await prisma.announcement_reads.upsert({
       where: {
         announcementId_userId: {
           announcementId,

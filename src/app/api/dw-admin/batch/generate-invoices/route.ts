@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     // アクティブなテナントを取得
     const tenants = await prismaClient.tenant.findMany({
       where: {
-        settings: {
+        tenant_settings: {
           status: 'active',
         },
       },
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
         // 料金計算（ユーザー数ベース）
         const userCount = tenant._count.users;
-        const basePrice = tenant.settings?.customPricing ? 0 : 10000; // カスタム料金の場合は手動設定
+        const basePrice = tenant.tenant_settings?.customPricing ? 0 : 10000; // カスタム料金の場合は手動設定
         const pricePerUser = 1000;
         const subtotal = basePrice + (userCount * pricePerUser);
         const taxRate = 0.1;
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
             total,
             status: 'draft',
             dueDate,
-            billingEmail: tenant.settings?.billingEmail,
+            billingEmail: tenant.tenant_settings?.billingEmail,
             items: {
               basePrice,
               userCount,

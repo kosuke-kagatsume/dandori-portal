@@ -114,10 +114,10 @@ export async function GET(request: NextRequest) {
     }
 
     // 総件数取得
-    const total = await prisma.saaSLicenseAssignment.count({ where });
+    const total = await prisma.saas_license_assignments.count({ where });
 
     // ライセンス割り当て一覧取得（select最適化）
-    const assignments = await prisma.saaSLicenseAssignment.findMany({
+    const assignments = await prisma.saas_license_assignments.findMany({
       where,
       select: {
         id: true,
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const assignment = await prisma.saaSLicenseAssignment.create({
+    const assignment = await prisma.saas_license_assignments.create({
       data: {
         tenantId,
         serviceId,

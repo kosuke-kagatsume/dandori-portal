@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const pcAsset = await prisma.pCAsset.findUnique({
+    const pcAsset = await prisma.pc_assets.findUnique({
       where: { id: params.id },
       include: {
         softwareLicenses: true,
@@ -69,7 +69,7 @@ export async function PUT(
       notes,
     } = body;
 
-    const pcAsset = await prisma.pCAsset.update({
+    const pcAsset = await prisma.pc_assets.update({
       where: { id: params.id },
       data: {
         assetNumber,
@@ -120,11 +120,11 @@ export async function DELETE(
 ) {
   try {
     // 関連するソフトウェアライセンスも削除
-    await prisma.softwareLicense.deleteMany({
+    await prisma.software_licenses.deleteMany({
       where: { pcAssetId: params.id },
     });
 
-    await prisma.pCAsset.delete({
+    await prisma.pc_assets.delete({
       where: { id: params.id },
     });
 

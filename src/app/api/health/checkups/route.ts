@@ -236,7 +236,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [checkups, total] = await Promise.all([
-      prisma.healthCheckup.findMany({
+      prisma.health_checkups.findMany({
         where,
         include: {
           findings: true,
@@ -245,11 +245,11 @@ export async function GET(request: NextRequest) {
         take: limit,
         skip: offset,
       }),
-      prisma.healthCheckup.count({ where }),
+      prisma.health_checkups.count({ where }),
     ]);
 
     // 統計情報を1クエリで取得（N+1問題解消: 4クエリ→1クエリ）
-    const resultStats = await prisma.healthCheckup.groupBy({
+    const resultStats = await prisma.health_checkups.groupBy({
       by: ['overallResult'],
       where: { tenantId },
       _count: true,
@@ -332,7 +332,7 @@ export async function POST(request: NextRequest) {
       findings,
     } = body;
 
-    const checkup = await prisma.healthCheckup.create({
+    const checkup = await prisma.health_checkups.create({
       data: {
         tenantId,
         userId,

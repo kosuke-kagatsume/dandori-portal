@@ -9,15 +9,15 @@ export async function GET(
   try {
     const { id } = params;
 
-    const workflow = await prisma.workflowRequest.findUnique({
+    const workflow = await prisma.workflow_requests.findUnique({
       where: { id },
       include: {
-        approvalSteps: {
+        approval_steps: {
           orderBy: {
             order: 'asc',
           },
         },
-        timelineEntries: {
+        timeline_entries: {
           orderBy: {
             createdAt: 'desc',
           },
@@ -74,7 +74,7 @@ export async function PUT(
     } = body;
 
     // 既存のワークフローを確認
-    const existingWorkflow = await prisma.workflowRequest.findUnique({
+    const existingWorkflow = await prisma.workflow_requests.findUnique({
       where: { id },
     });
 
@@ -89,7 +89,7 @@ export async function PUT(
     }
 
     // 更新
-    const workflow = await prisma.workflowRequest.update({
+    const workflow = await prisma.workflow_requests.update({
       where: { id },
       data: {
         title,
@@ -103,12 +103,12 @@ export async function PUT(
         status,
       },
       include: {
-        approvalSteps: {
+        approval_steps: {
           orderBy: {
             order: 'asc',
           },
         },
-        timelineEntries: {
+        timeline_entries: {
           orderBy: {
             createdAt: 'desc',
           },
@@ -141,7 +141,7 @@ export async function DELETE(
   try {
     const { id } = params;
 
-    const existingWorkflow = await prisma.workflowRequest.findUnique({
+    const existingWorkflow = await prisma.workflow_requests.findUnique({
       where: { id },
     });
 
@@ -155,8 +155,8 @@ export async function DELETE(
       );
     }
 
-    // 削除（カスケードでapprovalStepsとtimelineEntriesも削除される）
-    await prisma.workflowRequest.delete({
+    // 削除（カスケードでapproval_stepsとtimeline_entriesも削除される）
+    await prisma.workflow_requests.delete({
       where: { id },
     });
 
