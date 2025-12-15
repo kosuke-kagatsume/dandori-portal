@@ -118,7 +118,8 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
     try {
       const res = await fetch(`/api/master-data/departments?tenantId=${tenantId}`);
       if (!res.ok) throw new Error('部署の取得に失敗しました');
-      const data = await res.json();
+      const json = await res.json();
+      const data = Array.isArray(json) ? json : (json.data || []);
       set({ departments: data.map(mapDepartment), isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -200,7 +201,8 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
     try {
       const res = await fetch(`/api/master-data/positions?tenantId=${tenantId}`);
       if (!res.ok) throw new Error('役職の取得に失敗しました');
-      const data = await res.json();
+      const json = await res.json();
+      const data = Array.isArray(json) ? json : (json.data || []);
       set({ positions: data.map(mapPosition), isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -282,7 +284,8 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
     try {
       const res = await fetch(`/api/master-data/employment-types?tenantId=${tenantId}`);
       if (!res.ok) throw new Error('雇用形態の取得に失敗しました');
-      const data = await res.json();
+      const json = await res.json();
+      const data = Array.isArray(json) ? json : (json.data || []);
       set({ employmentTypes: data.map(mapEmploymentType), isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });

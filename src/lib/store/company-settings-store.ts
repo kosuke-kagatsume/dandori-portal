@@ -99,12 +99,31 @@ export interface AttendanceSettings {
   weeklyHolidays: string[]; // 週休日
 }
 
+export interface WorkflowSettings {
+  // 承認期限設定
+  defaultApprovalDeadlineDays: number; // デフォルト承認期限（日数）
+
+  // エスカレーション設定
+  enableAutoEscalation: boolean; // 自動エスカレーション
+  escalationReminderDays: number; // リマインダー送信日数
+
+  // 自動承認設定
+  enableAutoApproval: boolean; // 自動承認
+  autoApprovalThreshold: number; // 自動承認金額上限（円）
+
+  // 承認ルール設定
+  requireCommentOnReject: boolean; // 却下時コメント必須
+  allowParallelApproval: boolean; // 並行承認許可
+  enableProxyApproval: boolean; // 代理承認許可
+}
+
 interface CompanySettingsState {
   // データ
   companyInfo: CompanyInfo;
   payrollSettings: PayrollSettings;
   yearEndAdjustmentSettings: YearEndAdjustmentSettings;
   attendanceSettings: AttendanceSettings;
+  workflowSettings: WorkflowSettings;
 
   // 状態
   initialized: boolean;
@@ -116,6 +135,7 @@ interface CompanySettingsState {
   updatePayrollSettings: (settings: Partial<PayrollSettings>) => void;
   updateYearEndAdjustmentSettings: (settings: Partial<YearEndAdjustmentSettings>) => void;
   updateAttendanceSettings: (settings: Partial<AttendanceSettings>) => void;
+  updateWorkflowSettings: (settings: Partial<WorkflowSettings>) => void;
   resetSettings: () => void;
 
   // アクション（非同期版 - API連携用）
@@ -127,6 +147,8 @@ interface CompanySettingsState {
   saveAttendanceSettings: () => Promise<void>;
   fetchYearEndSettings: () => Promise<void>;
   saveYearEndSettings: () => Promise<void>;
+  fetchWorkflowSettings: () => Promise<void>;
+  saveWorkflowSettings: () => Promise<void>;
   fetchAllSettings: () => Promise<void>;
 }
 
@@ -188,11 +210,23 @@ const defaultAttendanceSettings: AttendanceSettings = {
   weeklyHolidays: ['saturday', 'sunday'],
 };
 
+const defaultWorkflowSettings: WorkflowSettings = {
+  defaultApprovalDeadlineDays: 3,
+  enableAutoEscalation: false,
+  escalationReminderDays: 1,
+  enableAutoApproval: false,
+  autoApprovalThreshold: 10000,
+  requireCommentOnReject: true,
+  allowParallelApproval: false,
+  enableProxyApproval: false,
+};
+
 const initialState = {
   companyInfo: defaultCompanyInfo,
   payrollSettings: defaultPayrollSettings,
   yearEndAdjustmentSettings: defaultYearEndAdjustmentSettings,
   attendanceSettings: defaultAttendanceSettings,
+  workflowSettings: defaultWorkflowSettings,
   initialized: false,
   isLoading: false,
   error: null,
@@ -224,6 +258,12 @@ const createCompanySettingsStore = () => {
     updateAttendanceSettings: (settings: Partial<AttendanceSettings>) => {
       set((state: CompanySettingsState) => ({
         attendanceSettings: { ...state.attendanceSettings, ...settings },
+      }));
+    },
+
+    updateWorkflowSettings: (settings: Partial<WorkflowSettings>) => {
+      set((state: CompanySettingsState) => ({
+        workflowSettings: { ...state.workflowSettings, ...settings },
       }));
     },
 
@@ -489,8 +529,68 @@ const createCompanySettingsStore = () => {
       }
     },
 
+    fetchWorkflowSettings: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/workflow-settings?tenantId=tenant-demo-001');
+        const result = await response.json();
+
+        if (result.success) {
+          set({
+            workflowSettings: {
+              defaultApprovalDeadlineDays: result.data.defaultApprovalDeadlineDays,
+              enableAutoEscalation: result.data.enableAutoEscalation,
+              escalationReminderDays: result.data.escalationReminderDays,
+              enableAutoApproval: result.data.enableAutoApproval,
+              autoApprovalThreshold: result.data.autoApprovalThreshold,
+              requireCommentOnReject: result.data.requireCommentOnReject,
+              allowParallelApproval: result.data.allowParallelApproval,
+              enableProxyApproval: result.data.enableProxyApproval,
+            },
+            isLoading: false,
+          });
+        } else {
+          throw new Error(result.error || 'Failed to fetch workflow settings');
+        }
+      } catch (error) {
+        console.error('Error fetching workflow settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+    },
+
+    saveWorkflowSettings: async () => {
+      const state = get() as CompanySettingsState;
+      set({ isLoading: true, error: null });
+      try {
+        const response = await fetch('/api/workflow-settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: 'tenant-demo-001',
+            ...state.workflowSettings,
+          }),
+        });
+        const result = await response.json();
+
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save workflow settings');
+        }
+        set({ isLoading: false });
+      } catch (error) {
+        console.error('Error saving workflow settings:', error);
+        set({
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error;
+      }
+    },
+
     fetchAllSettings: async () => {
-      const { fetchCompanySettings, fetchPayrollSettings, fetchAttendanceSettings, fetchYearEndSettings } = get();
+      const { fetchCompanySettings, fetchPayrollSettings, fetchAttendanceSettings, fetchYearEndSettings, fetchWorkflowSettings } = get();
       set({ initialized: false, isLoading: true });
 
       try {
@@ -499,6 +599,7 @@ const createCompanySettingsStore = () => {
           fetchPayrollSettings(),
           fetchAttendanceSettings(),
           fetchYearEndSettings(),
+          fetchWorkflowSettings(),
         ]);
         set({ initialized: true });
       } catch (error) {
@@ -523,6 +624,7 @@ const createCompanySettingsStore = () => {
         payrollSettings: state.payrollSettings,
         yearEndAdjustmentSettings: state.yearEndAdjustmentSettings,
         attendanceSettings: state.attendanceSettings,
+        workflowSettings: state.workflowSettings,
       }),
     })
   );
