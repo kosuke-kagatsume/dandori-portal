@@ -172,8 +172,9 @@ export default function SettingsPage() {
       )}
 
       <Tabs defaultValue="company" className="space-y-4 w-full">
-        <div className="w-full overflow-x-auto pb-2">
-          <TabsList className="inline-flex h-auto min-w-full gap-1 p-1">
+        <div className="relative w-full">
+          <div className="w-full overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+            <TabsList className="inline-flex h-auto w-max gap-1 p-1">
             <TabsTrigger value="company" className="shrink-0 px-3 py-2">
               <Building2 className="w-4 h-4 mr-1.5" />
               <span>会社</span>
@@ -231,6 +232,9 @@ export default function SettingsPage() {
               </TabsTrigger>
             )}
           </TabsList>
+          </div>
+          {/* スクロールインジケーター（右端のフェード） */}
+          <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-background to-transparent" />
         </div>
 
         <TabsContent value="company">
