@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   LineChart,
@@ -27,6 +28,7 @@ import {
   DollarSign,
   Activity,
   Package,
+  Loader2,
 } from 'lucide-react';
 import {
   generatePersonalAttendanceTrend,
@@ -39,11 +41,8 @@ import {
   generateDepartmentLeaveRate,
   generateDepartmentAverageSalary,
   generateHeadcountTrend,
-  generateSaasCostTrend,
-  generateSaasCostByCategory,
-  generateAssetUtilization,
-  generateSystemHealthTrend,
 } from '@/lib/mock-data/dashboard-charts-data';
+import { useDashboardStore } from '@/lib/store/dashboard-store';
 
 // カラーパレット
 const COLORS = {
@@ -58,13 +57,24 @@ const COLORS = {
 };
 
 const CHART_COLORS = [
-  COLORS.primary,
-  COLORS.secondary,
-  COLORS.success,
-  COLORS.warning,
-  COLORS.danger,
-  COLORS.info,
+  COLORS.danger,    // 赤（営業支援など）
+  COLORS.primary,   // 青（開発ツール）
+  COLORS.purple,    // 紫（プロジェクト管理）
+  COLORS.info,      // シアン（コミュニケーション）
+  COLORS.success,   // 緑（生産性ツール）
+  COLORS.warning,   // オレンジ（デザインツール）
 ];
+
+// カテゴリ別のカラーマッピング
+const CATEGORY_COLORS: Record<string, string> = {
+  '営業支援': COLORS.danger,
+  '開発ツール': COLORS.primary,
+  'プロジェクト管理': COLORS.purple,
+  'コミュニケーション': COLORS.info,
+  '生産性ツール': COLORS.success,
+  'デザインツール': COLORS.warning,
+  'その他': COLORS.secondary,
+};
 
 // =====================================
 // 一般社員用グラフ
@@ -371,7 +381,7 @@ export function DepartmentSalaryChart() {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" />
             <YAxis dataKey="department" type="category" width={120} />
-            <Tooltip formatter={(value) => `¥${value.toLocaleString()}`} />
+            <Tooltip formatter={(value) => `¥${Number(value).toLocaleString()}`} />
             <Legend />
             <Bar dataKey="baseSalary" fill={COLORS.primary} name="基本給" stackId="a" />
             <Bar dataKey="allowances" fill={COLORS.success} name="手当" stackId="a" />
@@ -434,11 +444,50 @@ export function HeadcountTrendChart() {
 }
 
 // =====================================
-// システム管理者用グラフ
+// システム管理者用グラフ（実データ対応）
 // =====================================
 
 export function SaasCostTrendChart() {
-  const data = generateSaasCostTrend();
+  const { saasMonthlyTrend, saasCategories, isLoading, fetchDashboardStats } = useDashboardStore();
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [fetchDashboardStats]);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-blue-500" />
+            SaaSコスト推移
+          </CardTitle>
+          <CardDescription>カテゴリ別の月次コスト推移</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // データがない場合のフォールバック
+  if (saasMonthlyTrend.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-blue-500" />
+            SaaSコスト推移
+          </CardTitle>
+          <CardDescription>カテゴリ別の月次コスト推移</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <p className="text-muted-foreground">データがありません</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -451,52 +500,23 @@ export function SaasCostTrendChart() {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={data}>
+          <AreaChart data={saasMonthlyTrend}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis />
-            <Tooltip formatter={(value) => `¥${value.toLocaleString()}`} />
+            <Tooltip formatter={(value) => `¥${Number(value).toLocaleString()}`} />
             <Legend />
-            <Area
-              type="monotone"
-              dataKey="communication"
-              stackId="1"
-              stroke={COLORS.primary}
-              fill={COLORS.primary}
-              name="コミュニケーション"
-            />
-            <Area
-              type="monotone"
-              dataKey="development"
-              stackId="1"
-              stroke={COLORS.secondary}
-              fill={COLORS.secondary}
-              name="開発"
-            />
-            <Area
-              type="monotone"
-              dataKey="design"
-              stackId="1"
-              stroke={COLORS.purple}
-              fill={COLORS.purple}
-              name="デザイン"
-            />
-            <Area
-              type="monotone"
-              dataKey="productivity"
-              stackId="1"
-              stroke={COLORS.success}
-              fill={COLORS.success}
-              name="生産性"
-            />
-            <Area
-              type="monotone"
-              dataKey="sales"
-              stackId="1"
-              stroke={COLORS.warning}
-              fill={COLORS.warning}
-              name="営業"
-            />
+            {saasCategories.map((category, index) => (
+              <Area
+                key={category}
+                type="monotone"
+                dataKey={category}
+                stackId="1"
+                stroke={CATEGORY_COLORS[category] || CHART_COLORS[index % CHART_COLORS.length]}
+                fill={CATEGORY_COLORS[category] || CHART_COLORS[index % CHART_COLORS.length]}
+                name={category}
+              />
+            ))}
           </AreaChart>
         </ResponsiveContainer>
       </CardContent>
@@ -505,7 +525,46 @@ export function SaasCostTrendChart() {
 }
 
 export function SaasCostByCategoryChart() {
-  const data = generateSaasCostByCategory();
+  const { saasCostByCategory, isLoading, fetchDashboardStats } = useDashboardStore();
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [fetchDashboardStats]);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-purple-500" />
+            カテゴリ別SaaSコスト
+          </CardTitle>
+          <CardDescription>現在のSaaSサービスの費用内訳</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // データがない場合のフォールバック
+  if (saasCostByCategory.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-purple-500" />
+            カテゴリ別SaaSコスト
+          </CardTitle>
+          <CardDescription>現在のSaaSサービスの費用内訳</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <p className="text-muted-foreground">データがありません</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -520,20 +579,23 @@ export function SaasCostByCategoryChart() {
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
-              data={data}
+              data={saasCostByCategory}
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
+              label={({ category, percentage }) => `${category} ${percentage}%`}
               outerRadius={100}
               fill="#8884d8"
               dataKey="cost"
             >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+              {saasCostByCategory.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={CATEGORY_COLORS[entry.category] || CHART_COLORS[index % CHART_COLORS.length]}
+                />
               ))}
             </Pie>
-            <Tooltip formatter={(value) => `¥${value.toLocaleString()}`} />
+            <Tooltip formatter={(value) => `¥${Number(value).toLocaleString()}`} />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>
@@ -542,7 +604,46 @@ export function SaasCostByCategoryChart() {
 }
 
 export function AssetUtilizationChart() {
-  const data = generateAssetUtilization();
+  const { assetUtilization, isLoading, fetchDashboardStats } = useDashboardStore();
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, [fetchDashboardStats]);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-green-500" />
+            資産利用状況
+          </CardTitle>
+          <CardDescription>社内資産の利用率</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // データがない場合のフォールバック
+  if (assetUtilization.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-green-500" />
+            資産利用状況
+          </CardTitle>
+          <CardDescription>社内資産の利用率</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <p className="text-muted-foreground">データがありません</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -555,7 +656,7 @@ export function AssetUtilizationChart() {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data}>
+          <BarChart data={assetUtilization}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="category" />
             <YAxis />
@@ -564,50 +665,6 @@ export function AssetUtilizationChart() {
             <Bar dataKey="inUse" fill={COLORS.success} name="使用中" />
             <Bar dataKey="available" fill={COLORS.info} name="利用可能" />
           </BarChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function SystemHealthChart() {
-  const data = generateSystemHealthTrend();
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-blue-500" />
-          システム健全性
-        </CardTitle>
-        <CardDescription>稼働率とレスポンスタイム（週次）</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="day" />
-            <YAxis yAxisId="left" />
-            <YAxis yAxisId="right" orientation="right" />
-            <Tooltip />
-            <Legend />
-            <Line
-              yAxisId="left"
-              type="monotone"
-              dataKey="uptime"
-              stroke={COLORS.success}
-              name="稼働率(%)"
-              strokeWidth={2}
-            />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="responseTime"
-              stroke={COLORS.info}
-              name="レスポンスタイム(ms)"
-              strokeWidth={2}
-            />
-          </LineChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getDashboardStats } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -23,6 +22,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
+import { useDashboardStore } from '@/lib/store/dashboard-store';
 import { hasPermission as hasDemoPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
 import type { UserRole } from '@/types';
 import { ROLE_LABELS } from '@/lib/rbac';
@@ -42,11 +42,11 @@ import {
   SaasCostTrendChart,
   SaasCostByCategoryChart,
   AssetUtilizationChart,
-  SystemHealthChart,
 } from '@/components/dashboard/role-based-charts';
 
 export function DashboardContent() {
   const { currentUser, currentDemoUser, switchDemoRole } = useUserStore();
+  const { kpiData, isLoading: isLoadingStats, fetchDashboardStats } = useDashboardStore();
   // 初期値を確実に設定（SSR/CSR一致のため）
   const [effectiveDemoUser, setEffectiveDemoUser] = useState(demoUsers.employee);
   const [showAllActivities, setShowAllActivities] = useState(false);
@@ -126,25 +126,12 @@ export function DashboardContent() {
     return translations[key] || key;
   };
 
-  // データを取得
-  const [kpiData, setKpiData] = useState({
-    totalEmployees: 50,
-    teamMembers: 8,
-    todayAttendance: 42,
-    pendingApprovals: 8,
-    monthlyUtilization: 87.5,
-  });
-
+  // ダッシュボードデータを取得
   useEffect(() => {
-    const stats = getDashboardStats();
-    setKpiData({
-      totalEmployees: stats.totalEmployees,
-      teamMembers: 8,
-      todayAttendance: stats.todayAttendance,
-      pendingApprovals: stats.pendingApprovals,
-      monthlyUtilization: stats.monthlyUtilization,
-    });
-  }, []);
+    if (mounted) {
+      fetchDashboardStats();
+    }
+  }, [mounted, fetchDashboardStats]);
 
   const leaveBalance = {
     remaining: 12,
@@ -231,12 +218,12 @@ export function DashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
-              {canViewAll ? kpiData.totalEmployees : canViewTeam ? kpiData.teamMembers : '出勤中'}
+              {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.totalEmployees : canViewTeam ? '8' : '出勤中')}
             </div>
             <div className="flex items-center gap-1 mt-1">
               <TrendingUp className="h-3 w-3 text-green-600" />
               <p className="text-xs text-orange-700 dark:text-orange-300">
-                {canViewAll ? '+12 先月比' : canViewTeam ? 'チーム全員出勤' : '08:45 出勤'}
+                {canViewAll ? 'アクティブユーザー' : canViewTeam ? 'チームメンバー' : '08:45 出勤'}
               </p>
             </div>
           </CardContent>
@@ -256,12 +243,12 @@ export function DashboardContent() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
-                {canViewAll ? kpiData.todayAttendance : '7/8'}
+                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.todayAttendance : '7/8')}
               </div>
               <div className="flex items-center gap-1 mt-1">
                 <Activity className="h-3 w-3 text-blue-600" />
                 <p className="text-xs text-blue-700 dark:text-blue-300">
-                  出勤率 {canViewAll ? Math.round((kpiData.todayAttendance / kpiData.totalEmployees) * 100) : 87.5}%
+                  出勤率 {canViewAll ? kpiData.attendanceRate : 87.5}%
                 </p>
               </div>
             </CardContent>
@@ -282,41 +269,20 @@ export function DashboardContent() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">
-                {canViewAll ? kpiData.pendingApprovals : 3}
+                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.pendingApprovals : 3)}
               </div>
               <div className="flex items-center gap-1 mt-1">
                 <Clock className="h-3 w-3 text-amber-600" />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  {canViewAll ? '3件は緊急' : '1件は緊急'}
+                  {canViewAll ? `${kpiData.urgentApprovals}件は緊急` : '1件は緊急'}
                 </p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Card 4: システム管理（管理者のみ） */}
-        {canManageSystem ? (
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                {t('systemHealth')}
-              </CardTitle>
-              <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-                <ShieldCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">99.9%</div>
-              <div className="flex items-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3 text-green-600" />
-                <p className="text-xs text-purple-700 dark:text-purple-300">
-                  稼働時間
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
+        {/* Card 4: 月間稼働率（非管理者）/ 削除済み（管理者にはシステム健全性カードは表示しない） */}
+        {!canManageSystem && (
           <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -328,7 +294,7 @@ export function DashboardContent() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-900 dark:text-green-100">{kpiData.monthlyUtilization}%</div>
+              <div className="text-3xl font-bold text-green-900 dark:text-green-100">87.5%</div>
               <div className="flex items-center gap-1 mt-1">
                 <TrendingUp className="h-3 w-3 text-green-600" />
                 <p className="text-xs text-green-700 dark:text-green-300">
@@ -414,9 +380,8 @@ export function DashboardContent() {
             <SaasCostTrendChart />
             <SaasCostByCategoryChart />
           </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 mt-6">
+          <div className="grid gap-6 mt-6">
             <AssetUtilizationChart />
-            <SystemHealthChart />
           </div>
           <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">全社統計（管理者用）</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">

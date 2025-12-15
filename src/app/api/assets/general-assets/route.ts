@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { randomUUID } from 'crypto';
 
 // デモ用汎用資産データ
 const demoGeneralAssets = [
@@ -85,6 +86,7 @@ export async function POST(request: NextRequest) {
 
     const asset = await prisma.general_assets.create({
       data: {
+        id: randomUUID(),
         tenantId,
         assetNumber: body.assetNumber,
         category: body.category,
@@ -106,6 +108,7 @@ export async function POST(request: NextRequest) {
         warrantyExpiration: body.warrantyExpiration ? new Date(body.warrantyExpiration) : null,
         status: body.status || 'active',
         notes: body.notes || null,
+        updatedAt: new Date(),
       },
     });
 

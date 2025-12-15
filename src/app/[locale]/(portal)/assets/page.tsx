@@ -45,6 +45,8 @@ import { toast } from 'sonner';
 import { MaintenanceDialog, type MaintenanceFormData } from '@/features/assets/maintenance-dialog';
 import { VehicleFormDialog } from '@/features/assets/vehicle-form-dialog';
 import { VendorFormDialog } from '@/features/assets/vendor-form-dialog';
+import { PCFormDialog } from '@/features/assets/pc-form-dialog';
+import { GeneralAssetFormDialog } from '@/features/assets/general-asset-form-dialog';
 
 export default function AssetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,6 +126,12 @@ export default function AssetsPage() {
   // 業者登録ダイアログの状態
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
 
+  // PC登録ダイアログの状態
+  const [pcDialogOpen, setPcDialogOpen] = useState(false);
+
+  // 備品登録ダイアログの状態
+  const [generalAssetDialogOpen, setGeneralAssetDialogOpen] = useState(false);
+
   // 期限警告タブのカテゴリフィルター
   const [warningCategoryFilter, setWarningCategoryFilter] = useState<'all' | 'vehicle' | 'pc' | 'general'>('all');
   const [expandedWarningGroups, setExpandedWarningGroups] = useState<Record<string, boolean>>({
@@ -181,30 +189,66 @@ export default function AssetsPage() {
     setMounted(true);
   }, []);
 
-  // 統計値（memoで計算）
+  // 統計値（memoで計算）- 全資産の統合サマリー
   const stats = useMemo(() => {
+    // 資産数
+    const totalVehicles = vehicles.length;
+    const totalPCs = pcAssets.length;
+    const totalGeneralAssets = generalAssets.length;
+    const totalAssets = totalVehicles + totalPCs + totalGeneralAssets;
+
+    // 稼働中の資産
     const activeVehicles = vehicles.filter((v) => v.status === 'active').length;
+    const activePCs = pcAssets.filter((p) => p.status === 'active').length;
+    const activeGeneralAssets = generalAssets.filter((a) => a.status === 'active').length;
+    const activeAssets = activeVehicles + activePCs + activeGeneralAssets;
+
+    // リース費用（車両のみ）
     const leasedVehicles = vehicles.filter((v) => v.ownershipType === 'leased').length;
     const monthlyLeaseCost = vehicles
       .filter((v) => v.ownershipType === 'leased' && v.leaseMonthlyCost)
       .reduce((sum, v) => sum + (v.leaseMonthlyCost || 0), 0);
 
-    // 期限警告の計算
-    const warnings = getDeadlineWarnings(vehicles);
-    const criticalWarningsCount = warnings.filter((w) => w.level === 'critical').length;
-    const warningsCount = warnings.filter((w) => w.level === 'warning').length;
+    // 修理・メンテナンス件数
+    const totalRepairs = repairRecords.length;
+    const totalMaintenance = maintenanceRecords.length;
+    const totalRepairsAndMaintenance = totalRepairs + totalMaintenance;
+
+    // 今月の費用（リース + 修理）
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const thisMonthRepairCost = repairRecords
+      .filter((r) => r.date.startsWith(currentMonth))
+      .reduce((sum, r) => sum + r.cost, 0);
+    const thisMonthMaintenanceCost = maintenanceRecords
+      .filter((r) => r.date.startsWith(currentMonth))
+      .reduce((sum, r) => sum + r.cost, 0);
+    const thisMonthTotalCost = monthlyLeaseCost + thisMonthRepairCost + thisMonthMaintenanceCost;
 
     return {
+      // 統合サマリー用
+      totalAssets,
+      activeAssets,
+      totalVehicles,
+      totalPCs,
+      totalGeneralAssets,
+      totalRepairsAndMaintenance,
+      totalRepairs,
+      totalMaintenance,
+      thisMonthTotalCost,
+      monthlyLeaseCost,
+      thisMonthRepairCost,
+      thisMonthMaintenanceCost,
+      // 警告用
+      criticalWarningsCount: 0, // 後で計算
+      warningsCount: 0, // 後で計算
+      // その他
       activeVehicles,
       leasedVehicles,
       totalMaintenanceRecords: maintenanceRecords.length,
-      monthlyLeaseCost,
-      criticalWarningsCount,
-      warningsCount,
-      totalVehicles: vehicles.length,
       totalVendors: vendors.length,
     };
-  }, [vehicles, vendors, maintenanceRecords]);
+  }, [vehicles, pcAssets, generalAssets, maintenanceRecords, repairRecords, vendors]);
 
   // 期限警告を計算
   // 全資産の期限警告（車両、PC、その他）
@@ -725,23 +769,21 @@ export default function AssetsPage() {
             <RefreshCw className="mr-2 h-4 w-4" />
             更新
           </Button>
-          <Button className="w-full sm:w-auto" onClick={() => setVehicleDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            新規登録
-          </Button>
         </div>
       </div>
 
-      {/* 統計カード */}
+      {/* 統計カード - 全資産の統合サマリー */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">稼働車両</CardTitle>
-            <Car className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">総資産数</CardTitle>
+            <Monitor className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeVehicles}台</div>
-            <p className="text-xs text-muted-foreground">総車両: {stats.totalVehicles}台</p>
+            <div className="text-2xl font-bold">{stats.totalAssets}件</div>
+            <p className="text-xs text-muted-foreground">
+              車両{stats.totalVehicles} / PC{stats.totalPCs} / 他{stats.totalGeneralAssets}
+            </p>
           </CardContent>
         </Card>
 
@@ -752,33 +794,37 @@ export default function AssetsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              {stats.criticalWarningsCount}件
+              {allWarnings.filter(w => w.level === 'critical').length}件
             </div>
             <p className="text-xs text-muted-foreground">
-              注意: {stats.warningsCount}件
+              注意: {allWarnings.filter(w => w.level === 'warning').length}件
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">メンテナンス実績</CardTitle>
+            <CardTitle className="text-sm font-medium">修理・メンテナンス</CardTitle>
             <Wrench className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalMaintenanceRecords}件</div>
-            <p className="text-xs text-muted-foreground">登録業者: {stats.totalVendors}社</p>
+            <div className="text-2xl font-bold">{stats.totalRepairsAndMaintenance}件</div>
+            <p className="text-xs text-muted-foreground">
+              修理{stats.totalRepairs} / メンテ{stats.totalMaintenance}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">今月リース費用</CardTitle>
+            <CardTitle className="text-sm font-medium">今月費用</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.monthlyLeaseCost)}</div>
-            <p className="text-xs text-muted-foreground">リース車両: {stats.leasedVehicles}台</p>
+            <div className="text-2xl font-bold">{formatCurrency(stats.thisMonthTotalCost)}</div>
+            <p className="text-xs text-muted-foreground">
+              リース{formatCurrency(stats.monthlyLeaseCost).replace('￥', '')}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -814,9 +860,15 @@ export default function AssetsPage() {
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-4">
-                <div>
-                  <CardTitle>車両一覧</CardTitle>
-                  <CardDescription>登録されている全車両の管理</CardDescription>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <CardTitle>車両一覧</CardTitle>
+                    <CardDescription>登録されている全車両の管理（{vehicles.length}台）</CardDescription>
+                  </div>
+                  <Button onClick={() => setVehicleDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    車両を登録
+                  </Button>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
@@ -948,7 +1000,7 @@ export default function AssetsPage() {
           {/* PC一覧 */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Laptop className="h-5 w-5" />
@@ -960,6 +1012,10 @@ export default function AssetsPage() {
                   <Button variant="outline" size="sm" onClick={handleExportPCsCSV}>
                     <Download className="mr-2 h-4 w-4" />
                     CSV出力
+                  </Button>
+                  <Button onClick={() => setPcDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    PCを登録
                   </Button>
                 </div>
               </div>
@@ -1051,20 +1107,18 @@ export default function AssetsPage() {
           {/* その他資産一覧 */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Monitor className="h-5 w-5" />
                     その他資産一覧
                   </CardTitle>
-                  <CardDescription>モニター、プリンター、スマートフォンなど（{generalAssets.length}台）</CardDescription>
+                  <CardDescription>モニター、プリンター、スマートフォンなど（{generalAssets.length}件）</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => toast.info('その他資産の新規登録機能は準備中です')}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    新規登録
-                  </Button>
-                </div>
+                <Button onClick={() => setGeneralAssetDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  備品を登録
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -1163,12 +1217,10 @@ export default function AssetsPage() {
                   </CardTitle>
                   <CardDescription>PC・その他資産の修理履歴（{repairRecords.length}件）</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => setRepairDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    修理登録
-                  </Button>
-                </div>
+                <Button onClick={() => setRepairDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  修理を登録
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -1376,11 +1428,12 @@ export default function AssetsPage() {
                   <CardTitle>メンテナンス履歴</CardTitle>
                   <CardDescription>全車両のメンテナンス記録（{maintenanceRecords.length}件）</CardDescription>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => setMaintenanceDialogOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    新規登録
-                  </Button>
+                <Button onClick={() => setMaintenanceDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  メンテナンスを登録
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-4">
                   <select
                     className="px-3 py-2 border rounded-md text-sm"
                     value={maintenanceTypeFilter}
@@ -1406,7 +1459,6 @@ export default function AssetsPage() {
                       </option>
                     ))}
                   </select>
-                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -1494,14 +1546,14 @@ export default function AssetsPage() {
         <TabsContent value="vendors" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <CardTitle>業者管理</CardTitle>
-                  <CardDescription>メンテナンス業者の管理</CardDescription>
+                  <CardDescription>メンテナンス業者の管理（{vendors.length}社）</CardDescription>
                 </div>
-                <Button variant="outline" onClick={() => setVendorDialogOpen(true)}>
+                <Button onClick={() => setVendorDialogOpen(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  業者追加
+                  業者を登録
                 </Button>
               </div>
             </CardHeader>
@@ -1721,6 +1773,18 @@ export default function AssetsPage() {
       <VendorFormDialog
         open={vendorDialogOpen}
         onOpenChange={setVendorDialogOpen}
+      />
+
+      {/* PC登録ダイアログ */}
+      <PCFormDialog
+        open={pcDialogOpen}
+        onOpenChange={setPcDialogOpen}
+      />
+
+      {/* 備品登録ダイアログ */}
+      <GeneralAssetFormDialog
+        open={generalAssetDialogOpen}
+        onOpenChange={setGeneralAssetDialogOpen}
       />
     </div>
   );

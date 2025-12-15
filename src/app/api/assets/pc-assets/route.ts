@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { randomUUID } from 'crypto';
 import {
   successResponse,
   handleApiError,
@@ -180,39 +181,41 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // バリデーション
-    if (!assetNumber || !manufacturer || !model || !serialNumber) {
+    if (!assetNumber || !manufacturer || !model) {
       return handleApiError(
-        new Error('資産番号、メーカー、モデル、シリアル番号は必須です'),
+        new Error('資産番号、メーカー、モデルは必須です'),
         'PC資産登録'
       );
     }
 
     const pcAsset = await prisma.pc_assets.create({
       data: {
+        id: randomUUID(),
         tenantId,
         assetNumber,
         manufacturer,
         model,
-        serialNumber,
-        cpu,
-        memory,
-        storage,
-        os,
-        assignedUserId,
-        assignedUserName,
+        serialNumber: serialNumber || '',
+        cpu: cpu || null,
+        memory: memory || null,
+        storage: storage || null,
+        os: os || null,
+        assignedUserId: assignedUserId || null,
+        assignedUserName: assignedUserName || null,
         assignedDate: assignedDate ? new Date(assignedDate) : null,
         ownershipType,
-        leaseCompany,
+        leaseCompany: leaseCompany || null,
         leaseStartDate: leaseStartDate ? new Date(leaseStartDate) : null,
         leaseEndDate: leaseEndDate ? new Date(leaseEndDate) : null,
-        leaseMonthlyCost,
-        leaseContact,
-        leasePhone,
+        leaseMonthlyCost: leaseMonthlyCost || null,
+        leaseContact: leaseContact || null,
+        leasePhone: leasePhone || null,
         purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
-        purchaseCost,
+        purchaseCost: purchaseCost || null,
         warrantyExpiration: warrantyExpiration ? new Date(warrantyExpiration) : null,
         status,
-        notes,
+        notes: notes || null,
+        updatedAt: new Date(),
       },
     });
 
