@@ -172,64 +172,66 @@ export default function SettingsPage() {
       )}
 
       <Tabs defaultValue="company" className="space-y-4 w-full">
-        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-1">
-          <TabsTrigger value="company" className="flex-1 sm:flex-none min-w-[100px]">
-            <Building2 className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">会社</span>
-          </TabsTrigger>
-          <TabsTrigger value="payroll" className="flex-1 sm:flex-none min-w-[100px]">
-            <DollarSign className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">給与</span>
-          </TabsTrigger>
-          <TabsTrigger value="year-end" className="flex-1 sm:flex-none min-w-[100px]">
-            <FileText className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">年末調整</span>
-          </TabsTrigger>
-          <TabsTrigger value="attendance" className="flex-1 sm:flex-none min-w-[100px]">
-            <Clock className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">勤怠</span>
-          </TabsTrigger>
-          <TabsTrigger value="workflow" className="flex-1 sm:flex-none min-w-[100px]">
-            <GitBranch className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">ワークフロー</span>
-          </TabsTrigger>
-          {canManageSystem && (
-            <TabsTrigger value="master-data" className="flex-1 sm:flex-none min-w-[100px]">
-              <Building2 className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">マスタ</span>
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="inline-flex h-auto min-w-full gap-1 p-1">
+            <TabsTrigger value="company" className="shrink-0 px-3 py-2">
+              <Building2 className="w-4 h-4 mr-1.5" />
+              <span>会社</span>
             </TabsTrigger>
-          )}
-          {canViewBilling && (
-            <TabsTrigger value="billing" className="flex-1 sm:flex-none min-w-[100px]">
-              <DollarSign className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">請求</span>
+            <TabsTrigger value="payroll" className="shrink-0 px-3 py-2">
+              <DollarSign className="w-4 h-4 mr-1.5" />
+              <span>給与</span>
             </TabsTrigger>
-          )}
-          {isSuperAdmin && (
-            <TabsTrigger value="tenant-management" className="flex-1 sm:flex-none min-w-[100px]">
-              <Building2 className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">テナント</span>
+            <TabsTrigger value="year-end" className="shrink-0 px-3 py-2">
+              <FileText className="w-4 h-4 mr-1.5" />
+              <span>年末調整</span>
             </TabsTrigger>
-          )}
-          {isSuperAdmin && (
-            <TabsTrigger value="payment-management" className="flex-1 sm:flex-none min-w-[100px]">
-              <DollarSign className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">支払い</span>
+            <TabsTrigger value="attendance" className="shrink-0 px-3 py-2">
+              <Clock className="w-4 h-4 mr-1.5" />
+              <span>勤怠</span>
             </TabsTrigger>
-          )}
-          {isSuperAdmin && (
-            <TabsTrigger value="notification-management" className="flex-1 sm:flex-none min-w-[100px]">
-              <Mail className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">通知履歴</span>
+            <TabsTrigger value="workflow" className="shrink-0 px-3 py-2">
+              <GitBranch className="w-4 h-4 mr-1.5" />
+              <span>ワークフロー</span>
             </TabsTrigger>
-          )}
-          {canManageSystem && (
-            <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
-              <ShieldCheck className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">システム</span>
-            </TabsTrigger>
-          )}
-        </TabsList>
+            {canManageSystem && (
+              <TabsTrigger value="master-data" className="shrink-0 px-3 py-2">
+                <Building2 className="w-4 h-4 mr-1.5" />
+                <span>マスタ</span>
+              </TabsTrigger>
+            )}
+            {canViewBilling && (
+              <TabsTrigger value="billing" className="shrink-0 px-3 py-2">
+                <DollarSign className="w-4 h-4 mr-1.5" />
+                <span>請求</span>
+              </TabsTrigger>
+            )}
+            {isSuperAdmin && (
+              <TabsTrigger value="tenant-management" className="shrink-0 px-3 py-2">
+                <Building2 className="w-4 h-4 mr-1.5" />
+                <span>テナント</span>
+              </TabsTrigger>
+            )}
+            {isSuperAdmin && (
+              <TabsTrigger value="payment-management" className="shrink-0 px-3 py-2">
+                <DollarSign className="w-4 h-4 mr-1.5" />
+                <span>支払い</span>
+              </TabsTrigger>
+            )}
+            {isSuperAdmin && (
+              <TabsTrigger value="notification-management" className="shrink-0 px-3 py-2">
+                <Mail className="w-4 h-4 mr-1.5" />
+                <span>通知履歴</span>
+              </TabsTrigger>
+            )}
+            {canManageSystem && (
+              <TabsTrigger value="system" className="shrink-0 px-3 py-2">
+                <ShieldCheck className="w-4 h-4 mr-1.5" />
+                <span>システム</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
 
         <TabsContent value="company">
           <CompanyTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
