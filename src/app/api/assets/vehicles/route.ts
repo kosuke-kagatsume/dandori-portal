@@ -1,11 +1,15 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   getTenantId,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
+import { createVehicleSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
 
 // デモ用車両データ
 const demoVehicles = [
@@ -166,68 +170,46 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      tenantId = 'tenant-demo-001',
-      vehicleNumber,
-      licensePlate,
-      make,
-      model,
-      year,
-      color,
-      assignedUserId,
-      assignedUserName,
-      assignedDate,
-      ownershipType = 'owned',
-      leaseCompany,
-      leaseStartDate,
-      leaseEndDate,
-      leaseMonthlyCost,
-      purchaseDate,
-      purchaseCost,
-      inspectionDate,
-      insuranceDate,
-      maintenanceDate,
-      tireChangeDate,
-      currentTireType,
-      status = 'active',
-      notes,
-    } = body;
 
-    // バリデーション
-    if (!vehicleNumber || !licensePlate || !make || !model || !year) {
-      return handleApiError(
-        new Error('車両番号、ナンバープレート、メーカー、車種、年式は必須です'),
-        '車両登録'
-      );
+    // Zodバリデーション
+    const validation = validateWithSchema(createVehicleSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.errors.join(', '), 400);
     }
 
+    const data = validation.data;
+
+    const createData: Prisma.vehiclesUncheckedCreateInput = {
+      id: randomUUID(),
+      tenantId: data.tenantId || 'tenant-demo-001',
+      vehicleNumber: data.vehicleNumber,
+      licensePlate: data.licensePlate,
+      make: data.make,
+      model: data.model,
+      year: data.year,
+      color: data.color ?? undefined,
+      assignedUserId: data.assignedUserId ?? undefined,
+      assignedUserName: data.assignedUserName ?? undefined,
+      assignedDate: data.assignedDate ? new Date(data.assignedDate) : undefined,
+      ownershipType: data.ownershipType,
+      leaseCompany: data.leaseCompany ?? undefined,
+      leaseStartDate: data.leaseStartDate ? new Date(data.leaseStartDate) : undefined,
+      leaseEndDate: data.leaseEndDate ? new Date(data.leaseEndDate) : undefined,
+      leaseMonthlyCost: data.leaseMonthlyCost ?? undefined,
+      purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : undefined,
+      purchaseCost: data.purchaseCost ?? undefined,
+      inspectionDate: data.inspectionDate ? new Date(data.inspectionDate) : undefined,
+      insuranceDate: data.insuranceDate ? new Date(data.insuranceDate) : undefined,
+      maintenanceDate: data.maintenanceDate ? new Date(data.maintenanceDate) : undefined,
+      tireChangeDate: data.tireChangeDate ? new Date(data.tireChangeDate) : undefined,
+      currentTireType: data.currentTireType ?? undefined,
+      status: data.status,
+      notes: data.notes ?? undefined,
+      updatedAt: new Date(),
+    };
+
     const vehicle = await prisma.vehicles.create({
-      data: {
-        tenantId,
-        vehicleNumber,
-        licensePlate,
-        make,
-        model,
-        year,
-        color,
-        assignedUserId,
-        assignedUserName,
-        assignedDate: assignedDate ? new Date(assignedDate) : null,
-        ownershipType,
-        leaseCompany,
-        leaseStartDate: leaseStartDate ? new Date(leaseStartDate) : null,
-        leaseEndDate: leaseEndDate ? new Date(leaseEndDate) : null,
-        leaseMonthlyCost,
-        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
-        purchaseCost,
-        inspectionDate: inspectionDate ? new Date(inspectionDate) : null,
-        insuranceDate: insuranceDate ? new Date(insuranceDate) : null,
-        maintenanceDate: maintenanceDate ? new Date(maintenanceDate) : null,
-        tireChangeDate: tireChangeDate ? new Date(tireChangeDate) : null,
-        currentTireType,
-        status,
-        notes,
-      },
+      data: createData,
     });
 
     return successResponse(vehicle);

@@ -142,6 +142,23 @@ export default function AssetsPage() {
 
   const isLoading = vehiclesLoading || vendorsLoading || pcsLoading || maintenanceLoading || generalAssetsLoading || repairLoading;
 
+  // O(1)検索用のMap（パフォーマンス最適化）
+  const vehicleMap = useMemo(() => {
+    return new Map(vehicles.map((v) => [v.id, v]));
+  }, [vehicles]);
+
+  const vendorMap = useMemo(() => {
+    return new Map(vendors.map((v) => [v.id, v]));
+  }, [vendors]);
+
+  const pcAssetMap = useMemo(() => {
+    return new Map(pcAssets.map((p) => [p.id, p]));
+  }, [pcAssets]);
+
+  const generalAssetMap = useMemo(() => {
+    return new Map(generalAssets.map((a) => [a.id, a]));
+  }, [generalAssets]);
+
   // 車両別費用集計を計算する関数
   const calculateVehicleCosts = (startMonth: string, endMonth: string) => {
     const start = new Date(startMonth + '-01');
@@ -1398,7 +1415,7 @@ export default function AssetsPage() {
                               size="sm"
                               onClick={() => {
                                 if (warning.assetCategory === 'vehicle') {
-                                  const vehicle = vehicles.find((v) => v.id === warning.assetId);
+                                  const vehicle = vehicleMap.get(warning.assetId);
                                   if (vehicle) {
                                     setSelectedVehicle(vehicle);
                                     setDetailModalOpen(true);
@@ -1484,8 +1501,8 @@ export default function AssetsPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredMaintenanceFromAPI.map((record) => {
-                      const vehicle = vehicles.find((v) => v.id === record.vehicleId);
-                      const vendor = vendors.find((v) => v.id === record.vendorId);
+                      const vehicle = vehicleMap.get(record.vehicleId);
+                      const vendor = record.vendorId ? vendorMap.get(record.vendorId) : null;
                       return (
                         <TableRow key={record.id}>
                           <TableCell className="whitespace-nowrap">
@@ -1704,7 +1721,7 @@ export default function AssetsPage() {
                       </TableHeader>
                       <TableBody>
                         {costSummary.map((item) => {
-                          const vehicle = vehicles.find((v) => v.id === item.vehicleId);
+                          const vehicle = vehicleMap.get(item.vehicleId);
                           const total = item.leaseCost + item.maintenanceCost;
 
                           return (

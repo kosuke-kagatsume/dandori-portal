@@ -1,11 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   getTenantId,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
+import { createMaintenanceRecordSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
 
 // デモ用メンテナンス記録データ
 const demoMaintenanceRecords = [
@@ -92,7 +96,7 @@ export async function GET(request: NextRequest) {
         notes: true,
         createdAt: true,
         updatedAt: true,
-        vehicle: {
+        vehicles: {
           select: {
             id: true,
             vehicleNumber: true,
@@ -101,7 +105,7 @@ export async function GET(request: NextRequest) {
             model: true,
           },
         },
-        vendor: {
+        vendors: {
           select: {
             id: true,
             name: true,
@@ -133,60 +137,60 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      tenantId = 'tenant-demo-001',
-      vehicleId,
-      type,
-      date,
-      mileage,
-      cost,
-      vendorId,
-      description,
-      nextDueDate,
-      nextDueMileage,
-      tireType,
-      performedBy,
-      performedByName,
-      notes,
-    } = body;
 
-    // バリデーション
-    if (!vehicleId || !type || !date || cost === undefined) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: '車両ID、種別、日付、費用は必須です',
-        },
-        { status: 400 }
-      );
+    // Zodバリデーション
+    const validation = validateWithSchema(createMaintenanceRecordSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.errors.join(', '), 400);
     }
 
+    const data = validation.data;
+
+    // mileageとnextDueMileageの変換
+    const mileage = data.mileage
+      ? typeof data.mileage === 'string'
+        ? parseInt(data.mileage, 10)
+        : data.mileage
+      : null;
+    const nextDueMileage = data.nextDueMileage
+      ? typeof data.nextDueMileage === 'string'
+        ? parseInt(data.nextDueMileage, 10)
+        : data.nextDueMileage
+      : null;
+
+    // costの型変換
+    const costValue = typeof data.cost === 'number' ? data.cost : parseInt(String(data.cost), 10);
+
+    const createData: Prisma.maintenance_recordsUncheckedCreateInput = {
+      id: randomUUID(),
+      tenantId: data.tenantId || 'tenant-demo-001',
+      vehicleId: data.vehicleId,
+      type: data.type,
+      date: new Date(data.date),
+      mileage: mileage ?? undefined,
+      cost: costValue,
+      vendorId: data.vendorId ?? undefined,
+      description: data.description ?? undefined,
+      nextDueDate: data.nextDueDate ? new Date(data.nextDueDate) : undefined,
+      nextDueMileage: nextDueMileage ?? undefined,
+      tireType: data.tireType ?? undefined,
+      performedBy: data.performedBy ?? undefined,
+      performedByName: data.performedByName ?? undefined,
+      notes: data.notes ?? undefined,
+      updatedAt: new Date(),
+    };
+
     const record = await prisma.maintenance_records.create({
-      data: {
-        tenantId,
-        vehicleId,
-        type,
-        date: new Date(date),
-        mileage: mileage ? parseInt(mileage, 10) : null,
-        cost: parseInt(cost, 10),
-        vendorId: vendorId || null,
-        description,
-        nextDueDate: nextDueDate ? new Date(nextDueDate) : null,
-        nextDueMileage: nextDueMileage ? parseInt(nextDueMileage, 10) : null,
-        tireType,
-        performedBy,
-        performedByName,
-        notes,
-      },
+      data: createData,
       include: {
-        vehicle: {
+        vehicles: {
           select: {
             id: true,
             vehicleNumber: true,
             licensePlate: true,
           },
         },
-        vendor: {
+        vendors: {
           select: {
             id: true,
             name: true,
@@ -195,19 +199,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: record,
-    });
+    return successResponse(record);
   } catch (error) {
-    console.error('Error creating maintenance record:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to create maintenance record',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleApiError(error, 'メンテナンス記録作成');
   }
 }

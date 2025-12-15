@@ -1,6 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { randomUUID } from 'crypto';
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  getTenantId,
+} from '@/lib/api/api-helpers';
+import { createGeneralAssetSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
 
 // デモ用汎用資産データ
 const demoGeneralAssets = [
@@ -49,16 +56,19 @@ export async function GET(request: NextRequest) {
   try {
     // デモモードの場合はデモデータを返す
     if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return NextResponse.json({ success: true, data: demoGeneralAssets });
+      return successResponse(demoGeneralAssets, {
+        count: demoGeneralAssets.length,
+        cacheSeconds: 60,
+      });
     }
 
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
 
     const assets = await prisma.general_assets.findMany({
       where: { tenantId },
       include: {
-        repairRecords: {
+        repair_records: {
           orderBy: { date: 'desc' },
           take: 5,
         },
@@ -66,13 +76,12 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ success: true, data: assets });
+    return successResponse(assets, {
+      count: assets.length,
+      cacheSeconds: 60,
+    });
   } catch (error) {
-    console.error('Error fetching general assets:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch general assets' },
-      { status: 500 }
-    );
+    return handleApiError(error, '汎用資産一覧取得');
   }
 }
 
@@ -80,44 +89,48 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
 
     const body = await request.json();
+
+    // Zodバリデーション
+    const validation = validateWithSchema(createGeneralAssetSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.errors.join(', '), 400);
+    }
+
+    const data = validation.data;
 
     const asset = await prisma.general_assets.create({
       data: {
         id: randomUUID(),
-        tenantId,
-        assetNumber: body.assetNumber,
-        category: body.category,
-        name: body.name,
-        manufacturer: body.manufacturer || null,
-        model: body.model || null,
-        serialNumber: body.serialNumber || null,
-        specifications: body.specifications || null,
-        assignedUserId: body.assignedUserId || null,
-        assignedUserName: body.assignedUserName || null,
-        assignedDate: body.assignedDate ? new Date(body.assignedDate) : null,
-        ownershipType: body.ownershipType || 'owned',
-        purchaseDate: body.purchaseDate ? new Date(body.purchaseDate) : null,
-        purchaseCost: body.purchaseCost || null,
-        leaseCompany: body.leaseCompany || null,
-        leaseMonthlyCost: body.leaseMonthlyCost || null,
-        leaseStartDate: body.leaseStartDate ? new Date(body.leaseStartDate) : null,
-        leaseEndDate: body.leaseEndDate ? new Date(body.leaseEndDate) : null,
-        warrantyExpiration: body.warrantyExpiration ? new Date(body.warrantyExpiration) : null,
-        status: body.status || 'active',
-        notes: body.notes || null,
+        tenantId: data.tenantId || tenantId,
+        assetNumber: data.assetNumber,
+        category: data.category,
+        name: data.name,
+        manufacturer: data.manufacturer || null,
+        model: data.model || null,
+        serialNumber: data.serialNumber || null,
+        specifications: data.specifications ? JSON.parse(data.specifications) : null,
+        assignedUserId: data.assignedUserId || null,
+        assignedUserName: data.assignedUserName || null,
+        assignedDate: data.assignedDate ? new Date(data.assignedDate) : null,
+        ownershipType: data.ownershipType,
+        purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
+        purchaseCost: data.purchaseCost || null,
+        leaseCompany: data.leaseCompany || null,
+        leaseMonthlyCost: data.leaseMonthlyCost || null,
+        leaseStartDate: data.leaseStartDate ? new Date(data.leaseStartDate) : null,
+        leaseEndDate: data.leaseEndDate ? new Date(data.leaseEndDate) : null,
+        warrantyExpiration: data.warrantyExpiration ? new Date(data.warrantyExpiration) : null,
+        status: data.status,
+        notes: data.notes || null,
         updatedAt: new Date(),
       },
     });
 
-    return NextResponse.json({ success: true, data: asset }, { status: 201 });
+    return successResponse(asset);
   } catch (error) {
-    console.error('Error creating general asset:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to create general asset' },
-      { status: 500 }
-    );
+    return handleApiError(error, '汎用資産登録');
   }
 }

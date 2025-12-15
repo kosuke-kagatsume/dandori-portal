@@ -1,5 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  getTenantId,
+} from '@/lib/api/api-helpers';
+import { createRepairRecordSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
 
 // デモ用修理記録データ
 const demoRepairRecords = [
@@ -45,16 +54,19 @@ export async function GET(request: NextRequest) {
   try {
     // デモモードの場合はデモデータを返す
     if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return NextResponse.json({ success: true, data: demoRepairRecords });
+      return successResponse(demoRepairRecords, {
+        count: demoRepairRecords.length,
+        cacheSeconds: 60,
+      });
     }
 
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
 
     const records = await prisma.repair_records.findMany({
       where: { tenantId },
       include: {
-        pcAsset: {
+        pc_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -62,7 +74,7 @@ export async function GET(request: NextRequest) {
             model: true,
           },
         },
-        generalAsset: {
+        general_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -76,13 +88,12 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'desc' },
     });
 
-    return NextResponse.json({ success: true, data: records });
+    return successResponse(records, {
+      count: records.length,
+      cacheSeconds: 60,
+    });
   } catch (error) {
-    console.error('Error fetching repair records:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch repair records' },
-      { status: 500 }
-    );
+    return handleApiError(error, '修理記録一覧取得');
   }
 }
 
@@ -90,38 +101,42 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = getTenantId(searchParams);
 
     const body = await request.json();
 
-    // PC資産または汎用資産のどちらかが必須
-    if (!body.pcAssetId && !body.generalAssetId) {
-      return NextResponse.json(
-        { success: false, error: 'Either pcAssetId or generalAssetId is required' },
-        { status: 400 }
-      );
+    // Zodバリデーション（PC資産または汎用資産のどちらかが必須のチェック含む）
+    const validation = validateWithSchema(createRepairRecordSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.errors.join(', '), 400);
     }
 
+    const data = validation.data;
+
+    const createData: Prisma.repair_recordsUncheckedCreateInput = {
+      id: randomUUID(),
+      tenantId: data.tenantId || tenantId,
+      pcAssetId: data.pcAssetId ?? undefined,
+      generalAssetId: data.generalAssetId ?? undefined,
+      repairType: data.repairType,
+      date: new Date(data.date),
+      cost: data.cost,
+      vendorId: data.vendorId ?? undefined,
+      vendorName: data.vendorName ?? undefined,
+      symptom: data.symptom ?? undefined,
+      description: data.description ?? undefined,
+      status: data.status,
+      completedDate: data.completedDate ? new Date(data.completedDate) : undefined,
+      performedBy: data.performedBy ?? undefined,
+      performedByName: data.performedByName ?? undefined,
+      notes: data.notes ?? undefined,
+      updatedAt: new Date(),
+    };
+
     const record = await prisma.repair_records.create({
-      data: {
-        tenantId,
-        pcAssetId: body.pcAssetId || null,
-        generalAssetId: body.generalAssetId || null,
-        repairType: body.repairType,
-        date: new Date(body.date),
-        cost: body.cost,
-        vendorId: body.vendorId || null,
-        vendorName: body.vendorName || null,
-        symptom: body.symptom || null,
-        description: body.description || null,
-        status: body.status || 'completed',
-        completedDate: body.completedDate ? new Date(body.completedDate) : null,
-        performedBy: body.performedBy || null,
-        performedByName: body.performedByName || null,
-        notes: body.notes || null,
-      },
+      data: createData,
       include: {
-        pcAsset: {
+        pc_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -129,7 +144,7 @@ export async function POST(request: NextRequest) {
             model: true,
           },
         },
-        generalAsset: {
+        general_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -142,12 +157,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, data: record }, { status: 201 });
+    return successResponse(record);
   } catch (error) {
-    console.error('Error creating repair record:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to create repair record' },
-      { status: 500 }
-    );
+    return handleApiError(error, '修理記録登録');
   }
 }

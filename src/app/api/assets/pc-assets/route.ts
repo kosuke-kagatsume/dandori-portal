@@ -3,10 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { randomUUID } from 'crypto';
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   getTenantId,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
+import { createPCAssetSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
 
 // デモ用PC資産データ
 const demoPCAssets = [
@@ -153,68 +155,42 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      tenantId = 'tenant-demo-001',
-      assetNumber,
-      manufacturer,
-      model,
-      serialNumber,
-      cpu,
-      memory,
-      storage,
-      os,
-      assignedUserId,
-      assignedUserName,
-      assignedDate,
-      ownershipType = 'owned',
-      leaseCompany,
-      leaseStartDate,
-      leaseEndDate,
-      leaseMonthlyCost,
-      leaseContact,
-      leasePhone,
-      purchaseDate,
-      purchaseCost,
-      warrantyExpiration,
-      status = 'active',
-      notes,
-    } = body;
 
-    // バリデーション
-    if (!assetNumber || !manufacturer || !model) {
-      return handleApiError(
-        new Error('資産番号、メーカー、モデルは必須です'),
-        'PC資産登録'
-      );
+    // Zodバリデーション
+    const validation = validateWithSchema(createPCAssetSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.errors.join(', '), 400);
     }
+
+    const data = validation.data;
 
     const pcAsset = await prisma.pc_assets.create({
       data: {
         id: randomUUID(),
-        tenantId,
-        assetNumber,
-        manufacturer,
-        model,
-        serialNumber: serialNumber || '',
-        cpu: cpu || null,
-        memory: memory || null,
-        storage: storage || null,
-        os: os || null,
-        assignedUserId: assignedUserId || null,
-        assignedUserName: assignedUserName || null,
-        assignedDate: assignedDate ? new Date(assignedDate) : null,
-        ownershipType,
-        leaseCompany: leaseCompany || null,
-        leaseStartDate: leaseStartDate ? new Date(leaseStartDate) : null,
-        leaseEndDate: leaseEndDate ? new Date(leaseEndDate) : null,
-        leaseMonthlyCost: leaseMonthlyCost || null,
-        leaseContact: leaseContact || null,
-        leasePhone: leasePhone || null,
-        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
-        purchaseCost: purchaseCost || null,
-        warrantyExpiration: warrantyExpiration ? new Date(warrantyExpiration) : null,
-        status,
-        notes: notes || null,
+        tenantId: data.tenantId || 'tenant-demo-001',
+        assetNumber: data.assetNumber,
+        manufacturer: data.manufacturer,
+        model: data.model,
+        serialNumber: data.serialNumber || '',
+        cpu: data.cpu || null,
+        memory: data.memory || null,
+        storage: data.storage || null,
+        os: data.os || null,
+        assignedUserId: data.assignedUserId || null,
+        assignedUserName: data.assignedUserName || null,
+        assignedDate: data.assignedDate ? new Date(data.assignedDate) : null,
+        ownershipType: data.ownershipType,
+        leaseCompany: data.leaseCompany || null,
+        leaseStartDate: data.leaseStartDate ? new Date(data.leaseStartDate) : null,
+        leaseEndDate: data.leaseEndDate ? new Date(data.leaseEndDate) : null,
+        leaseMonthlyCost: data.leaseMonthlyCost || null,
+        leaseContact: data.leaseContact || null,
+        leasePhone: data.leasePhone || null,
+        purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
+        purchaseCost: data.purchaseCost || null,
+        warrantyExpiration: data.warrantyExpiration ? new Date(data.warrantyExpiration) : null,
+        status: data.status,
+        notes: data.notes || null,
         updatedAt: new Date(),
       },
     });

@@ -1,11 +1,15 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   getTenantId,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
+import { createVendorSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
 
 // デモ用業者データ
 const demoVendors = [
@@ -113,32 +117,30 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      tenantId = 'tenant-demo-001',
-      name,
-      phone,
-      address,
-      contactPerson,
-      email,
-      rating,
-      notes,
-    } = body;
 
-    if (!name) {
-      return handleApiError(new Error('業者名は必須です'), '業者登録');
+    // Zodバリデーション
+    const validation = validateWithSchema(createVendorSchema, body);
+    if (!validation.success) {
+      return errorResponse(validation.errors.join(', '), 400);
     }
 
+    const data = validation.data;
+
+    const createData: Prisma.vendorsUncheckedCreateInput = {
+      id: randomUUID(),
+      tenantId: data.tenantId || 'tenant-demo-001',
+      name: data.name,
+      phone: data.phone ?? undefined,
+      address: data.address ?? undefined,
+      contactPerson: data.contactPerson ?? undefined,
+      email: data.email ?? undefined,
+      rating: data.rating ?? undefined,
+      notes: data.notes ?? undefined,
+      updatedAt: new Date(),
+    };
+
     const vendor = await prisma.vendors.create({
-      data: {
-        tenantId,
-        name,
-        phone,
-        address,
-        contactPerson,
-        email,
-        rating,
-        notes,
-      },
+      data: createData,
     });
 
     return successResponse(vendor);
