@@ -12,7 +12,9 @@ import {
   GitBranch,
   ShieldCheck,
   Clock,
-  Mail,
+  Palette,
+  Globe,
+  Database,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -28,10 +30,9 @@ import {
   AttendanceTab,
   WorkflowTab,
   BillingTab,
+  AppearanceTab,
+  RegionalTab,
 } from '@/features/settings/tabs';
-import { TenantManagementTab } from '@/features/dw-admin/tenant-management-tab';
-import { PaymentManagementTab } from '@/features/dw-admin/payment-management-tab';
-import { NotificationManagementTab } from '@/features/dw-admin/notification-management-tab';
 import { MasterDataPanel } from '@/components/settings/master-data-panel';
 
 export default function SettingsPage() {
@@ -85,16 +86,7 @@ export default function SettingsPage() {
     return userRole === 'admin' || userRole === 'hr';
   }, [userRole]);
 
-  // DW社管理者権限（全テナント管理）
-  const isSuperAdmin = useMemo(() => {
-    if (!userRole) return false;
-    // 本番ユーザーの場合: adminロールを持っているかチェック
-    // デモユーザーの場合: 従来のロジック
-    if (currentUser) {
-      return userRole === 'admin';
-    }
-    return currentDemoUser?.role === 'admin' && currentDemoUser?.id === 'demo-admin';
-  }, [userRole, currentUser, currentDemoUser]);
+  // DW社管理者権限は /dw-admin で管理するため、設定ページでは不要
 
   // 設定の読み込み
   useEffect(() => {
@@ -171,65 +163,63 @@ export default function SettingsPage() {
         </Alert>
       )}
 
-      <Tabs defaultValue="company" className="space-y-4 w-full">
-        <TabsList className="flex flex-wrap sm:grid sm:w-full sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-9 gap-1">
-          <TabsTrigger value="company" className="flex-1 sm:flex-none min-w-[100px]">
-            <Building2 className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">会社</span>
+      <Tabs defaultValue="appearance" className="space-y-4 w-full">
+        <TabsList className="w-full flex flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="appearance" className="flex-1 min-w-[80px] px-2 py-2">
+            <Palette className="w-4 h-4 mr-1.5" />
+            <span>外観</span>
           </TabsTrigger>
-          <TabsTrigger value="payroll" className="flex-1 sm:flex-none min-w-[100px]">
-            <DollarSign className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">給与</span>
+          <TabsTrigger value="regional" className="flex-1 min-w-[80px] px-2 py-2">
+            <Globe className="w-4 h-4 mr-1.5" />
+            <span>地域</span>
           </TabsTrigger>
-          <TabsTrigger value="year-end" className="flex-1 sm:flex-none min-w-[100px]">
-            <FileText className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">年末調整</span>
+          <TabsTrigger value="company" className="flex-1 min-w-[80px] px-2 py-2">
+            <Building2 className="w-4 h-4 mr-1.5" />
+            <span>会社</span>
           </TabsTrigger>
-          <TabsTrigger value="attendance" className="flex-1 sm:flex-none min-w-[100px]">
-            <Clock className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">勤怠</span>
+          <TabsTrigger value="payroll" className="flex-1 min-w-[80px] px-2 py-2">
+            <DollarSign className="w-4 h-4 mr-1.5" />
+            <span>給与</span>
           </TabsTrigger>
-          <TabsTrigger value="workflow" className="flex-1 sm:flex-none min-w-[100px]">
-            <GitBranch className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">ワークフロー</span>
+          <TabsTrigger value="year-end" className="flex-1 min-w-[80px] px-2 py-2">
+            <FileText className="w-4 h-4 mr-1.5" />
+            <span>年末調整</span>
+          </TabsTrigger>
+          <TabsTrigger value="attendance" className="flex-1 min-w-[80px] px-2 py-2">
+            <Clock className="w-4 h-4 mr-1.5" />
+            <span>勤怠</span>
+          </TabsTrigger>
+          <TabsTrigger value="workflow" className="flex-1 min-w-[80px] px-2 py-2">
+            <GitBranch className="w-4 h-4 mr-1.5" />
+            <span>ワークフロー</span>
           </TabsTrigger>
           {canManageSystem && (
-            <TabsTrigger value="master-data" className="flex-1 sm:flex-none min-w-[100px]">
-              <Building2 className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">マスタ</span>
+            <TabsTrigger value="master-data" className="flex-1 min-w-[80px] px-2 py-2">
+              <Database className="w-4 h-4 mr-1.5" />
+              <span>マスタ</span>
             </TabsTrigger>
           )}
           {canViewBilling && (
-            <TabsTrigger value="billing" className="flex-1 sm:flex-none min-w-[100px]">
-              <DollarSign className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">請求</span>
-            </TabsTrigger>
-          )}
-          {isSuperAdmin && (
-            <TabsTrigger value="tenant-management" className="flex-1 sm:flex-none min-w-[100px]">
-              <Building2 className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">テナント</span>
-            </TabsTrigger>
-          )}
-          {isSuperAdmin && (
-            <TabsTrigger value="payment-management" className="flex-1 sm:flex-none min-w-[100px]">
-              <DollarSign className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">支払い</span>
-            </TabsTrigger>
-          )}
-          {isSuperAdmin && (
-            <TabsTrigger value="notification-management" className="flex-1 sm:flex-none min-w-[100px]">
-              <Mail className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">通知履歴</span>
+            <TabsTrigger value="billing" className="flex-1 min-w-[80px] px-2 py-2">
+              <DollarSign className="w-4 h-4 mr-1.5" />
+              <span>請求</span>
             </TabsTrigger>
           )}
           {canManageSystem && (
-            <TabsTrigger value="system" className="flex-1 sm:flex-none min-w-[100px]">
-              <ShieldCheck className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">システム</span>
+            <TabsTrigger value="system" className="flex-1 min-w-[80px] px-2 py-2">
+              <ShieldCheck className="w-4 h-4 mr-1.5" />
+              <span>システム</span>
             </TabsTrigger>
           )}
         </TabsList>
+
+        <TabsContent value="appearance">
+          <AppearanceTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
+        </TabsContent>
+
+        <TabsContent value="regional">
+          <RegionalTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
+        </TabsContent>
 
         <TabsContent value="company">
           <CompanyTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />
@@ -263,23 +253,6 @@ export default function SettingsPage() {
           </TabsContent>
         )}
 
-        {isSuperAdmin && (
-          <TabsContent value="tenant-management">
-            <TenantManagementTab />
-          </TabsContent>
-        )}
-
-        {isSuperAdmin && (
-          <TabsContent value="payment-management">
-            <PaymentManagementTab />
-          </TabsContent>
-        )}
-
-        {isSuperAdmin && (
-          <TabsContent value="notification-management">
-            <NotificationManagementTab />
-          </TabsContent>
-        )}
 
         {canManageSystem && (
           <TabsContent value="system">

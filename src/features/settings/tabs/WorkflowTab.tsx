@@ -9,12 +9,14 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { GitBranch, AlertTriangle, CheckCircle, MessageSquare, Plus, Edit2, Copy, Trash2, CheckCircle2, Building2 } from 'lucide-react';
+import { GitBranch, AlertTriangle, CheckCircle, MessageSquare, Plus, Edit2, Copy, Trash2, CheckCircle2, Building2, Loader2 } from 'lucide-react';
 import { useApprovalFlowStore } from '@/lib/store/approval-flow-store';
+import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import type { DocumentType } from '@/types/approval-flow';
 import type { SettingsTabProps } from '../types';
 import { CreateApprovalFlowDialog } from '../components/create-approval-flow-dialog';
 import { EditApprovalFlowDialog } from '../components/edit-approval-flow-dialog';
+import { toast } from 'sonner';
 
 /**
  * ドキュメントタイプの日本語名
@@ -30,7 +32,7 @@ const documentTypeLabels: Record<DocumentType, string> = {
 export function WorkflowTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
   const {
     flows,
-    initialized,
+    initialized: flowsInitialized,
     getFlowsByDocumentType,
     getStats,
     deleteFlow,
@@ -38,17 +40,46 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
     initializeDemoData,
   } = useApprovalFlowStore();
 
+  // DB連携用のストア
+  const {
+    workflowSettings,
+    isLoading,
+    fetchWorkflowSettings,
+    updateWorkflowSettings,
+    saveWorkflowSettings,
+  } = useCompanySettingsStore();
+
   const [activeDocumentType, setActiveDocumentType] = useState<DocumentType>('leave_request');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingFlowId, setEditingFlowId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // 初期化
   useEffect(() => {
-    if (!initialized) {
+    if (!flowsInitialized) {
       initializeDemoData();
     }
-  }, [initialized, initializeDemoData]);
+  }, [flowsInitialized, initializeDemoData]);
+
+  // DB設定を取得
+  useEffect(() => {
+    fetchWorkflowSettings();
+  }, [fetchWorkflowSettings]);
+
+  // DB保存処理
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      await saveWorkflowSettings();
+      toast.success('ワークフロー設定を保存しました');
+    } catch (error) {
+      toast.error('設定の保存に失敗しました');
+      console.error('Error saving workflow settings:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const stats = getStats();
   const currentFlows = getFlowsByDocumentType(activeDocumentType);
@@ -95,9 +126,9 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
               type="number"
               min="1"
               max="30"
-              value={settings.workflow.defaultApprovalDeadlineDays}
-              onChange={(e) => updateSettings({
-                workflow: { ...settings.workflow, defaultApprovalDeadlineDays: parseInt(e.target.value) }
+              value={workflowSettings.defaultApprovalDeadlineDays}
+              onChange={(e) => updateWorkflowSettings({
+                defaultApprovalDeadlineDays: parseInt(e.target.value) || 3
               })}
             />
             <p className="text-sm text-muted-foreground">
@@ -125,14 +156,14 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
               </p>
             </div>
             <Switch
-              checked={settings.workflow.enableAutoEscalation}
-              onCheckedChange={(checked) => updateSettings({
-                workflow: { ...settings.workflow, enableAutoEscalation: checked }
+              checked={workflowSettings.enableAutoEscalation}
+              onCheckedChange={(checked) => updateWorkflowSettings({
+                enableAutoEscalation: checked
               })}
             />
           </div>
 
-          {settings.workflow.enableAutoEscalation && (
+          {workflowSettings.enableAutoEscalation && (
             <>
               <Separator />
               <div className="space-y-2">
@@ -142,9 +173,9 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
                   type="number"
                   min="0"
                   max="10"
-                  value={settings.workflow.escalationReminderDays}
-                  onChange={(e) => updateSettings({
-                    workflow: { ...settings.workflow, escalationReminderDays: parseInt(e.target.value) }
+                  value={workflowSettings.escalationReminderDays}
+                  onChange={(e) => updateWorkflowSettings({
+                    escalationReminderDays: parseInt(e.target.value) || 1
                   })}
                 />
                 <p className="text-sm text-muted-foreground">
@@ -174,14 +205,14 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
               </p>
             </div>
             <Switch
-              checked={settings.workflow.enableAutoApproval}
-              onCheckedChange={(checked) => updateSettings({
-                workflow: { ...settings.workflow, enableAutoApproval: checked }
+              checked={workflowSettings.enableAutoApproval}
+              onCheckedChange={(checked) => updateWorkflowSettings({
+                enableAutoApproval: checked
               })}
             />
           </div>
 
-          {settings.workflow.enableAutoApproval && (
+          {workflowSettings.enableAutoApproval && (
             <>
               <Separator />
               <div className="space-y-2">
@@ -191,9 +222,9 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
                   type="number"
                   min="0"
                   max="1000000"
-                  value={settings.workflow.autoApprovalThreshold}
-                  onChange={(e) => updateSettings({
-                    workflow: { ...settings.workflow, autoApprovalThreshold: parseInt(e.target.value) }
+                  value={workflowSettings.autoApprovalThreshold}
+                  onChange={(e) => updateWorkflowSettings({
+                    autoApprovalThreshold: parseInt(e.target.value) || 10000
                   })}
                 />
                 <p className="text-sm text-muted-foreground">
@@ -223,9 +254,9 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
               </p>
             </div>
             <Switch
-              checked={settings.workflow.requireCommentOnReject}
-              onCheckedChange={(checked) => updateSettings({
-                workflow: { ...settings.workflow, requireCommentOnReject: checked }
+              checked={workflowSettings.requireCommentOnReject}
+              onCheckedChange={(checked) => updateWorkflowSettings({
+                requireCommentOnReject: checked
               })}
             />
           </div>
@@ -240,9 +271,9 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
               </p>
             </div>
             <Switch
-              checked={settings.workflow.allowParallelApproval}
-              onCheckedChange={(checked) => updateSettings({
-                workflow: { ...settings.workflow, allowParallelApproval: checked }
+              checked={workflowSettings.allowParallelApproval}
+              onCheckedChange={(checked) => updateWorkflowSettings({
+                allowParallelApproval: checked
               })}
             />
           </div>
@@ -257,9 +288,9 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
               </p>
             </div>
             <Switch
-              checked={settings.workflow.enableProxyApproval}
-              onCheckedChange={(checked) => updateSettings({
-                workflow: { ...settings.workflow, enableProxyApproval: checked }
+              checked={workflowSettings.enableProxyApproval}
+              onCheckedChange={(checked) => updateWorkflowSettings({
+                enableProxyApproval: checked
               })}
             />
           </div>
@@ -268,8 +299,15 @@ export function WorkflowTab({ settings, updateSettings, saveSettings }: Settings
 
           {/* 保存ボタン */}
           <div className="flex justify-end">
-            <Button onClick={saveSettings} size="lg">
-              ワークフロー設定を保存
+            <Button onClick={handleSaveSettings} size="lg" disabled={isSaving || isLoading}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  保存中...
+                </>
+              ) : (
+                'ワークフロー設定を保存'
+              )}
             </Button>
           </div>
         </TabsContent>

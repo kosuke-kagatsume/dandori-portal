@@ -1518,6 +1518,23 @@ model workflow_requests {
   @@index([type])
 }
 
+model workflow_settings {
+  id                          String   @id
+  tenantId                    String   @unique
+  defaultApprovalDeadlineDays Int      @default(3)
+  enableAutoEscalation        Boolean  @default(false)
+  escalationReminderDays      Int      @default(1)
+  enableAutoApproval          Boolean  @default(false)
+  autoApprovalThreshold       Int      @default(10000)
+  requireCommentOnReject      Boolean  @default(true)
+  allowParallelApproval       Boolean  @default(false)
+  enableProxyApproval         Boolean  @default(false)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime
+
+  @@index([tenantId])
+}
+
 model year_end_adjustment_settings {
   id                             String   @id
   tenantId                       String   @unique

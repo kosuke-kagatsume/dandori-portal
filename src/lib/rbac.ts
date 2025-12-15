@@ -27,10 +27,10 @@ export const MENU_PERMISSIONS = {
   dashboard: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'],
   announcements: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // アナウンス一覧（全社員）
   users: ['hr', 'admin'],
-  members: ['manager', 'executive', 'hr'],
-  attendance: ['employee', 'manager', 'executive', 'hr', 'applicant'],
-  leave: ['employee', 'manager', 'executive', 'hr', 'applicant'],
-  workflow: ['employee', 'manager', 'executive', 'hr', 'applicant'],
+  members: ['manager', 'executive', 'hr', 'admin'], // システム管理者追加
+  attendance: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // システム管理者追加
+  leave: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // システム管理者追加
+  workflow: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // システム管理者追加
   approval: ['manager', 'executive', 'hr'],
   payroll: ['executive', 'hr'],
   evaluation: ['manager', 'executive', 'hr'],
