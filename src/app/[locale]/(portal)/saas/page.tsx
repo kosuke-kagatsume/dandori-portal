@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, TrendingUp, AlertCircle, Users, Building, Database, Download, Loader2, RefreshCw, Trash2 } from 'lucide-react';
-import { useSaaSServicesAPI, useSaaSAssignmentsAPI, type SaaSServiceFromAPI } from '@/hooks/use-saas-api';
+import { useSaaSServicesAPI, type SaaSServiceFromAPI } from '@/hooks/use-saas-api';
 import { CreateServiceDialog } from '@/features/saas/create-service-dialog';
 import { toast } from 'sonner';
 
@@ -48,7 +48,7 @@ type LicenseType = keyof typeof licenseTypeLabels;
 export default function SaaSManagementPage() {
   const router = useRouter();
 
-  // APIからデータ取得
+  // APIからデータ取得（最適化: 2 API → 1 API）
   const {
     services,
     loading: servicesLoading,
@@ -61,18 +61,23 @@ export default function SaaSManagementPage() {
     getUnusedLicensesCost,
   } = useSaaSServicesAPI();
 
-  const {
-    assignments,
-    loading: assignmentsLoading,
-    fetchAssignments,
-  } = useSaaSAssignmentsAPI();
+  // servicesからassignmentsを抽出（CSV出力用）
+  const assignments = useMemo(() => {
+    return services.flatMap(service =>
+      (service.assignments || []).map(a => ({
+        ...a,
+        service: { id: service.id, name: service.name, category: service.category },
+        plan: service.plans?.find(p => p.id === a.planId) || null,
+      }))
+    );
+  }, [services]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<SaaSCategory | 'all'>('all');
   const [licenseTypeFilter, setLicenseTypeFilter] = useState<LicenseType | 'all'>('all');
   const [mounted, setMounted] = useState(false);
 
-  const isLoading = servicesLoading || assignmentsLoading;
+  const isLoading = servicesLoading;
 
   // クライアントサイドでのみマウント状態を管理
   useEffect(() => {
@@ -100,10 +105,9 @@ export default function SaaSManagementPage() {
     unusedLicensesCost: getUnusedLicensesCost(),
   }), [getTotalServices, getTotalLicenses, getActiveLicenses, getTotalMonthlyCost, getUnusedLicensesCost]);
 
-  // データ更新ハンドラー
+  // データ更新ハンドラー（最適化済み: 1 APIのみ）
   const handleRefreshData = () => {
     fetchServices();
-    fetchAssignments();
     toast.success('データを更新しました');
   };
 

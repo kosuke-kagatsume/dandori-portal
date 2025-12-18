@@ -13,17 +13,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useVehiclesAPI, useVendorsAPI, type VehicleFromAPI, type VendorFromAPI } from '@/hooks/use-vehicles-api';
-import { usePCAssetsAPI, type PCAssetFromAPI } from '@/hooks/use-pc-assets-api';
-import { useMaintenanceAPI, type MaintenanceRecordFromAPI } from '@/hooks/use-maintenance-api';
+import { type VehicleFromAPI, type VendorFromAPI } from '@/hooks/use-vehicles-api';
+import { type PCAssetFromAPI } from '@/hooks/use-pc-assets-api';
+import { type MaintenanceRecordFromAPI } from '@/hooks/use-maintenance-api';
 import {
-  useGeneralAssetsAPI,
-  useRepairRecordsAPI,
   type GeneralAssetFromAPI,
   type RepairRecordFromAPI,
   ASSET_CATEGORIES,
   REPAIR_TYPES,
 } from '@/hooks/use-general-assets-api';
+import { useAssetsBatchAPI } from '@/hooks/use-assets-batch-api';
 import { RepairFormModal } from '@/components/assets/RepairFormModal';
 import {
   Car,
@@ -66,56 +65,24 @@ export default function AssetsPage() {
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
   );
 
-  // APIからデータ取得
+  // バッチAPIで全データを一括取得（6 API → 1 APIに最適化）
   const {
     vehicles,
-    loading: vehiclesLoading,
-    error: vehiclesError,
-    fetchVehicles,
-    deleteVehicle: deleteVehicleAPI,
-  } = useVehiclesAPI();
-
-  const {
+    pcAssets,
+    generalAssets,
     vendors,
-    loading: vendorsLoading,
-    fetchVendors,
-    deleteVendor: deleteVendorAPI,
-  } = useVendorsAPI();
+    maintenanceRecords,
+    repairRecords,
+    loading: batchLoading,
+    error: batchError,
+    refresh: refreshAllData,
+  } = useAssetsBatchAPI();
 
-  const {
-    pcs: pcAssets,
-    loading: pcsLoading,
-    fetchPCs,
-    deletePC: deletePCAPI,
-  } = usePCAssetsAPI();
-
-  // メンテナンス記録API
-  const {
-    records: maintenanceRecords,
-    loading: maintenanceLoading,
-    fetchRecords: fetchMaintenanceRecords,
-    createRecord: createMaintenanceRecord,
-    deleteRecord: deleteMaintenanceRecord,
-  } = useMaintenanceAPI();
+  // CRUD操作用の状態（削除時にはrefreshAllDataで再取得）
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // メンテナンス登録ダイアログの状態
   const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
-
-  // 汎用資産API
-  const {
-    assets: generalAssets,
-    loading: generalAssetsLoading,
-    fetchAssets: fetchGeneralAssets,
-    deleteAsset: deleteGeneralAssetAPI,
-  } = useGeneralAssetsAPI();
-
-  // 修理記録API
-  const {
-    records: repairRecords,
-    loading: repairLoading,
-    fetchRecords: fetchRepairRecords,
-    deleteRecord: deleteRepairRecordAPI,
-  } = useRepairRecordsAPI();
 
   // 修理登録ダイアログの状態
   const [repairDialogOpen, setRepairDialogOpen] = useState(false);
@@ -140,7 +107,7 @@ export default function AssetsPage() {
     general: true,
   });
 
-  const isLoading = vehiclesLoading || vendorsLoading || pcsLoading || maintenanceLoading || generalAssetsLoading || repairLoading;
+  const isLoading = batchLoading || deleteLoading;
 
   // O(1)検索用のMap（パフォーマンス最適化）
   const vehicleMap = useMemo(() => {
@@ -650,59 +617,90 @@ export default function AssetsPage() {
     toast.success(`CSV出力完了: ${pcAssets.length}件`);
   };
 
-  // 削除ハンドラー
+  // 削除ハンドラー（直接API呼び出し + バッチ再取得）
   const handleDeleteVehicle = async (id: string, vehicleNumber: string) => {
     if (window.confirm(`車両 ${vehicleNumber} を削除してもよろしいですか？`)) {
-      const result = await deleteVehicleAPI(id);
-      if (result.success) {
-        toast.success('車両を削除しました');
-      } else {
-        toast.error(result.error || '削除に失敗しました');
+      try {
+        setDeleteLoading(true);
+        const response = await fetch(`/api/assets/vehicles/${id}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (result.success) {
+          toast.success('車両を削除しました');
+          await refreshAllData();
+        } else {
+          toast.error(result.error || '削除に失敗しました');
+        }
+      } catch {
+        toast.error('削除に失敗しました');
+      } finally {
+        setDeleteLoading(false);
       }
     }
   };
 
   const handleDeletePC = async (id: string, assetNumber: string) => {
     if (window.confirm(`PC ${assetNumber} を削除してもよろしいですか？`)) {
-      const result = await deletePCAPI(id);
-      if (result.success) {
-        toast.success('PCを削除しました');
-      } else {
-        toast.error(result.error || '削除に失敗しました');
+      try {
+        setDeleteLoading(true);
+        const response = await fetch(`/api/assets/pc-assets/${id}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (result.success) {
+          toast.success('PCを削除しました');
+          await refreshAllData();
+        } else {
+          toast.error(result.error || '削除に失敗しました');
+        }
+      } catch {
+        toast.error('削除に失敗しました');
+      } finally {
+        setDeleteLoading(false);
       }
     }
   };
 
   const handleDeleteVendor = async (id: string, name: string) => {
     if (window.confirm(`業者 ${name} を削除してもよろしいですか？`)) {
-      const result = await deleteVendorAPI(id);
-      if (result.success) {
-        toast.success('業者を削除しました');
-      } else {
-        toast.error(result.error || '削除に失敗しました');
+      try {
+        setDeleteLoading(true);
+        const response = await fetch(`/api/assets/vendors/${id}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (result.success) {
+          toast.success('業者を削除しました');
+          await refreshAllData();
+        } else {
+          toast.error(result.error || '削除に失敗しました');
+        }
+      } catch {
+        toast.error('削除に失敗しました');
+      } finally {
+        setDeleteLoading(false);
       }
     }
   };
 
-  // データ更新ハンドラー
-  const handleRefreshData = () => {
-    fetchVehicles();
-    fetchVendors();
-    fetchPCs();
-    fetchMaintenanceRecords();
-    fetchGeneralAssets();
-    fetchRepairRecords();
+  // データ更新ハンドラー（バッチAPIで一括更新）
+  const handleRefreshData = async () => {
+    await refreshAllData();
     toast.success('データを更新しました');
   };
 
   // 汎用資産削除ハンドラー
   const handleDeleteGeneralAsset = async (id: string, name: string) => {
     if (window.confirm(`資産 ${name} を削除してもよろしいですか？`)) {
-      const result = await deleteGeneralAssetAPI(id);
-      if (result.success) {
-        toast.success('資産を削除しました');
-      } else {
-        toast.error(result.error || '削除に失敗しました');
+      try {
+        setDeleteLoading(true);
+        const response = await fetch(`/api/assets/general-assets/${id}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (result.success) {
+          toast.success('資産を削除しました');
+          await refreshAllData();
+        } else {
+          toast.error(result.error || '削除に失敗しました');
+        }
+      } catch {
+        toast.error('削除に失敗しました');
+      } finally {
+        setDeleteLoading(false);
       }
     }
   };
@@ -710,11 +708,20 @@ export default function AssetsPage() {
   // 修理記録削除ハンドラー
   const handleDeleteRepairRecord = async (id: string) => {
     if (window.confirm('この修理記録を削除してもよろしいですか？')) {
-      const result = await deleteRepairRecordAPI(id);
-      if (result.success) {
-        toast.success('修理記録を削除しました');
-      } else {
-        toast.error(result.error || '削除に失敗しました');
+      try {
+        setDeleteLoading(true);
+        const response = await fetch(`/api/assets/repair-records/${id}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (result.success) {
+          toast.success('修理記録を削除しました');
+          await refreshAllData();
+        } else {
+          toast.error(result.error || '削除に失敗しました');
+        }
+      } catch {
+        toast.error('削除に失敗しました');
+      } finally {
+        setDeleteLoading(false);
       }
     }
   };
@@ -731,21 +738,40 @@ export default function AssetsPage() {
 
   // メンテナンス登録ハンドラー
   const handleMaintenanceSubmit = async (formData: MaintenanceFormData) => {
-    const result = await createMaintenanceRecord(formData);
-    if (result.success) {
-      toast.success('メンテナンス記録を登録しました');
+    try {
+      const response = await fetch('/api/assets/maintenance-records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
+      if (result.success) {
+        toast.success('メンテナンス記録を登録しました');
+        await refreshAllData();
+      }
+      return result;
+    } catch {
+      return { success: false, error: '登録に失敗しました' };
     }
-    return result;
   };
 
   // メンテナンス削除ハンドラー
   const handleDeleteMaintenance = async (id: string) => {
     if (window.confirm('このメンテナンス記録を削除してもよろしいですか？')) {
-      const result = await deleteMaintenanceRecord(id);
-      if (result.success) {
-        toast.success('メンテナンス記録を削除しました');
-      } else {
-        toast.error(result.error || '削除に失敗しました');
+      try {
+        setDeleteLoading(true);
+        const response = await fetch(`/api/assets/maintenance-records/${id}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (result.success) {
+          toast.success('メンテナンス記録を削除しました');
+          await refreshAllData();
+        } else {
+          toast.error(result.error || '削除に失敗しました');
+        }
+      } catch {
+        toast.error('削除に失敗しました');
+      } finally {
+        setDeleteLoading(false);
       }
     }
   };

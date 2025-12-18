@@ -5,7 +5,7 @@
  * 機密情報を権限に応じてマスキング
  */
 
-export type UserRole = 'employee' | 'manager' | 'hr' | 'admin';
+export type UserRole = 'employee' | 'manager' | 'executive' | 'hr' | 'admin' | 'applicant';
 
 export interface MaskingOptions {
   userRole: UserRole;

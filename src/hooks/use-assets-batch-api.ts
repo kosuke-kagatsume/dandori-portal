@@ -1,158 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { VehicleFromAPI, VendorFromAPI } from './use-vehicles-api';
+import type { PCAssetFromAPI } from './use-pc-assets-api';
+import type { MaintenanceRecordFromAPI } from './use-maintenance-api';
+import type { GeneralAssetFromAPI, RepairRecordFromAPI } from './use-general-assets-api';
 
-// 型定義
-export interface VehicleFromBatch {
-  id: string;
-  tenantId: string;
-  vehicleNumber: string;
-  licensePlate: string;
-  make: string;
-  model: string;
-  year: number;
-  color: string | null;
-  vin: string | null;
-  ownershipType: string;
-  status: string;
-  assignedUserId: string | null;
-  assignedUserName: string | null;
-  assignedDate: string | null;
-  inspectionDate: string | null;
-  maintenanceDate: string | null;
-  insuranceDate: string | null;
-  tireChangeDate: string | null;
-  currentTireType: string | null;
-  leaseMonthlyCost: number | null;
-  leaseStartDate: string | null;
-  leaseEndDate: string | null;
-  purchaseCost: number | null;
-  purchaseDate: string | null;
-  warrantyExpiration: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PCAssetFromBatch {
-  id: string;
-  tenantId: string;
-  assetNumber: string;
-  manufacturer: string;
-  model: string;
-  serialNumber: string | null;
-  cpu: string | null;
-  memory: string | null;
-  storage: string | null;
-  os: string | null;
-  ownershipType: string;
-  status: string;
-  assignedUserId: string | null;
-  assignedUserName: string | null;
-  assignedDate: string | null;
-  purchaseCost: number | null;
-  purchaseDate: string | null;
-  warrantyExpiration: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface GeneralAssetFromBatch {
-  id: string;
-  tenantId: string;
-  assetNumber: string;
-  category: string;
-  name: string;
-  manufacturer: string | null;
-  model: string | null;
-  serialNumber: string | null;
-  ownershipType: string;
-  status: string;
-  assignedUserId: string | null;
-  assignedUserName: string | null;
-  assignedDate: string | null;
-  purchaseCost: number | null;
-  purchaseDate: string | null;
-  leaseMonthlyCost: number | null;
-  leaseStartDate: string | null;
-  leaseEndDate: string | null;
-  warrantyExpiration: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface VendorFromBatch {
-  id: string;
-  tenantId: string;
-  name: string;
-  contactPerson: string | null;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  rating: number | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface MaintenanceRecordFromBatch {
-  id: string;
-  tenantId: string;
-  vehicleId: string;
-  type: string;
-  date: string;
-  cost: number;
-  vendorId: string | null;
-  description: string | null;
-  nextScheduledDate: string | null;
-  createdAt: string;
-  updatedAt: string;
-  vehicle: {
-    id: string;
-    vehicleNumber: string;
-    licensePlate: string;
-  } | null;
-  vendor: {
-    id: string;
-    name: string;
-  } | null;
-}
-
-export interface RepairRecordFromBatch {
-  id: string;
-  tenantId: string;
-  pcAssetId: string | null;
-  generalAssetId: string | null;
-  repairType: string;
-  date: string;
-  cost: number;
-  vendorId: string | null;
-  symptom: string | null;
-  description: string | null;
-  status: string;
-  completedDate: string | null;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  pcAsset: {
-    id: string;
-    assetNumber: string;
-    manufacturer: string;
-    model: string;
-  } | null;
-  generalAsset: {
-    id: string;
-    assetNumber: string;
-    category: string;
-    name: string;
-  } | null;
-  vendor: {
-    id: string;
-    name: string;
-  } | null;
-}
+// 元のAPIと同じ型をエクスポート
+export type { VehicleFromAPI, VendorFromAPI } from './use-vehicles-api';
+export type { PCAssetFromAPI } from './use-pc-assets-api';
+export type { MaintenanceRecordFromAPI } from './use-maintenance-api';
+export type { GeneralAssetFromAPI, RepairRecordFromAPI } from './use-general-assets-api';
 
 export interface AssetsSummary {
   totalVehicles: number;
@@ -167,12 +25,12 @@ export interface AssetsSummary {
 }
 
 export interface AssetsBatchData {
-  vehicles: VehicleFromBatch[];
-  pcAssets: PCAssetFromBatch[];
-  generalAssets: GeneralAssetFromBatch[];
-  vendors: VendorFromBatch[];
-  maintenanceRecords: MaintenanceRecordFromBatch[];
-  repairRecords: RepairRecordFromBatch[];
+  vehicles: VehicleFromAPI[];
+  pcAssets: PCAssetFromAPI[];
+  generalAssets: GeneralAssetFromAPI[];
+  vendors: VendorFromAPI[];
+  maintenanceRecords: MaintenanceRecordFromAPI[];
+  repairRecords: RepairRecordFromAPI[];
   summary: AssetsSummary;
 }
 

@@ -21,6 +21,10 @@ export interface PCAssetFromAPI {
   purchaseCost: number | null;
   purchaseDate: string | null;
   warrantyExpiration: string | null;
+  // リース関連フィールド
+  leaseMonthlyCost: number | null;
+  leaseStartDate: string | null;
+  leaseEndDate: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;

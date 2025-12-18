@@ -9,7 +9,6 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Users,
-  UserCheck,
   Clock,
   AlertCircle,
   Calendar,
@@ -23,19 +22,10 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { useDashboardStore } from '@/lib/store/dashboard-store';
-import { hasPermission as hasDemoPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
-import type { UserRole } from '@/types';
-import { ROLE_LABELS } from '@/lib/rbac';
-import { QuickCheckIn } from '@/features/dashboard/quick-check-in';
+import { demoUsers } from '@/lib/demo-users';
+import { type UserRole, ROLE_LABELS } from '@/lib/rbac';
 import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
 import {
-  PersonalAttendanceChart,
-  PersonalLeaveChart,
-  PersonalWorkHoursChart,
-  TeamAttendanceChart,
-  TeamWorkloadChart,
-  ApprovalTasksChart,
-  CompanyAttendanceChart,
   DepartmentLeaveChart,
   DepartmentSalaryChart,
   HeadcountTrendChart,
@@ -51,6 +41,27 @@ export function DashboardContent() {
   const [effectiveDemoUser, setEffectiveDemoUser] = useState(demoUsers.employee);
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // ダッシュボード表示設定（設定でON/OFF可能な項目）
+  const [dashboardSettings, setDashboardSettings] = useState({
+    showLeaveBalance: false,      // 有給残日数（デフォルト非表示）
+    showRecentActivity: false,    // 最近のアクティビティ（デフォルト非表示）
+    showSystemStatus: false,      // システム接続状況（デフォルト非表示）
+  });
+
+  // ローカルストレージから設定を読み込み
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedSettings = localStorage.getItem('dashboard-display-settings');
+        if (savedSettings) {
+          setDashboardSettings(JSON.parse(savedSettings));
+        }
+      } catch (error) {
+        console.error('Failed to load dashboard settings:', error);
+      }
+    }
+  }, []);
 
   // 本番ユーザーのロールを取得
   const getCurrentUserRole = (): UserRole => {
@@ -110,6 +121,8 @@ export function DashboardContent() {
       'teamMembers': 'チームメンバー',
       'todayAttendance': '本日の出勤率',
       'pendingApprovals': '承認待ち',
+      'approvalRequests': '承認依頼',
+      'myPendingRequests': '申請中',
       'monthlyUtilization': '月間稼働率',
       'leaveBalance': '有給残日数',
       'remainingDays': '残日数',
@@ -164,13 +177,13 @@ export function DashboardContent() {
   ];
 
   // 権限チェック（本番ユーザーのロールを使用）
-  const rolePermissions: Record<UserRole, { viewAll: boolean; viewTeam: boolean; approve: boolean; manageSystem: boolean }> = {
-    employee: { viewAll: false, viewTeam: false, approve: false, manageSystem: false },
-    manager: { viewAll: false, viewTeam: true, approve: true, manageSystem: false },
-    executive: { viewAll: true, viewTeam: true, approve: true, manageSystem: false },
-    hr: { viewAll: true, viewTeam: true, approve: true, manageSystem: false },
-    admin: { viewAll: true, viewTeam: true, approve: true, manageSystem: true },
-    applicant: { viewAll: false, viewTeam: false, approve: false, manageSystem: false },
+  const rolePermissions: Record<UserRole, { viewAll: boolean; viewTeam: boolean; approve: boolean; manageSystem: boolean; manageUsers: boolean }> = {
+    employee: { viewAll: false, viewTeam: false, approve: false, manageSystem: false, manageUsers: false },
+    manager: { viewAll: false, viewTeam: true, approve: true, manageSystem: false, manageUsers: false },
+    executive: { viewAll: true, viewTeam: true, approve: true, manageSystem: false, manageUsers: false },
+    hr: { viewAll: true, viewTeam: true, approve: true, manageSystem: false, manageUsers: true },
+    admin: { viewAll: true, viewTeam: true, approve: true, manageSystem: true, manageUsers: true },
+    applicant: { viewAll: false, viewTeam: false, approve: false, manageSystem: false, manageUsers: false },
   };
 
   const permissions = rolePermissions[currentUserRole] || rolePermissions.employee;
@@ -178,6 +191,7 @@ export function DashboardContent() {
   const canViewTeam = permissions.viewTeam;
   const canApprove = permissions.approve;
   const canManageSystem = permissions.manageSystem;
+  const canManageUsers = permissions.manageUsers;
 
   // マウント完了までローディング表示
   if (!mounted) {
@@ -193,75 +207,110 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-6">
-      {/* クイックアクション（打刻ボタン） - モバイルのみ表示 */}
-      <div className="block md:hidden">
-        <QuickCheckIn />
-      </div>
+      {/* クイックアクション - ページTOPに移動 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>クイックアクション</CardTitle>
+          <CardDescription>
+            {currentUser ? `${ROLE_LABELS[currentUserRole]}として実行可能な操作` : 'よく使う操作をすばやく実行できます'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+            {/* 全員共通: 出勤する */}
+            <Link href="/ja/attendance">
+              <Button className="h-16 w-full flex flex-col space-y-1">
+                <Clock className="h-5 w-5" />
+                <span className="text-sm">出勤する</span>
+              </Button>
+            </Link>
+            {/* 全員共通: 有給申請 */}
+            <Link href="/ja/leave">
+              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                <Calendar className="h-5 w-5" />
+                <span className="text-sm">有給申請</span>
+              </Button>
+            </Link>
+            {/* チーム管理者以上: メンバー確認 */}
+            {canViewTeam && (
+              <Link href="/ja/members">
+                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                  <Users className="h-5 w-5" />
+                  <span className="text-sm">メンバー確認</span>
+                </Button>
+              </Link>
+            )}
+            {/* 承認権限: 承認待ち */}
+            {canApprove && (
+              <Link href="/ja/workflow">
+                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="text-sm">承認待ち</span>
+                </Button>
+              </Link>
+            )}
+            {/* ユーザー管理権限（admin + hr） */}
+            {canManageUsers && (
+              <Link href="/ja/users">
+                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                  <ShieldCheck className="h-5 w-5" />
+                  <span className="text-sm">ユーザー管理</span>
+                </Button>
+              </Link>
+            )}
+            {/* システム管理者のみ: システム設定 */}
+            {canManageSystem && (
+              <Link href="/ja/settings">
+                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                  <Settings className="h-5 w-5" />
+                  <span className="text-sm">システム設定</span>
+                </Button>
+              </Link>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* 最新アナウンス */}
       <LatestAnnouncementCard />
 
-      {/* Role-based KPI Cards */}
+      {/* Role-based KPI Cards - 新しい構成 */}
       <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 ${
-        currentUserRole === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
+        canViewAll ? 'lg:grid-cols-4' : canApprove ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
       }`}>
-        {/* Card 1: 従業員数/チームメンバー数 */}
-        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">
-              {canViewAll ? t('totalEmployees') : canViewTeam ? t('teamMembers') : t('myAttendance')}
-            </CardTitle>
-            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-              <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
-              {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.totalEmployees : canViewTeam ? '8' : '出勤中')}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3 text-green-600" />
-              <p className="text-xs text-orange-700 dark:text-orange-300">
-                {canViewAll ? 'アクティブユーザー' : canViewTeam ? 'チームメンバー' : '08:45 出勤'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 2: 出勤率 */}
-        {(canViewAll || canViewTeam) && (
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+        {/* Card 1: 総従業員数（管理者系のみ） */}
+        {canViewAll && (
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-transparent rounded-full -mr-16 -mt-16" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                {t('todayAttendance')}
+              <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                {t('totalEmployees')}
               </CardTitle>
               <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-                <UserCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
-                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.todayAttendance : '7/8')}
+              <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
+                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : kpiData.totalEmployees}
               </div>
               <div className="flex items-center gap-1 mt-1">
-                <Activity className="h-3 w-3 text-blue-600" />
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  出勤率 {canViewAll ? kpiData.attendanceRate : 87.5}%
+                <TrendingUp className="h-3 w-3 text-green-600" />
+                <p className="text-xs text-orange-700 dark:text-orange-300">
+                  アクティブユーザー
                 </p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Card 3: 承認待ち（承認権限がある場合のみ） */}
+        {/* Card 2: 承認依頼（自分が承認すべきもの）- 承認権限がある場合 */}
         {canApprove && (
           <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -mr-16 -mt-16" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                {canViewAll ? t('pendingApprovals') : t('teamApprovals')}
+                {t('approvalRequests')}
               </CardTitle>
               <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
                 <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -274,105 +323,70 @@ export function DashboardContent() {
               <div className="flex items-center gap-1 mt-1">
                 <Clock className="h-3 w-3 text-amber-600" />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  {canViewAll ? `${kpiData.urgentApprovals}件は緊急` : '1件は緊急'}
+                  自分が承認すべき申請
                 </p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Card 4: 月間稼働率（非管理者）/ 削除済み（管理者にはシステム健全性カードは表示しない） */}
-        {!canManageSystem && (
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
-                {t('monthlyUtilization')}
-              </CardTitle>
-              <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-                <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-900 dark:text-green-100">87.5%</div>
-              <div className="flex items-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3 text-green-600" />
-                <p className="text-xs text-green-700 dark:text-green-300">
-                  +2.1% 先月比
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* 一般社員専用の追加情報 */}
-      {currentUserRole === 'employee' && (
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-yellow-500" />
-              権限制限のお知らせ
+        {/* Card 3: 申請中（自分の申請）- 全員表示 */}
+        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              {t('myPendingRequests')}
             </CardTitle>
+            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              一般社員として、自分の情報のみ閲覧可能です。チームや全社の情報を見るには、マネージャー以上の権限が必要です。
-            </p>
-            <div className="mt-4 p-3 bg-muted rounded-lg">
-              <p className="text-xs">閲覧可能な情報：</p>
-              <ul className="text-xs mt-1 space-y-1">
-                <li>✅ 自分の勤怠記録</li>
-                <li>✅ 自分の有給残日数</li>
-                <li>❌ 他の社員の情報</li>
-                <li>❌ 承認機能</li>
-              </ul>
+            <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
+              {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : 2}
+            </div>
+            <div className="flex items-center gap-1 mt-1">
+              <Activity className="h-3 w-3 text-blue-600" />
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                承認されたら件数が減ります
+              </p>
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
 
-      {/* 権限別グラフセクション */}
-      {currentUserRole === 'employee' && (
-        <>
-          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">個人統計</h2>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            <PersonalAttendanceChart />
-            <PersonalLeaveChart />
-          </div>
-          <div className="grid gap-6 mt-6">
-            <PersonalWorkHoursChart />
-          </div>
-        </>
-      )}
+      {/* 権限別グラフセクション - 要件に応じて表示を制御 */}
 
-      {currentUserRole === 'manager' && (
-        <>
-          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">チーム統計</h2>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            <TeamAttendanceChart />
-            <TeamWorkloadChart />
-          </div>
-          <div className="grid gap-6 mt-6">
-            <ApprovalTasksChart />
-          </div>
-        </>
-      )}
-
+      {/* 人事: 部門別休暇取得率 + 入退社予定リスト */}
       {currentUserRole === 'hr' && (
         <>
           <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">全社統計</h2>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            <CompanyAttendanceChart />
             <DepartmentLeaveChart />
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 mt-6">
-            <DepartmentSalaryChart />
             <HeadcountTrendChart />
           </div>
         </>
       )}
 
+      {/* 経営者: SaaSコスト + 資産利用状況 + 部門別平均給与 + 入退社予定リスト */}
+      {currentUserRole === 'executive' && (
+        <>
+          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">経営統計</h2>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <SaasCostTrendChart />
+            <SaasCostByCategoryChart />
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 mt-6">
+            <AssetUtilizationChart />
+            <DepartmentSalaryChart />
+          </div>
+          <div className="grid gap-6 mt-6">
+            <HeadcountTrendChart />
+          </div>
+        </>
+      )}
+
+      {/* システム管理者: SaaSコスト + 資産利用状況 */}
       {currentUserRole === 'admin' && (
         <>
           <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">システム統計</h2>
@@ -383,205 +397,143 @@ export function DashboardContent() {
           <div className="grid gap-6 mt-6">
             <AssetUtilizationChart />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight mt-8 mb-4">全社統計（管理者用）</h2>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-            <CompanyAttendanceChart />
-            <DepartmentSalaryChart />
-          </div>
         </>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Leave Balance Summary - 全ロール共通 */}
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              {t('leaveBalance')}
-            </CardTitle>
-            <CardDescription>
-              {canViewAll ? '組織全体の有給状況' : '現在の有給休暇の状況'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-green-600">{leaveBalance.remaining}</p>
-                <p className="text-xs text-muted-foreground">{t('remainingDays')}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-bold text-blue-600">{leaveBalance.used}</p>
-                <p className="text-xs text-muted-foreground">{t('usedLeave')}</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-yellow-600">{leaveBalance.pending}</p>
-                <p className="text-xs text-muted-foreground">{t('pendingLeave')}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-lg font-semibold text-red-600">{leaveBalance.expiring}</p>
-                <p className="text-xs text-muted-foreground">{t('expiringLeave')}</p>
-              </div>
-            </div>
-            <Progress value={(leaveBalance.used / 20) * 100} className="w-full" />
-            <p className="text-xs text-center text-muted-foreground">
-              年間20日中 {leaveBalance.used}日使用済み
-            </p>
-          </CardContent>
-        </Card>
+      {/* 設定でON/OFF可能な項目 */}
+      {(dashboardSettings.showLeaveBalance || dashboardSettings.showRecentActivity || dashboardSettings.showSystemStatus) && (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {/* Leave Balance Summary - 設定でON/OFF */}
+          {dashboardSettings.showLeaveBalance && (
+            <Card className="md:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  {t('leaveBalance')}
+                </CardTitle>
+                <CardDescription>
+                  {canViewAll ? '組織全体の有給状況' : '現在の有給休暇の状況'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold text-green-600">{leaveBalance.remaining}</p>
+                    <p className="text-xs text-muted-foreground">{t('remainingDays')}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-bold text-blue-600">{leaveBalance.used}</p>
+                    <p className="text-xs text-muted-foreground">{t('usedLeave')}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div className="space-y-1">
+                    <p className="text-lg font-semibold text-yellow-600">{leaveBalance.pending}</p>
+                    <p className="text-xs text-muted-foreground">{t('pendingLeave')}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-lg font-semibold text-red-600">{leaveBalance.expiring}</p>
+                    <p className="text-xs text-muted-foreground">{t('expiringLeave')}</p>
+                  </div>
+                </div>
+                <Progress value={(leaveBalance.used / 20) * 100} className="w-full" />
+                <p className="text-xs text-center text-muted-foreground">
+                  年間20日中 {leaveBalance.used}日使用済み
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Recent Activity - 権限に応じて内容を変更 */}
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              {t('recentActivity')}
-            </CardTitle>
-            <CardDescription>
-              {canViewAll ? '全社の活動' : canViewTeam ? 'チームの活動' : '自分の活動'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentActivity
-                .filter((activity, index) => {
-                  if (canViewAll) return true;
-                  if (canViewTeam) return index < 3;
-                  return index === 0; // 自分の活動のみ
-                })
-                .map((activity) => (
-                  <div key={activity.id} className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{activity.user}</p>
-                      <p className="text-xs text-muted-foreground">{activity.action}</p>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {activity.time}
+          {/* Recent Activity - 設定でON/OFF */}
+          {dashboardSettings.showRecentActivity && (
+            <Card className="md:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  {t('recentActivity')}
+                </CardTitle>
+                <CardDescription>
+                  {canViewAll ? '全社の活動' : canViewTeam ? 'チームの活動' : '自分の活動'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {recentActivity
+                    .filter((activity, index) => {
+                      if (canViewAll) return true;
+                      if (canViewTeam) return index < 3;
+                      return index === 0;
+                    })
+                    .map((activity) => (
+                      <div key={activity.id} className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">{activity.user}</p>
+                          <p className="text-xs text-muted-foreground">{activity.action}</p>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {activity.time}
+                        </Badge>
+                      </div>
+                    ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-4"
+                  onClick={() => setShowAllActivities(true)}
+                >
+                  すべての活動を表示
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* System Status - 設定でON/OFF */}
+          {dashboardSettings.showSystemStatus && (
+            <Card className="md:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wifi className="h-5 w-5 text-green-500" />
+                  {t('systemConnection')}
+                </CardTitle>
+                <CardDescription>
+                  システム接続状態
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">データベース</span>
+                    <Badge variant="default" className="bg-green-500">
+                      <Wifi className="h-3 w-3 mr-1" />
+                      接続中
                     </Badge>
                   </div>
-                ))}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full mt-4"
-              onClick={() => setShowAllActivities(true)}
-            >
-              すべての活動を表示
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* System Status - システム接続状況 */}
-        <Card className="md:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wifi className="h-5 w-5 text-green-500" />
-              {t('systemConnection')}
-            </CardTitle>
-            <CardDescription>
-              システム接続状態
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">データベース</span>
-                <Badge variant="default" className="bg-green-500">
-                  <Wifi className="h-3 w-3 mr-1" />
-                  接続中
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">外部API</span>
-                <Badge variant="default" className="bg-green-500">
-                  <Wifi className="h-3 w-3 mr-1" />
-                  接続中
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">メール配信</span>
-                <Badge variant="secondary">
-                  <WifiOff className="h-3 w-3 mr-1" />
-                  メンテナンス中
-                </Badge>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t">
-              <p className="text-xs text-muted-foreground text-center">
-                最終更新: 2024年1月15日 14:30
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions - 役割に応じた操作 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>クイックアクション</CardTitle>
-          <CardDescription>
-            {currentUser ? `${ROLE_LABELS[currentUserRole]}として実行可能な操作` : 'よく使う操作をすばやく実行できます'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            {/* 全員共通 */}
-            <Link href="/ja/attendance">
-              <Button className="h-16 w-full flex flex-col space-y-1">
-                <Clock className="h-5 w-5" />
-                <span className="text-sm">出勤する</span>
-              </Button>
-            </Link>
-            <Link href="/ja/leave">
-              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                <Calendar className="h-5 w-5" />
-                <span className="text-sm">有給申請</span>
-              </Button>
-            </Link>
-
-            {/* チーム管理者以上 */}
-            {canViewTeam && (
-              <Link href="/ja/members">
-                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                  <Users className="h-5 w-5" />
-                  <span className="text-sm">メンバー確認</span>
-                </Button>
-              </Link>
-            )}
-
-            {/* 承認権限 */}
-            {canApprove && (
-              <Link href="/ja/workflow">
-                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                  <AlertCircle className="h-5 w-5" />
-                  <span className="text-sm">承認待ち</span>
-                </Button>
-              </Link>
-            )}
-
-            {/* 管理者のみ */}
-            {canManageSystem && (
-              <>
-                <Link href="/ja/users">
-                  <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                    <ShieldCheck className="h-5 w-5" />
-                    <span className="text-sm">ユーザー管理</span>
-                  </Button>
-                </Link>
-                <Link href="/ja/settings">
-                  <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                    <Settings className="h-5 w-5" />
-                    <span className="text-sm">システム設定</span>
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">外部API</span>
+                    <Badge variant="default" className="bg-green-500">
+                      <Wifi className="h-3 w-3 mr-1" />
+                      接続中
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">メール配信</span>
+                    <Badge variant="secondary">
+                      <WifiOff className="h-3 w-3 mr-1" />
+                      メンテナンス中
+                    </Badge>
+                  </div>
+                </div>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground text-center">
+                    最終更新: 2024年1月15日 14:30
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* 全ての活動を表示するモーダル */}
       <Dialog open={showAllActivities} onOpenChange={setShowAllActivities}>

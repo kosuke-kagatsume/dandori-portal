@@ -217,7 +217,7 @@ export type AuditLog = z.infer<typeof AuditLogSchema>;
 export type TransferHistory = z.infer<typeof TransferHistorySchema>;
 
 // Role and Permission types
-export type UserRole = 'employee' | 'manager' | 'hr' | 'admin';
+export type UserRole = 'employee' | 'manager' | 'executive' | 'hr' | 'admin' | 'applicant';
 export type Permission = 'view_own' | 'view_team' | 'view_all' | 'approve_requests' | 'manage_system';
 
 export interface DemoUser {
