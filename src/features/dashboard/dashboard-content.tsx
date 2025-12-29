@@ -276,7 +276,7 @@ export function DashboardContent() {
 
       {/* Role-based KPI Cards - 新しい構成 */}
       <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 ${
-        canViewAll ? 'lg:grid-cols-4' : canApprove ? 'lg:grid-cols-3' : 'lg:grid-cols-2'
+        canViewAll ? 'lg:grid-cols-4' : canApprove ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
       }`}>
         {/* Card 1: 総従業員数（管理者系のみ） */}
         {canViewAll && (
@@ -303,6 +303,30 @@ export function DashboardContent() {
             </CardContent>
           </Card>
         )}
+
+        {/* Card: 本日の出勤状況 */}
+        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
+              {t('todayAttendance')}
+            </CardTitle>
+            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+              <Clock className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-900 dark:text-green-100">
+              {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : `${kpiData.attendanceRate}%`}
+            </div>
+            <div className="flex items-center gap-1 mt-1">
+              <Users className="h-3 w-3 text-green-600" />
+              <p className="text-xs text-green-700 dark:text-green-300">
+                {isLoadingStats ? '...' : `${kpiData.todayAttendance}名出勤中`}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Card 2: 承認依頼（自分が承認すべきもの）- 承認権限がある場合 */}
         {canApprove && (
