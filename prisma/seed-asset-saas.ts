@@ -376,42 +376,42 @@ async function main() {
   // 業者データ投入
   console.log('\n=== 業者データ ===');
   for (const data of demoVendors) {
-    const existing = await prisma.vendor.findFirst({
+    const existing = await prisma.vendors.findFirst({
       where: { tenantId, name: data.name },
     });
     if (existing) {
       console.log(`スキップ: ${data.name}（既に存在）`);
       continue;
     }
-    await prisma.vendor.create({ data });
+    await prisma.vendors.create({ data });
     console.log(`作成: ${data.name}`);
   }
 
   // 車両データ投入
   console.log('\n=== 車両データ ===');
   for (const data of demoVehicles) {
-    const existing = await prisma.vehicle.findFirst({
+    const existing = await prisma.vehicles.findFirst({
       where: { tenantId, vehicleNumber: data.vehicleNumber },
     });
     if (existing) {
       console.log(`スキップ: ${data.vehicleNumber}（既に存在）`);
       continue;
     }
-    await prisma.vehicle.create({ data });
+    await prisma.vehicles.create({ data });
     console.log(`作成: ${data.vehicleNumber} - ${data.make} ${data.model}`);
   }
 
   // PC資産データ投入
   console.log('\n=== PC資産データ ===');
   for (const data of demoPCAssets) {
-    const existing = await prisma.pCAsset.findFirst({
+    const existing = await prisma.pc_assets.findFirst({
       where: { tenantId, assetNumber: data.assetNumber },
     });
     if (existing) {
       console.log(`スキップ: ${data.assetNumber}（既に存在）`);
       continue;
     }
-    await prisma.pCAsset.create({ data });
+    await prisma.pc_assets.create({ data });
     console.log(`作成: ${data.assetNumber} - ${data.manufacturer} ${data.model}`);
   }
 
@@ -419,7 +419,7 @@ async function main() {
   console.log('\n=== SaaSサービスデータ ===');
   const serviceIds: Record<string, string> = {};
   for (const data of demoSaaSServices) {
-    const existing = await prisma.saaSService.findFirst({
+    const existing = await prisma.saas_services.findFirst({
       where: { tenantId, name: data.name },
     });
     if (existing) {
@@ -427,7 +427,7 @@ async function main() {
       console.log(`スキップ: ${data.name}（既に存在）`);
       continue;
     }
-    const created = await prisma.saaSService.create({ data });
+    const created = await prisma.saas_services.create({ data });
     serviceIds[data.name] = created.id;
     console.log(`作成: ${data.name}`);
   }
@@ -442,7 +442,7 @@ async function main() {
       continue;
     }
 
-    const existing = await prisma.saaSLicensePlan.findFirst({
+    const existing = await prisma.saas_license_plans.findFirst({
       where: { tenantId, serviceId, planName: planData.planName },
     });
     if (existing) {
@@ -452,7 +452,7 @@ async function main() {
     }
 
     const { serviceName, ...rest } = planData;
-    const created = await prisma.saaSLicensePlan.create({
+    const created = await prisma.saas_license_plans.create({
       data: { ...rest, serviceId },
     });
     planIds[serviceName] = created.id;
@@ -469,22 +469,22 @@ async function main() {
   if (m365Id && slackId && m365PlanId && slackPlanId) {
     for (const assignment of demoAssignments) {
       // Microsoft 365
-      const existingM365 = await prisma.saaSLicenseAssignment.findFirst({
+      const existingM365 = await prisma.saas_license_assignments.findFirst({
         where: { tenantId, serviceId: m365Id, userId: assignment.userId },
       });
       if (!existingM365) {
-        await prisma.saaSLicenseAssignment.create({
+        await prisma.saas_license_assignments.create({
           data: { ...assignment, serviceId: m365Id, planId: m365PlanId },
         });
         console.log(`作成: M365 → ${assignment.userName}`);
       }
 
       // Slack
-      const existingSlack = await prisma.saaSLicenseAssignment.findFirst({
+      const existingSlack = await prisma.saas_license_assignments.findFirst({
         where: { tenantId, serviceId: slackId, userId: assignment.userId },
       });
       if (!existingSlack) {
-        await prisma.saaSLicenseAssignment.create({
+        await prisma.saas_license_assignments.create({
           data: { ...assignment, serviceId: slackId, planId: slackPlanId },
         });
         console.log(`作成: Slack → ${assignment.userName}`);

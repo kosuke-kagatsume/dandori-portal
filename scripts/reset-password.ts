@@ -15,7 +15,7 @@ async function main() {
   
   console.log('New password hash:', passwordHash);
   
-  const user = await prisma.user.update({
+  const user = await prisma.users.update({
     where: { email: 'admin@dandori-work.com' },
     data: { passwordHash },
   });

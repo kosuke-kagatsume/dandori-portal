@@ -176,7 +176,7 @@ async function main() {
   console.log('法令更新デモデータの投入を開始します...');
 
   // 既存データを削除（オプション）
-  const existingCount = await prisma.legalUpdate.count();
+  const existingCount = await prisma.legal_updates.count();
   if (existingCount > 0) {
     console.log(`既存データ ${existingCount} 件をスキップします`);
   }
@@ -186,7 +186,7 @@ async function main() {
   for (const data of demoLegalUpdates) {
     try {
       // 同じタイトルが既に存在するかチェック
-      const existing = await prisma.legalUpdate.findFirst({
+      const existing = await prisma.legal_updates.findFirst({
         where: { title: data.title },
       });
 
@@ -195,7 +195,7 @@ async function main() {
         continue;
       }
 
-      await prisma.legalUpdate.create({
+      await prisma.legal_updates.create({
         data,
       });
       console.log(`作成: ${data.title}`);

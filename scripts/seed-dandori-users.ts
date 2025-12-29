@@ -74,13 +74,13 @@ async function main() {
   for (const emp of employees) {
     try {
       // 既存ユーザーチェック
-      const existing = await prisma.user.findFirst({
+      const existing = await prisma.users.findFirst({
         where: { email: emp.email }
       });
 
       if (existing) {
         // 更新
-        await prisma.user.update({
+        await prisma.users.update({
           where: { id: existing.id },
           data: {
             name: emp.name,
@@ -94,7 +94,7 @@ async function main() {
         updated++;
       } else {
         // 新規作成
-        await prisma.user.create({
+        await prisma.users.create({
           data: {
             email: emp.email,
             name: emp.name,

@@ -61,7 +61,7 @@ async function main() {
   console.log('🌱 テナントデータを投入中...');
 
   for (const tenant of tenants) {
-    const result = await prisma.tenant.upsert({
+    const result = await prisma.tenants.upsert({
       where: { id: tenant.id },
       update: {
         subdomain: tenant.subdomain,
@@ -75,7 +75,7 @@ async function main() {
   console.log('\n✨ テナントデータ投入完了！');
 
   // 確認
-  const allTenants = await prisma.tenant.findMany({
+  const allTenants = await prisma.tenants.findMany({
     orderBy: { id: 'asc' },
   });
 

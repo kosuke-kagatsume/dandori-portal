@@ -78,12 +78,12 @@ async function main() {
   console.log('パスワードハッシュ生成完了');
 
   // デモ用テナントを作成（存在しない場合）
-  const existingTenant = await prisma.tenant.findUnique({
+  const existingTenant = await prisma.tenants.findUnique({
     where: { id: DEMO_TENANT_ID }
   });
 
   if (!existingTenant) {
-    await prisma.tenant.create({
+    await prisma.tenants.create({
       data: {
         id: DEMO_TENANT_ID,
         name: 'デモ会社',
@@ -102,13 +102,13 @@ async function main() {
   for (const user of demoUsers) {
     try {
       // 既存ユーザーチェック（メールで検索）
-      const existing = await prisma.user.findFirst({
+      const existing = await prisma.users.findFirst({
         where: { email: user.email }
       });
 
       if (existing) {
         // 更新
-        await prisma.user.update({
+        await prisma.users.update({
           where: { id: existing.id },
           data: {
             name: user.name,
@@ -123,7 +123,7 @@ async function main() {
         updated++;
       } else {
         // 新規作成
-        await prisma.user.create({
+        await prisma.users.create({
           data: {
             id: user.id,
             email: user.email,

@@ -10,7 +10,7 @@ async function main() {
   console.log('🌱 Seeding database...');
 
   // 1. Create Tenant
-  const tenant = await prisma.tenant.upsert({
+  const tenant = await prisma.tenants.upsert({
     where: { id: 'tenant-1' },
     update: {},
     create: {
@@ -24,7 +24,7 @@ async function main() {
   console.log('✅ Created tenant:', tenant.name);
 
   // 2. Create Organization Units (会社 → 部門 → 部 → チーム)
-  const company = await prisma.orgUnit.upsert({
+  const company = await prisma.org_units.upsert({
     where: { id: 'org-company' },
     update: {},
     create: {
@@ -39,7 +39,7 @@ async function main() {
     },
   });
 
-  const hrDivision = await prisma.orgUnit.upsert({
+  const hrDivision = await prisma.org_units.upsert({
     where: { id: 'org-hr' },
     update: {},
     create: {
@@ -55,7 +55,7 @@ async function main() {
     },
   });
 
-  const salesDivision = await prisma.orgUnit.upsert({
+  const salesDivision = await prisma.org_units.upsert({
     where: { id: 'org-sales' },
     update: {},
     create: {
@@ -71,7 +71,7 @@ async function main() {
     },
   });
 
-  const engineeringDivision = await prisma.orgUnit.upsert({
+  const engineeringDivision = await prisma.org_units.upsert({
     where: { id: 'org-engineering' },
     update: {},
     create: {
@@ -226,7 +226,7 @@ async function main() {
   ];
 
   for (const userData of users) {
-    await prisma.user.upsert({
+    await prisma.users.upsert({
       where: { email: userData.email },
       update: {},
       create: userData,

@@ -43,7 +43,7 @@ async function main() {
     console.log('🏢 Step 1: 組織構造を作成中...');
 
     // 会社（ルート組織）
-    const rootUnit = await prisma.orgUnit.create({
+    const rootUnit = await prisma.org_units.create({
       data: {
         tenantId: TENANT_ID,
         name: ORG_STRUCTURE.company.name,
@@ -57,7 +57,7 @@ async function main() {
     // 部門を作成
     const departments: Record<string, string> = {};
     for (const dept of ORG_STRUCTURE.departments) {
-      const unit = await prisma.orgUnit.create({
+      const unit = await prisma.org_units.create({
         data: {
           tenantId: TENANT_ID,
           name: dept.name,
@@ -77,7 +77,7 @@ async function main() {
     // パスワードをハッシュ化
     const passwordHash = await bcrypt.hash(ADMIN_USER.password, 10);
 
-    const adminUser = await prisma.user.create({
+    const adminUser = await prisma.users.create({
       data: {
         tenantId: TENANT_ID,
         email: ADMIN_USER.email,
@@ -97,7 +97,7 @@ async function main() {
 
     // 3. テナント設定を作成
     console.log('⚙️ Step 3: テナント設定を作成中...');
-    await prisma.tenantSettings.create({
+    await prisma.tenant_settings.create({
       data: {
         tenantId: TENANT_ID,
         status: 'active',
@@ -107,7 +107,7 @@ async function main() {
 
     // 4. 勤怠設定を作成
     console.log('⏰ Step 4: 勤怠設定を作成中...');
-    await prisma.attendanceSettings.create({
+    await prisma.attendance_settings.create({
       data: {
         tenantId: TENANT_ID,
         workStartTime: '09:00',

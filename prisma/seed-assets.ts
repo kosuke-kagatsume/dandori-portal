@@ -9,7 +9,7 @@ async function seedAssets() {
 
   // 業者データ
   const vendors = await Promise.all([
-    prisma.vendor.upsert({
+    prisma.vendors.upsert({
       where: { id: 'vendor-001' },
       update: {},
       create: {
@@ -24,7 +24,7 @@ async function seedAssets() {
         notes: '車検・点検に強い',
       },
     }),
-    prisma.vendor.upsert({
+    prisma.vendors.upsert({
       where: { id: 'vendor-002' },
       update: {},
       create: {
@@ -39,7 +39,7 @@ async function seedAssets() {
         notes: 'タイヤ交換専門',
       },
     }),
-    prisma.vendor.upsert({
+    prisma.vendors.upsert({
       where: { id: 'vendor-003' },
       update: {},
       create: {
@@ -60,7 +60,7 @@ async function seedAssets() {
 
   // 車両データ
   const vehicles = await Promise.all([
-    prisma.vehicle.upsert({
+    prisma.vehicles.upsert({
       where: { tenantId_vehicleNumber: { tenantId, vehicleNumber: 'V-001' } },
       update: {},
       create: {
@@ -87,7 +87,7 @@ async function seedAssets() {
         notes: '営業車',
       },
     }),
-    prisma.vehicle.upsert({
+    prisma.vehicles.upsert({
       where: { tenantId_vehicleNumber: { tenantId, vehicleNumber: 'V-002' } },
       update: {},
       create: {
@@ -118,7 +118,7 @@ async function seedAssets() {
         notes: '通勤用',
       },
     }),
-    prisma.vehicle.upsert({
+    prisma.vehicles.upsert({
       where: { tenantId_vehicleNumber: { tenantId, vehicleNumber: 'V-003' } },
       update: {},
       create: {
@@ -152,7 +152,7 @@ async function seedAssets() {
 
   // 月間走行距離データ
   const mileages = await Promise.all([
-    prisma.monthlyMileage.upsert({
+    prisma.monthly_mileages.upsert({
       where: { vehicleId_month: { vehicleId: vehicleIds[0], month: '2024-10' } },
       update: {},
       create: {
@@ -164,7 +164,7 @@ async function seedAssets() {
         recordedByName: '山田太郎',
       },
     }),
-    prisma.monthlyMileage.upsert({
+    prisma.monthly_mileages.upsert({
       where: { vehicleId_month: { vehicleId: vehicleIds[0], month: '2024-09' } },
       update: {},
       create: {
@@ -176,7 +176,7 @@ async function seedAssets() {
         recordedByName: '山田太郎',
       },
     }),
-    prisma.monthlyMileage.upsert({
+    prisma.monthly_mileages.upsert({
       where: { vehicleId_month: { vehicleId: vehicleIds[1], month: '2024-10' } },
       update: {},
       create: {
@@ -198,7 +198,7 @@ async function seedAssets() {
 
   // メンテナンス記録データ
   const maintenanceRecords = await Promise.all([
-    prisma.maintenanceRecord.create({
+    prisma.maintenance_records.create({
       data: {
         tenantId,
         vehicleId: vehicleIds[0],
@@ -215,7 +215,7 @@ async function seedAssets() {
         notes: '問題なく完了',
       },
     }),
-    prisma.maintenanceRecord.create({
+    prisma.maintenance_records.create({
       data: {
         tenantId,
         vehicleId: vehicleIds[0],
@@ -231,7 +231,7 @@ async function seedAssets() {
         notes: 'スタッドレスタイヤ装着',
       },
     }),
-    prisma.maintenanceRecord.create({
+    prisma.maintenance_records.create({
       data: {
         tenantId,
         vehicleId: vehicleIds[1],
@@ -247,7 +247,7 @@ async function seedAssets() {
         notes: 'ブレーキパッド残量50%',
       },
     }),
-    prisma.maintenanceRecord.create({
+    prisma.maintenance_records.create({
       data: {
         tenantId,
         vehicleId: vehicleIds[2],
@@ -266,7 +266,7 @@ async function seedAssets() {
 
   // PC資産データ
   const pcAssets = await Promise.all([
-    prisma.pCAsset.upsert({
+    prisma.pc_assets.upsert({
       where: { tenantId_assetNumber: { tenantId, assetNumber: 'PC-001' } },
       update: {},
       create: {
@@ -290,7 +290,7 @@ async function seedAssets() {
         notes: '開発用',
       },
     }),
-    prisma.pCAsset.upsert({
+    prisma.pc_assets.upsert({
       where: { tenantId_assetNumber: { tenantId, assetNumber: 'PC-002' } },
       update: {},
       create: {
@@ -315,7 +315,7 @@ async function seedAssets() {
         notes: '営業・プレゼン用',
       },
     }),
-    prisma.pCAsset.upsert({
+    prisma.pc_assets.upsert({
       where: { tenantId_assetNumber: { tenantId, assetNumber: 'PC-003' } },
       update: {},
       create: {
@@ -346,7 +346,7 @@ async function seedAssets() {
 
   // ソフトウェアライセンスデータ
   const licenses = await Promise.all([
-    prisma.softwareLicense.create({
+    prisma.software_licenses.create({
       data: {
         tenantId,
         pcAssetId: pcAssetIds[0],
@@ -356,7 +356,7 @@ async function seedAssets() {
         monthlyCost: 1500,
       },
     }),
-    prisma.softwareLicense.create({
+    prisma.software_licenses.create({
       data: {
         tenantId,
         pcAssetId: pcAssetIds[0],
@@ -365,7 +365,7 @@ async function seedAssets() {
         monthlyCost: 6480,
       },
     }),
-    prisma.softwareLicense.create({
+    prisma.software_licenses.create({
       data: {
         tenantId,
         pcAssetId: pcAssetIds[1],
@@ -375,7 +375,7 @@ async function seedAssets() {
         monthlyCost: 1500,
       },
     }),
-    prisma.softwareLicense.create({
+    prisma.software_licenses.create({
       data: {
         tenantId,
         pcAssetId: pcAssetIds[1],

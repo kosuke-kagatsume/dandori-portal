@@ -266,12 +266,12 @@ async function main() {
 
   for (const service of saasServices) {
     // サービス作成
-    let existingService = await prisma.saaSService.findFirst({
+    let existingService = await prisma.saas_services.findFirst({
       where: { tenantId, name: service.name },
     });
 
     if (!existingService) {
-      existingService = await prisma.saaSService.create({
+      existingService = await prisma.saas_services.create({
         data: {
           tenantId,
           name: service.name,
@@ -298,12 +298,12 @@ async function main() {
     serviceMap.set(service.name, existingService.id);
 
     // プラン作成
-    let existingPlan = await prisma.saaSLicensePlan.findFirst({
+    let existingPlan = await prisma.saas_license_plans.findFirst({
       where: { tenantId, serviceId: existingService.id, planName: service.planName },
     });
 
     if (!existingPlan) {
-      existingPlan = await prisma.saaSLicensePlan.create({
+      existingPlan = await prisma.saas_license_plans.create({
         data: {
           tenantId,
           serviceId: existingService.id,
@@ -324,7 +324,7 @@ async function main() {
 
   // 2. 既存の割り当てを削除（クリーンアップ）
   console.log('\n=== 既存割り当てクリーンアップ ===');
-  const deleted = await prisma.saaSLicenseAssignment.deleteMany({
+  const deleted = await prisma.saas_license_assignments.deleteMany({
     where: { tenantId },
   });
   console.log(`🗑️  削除された割り当て: ${deleted.count}件`);
@@ -346,7 +346,7 @@ async function main() {
         continue;
       }
 
-      await prisma.saaSLicenseAssignment.create({
+      await prisma.saas_license_assignments.create({
         data: {
           tenantId,
           serviceId,
