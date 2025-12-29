@@ -1838,6 +1838,261 @@ model year_end_adjustment_settings {
 }
 
 // ============================================
+// Phase 7: 年末調整
+// ============================================
+
+// 年末調整申告書（扶養控除等申告書）
+model year_end_declarations {
+  id                    String   @id
+  tenantId              String
+  userId                String
+  fiscalYear            Int      // 対象年度（例: 2024）
+
+  // 本人情報
+  maritalStatus         String?  // 婚姻状況: single, married, divorced, widowed
+  isDisabled            Boolean  @default(false)
+  disabilityType        String?  // 障害区分: general, special, special_living
+  isWorkingStudent      Boolean  @default(false)
+  isSingleParent        Boolean  @default(false)
+  isWidow               Boolean  @default(false)
+
+  // 配偶者情報
+  hasSpouse             Boolean  @default(false)
+  spouseName            String?
+  spouseBirthDate       DateTime? @db.Date
+  spouseIncome          Int?     // 配偶者の年間所得見込み
+  spouseIsDisabled      Boolean  @default(false)
+  spouseDisabilityType  String?
+  spouseLivingTogether  Boolean  @default(true)
+
+  // 扶養親族情報（JSONで保存）
+  dependentsJson        String?  @db.Text // 扶養親族の詳細情報
+  dependentCount        Int      @default(0)
+  specificDependentCount Int     @default(0) // 特定扶養親族（19-22歳）
+  elderlyDependentCount Int      @default(0) // 老人扶養親族（70歳以上）
+
+  // 保険料控除申告
+  lifeInsuranceNew      Int      @default(0) // 一般生命保険料（新契約）
+  lifeInsuranceOld      Int      @default(0) // 一般生命保険料（旧契約）
+  medicalInsurance      Int      @default(0) // 介護医療保険料
+  pensionInsuranceNew   Int      @default(0) // 個人年金保険料（新契約）
+  pensionInsuranceOld   Int      @default(0) // 個人年金保険料（旧契約）
+  earthquakeInsurance   Int      @default(0) // 地震保険料
+  longTermDamageIns     Int      @default(0) // 旧長期損害保険料
+
+  // 社会保険料控除（本人負担分以外）
+  nationalPension       Int      @default(0) // 国民年金
+  nationalHealthIns     Int      @default(0) // 国民健康保険
+  otherSocialIns        Int      @default(0) // その他社会保険
+
+  // 小規模企業共済等
+  idecoAmount           Int      @default(0) // iDeCo
+  smallBusinessMutualAid Int     @default(0) // 小規模企業共済
+
+  // 住宅借入金等特別控除
+  hasMortgage           Boolean  @default(false)
+  mortgageBalance       Int?     // 住宅ローン年末残高
+  mortgageType          String?  // 住宅ローン区分
+  mortgageStartYear     Int?     // 居住開始年
+
+  // 添付書類
+  documentsJson         String?  @db.Text // 添付書類情報
+
+  status                String   @default("draft") // draft, submitted, approved, rejected
+  submittedAt           DateTime?
+  approvedAt            DateTime?
+  approvedBy            String?
+  rejectionReason       String?
+  notes                 String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+
+  @@unique([tenantId, userId, fiscalYear])
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+}
+
+// 年末調整計算結果
+model year_end_results {
+  id                    String   @id
+  tenantId              String
+  userId                String
+  fiscalYear            Int
+
+  // 給与収入
+  totalSalary           Int      @default(0) // 給与収入合計
+  totalBonus            Int      @default(0) // 賞与収入合計
+  totalIncome           Int      @default(0) // 年間収入合計
+
+  // 給与所得控除後の金額
+  employmentIncomeDeduction Int @default(0) // 給与所得控除額
+  employmentIncome      Int      @default(0) // 給与所得金額
+
+  // 所得控除
+  basicDeduction        Int      @default(0) // 基礎控除
+  spouseDeduction       Int      @default(0) // 配偶者控除
+  spouseSpecialDeduction Int     @default(0) // 配偶者特別控除
+  dependentDeduction    Int      @default(0) // 扶養控除
+  disabilityDeduction   Int      @default(0) // 障害者控除
+  widowDeduction        Int      @default(0) // 寡婦控除
+  singleParentDeduction Int      @default(0) // ひとり親控除
+  workingStudentDeduction Int    @default(0) // 勤労学生控除
+
+  socialInsuranceDeduction Int   @default(0) // 社会保険料控除
+  lifeInsuranceDeduction Int     @default(0) // 生命保険料控除
+  earthquakeInsuranceDeduction Int @default(0) // 地震保険料控除
+  smallBusinessDeduction Int     @default(0) // 小規模企業共済等掛金控除
+
+  totalDeductions       Int      @default(0) // 所得控除合計
+
+  // 税額計算
+  taxableIncome         Int      @default(0) // 課税所得金額
+  calculatedTax         Int      @default(0) // 算出所得税額
+  specialReconstructionTax Int   @default(0) // 復興特別所得税
+  totalTax              Int      @default(0) // 年調年税額
+
+  // 住宅借入金等特別控除
+  mortgageDeduction     Int      @default(0)
+  finalTax              Int      @default(0) // 差引税額
+
+  // 源泉徴収との差額
+  withheldTaxTotal      Int      @default(0) // 年間源泉徴収税額
+  adjustmentAmount      Int      @default(0) // 年末調整額（正=還付、負=徴収）
+  isRefund              Boolean  @default(true)
+
+  // 計算明細（JSON）
+  calculationDetailsJson String? @db.Text
+
+  status                String   @default("draft") // draft, calculated, confirmed, paid
+  calculatedAt          DateTime?
+  confirmedAt           DateTime?
+  confirmedBy           String?
+  paidAt                DateTime?
+  notes                 String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+
+  @@unique([tenantId, userId, fiscalYear])
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, status])
+}
+
+// 源泉徴収票
+model withholding_slips {
+  id                    String   @id
+  tenantId              String
+  userId                String
+  fiscalYear            Int
+
+  // 従業員情報
+  employeeName          String
+  employeeAddress       String?
+  employeeMyNumber      String?  // マイナンバー（暗号化推奨）
+
+  // 支払者情報
+  payerName             String
+  payerAddress          String?
+  payerCorporateNumber  String?  // 法人番号
+
+  // 支払金額等
+  paymentAmount         Int      @default(0) // 支払金額
+  employmentIncome      Int      @default(0) // 給与所得控除後の金額
+  deductionTotal        Int      @default(0) // 所得控除の額の合計額
+  withheldTax           Int      @default(0) // 源泉徴収税額
+
+  // 控除対象配偶者
+  hasSpouse             Boolean  @default(false)
+  spouseName            String?
+  spouseIncome          Int?
+
+  // 扶養親族
+  dependentCount        Int      @default(0) // 扶養親族の数（配偶者除く）
+  under16DependentCount Int      @default(0) // 16歳未満扶養親族の数
+
+  // 社会保険料等
+  socialInsuranceAmount Int      @default(0)
+
+  // 生命保険料控除
+  lifeInsuranceDeduction Int     @default(0)
+
+  // 地震保険料控除
+  earthquakeInsuranceDeduction Int @default(0)
+
+  // 住宅借入金等特別控除
+  mortgageDeduction     Int      @default(0)
+  mortgageBalance       Int?     // 住宅借入金等の年末残高
+
+  // 備考欄（JSON）
+  remarksJson           String?  @db.Text
+
+  // 発行情報
+  issueDate             DateTime @db.Date
+  issueNumber           String?  // 発行番号
+  isReissue             Boolean  @default(false)
+  reissueCount          Int      @default(0)
+
+  status                String   @default("draft") // draft, issued, delivered
+  deliveredAt           DateTime?
+  deliveryMethod        String?  // email, paper, download
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+
+  @@unique([tenantId, userId, fiscalYear, isReissue, reissueCount])
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, userId])
+}
+
+// 給与支払報告書（市区町村提出用）
+model salary_payment_reports {
+  id                    String   @id
+  tenantId              String
+  userId                String
+  fiscalYear            Int
+
+  // 提出先市区町村
+  municipalityCode      String   // 市区町村コード
+  municipalityName      String   // 市区町村名
+
+  // 従業員情報
+  employeeName          String
+  employeeAddress       String
+  employeeBirthDate     DateTime? @db.Date
+
+  // 1月1日現在の住所地
+  jan1Address           String?
+
+  // 支払金額等（源泉徴収票と同一）
+  paymentAmount         Int      @default(0)
+  withheldTax           Int      @default(0)
+  socialInsuranceAmount Int      @default(0)
+
+  // 提出区分
+  submissionType        String   @default("normal") // normal, correction, cancel
+  isSpecialCollection   Boolean  @default(true) // 特別徴収対象
+
+  // 提出情報
+  status                String   @default("draft") // draft, submitted, accepted
+  submittedAt           DateTime?
+  submissionMethod      String?  // eltax, paper
+  receiptNumber         String?  // 受付番号
+
+  notes                 String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+
+  @@unique([tenantId, userId, fiscalYear, submissionType])
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, municipalityCode])
+  @@index([tenantId, status])
+}
+
+// ============================================
 // Phase 4: 勤怠マスタ
 // ============================================
 
