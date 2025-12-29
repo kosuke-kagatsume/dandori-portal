@@ -852,7 +852,7 @@ export interface HealthCheckupExport {
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
   followUpStatus?: string;
-  findings?: { category: string; finding: string; severity: string }[];
+  findings?: string[] | { category: string; finding: string; severity: string }[];
 }
 
 export interface StressCheckExport {

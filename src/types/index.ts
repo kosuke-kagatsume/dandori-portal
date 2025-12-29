@@ -278,6 +278,6 @@ export interface PermissionItem {
 
 // UI State types
 export type ViewMode = 'card' | 'table';
-export type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'system';
 export type Locale = 'ja' | 'en';
 export type Density = 'standard' | 'compact';

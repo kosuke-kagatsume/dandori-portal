@@ -89,6 +89,7 @@ interface HealthCheckup {
   overallResult: OverallResult;
   requiresReexam: boolean;
   requiresTreatment: boolean;
+  requiresGuidance: boolean;
   height?: number;
   weight?: number;
   bmi?: number;
@@ -127,6 +128,7 @@ interface APIHealthCheckup {
   overallResult: string;
   requiresReexam: boolean;
   requiresTreatment: boolean;
+  requiresGuidance?: boolean;
   height?: number;
   weight?: number;
   bmi?: number;
@@ -274,6 +276,7 @@ export default function HealthPage() {
           overallResult: (c.overallResult as OverallResult) || 'A',
           requiresReexam: c.requiresReexam,
           requiresTreatment: c.requiresTreatment,
+          requiresGuidance: c.requiresGuidance ?? false,
           height: c.height,
           weight: c.weight,
           bmi: c.bmi,
@@ -351,6 +354,7 @@ export default function HealthPage() {
     overallResult: 'A' as OverallResult,
     requiresReexam: false,
     requiresTreatment: false,
+    requiresGuidance: false,
     height: '',
     weight: '',
     bloodPressureSystolic: '',
@@ -474,6 +478,7 @@ export default function HealthPage() {
       overallResult: 'A',
       requiresReexam: false,
       requiresTreatment: false,
+      requiresGuidance: false,
       height: '',
       weight: '',
       bloodPressureSystolic: '',

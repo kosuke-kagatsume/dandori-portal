@@ -7,10 +7,10 @@ export interface AttendanceRecord {
   userId: string;
   userName: string;
   date: string; // YYYY-MM-DD形式
-  checkIn?: string;
-  checkOut?: string;
-  breakStart?: string;
-  breakEnd?: string;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  breakStart?: string | null;
+  breakEnd?: string | null;
   totalBreakMinutes: number;
   workMinutes: number;
   overtimeMinutes: number;
