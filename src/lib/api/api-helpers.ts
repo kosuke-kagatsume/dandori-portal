@@ -122,3 +122,6 @@ export function validateRequired<T extends Record<string, unknown>>(
 
   return { valid: true };
 }
+
+// validateRequiredのエイリアス（後方互換性のため）
+export const validateRequiredFields = validateRequired;
