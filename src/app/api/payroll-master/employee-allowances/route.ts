@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 手当種別名を取得
-    const codes = [...new Set(allowances.map((a) => a.allowanceCode))];
+    const codes = Array.from(new Set(allowances.map((a) => a.allowanceCode)));
     const allowanceTypes = await prisma.allowance_types.findMany({
       where: { tenantId, code: { in: codes } },
       select: { code: true, name: true },

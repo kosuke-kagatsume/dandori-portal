@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     });
 
     // ユーザー情報を結合
-    const userIds = [...new Set(settings.map((s) => s.userId))];
+    const userIds = Array.from(new Set(settings.map((s) => s.userId)));
     const users = await prisma.users.findMany({
       where: { id: { in: userIds } },
       select: { id: true, name: true, email: true, department: true, position: true },

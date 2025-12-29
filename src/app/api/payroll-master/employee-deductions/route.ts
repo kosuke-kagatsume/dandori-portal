@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 控除種別名を取得
-    const codes = [...new Set(deductions.map((d) => d.deductionCode))];
+    const codes = Array.from(new Set(deductions.map((d) => d.deductionCode)));
     const deductionTypes = await prisma.deduction_types.findMany({
       where: { tenantId, code: { in: codes } },
       select: { code: true, name: true },
