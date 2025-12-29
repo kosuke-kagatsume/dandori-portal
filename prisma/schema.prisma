@@ -960,6 +960,178 @@ model payroll_settings {
   @@index([tenantId])
 }
 
+// ========================================
+// Phase 5: 給与管理マスタ
+// ========================================
+
+// 給与項目マスタ（支給項目・控除項目の定義）
+model salary_items {
+  id                String   @id
+  tenantId          String
+  code              String   // 項目コード
+  name              String   // 項目名
+  category          String   // earning:支給, deduction:控除
+  itemType          String   // fixed:固定, variable:変動, calculated:計算
+  calculationType   String?  // hourly:時給計算, rate:率計算, fixed:固定額
+  defaultAmount     Int?     // デフォルト金額
+  isRequired        Boolean  @default(false) // 必須項目
+  isTaxable         Boolean  @default(true)  // 課税対象
+  isInsuranceTarget Boolean  @default(true)  // 社会保険対象
+  sortOrder         Int      @default(0)
+  isActive          Boolean  @default(true)
+  description       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, category])
+  @@index([tenantId, isActive])
+}
+
+// 手当種別マスタ
+model allowance_types {
+  id                String   @id
+  tenantId          String
+  code              String   // 手当コード
+  name              String   // 手当名
+  calculationType   String   @default("fixed") // fixed:固定額, rate:率, formula:計算式
+  defaultAmount     Int?     // デフォルト金額
+  rate              Float?   // 率（%）
+  formula           String?  // 計算式（JSON）
+  isTaxable         Boolean  @default(true)  // 課税対象
+  isInsuranceTarget Boolean  @default(true)  // 社会保険対象
+  isCommuting       Boolean  @default(false) // 通勤手当フラグ
+  maxAmount         Int?     // 上限金額
+  conditions        String?  // 支給条件（JSON）
+  sortOrder         Int      @default(0)
+  isActive          Boolean  @default(true)
+  description       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+// 控除種別マスタ
+model deduction_types {
+  id                String   @id
+  tenantId          String
+  code              String   // 控除コード
+  name              String   // 控除名
+  calculationType   String   @default("fixed") // fixed:固定額, rate:率, table:テーブル参照
+  deductionCategory String   @default("other") // social_insurance:社会保険, tax:税金, other:その他
+  defaultAmount     Int?     // デフォルト金額
+  rate              Float?   // 率（%）
+  isPreTax          Boolean  @default(true)  // 税引前控除
+  sortOrder         Int      @default(0)
+  isActive          Boolean  @default(true)
+  description       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, deductionCategory])
+  @@index([tenantId, isActive])
+}
+
+// 社会保険等級表（健康保険・厚生年金）
+model social_insurance_grades {
+  id                       String   @id
+  tenantId                 String
+  fiscalYear               Int      // 適用年度
+  grade                    Int      // 等級
+  standardMonthlyAmount    Int      // 標準報酬月額
+  minMonthlyAmount         Int?     // 報酬月額下限
+  maxMonthlyAmount         Int?     // 報酬月額上限
+  healthInsuranceEmployee  Int      // 健康保険料（本人負担）
+  healthInsuranceEmployer  Int      // 健康保険料（事業主負担）
+  pensionInsuranceEmployee Int      // 厚生年金（本人負担）
+  pensionInsuranceEmployer Int      // 厚生年金（事業主負担）
+  insuranceType            String   @default("general") // general:一般, specific:特定適用事業所
+  prefectureCode           String?  // 都道府県コード（健康保険料は都道府県で異なる）
+  isActive                 Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime
+
+  @@unique([tenantId, fiscalYear, grade, insuranceType])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, fiscalYear, standardMonthlyAmount])
+}
+
+// 従業員給与設定
+model employee_salary_settings {
+  id                    String    @id
+  tenantId              String
+  userId                String    // usersテーブルへの参照
+  employeeNumber        String?   // 従業員番号
+  effectiveFrom         DateTime  @db.Date // 適用開始日
+  effectiveTo           DateTime? @db.Date // 適用終了日
+  paymentType           String    @default("monthly") // monthly:月給, daily:日給, hourly:時給
+  basicSalary           Int       @default(0)  // 基本給
+  hourlyRate            Int?      // 時給
+  dailyRate             Int?      // 日給
+  socialInsuranceGrade  Int?      // 社会保険等級
+  employmentInsuranceRate Float   @default(0.006) // 雇用保険料率
+  residentTaxAmount     Int       @default(0)  // 住民税額（月額）
+  dependentCount        Int       @default(0)  // 扶養親族数
+  bankName              String?   // 振込先銀行名
+  bankBranchName        String?   // 支店名
+  bankAccountType       String?   // 口座種別（ordinary:普通, current:当座）
+  bankAccountNumber     String?   // 口座番号
+  bankAccountHolder     String?   // 口座名義
+  notes                 String?
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+
+  @@unique([tenantId, userId, effectiveFrom])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([tenantId, isActive])
+}
+
+// 従業員手当設定（個別の手当設定）
+model employee_allowances {
+  id              String    @id
+  tenantId        String
+  userId          String
+  allowanceCode   String    // allowance_typesのcode参照
+  amount          Int       // 支給額
+  effectiveFrom   DateTime  @db.Date
+  effectiveTo     DateTime? @db.Date
+  notes           String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+
+  @@unique([tenantId, userId, allowanceCode, effectiveFrom])
+  @@index([tenantId, userId])
+  @@index([tenantId, userId, isActive])
+}
+
+// 従業員控除設定（個別の控除設定）
+model employee_deductions {
+  id              String    @id
+  tenantId        String
+  userId          String
+  deductionCode   String    // deduction_typesのcode参照
+  amount          Int       // 控除額
+  effectiveFrom   DateTime  @db.Date
+  effectiveTo     DateTime? @db.Date
+  notes           String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+
+  @@unique([tenantId, userId, deductionCode, effectiveFrom])
+  @@index([tenantId, userId])
+  @@index([tenantId, userId, isActive])
+}
+
 model pc_assets {
   id                 String              @id
   tenantId           String
