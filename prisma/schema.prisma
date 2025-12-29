@@ -1132,6 +1132,118 @@ model employee_deductions {
   @@index([tenantId, userId, isActive])
 }
 
+// ========================================
+// Phase 6: 給与計算・出力
+// ========================================
+
+// 給与明細
+model pay_slips {
+  id                    String   @id
+  tenantId              String
+  userId                String
+  payPeriod             String   // YYYY-MM形式
+  paymentDate           DateTime @db.Date // 支給日
+
+  // 支給項目
+  basicSalary           Int      @default(0)  // 基本給
+  positionAllowance     Int      @default(0)  // 役職手当
+  overtimeAllowance     Int      @default(0)  // 残業手当
+  lateNightAllowance    Int      @default(0)  // 深夜手当
+  holidayAllowance      Int      @default(0)  // 休日手当
+  commuteAllowance      Int      @default(0)  // 通勤手当
+  housingAllowance      Int      @default(0)  // 住宅手当
+  familyAllowance       Int      @default(0)  // 家族手当
+  qualificationAllowance Int     @default(0)  // 資格手当
+  otherAllowances       Int      @default(0)  // その他手当
+  allowancesJson        String?  // 詳細な手当情報（JSON）
+  grossPay              Int      @default(0)  // 総支給額
+
+  // 控除項目
+  healthInsurance       Int      @default(0)  // 健康保険料
+  pensionInsurance      Int      @default(0)  // 厚生年金
+  employmentInsurance   Int      @default(0)  // 雇用保険
+  incomeTax             Int      @default(0)  // 所得税
+  residentTax           Int      @default(0)  // 住民税
+  otherDeductions       Int      @default(0)  // その他控除
+  deductionsJson        String?  // 詳細な控除情報（JSON）
+  totalDeductions       Int      @default(0)  // 総控除額
+
+  // 勤怠情報
+  workingDays           Int      @default(0)  // 所定勤務日数
+  actualWorkingDays     Int      @default(0)  // 実働日数
+  absenceDays           Float    @default(0)  // 欠勤日数
+  paidLeaveDays         Float    @default(0)  // 有給消化日数
+  overtimeHours         Float    @default(0)  // 残業時間
+  lateNightHours        Float    @default(0)  // 深夜労働時間
+  holidayWorkHours      Float    @default(0)  // 休日労働時間
+
+  // 差引支給額
+  netPay                Int      @default(0)  // 差引支給額（手取り）
+
+  // ステータス
+  status                String   @default("draft") // draft, confirmed, paid, corrected
+  confirmedAt           DateTime?
+  confirmedBy           String?
+  paidAt                DateTime?
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+
+  @@unique([tenantId, userId, payPeriod])
+  @@index([tenantId])
+  @@index([tenantId, payPeriod])
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+}
+
+// 賞与明細
+model bonus_slips {
+  id                    String   @id
+  tenantId              String
+  userId                String
+  bonusType             String   // summer:夏季, winter:冬季, special:特別
+  payPeriod             String   // YYYY-MM形式（支給対象期間）
+  paymentDate           DateTime @db.Date // 支給日
+
+  // 支給項目
+  basicBonus            Int      @default(0)  // 基本賞与
+  positionBonus         Int      @default(0)  // 役職加算
+  performanceBonus      Int      @default(0)  // 業績加算
+  specialBonus          Int      @default(0)  // 特別加算
+  grossBonus            Int      @default(0)  // 総支給額
+
+  // 控除項目
+  healthInsurance       Int      @default(0)
+  pensionInsurance      Int      @default(0)
+  employmentInsurance   Int      @default(0)
+  incomeTax             Int      @default(0)
+  totalDeductions       Int      @default(0)
+
+  // 査定情報
+  performanceRating     String?  // S, A, B, C, D
+  performanceScore      Int?     // 0-100
+  evaluationComment     String?
+
+  // 差引支給額
+  netBonus              Int      @default(0)
+
+  // ステータス
+  status                String   @default("draft") // draft, approved, paid
+  approvedAt            DateTime?
+  approvedBy            String?
+  paidAt                DateTime?
+  notes                 String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+
+  @@unique([tenantId, userId, bonusType, payPeriod])
+  @@index([tenantId])
+  @@index([tenantId, payPeriod])
+  @@index([tenantId, userId])
+  @@index([tenantId, bonusType])
+  @@index([tenantId, status])
+}
+
 model pc_assets {
   id                 String              @id
   tenantId           String
