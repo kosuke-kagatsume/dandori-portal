@@ -28,8 +28,10 @@ export async function GET(request: NextRequest) {
     if (!settings) {
       settings = await prisma.user_account_settings.create({
         data: {
+          id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
           tenantId,
           userId,
+          updatedAt: new Date(),
         },
       });
     }
@@ -74,9 +76,11 @@ export async function PUT(request: NextRequest) {
       // 作成
       settings = await prisma.user_account_settings.create({
         data: {
+          id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
           tenantId: tenantId || 'tenant-demo-001',
           userId,
           ...data,
+          updatedAt: new Date(),
         },
       });
     }
@@ -112,9 +116,11 @@ export async function PATCH(request: NextRequest) {
           updatedAt: new Date(),
         },
         create: {
+          id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
           tenantId: data.tenantId || 'tenant-demo-001',
           userId,
           passwordChangedAt: new Date(),
+          updatedAt: new Date(),
         },
       });
 
@@ -138,10 +144,12 @@ export async function PATCH(request: NextRequest) {
           updatedAt: new Date(),
         },
         create: {
+          id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
           tenantId: data.tenantId || 'tenant-demo-001',
           userId,
           twoFactorEnabled: true,
           twoFactorSecret: data.twoFactorSecret,
+          updatedAt: new Date(),
         },
       });
 
@@ -167,9 +175,11 @@ export async function PATCH(request: NextRequest) {
           updatedAt: new Date(),
         },
         create: {
+          id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
           tenantId: data.tenantId || 'tenant-demo-001',
           userId,
           ...data,
+          updatedAt: new Date(),
         },
       });
 
@@ -192,6 +202,7 @@ export async function PATCH(request: NextRequest) {
           updatedAt: new Date(),
         },
         create: {
+          id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
           tenantId: data.tenantId || 'tenant-demo-001',
           userId,
           theme: data.theme,
@@ -199,12 +210,39 @@ export async function PATCH(request: NextRequest) {
           timezone: data.timezone,
           dateFormat: data.dateFormat,
           timeFormat: data.timeFormat,
+          updatedAt: new Date(),
         },
       });
 
       return successResponse({
         ...settings,
         message: '外観設定が更新されました',
+      });
+    }
+
+    if (action === 'update_quick_actions') {
+      // クイックアクション設定更新
+      const settings = await prisma.user_account_settings.upsert({
+        where: { userId },
+        update: {
+          quickActionSettings: JSON.stringify(data.quickActionSettings),
+          updatedAt: new Date(),
+        },
+        create: {
+          id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+          tenantId: data.tenantId || 'tenant-demo-001',
+          userId,
+          quickActionSettings: JSON.stringify(data.quickActionSettings),
+          updatedAt: new Date(),
+        },
+      });
+
+      return successResponse({
+        ...settings,
+        quickActionSettings: settings.quickActionSettings
+          ? JSON.parse(settings.quickActionSettings)
+          : null,
+        message: 'クイックアクション設定が更新されました',
       });
     }
 

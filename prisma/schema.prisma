@@ -98,6 +98,29 @@ model announcements {
   @@index([tenantId, startDate])
 }
 
+// ============================================
+// Phase 8: アナウンス種別マスタ
+// ============================================
+
+model announcement_types {
+  id          String   @id
+  tenantId    String
+  code        String // 種別コード（general, urgent, maintenance, etc.）
+  name        String // 種別名（お知らせ、緊急、メンテナンス等）
+  description String? // 説明
+  color       String   @default("#3B82F6") // 表示色
+  icon        String? // アイコン名
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  isSystem    Boolean  @default(false) // システム定義（削除不可）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
 model approval_flow_approvers {
   id                  String              @id
   stepId              String
@@ -1626,6 +1649,8 @@ model user_account_settings {
   leaveNotifications        Boolean   @default(true)
   systemNotifications       Boolean   @default(true)
   announcementNotifications Boolean   @default(true)
+  // クイックアクション表示設定（JSON: {attendance: true, leave: true, members: true, workflow: true, users: true, settings: true}）
+  quickActionSettings       String?
   twoFactorEnabled          Boolean   @default(false)
   twoFactorSecret           String?
   passwordChangedAt         DateTime?
