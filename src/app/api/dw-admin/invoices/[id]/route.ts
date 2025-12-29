@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const invoice = await prisma.invoices.findUnique({
       where: { id },
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
             name: true,
@@ -33,10 +33,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         },
         payments: {
           orderBy: { paymentDate: 'desc' },
-        },
-        items: true,
-        reminders: {
-          orderBy: { sentAt: 'desc' },
         },
       },
     });
@@ -152,7 +148,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: updateData,
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
             name: true,

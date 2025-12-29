@@ -222,6 +222,7 @@ export interface ActivityResponse {
 
 /**
  * テナント一覧を取得
+ * 注意: fetcherはAPIレスポンスのdataプロパティを直接返す
  */
 export function useTenants(params?: {
   status?: string;
@@ -238,7 +239,7 @@ export function useTenants(params?: {
   const queryString = searchParams.toString();
   const url = `/api/dw-admin/tenants${queryString ? `?${queryString}` : ''}`;
 
-  return useSWR<TenantsResponse>(url, fetcher, {
+  return useSWR<TenantsResponse['data']>(url, fetcher, {
     refreshInterval: 60000,
     revalidateOnFocus: true,
   });
@@ -246,9 +247,10 @@ export function useTenants(params?: {
 
 /**
  * テナント統計を取得
+ * 注意: fetcherはAPIレスポンスのdataプロパティを直接返す
  */
 export function useTenantStats() {
-  return useSWR<TenantStatsResponse>(
+  return useSWR<TenantStatsResponse['data']>(
     '/api/dw-admin/tenants/stats',
     fetcher,
     {
@@ -260,6 +262,7 @@ export function useTenantStats() {
 
 /**
  * 請求書一覧を取得
+ * 注意: fetcherはAPIレスポンスのdataプロパティを直接返す
  */
 export function useInvoices(params?: {
   tenantId?: string;
@@ -280,7 +283,7 @@ export function useInvoices(params?: {
   const queryString = searchParams.toString();
   const url = `/api/dw-admin/invoices${queryString ? `?${queryString}` : ''}`;
 
-  return useSWR<InvoicesResponse>(url, fetcher, {
+  return useSWR<InvoicesResponse['data']>(url, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: true,
   });
@@ -301,6 +304,7 @@ export function useInvoice(id: string | null) {
 
 /**
  * 支払い記録一覧を取得
+ * 注意: fetcherはAPIレスポンスのdataプロパティを直接返す
  */
 export function usePayments(params?: {
   tenantId?: string;
@@ -321,7 +325,7 @@ export function usePayments(params?: {
   const queryString = searchParams.toString();
   const url = `/api/dw-admin/payments${queryString ? `?${queryString}` : ''}`;
 
-  return useSWR<PaymentsResponse>(url, fetcher, {
+  return useSWR<PaymentsResponse['data']>(url, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: true,
   });
@@ -329,6 +333,7 @@ export function usePayments(params?: {
 
 /**
  * DW管理通知一覧を取得
+ * 注意: fetcherはAPIレスポンスのdataプロパティを直接返す
  */
 export function useDWNotifications(params?: {
   type?: string;
@@ -347,7 +352,7 @@ export function useDWNotifications(params?: {
   const queryString = searchParams.toString();
   const url = `/api/dw-admin/notifications${queryString ? `?${queryString}` : ''}`;
 
-  return useSWR<NotificationsResponse>(url, fetcher, {
+  return useSWR<NotificationsResponse['data']>(url, fetcher, {
     refreshInterval: 15000, // 15秒ごとに更新（通知は頻繁にチェック）
     revalidateOnFocus: true,
   });
@@ -355,6 +360,7 @@ export function useDWNotifications(params?: {
 
 /**
  * アクティビティフィードを取得
+ * 注意: fetcherはAPIレスポンスのdataプロパティを直接返す
  */
 export function useActivityFeed(params?: {
   type?: string;
@@ -375,7 +381,7 @@ export function useActivityFeed(params?: {
   const queryString = searchParams.toString();
   const url = `/api/dw-admin/activity${queryString ? `?${queryString}` : ''}`;
 
-  return useSWR<ActivityResponse>(url, fetcher, {
+  return useSWR<ActivityResponse['data']>(url, fetcher, {
     refreshInterval: 30000,
     revalidateOnFocus: true,
   });

@@ -46,12 +46,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 支払い記録一覧を取得（tenantリレーションがないためinvoice経由でテナント名を取得）
+    // 支払い記録一覧を取得（tenantリレーションがないためinvoices経由でテナント名を取得）
     const [payments, total] = await Promise.all([
       prisma.payments.findMany({
         where,
         include: {
-          invoice: {
+          invoices: {
             select: {
               id: true,
               invoiceNumber: true,
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
               tax: true,
               total: true,
               status: true,
-              tenant: {
+              tenants: {
                 select: {
                   id: true,
                   name: true,
@@ -95,9 +95,9 @@ export async function GET(request: NextRequest) {
         payments: payments.map((payment) => ({
           id: payment.id,
           tenantId: payment.tenantId,
-          tenantName: payment.invoice.tenant.name,
+          tenantName: payment.invoices?.tenants?.name || '',
           invoiceId: payment.invoiceId,
-          invoiceNumber: payment.invoice.invoiceNumber,
+          invoiceNumber: payment.invoices?.invoiceNumber || '',
           amount: payment.amount,
           paymentDate: payment.paymentDate,
           paymentMethod: payment.paymentMethod,
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
     // トランザクションで支払い登録と請求書ステータス更新
     const result = await prisma.$transaction(async (tx) => {
       // 支払い記録を作成
-      const payment = await tx.payment.create({
+      const payment = await tx.payments.create({
         data: {
           tenantId: invoice.tenantId,
           invoiceId,
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
           notes,
         },
         include: {
-          invoice: {
+          invoices: {
             select: {
               id: true,
               invoiceNumber: true,
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
       const totalAmount = invoice.total;
 
       if (newPaidAmount >= totalAmount) {
-        await tx.invoice.update({
+        await tx.invoices.update({
           where: { id: invoiceId },
           data: {
             status: 'paid',
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
       }
 
       // アクティビティログを記録
-      await tx.activityFeed.create({
+      await tx.activity_feeds.create({
         data: {
           tenantId: invoice.tenantId,
           activityType: 'payment_received',

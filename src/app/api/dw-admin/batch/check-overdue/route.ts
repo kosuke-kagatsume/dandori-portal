@@ -27,13 +27,13 @@ export async function POST(request: NextRequest) {
     today.setHours(0, 0, 0, 0);
 
     // 期限超過の未払い請求書を検出
-    const overdueInvoices = await prismaClient.invoice.findMany({
+    const overdueInvoices = await prismaClient.invoices.findMany({
       where: {
         status: { in: ['draft', 'sent'] },
         dueDate: { lt: today },
       },
       include: {
-        tenant: {
+        tenants: {
           include: { tenant_settings: true },
         },
       },
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
       // ステータスを「overdue」に更新
       if (invoice.status !== 'overdue') {
-        await prismaClient.invoice.update({
+        await prismaClient.invoices.update({
           where: { id: invoice.id },
           data: { status: 'overdue' },
         });
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       else priority = 'low';
 
       // 既存の未読通知があるかチェック
-      const existingNotification = await prismaClient.dWNotification.findFirst({
+      const existingNotification = await prismaClient.dw_notifications.findFirst({
         where: {
           invoiceId: invoice.id,
           type: 'payment_overdue',
@@ -82,11 +82,11 @@ export async function POST(request: NextRequest) {
 
       if (!existingNotification) {
         // 新しい通知を作成
-        await prismaClient.dWNotification.create({
+        await prismaClient.dw_notifications.create({
           data: {
             type: 'payment_overdue',
             title: `支払い期限超過（${daysOverdue}日）`,
-            description: `${invoice.tenant?.name || '不明'}の請求書（${invoice.invoiceNumber}）が${daysOverdue}日超過しています`,
+            description: `${invoice.tenants?.name || '不明'}の請求書（${invoice.invoiceNumber}）が${daysOverdue}日超過しています`,
             priority,
             tenantId: invoice.tenantId,
             invoiceId: invoice.id,
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         action = 'notification_created';
       } else if (existingNotification.priority !== priority) {
         // 優先度を更新
-        await prismaClient.dWNotification.update({
+        await prismaClient.dw_notifications.update({
           where: { id: existingNotification.id },
           data: { priority },
         });
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       results.push({
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
-        tenantName: invoice.tenant?.name || '不明',
+        tenantName: invoice.tenants?.name || '不明',
         daysOverdue,
         amount: invoice.total,
         action,
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     const sevenDaysLater = new Date(today);
     sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
 
-    const upcomingDueInvoices = await prismaClient.invoice.findMany({
+    const upcomingDueInvoices = await prismaClient.invoices.findMany({
       where: {
         status: { in: ['draft', 'sent'] },
         dueDate: {
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        tenant: true,
+        tenants: true,
       },
     });
 
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
 
       // 3日以内の場合は通知を作成
       if (daysUntilDue <= 3) {
-        const existingNotification = await prismaClient.dWNotification.findFirst({
+        const existingNotification = await prismaClient.dw_notifications.findFirst({
           where: {
             invoiceId: invoice.id,
             type: 'payment_reminder',
@@ -154,11 +154,11 @@ export async function POST(request: NextRequest) {
         });
 
         if (!existingNotification) {
-          await prismaClient.dWNotification.create({
+          await prismaClient.dw_notifications.create({
             data: {
               type: 'payment_reminder',
               title: `支払い期限まもなく（${daysUntilDue}日）`,
-              description: `${invoice.tenant?.name || '不明'}の請求書（${invoice.invoiceNumber}）の支払い期限が${daysUntilDue}日後です`,
+              description: `${invoice.tenants?.name || '不明'}の請求書（${invoice.invoiceNumber}）の支払い期限が${daysUntilDue}日後です`,
               priority: 'normal',
               tenantId: invoice.tenantId,
               invoiceId: invoice.id,
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
       upcomingWarnings.push({
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoiceNumber,
-        tenantName: invoice.tenant?.name || '不明',
+        tenantName: invoice.tenants?.name || '不明',
         daysUntilDue,
         amount: invoice.total,
       });

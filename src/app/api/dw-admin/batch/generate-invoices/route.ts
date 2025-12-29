@@ -34,14 +34,14 @@ export async function POST(request: NextRequest) {
     const targetMonth = billingMonth || getPreviousMonth();
 
     // アクティブなテナントを取得
-    const tenants = await prismaClient.tenant.findMany({
+    const tenants = await prismaClient.tenants.findMany({
       where: {
         tenant_settings: {
           status: 'active',
         },
       },
       include: {
-        settings: true,
+        tenant_settings: true,
         _count: {
           select: { users: true },
         },
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     for (const tenant of tenants) {
       try {
         // 既存の請求書をチェック
-        const existingInvoice = await prismaClient.invoice.findFirst({
+        const existingInvoice = await prismaClient.invoices.findFirst({
           where: {
             tenantId: tenant.id,
             billingMonth: new Date(`${targetMonth}-01`),
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         const dueDate = getEndOfNextMonth(targetMonth);
 
         // 請求書作成
-        const invoice = await prismaClient.invoice.create({
+        const invoice = await prismaClient.invoices.create({
           data: {
             tenantId: tenant.id,
             invoiceNumber,
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
         });
 
         // 通知作成
-        await prismaClient.dWNotification.create({
+        await prismaClient.dw_notifications.create({
           data: {
             type: 'invoice_created',
             title: `請求書が作成されました`,
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         });
 
         // アクティビティ記録
-        await prismaClient.dWActivity.create({
+        await prismaClient.activity_feeds.create({
           data: {
             tenantId: tenant.id,
             activityType: 'invoice_generated',
@@ -146,7 +146,6 @@ export async function POST(request: NextRequest) {
             description: `${formatMonth(targetMonth)}分の請求書が自動生成されました`,
             resourceType: 'invoice',
             resourceId: invoice.id,
-            priority: 'normal',
           },
         });
 

@@ -50,6 +50,8 @@ export function TenantManagementTab() {
     );
   }
 
+  // fetcherはAPIレスポンスのdataプロパティを直接返すので、
+  // tenantsDataには{ tenants: [...], summary: {...}, pagination: {...} }が入っている
   const tenants = tenantsData?.tenants || [];
   const stats = statsData;
 
@@ -61,9 +63,9 @@ export function TenantManagementTab() {
   );
 
   // 統計計算
-  const totalAmount = tenants.reduce((sum, t) => sum + t.totalAmount, 0);
-  const unpaidAmount = tenants.reduce((sum, t) => sum + t.unpaidAmount, 0);
-  const overdueTenantsCount = tenants.filter((t) => t.overdueCount > 0).length;
+  const totalAmount = tenants.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+  const unpaidAmount = tenants.reduce((sum, t) => sum + (t.unpaidAmount || 0), 0);
+  const overdueTenantsCount = tenants.filter((t) => (t.overdueCount || 0) > 0).length;
 
   return (
     <div className="space-y-6">

@@ -13,11 +13,11 @@ export async function GET(
     const legalUpdate = await prisma.legal_updates.findUnique({
       where: { id: params.id },
       include: {
-        tenantStatuses: {
+        tenant_legal_statuses: {
           orderBy: { updatedAt: 'desc' },
         },
         _count: {
-          select: { tenantStatuses: true }
+          select: { tenant_legal_statuses: true }
         }
       },
     });
@@ -131,7 +131,7 @@ export async function DELETE(
       where: { id: params.id },
       include: {
         _count: {
-          select: { tenantStatuses: true }
+          select: { tenant_legal_statuses: true }
         }
       }
     });
@@ -144,12 +144,12 @@ export async function DELETE(
     }
 
     // 公開済みで対応状況があるものは削除不可（警告）
-    if (existing.isPublished && existing._count.tenantStatuses > 0) {
+    if (existing.isPublished && existing._count.tenant_legal_statuses > 0) {
       return NextResponse.json(
         {
           success: false,
           error: '公開済みで対応状況が登録されている法令は削除できません',
-          tenantStatusCount: existing._count.tenantStatuses,
+          tenantStatusCount: existing._count.tenant_legal_statuses,
         },
         { status: 400 }
       );

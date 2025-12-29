@@ -97,68 +97,57 @@ export function CreateInvoiceDialog({
   const total = subtotal + tax;
 
   // 請求書を作成（下書き）
-  const handleCreateDraft = () => {
+  const handleCreateDraft = async () => {
     if (!validateForm()) return;
 
     const [year, month] = billingMonth.split('-').map(Number);
     const billingMonthDate = new Date(year, month - 1, 1);
-    const allInvoices = getAllInvoices();
 
-    const newInvoice = createInvoice({
-      invoiceNumber: getNextInvoiceNumber(allInvoices, year, month),
+    const newInvoice = await createInvoice({
       tenantId,
-      tenantName,
-      billingMonth: billingMonthDate,
+      billingMonth: billingMonthDate.toISOString(),
       subtotal,
       tax,
-      total,
-      status: 'draft',
-      dueDate: calculateDueDate(billingMonthDate),
+      dueDate: calculateDueDate(billingMonthDate).toISOString(),
       billingEmail,
       memo: memo || undefined,
-      items: items.map((item) => ({
-        ...item,
-        period: `${year}-${String(month).padStart(2, '0')}`,
-      })),
     });
 
-    toast.success('請求書を下書き保存しました');
-    resetForm();
-    onOpenChange(false);
+    if (newInvoice) {
+      toast.success('請求書を下書き保存しました');
+      resetForm();
+      onOpenChange(false);
+    } else {
+      toast.error('請求書の作成に失敗しました');
+    }
   };
 
   // 請求書を作成して即送信
-  const handleCreateAndSend = () => {
+  const handleCreateAndSend = async () => {
     if (!validateForm()) return;
 
     const [year, month] = billingMonth.split('-').map(Number);
     const billingMonthDate = new Date(year, month - 1, 1);
-    const allInvoices = getAllInvoices();
 
-    const newInvoice = createInvoice({
-      invoiceNumber: getNextInvoiceNumber(allInvoices, year, month),
+    const newInvoice = await createInvoice({
       tenantId,
-      tenantName,
-      billingMonth: billingMonthDate,
+      billingMonth: billingMonthDate.toISOString(),
       subtotal,
       tax,
-      total,
-      status: 'draft',
-      dueDate: calculateDueDate(billingMonthDate),
+      dueDate: calculateDueDate(billingMonthDate).toISOString(),
       billingEmail,
       memo: memo || undefined,
-      items: items.map((item) => ({
-        ...item,
-        period: `${year}-${String(month).padStart(2, '0')}`,
-      })),
     });
 
-    // 即送信
-    markAsSent(newInvoice.id);
-
-    toast.success('請求書を作成して送信しました');
-    resetForm();
-    onOpenChange(false);
+    if (newInvoice) {
+      // 即送信
+      await markAsSent(newInvoice.id);
+      toast.success('請求書を作成して送信しました');
+      resetForm();
+      onOpenChange(false);
+    } else {
+      toast.error('請求書の作成に失敗しました');
+    }
   };
 
   // バリデーション

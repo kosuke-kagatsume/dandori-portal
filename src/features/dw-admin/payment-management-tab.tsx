@@ -62,8 +62,10 @@ export function PaymentManagementTab() {
     );
   }
 
-  const invoices = invoicesData?.data?.invoices || [];
-  const summary = invoicesData?.data?.summary || {
+  // fetcherはAPIレスポンスのdataプロパティを直接返すので、
+  // invoicesDataには{ invoices: [...], summary: {...}, pagination: {...} }が入っている
+  const invoices = invoicesData?.invoices || [];
+  const summary = invoicesData?.summary || {
     totalAmount: 0,
     paidAmount: 0,
     unpaidAmount: 0,

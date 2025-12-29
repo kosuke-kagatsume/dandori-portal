@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
           updatedAt: true,
           createdBy: true,
           _count: {
-            select: { tenantStatuses: true }
+            select: { tenant_legal_statuses: true }
           }
         },
         orderBy: [

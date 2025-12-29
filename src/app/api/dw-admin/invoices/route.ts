@@ -57,16 +57,12 @@ export async function GET(request: NextRequest) {
       prisma.invoices.findMany({
         where,
         include: {
-          tenant: {
+          tenants: {
             select: {
               id: true,
               name: true,
               subdomain: true,
             },
-          },
-          payments: {
-            orderBy: { paymentDate: 'desc' },
-            take: 1,
           },
         },
         orderBy: [
@@ -122,25 +118,32 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // 集計データを整形
-    const summary = {
-      total: 0,
-      draft: { count: 0, amount: 0 },
-      sent: { count: 0, amount: 0 },
-      paid: { count: 0, amount: 0 },
-      overdue: { count: 0, amount: 0 },
-      cancelled: { count: 0, amount: 0 },
-      monthlyRevenue: monthlyRevenue._sum.total || 0,
-    };
+    // 集計データを整形（フロントエンドの期待する形式に合わせる）
+    let totalAmount = 0;
+    let paidAmount = 0;
+    let unpaidAmount = 0;
+    let overdueCount = 0;
 
     summaryResult.forEach((item) => {
-      const statusKey = item.status as keyof typeof summary;
-      if (statusKey in summary && typeof summary[statusKey] === 'object') {
-        (summary[statusKey] as { count: number; amount: number }).count = item._count;
-        (summary[statusKey] as { count: number; amount: number }).amount = item._sum.total || 0;
-        summary.total += item._count;
+      const amount = item._sum.total || 0;
+      totalAmount += amount;
+
+      if (item.status === 'paid') {
+        paidAmount += amount;
+      } else if (item.status === 'overdue') {
+        unpaidAmount += amount;
+        overdueCount += item._count;
+      } else if (item.status === 'sent' || item.status === 'draft') {
+        unpaidAmount += amount;
       }
     });
+
+    const summary = {
+      totalAmount,
+      paidAmount,
+      unpaidAmount,
+      overdueCount,
+    };
 
     return NextResponse.json({
       success: true,
@@ -149,8 +152,8 @@ export async function GET(request: NextRequest) {
           id: invoice.id,
           invoiceNumber: invoice.invoiceNumber,
           tenantId: invoice.tenantId,
-          tenantName: invoice.tenant.name,
-          tenantSubdomain: invoice.tenant.subdomain,
+          tenantName: invoice.tenants?.name || '',
+          tenantSubdomain: invoice.tenants?.subdomain || null,
           subtotal: invoice.subtotal,
           tax: invoice.tax,
           total: invoice.total,
@@ -158,7 +161,6 @@ export async function GET(request: NextRequest) {
           dueDate: invoice.dueDate,
           status: invoice.status,
           paidDate: invoice.paidDate,
-          lastPayment: invoice.payments[0] || null,
           createdAt: invoice.createdAt,
           updatedAt: invoice.updatedAt,
         })),
@@ -277,7 +279,9 @@ export async function POST(request: NextRequest) {
     // 請求書作成
     const invoice = await prisma.invoices.create({
       data: {
-        tenantId,
+        tenants: {
+          connect: { id: tenantId },
+        },
         invoiceNumber,
         subtotal,
         tax,
@@ -289,7 +293,7 @@ export async function POST(request: NextRequest) {
         status: 'draft',
       },
       include: {
-        tenant: {
+        tenants: {
           select: {
             id: true,
             name: true,

@@ -22,11 +22,9 @@ import {
   CheckCircle,
   Mail,
   FileText,
-  Calendar,
   Building2,
   LayoutDashboard,
   Bell,
-  Database,
   RefreshCw,
   Scale,
 } from 'lucide-react';
@@ -40,17 +38,16 @@ import { PaymentReminderTab } from '@/features/dw-admin/payment-reminder-tab';
 import { InvoiceAutoGenerationTab } from '@/features/dw-admin/invoice-auto-generation-tab';
 import { LegalUpdatesManagementTab } from '@/features/dw-admin/legal-updates-management-tab';
 import { useIsMounted } from '@/hooks/useIsMounted';
-import { initializeDWAdminDemo } from '@/lib/demo-data/initialize-dw-admin-demo';
 import { toast } from 'sonner';
 
 function DWAdminDashboardPage() {
   const mounted = useIsMounted();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { getAllInvoices, getStats, initializeInvoices } = useInvoiceStore();
-  const { tenants, initializeTenants } = useAdminTenantStore();
-  const { getStats: getNotificationStats, initializeNotifications } = useNotificationHistoryStore();
-  const [isInitializing, setIsInitializing] = useState(false);
+  const { getAllInvoices, getStats, fetchInvoices, isLoading: invoicesLoading } = useInvoiceStore();
+  const { tenants, fetchTenants, isLoading: tenantsLoading } = useAdminTenantStore();
+  const { getStats: getNotificationStats, fetchNotifications, isLoading: notificationsLoading } = useNotificationHistoryStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // URLパラメータからタブを取得（デフォルトは 'dashboard'）
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -60,31 +57,37 @@ function DWAdminDashboardPage() {
     router.push(`/dw-admin/dashboard?tab=${value}`);
   };
 
-  // 初期化
+  // 初期化 - APIからデータを取得
   useEffect(() => {
-    initializeTenants();
-    initializeInvoices();
-    initializeNotifications();
-  }, [initializeTenants, initializeInvoices, initializeNotifications]);
+    const loadData = async () => {
+      await Promise.all([
+        fetchTenants(),
+        fetchInvoices(),
+        fetchNotifications(),
+      ]);
+    };
+    loadData();
+  }, [fetchTenants, fetchInvoices, fetchNotifications]);
 
-  // デモデータ初期化ハンドラー
-  const handleInitializeDemo = () => {
-    setIsInitializing(true);
+  // データ再読み込みハンドラー
+  const handleRefreshData = async () => {
+    setIsRefreshing(true);
     try {
-      const result = initializeDWAdminDemo();
-      toast.success(
-        `デモデータを初期化しました！\nテナント: ${result.tenants}件\n請求書: ${result.invoices}件\n通知: ${result.notifications}件\nリマインダー: ${result.reminders}件`,
-        { duration: 5000 }
-      );
-      // ページをリロードして最新データを表示
-      window.location.reload();
+      await Promise.all([
+        fetchTenants(),
+        fetchInvoices(),
+        fetchNotifications(),
+      ]);
+      toast.success('データを更新しました');
     } catch (error) {
-      console.error('Demo data initialization failed:', error);
-      toast.error('デモデータの初期化に失敗しました');
+      console.error('Data refresh failed:', error);
+      toast.error('データの更新に失敗しました');
     } finally {
-      setIsInitializing(false);
+      setIsRefreshing(false);
     }
   };
+
+  const isLoading = invoicesLoading || tenantsLoading || notificationsLoading;
 
   const allInvoices = mounted ? getAllInvoices() : [];
   const invoiceStats = mounted ? getStats() : {
@@ -98,9 +101,11 @@ function DWAdminDashboardPage() {
     totalSent: 0,
     totalFailed: 0,
     byType: {
-      invoice_sent: 0,
-      payment_reminder: 0,
       payment_received: 0,
+      payment_overdue: 0,
+      tenant_created: 0,
+      tenant_suspended: 0,
+      system_alert: 0,
     },
   };
 
@@ -168,18 +173,18 @@ function DWAdminDashboardPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={handleInitializeDemo}
-          disabled={isInitializing}
+          onClick={handleRefreshData}
+          disabled={isRefreshing || isLoading}
         >
-          {isInitializing ? (
+          {isRefreshing || isLoading ? (
             <>
               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              初期化中...
+              読み込み中...
             </>
           ) : (
             <>
-              <Database className="h-4 w-4 mr-2" />
-              デモデータ初期化
+              <RefreshCw className="h-4 w-4 mr-2" />
+              データ更新
             </>
           )}
         </Button>
@@ -300,28 +305,7 @@ function DWAdminDashboardPage() {
                   <div className="text-2xl font-bold text-green-600">
                     {notificationStats.totalSent}
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">送信成功</div>
-                </div>
-                <div className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg">
-                  <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-red-600">
-                    {notificationStats.totalFailed}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">送信失敗</div>
-                </div>
-                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                  <FileText className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-blue-600">
-                    {notificationStats.byType.invoice_sent}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">請求書発行</div>
-                </div>
-                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
-                  <Calendar className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {notificationStats.byType.payment_reminder}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">リマインダー</div>
+                  <div className="text-xs text-muted-foreground mt-1">通知総数</div>
                 </div>
                 <div className="text-center p-4 bg-purple-50 dark:bg-purple-950 rounded-lg">
                   <CheckCircle className="h-8 w-8 text-purple-600 mx-auto mb-2" />
@@ -329,6 +313,27 @@ function DWAdminDashboardPage() {
                     {notificationStats.byType.payment_received}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">入金確認</div>
+                </div>
+                <div className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg">
+                  <AlertCircle className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-red-600">
+                    {notificationStats.byType.payment_overdue}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">支払超過</div>
+                </div>
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                  <Building2 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-blue-600">
+                    {notificationStats.byType.tenant_created}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">テナント作成</div>
+                </div>
+                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
+                  <AlertCircle className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {notificationStats.byType.system_alert}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">システム通知</div>
                 </div>
               </div>
             </CardContent>

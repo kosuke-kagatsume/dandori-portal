@@ -60,7 +60,7 @@ interface LegalUpdate {
   referenceUrl: string | null;
   createdAt: string;
   _count?: {
-    tenantStatuses: number;
+    tenant_legal_statuses: number;
   };
 }
 
@@ -423,7 +423,7 @@ export function LegalUpdatesManagementTab() {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
-                          {legalUpdate._count?.tenantStatuses || 0}社対応中
+                          {legalUpdate._count?.tenant_legal_statuses || 0}社対応中
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -446,7 +446,7 @@ export function LegalUpdatesManagementTab() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(legalUpdate.id)}
-                            disabled={legalUpdate.isPublished && (legalUpdate._count?.tenantStatuses || 0) > 0}
+                            disabled={legalUpdate.isPublished && (legalUpdate._count?.tenant_legal_statuses || 0) > 0}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -695,7 +695,7 @@ export function LegalUpdatesManagementTab() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">テナント対応状況</Label>
-                  <p>{selectedLegalUpdate._count?.tenantStatuses || 0}社対応中</p>
+                  <p>{selectedLegalUpdate._count?.tenant_legal_statuses || 0}社対応中</p>
                 </div>
               </div>
             </div>

@@ -157,9 +157,9 @@ export async function GET(request: NextRequest) {
 
     // 契約終了間近のテナントをチェック
     const expiringContracts = tenantsWithSettings.filter((t) => {
-      if (!t.settings?.contractEndDate) return false;
+      if (!t.tenant_settings?.contractEndDate) return false;
       const daysUntilExpiry = Math.ceil(
-        (new Date(t.settings.contractEndDate).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
+        (new Date(t.tenant_settings.contractEndDate).getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
       );
       return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
     });
