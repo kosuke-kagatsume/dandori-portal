@@ -156,13 +156,14 @@ export async function POST(request: NextRequest) {
         });
 
         let report;
+        // usersモデルにはaddress/birthDateがないため空文字/nullを使用
         const reportData = {
           municipalityCode: municipality.code,
           municipalityName: municipality.name,
           employeeName: user.name,
-          employeeAddress: user.address || '',
-          employeeBirthDate: user.birthDate ? new Date(user.birthDate) : null,
-          jan1Address: user.address || null,
+          employeeAddress: '', // 住所は別途入力または従業員プロフィールから取得
+          employeeBirthDate: null, // 生年月日は別途入力または従業員プロフィールから取得
+          jan1Address: null,
           paymentAmount: slip.paymentAmount,
           withheldTax: slip.withheldTax,
           socialInsuranceAmount: slip.socialInsuranceAmount,

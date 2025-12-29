@@ -160,10 +160,11 @@ export async function POST(request: NextRequest) {
         });
 
         let slip;
+        // tenantsモデルにはaddressがないためnullを使用
         const slipData = {
           employeeName: user.name,
           payerName: tenant?.name || '',
-          payerAddress: tenant?.address || null,
+          payerAddress: null, // 支払者住所は別途設定から取得
           paymentAmount: yearEndResult.totalIncome,
           employmentIncome: yearEndResult.employmentIncome,
           deductionTotal: yearEndResult.totalDeductions,
