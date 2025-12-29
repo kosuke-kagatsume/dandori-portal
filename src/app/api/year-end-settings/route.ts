@@ -92,6 +92,7 @@ export async function PUT(request: NextRequest) {
         includeQRCode,
       },
       create: {
+        id: `yes-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         tenantId,
         adjustmentStartMonth: adjustmentStartMonth ?? 11,
         adjustmentEndMonth: adjustmentEndMonth ?? 12,
@@ -102,6 +103,7 @@ export async function PUT(request: NextRequest) {
         enableSocialInsuranceDeduction: enableSocialInsuranceDeduction ?? true,
         withholdingSlipFormat: withholdingSlipFormat ?? 'standard',
         includeQRCode: includeQRCode ?? false,
+        updatedAt: new Date(),
       },
     });
 

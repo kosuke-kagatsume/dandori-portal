@@ -100,6 +100,7 @@ export async function PUT(request: NextRequest) {
         enableResidentTax,
       },
       create: {
+        id: `ps-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         tenantId,
         paymentDay: paymentDay ?? 25,
         paymentDayType: paymentDayType ?? 'current',
@@ -112,6 +113,7 @@ export async function PUT(request: NextRequest) {
         enableEmploymentInsurance: enableEmploymentInsurance ?? true,
         enableIncomeTax: enableIncomeTax ?? true,
         enableResidentTax: enableResidentTax ?? true,
+        updatedAt: new Date(),
       },
     });
 
