@@ -155,21 +155,44 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
+          // 既存のuserStatesを保持（ローカル既読状態をマージするため）
+          const existingAnnouncements = get().announcements;
+          const existingUserStatesMap = new Map<string, UserAnnouncementState[]>(
+            existingAnnouncements.map((a) => [a.id, a.userStates])
+          );
+
           const response = await apiFetch<{
             success: boolean;
             data: Announcement[];
           }>(`${API_BASE}?tenantId=demo`);
 
-          // APIレスポンスをストア形式に変換
-          const announcements = response.data.map((item) => ({
-            ...item,
-            userStates: (item as unknown as { reads?: Array<{ userId: string; readAt: string; actionCompleted: boolean; actionCompletedAt?: string }> }).reads?.map((read) => ({
+          // APIレスポンスをストア形式に変換（既存のuserStatesとマージ）
+          const announcements = response.data.map((item) => {
+            // APIから取得したuserStates
+            const apiUserStates: UserAnnouncementState[] = (item as unknown as { reads?: Array<{ userId: string; readAt: string; actionCompleted: boolean; actionCompletedAt?: string }> }).reads?.map((read) => ({
               userId: read.userId,
               status: read.actionCompleted ? 'completed' as UserAnnouncementStatus : 'read' as UserAnnouncementStatus,
               readAt: read.readAt,
               completedAt: read.actionCompletedAt,
-            })) || [],
-          }));
+            })) || [];
+
+            // 既存のローカルuserStatesを取得
+            const existingUserStates = existingUserStatesMap.get(item.id) || [];
+
+            // マージ: APIのデータを優先しつつ、ローカルのみにある既読情報も保持
+            const mergedUserStates = [...apiUserStates];
+            existingUserStates.forEach((localState) => {
+              const existsInApi = apiUserStates.some((apiState) => apiState.userId === localState.userId);
+              if (!existsInApi) {
+                mergedUserStates.push(localState);
+              }
+            });
+
+            return {
+              ...item,
+              userStates: mergedUserStates,
+            };
+          });
 
           set({ announcements, isLoading: false });
         } catch (error) {

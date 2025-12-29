@@ -45,6 +45,7 @@ import { exportUsersToCSV } from '@/lib/csv/csv-export';
 // ダイアログの遅延読み込み
 const RetireUserDialog = dynamic(() => import('@/features/users/retire-user-dialog').then(mod => ({ default: mod.RetireUserDialog })), { ssr: false });
 const InviteUserDialog = dynamic(() => import('@/features/users/invite-user-dialog').then(mod => ({ default: mod.InviteUserDialog })), { ssr: false });
+const UserFormDialog = dynamic(() => import('@/features/users/user-form-dialog').then(mod => ({ default: mod.UserFormDialog })), { ssr: false });
 
 export default function UsersPage() {
   const mounted = useIsMounted();
@@ -60,6 +61,8 @@ export default function UsersPage() {
   const [retireDialogOpen, setRetireDialogOpen] = useState(false);
   const [retiringUser, setRetiringUser] = useState<User | undefined>();
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [importInputRef, setImportInputRef] = useState<HTMLInputElement | null>(null);
 
@@ -140,12 +143,57 @@ export default function UsersPage() {
       );
 
       // ローカルステートを更新
-      setUsers(prev => prev.map(u => u.id === retiringUser.id ? result.data : u));
+      setUsers(users.map((u) => (u.id === retiringUser.id ? result.data : u)));
 
       toast.success('退職処理が完了しました');
     } catch (error) {
       console.error('Error retiring user:', error);
       toast.error('退職処理に失敗しました');
+      throw error;
+    }
+  };
+
+  // ユーザー編集ハンドラー
+  const handleEditUser = async (data: {
+    name: string;
+    email: string;
+    phone?: string;
+    department: string;
+    position: string;
+    hireDate: Date;
+    status: 'active' | 'inactive' | 'suspended' | 'retired';
+    roles: string[];
+  }) => {
+    if (!editingUser) return;
+
+    try {
+      const response = await fetch(`/api/users/${editingUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          position: data.position,
+          hireDate: data.hireDate.toISOString().split('T')[0],
+          status: data.status,
+          roles: data.roles,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update user');
+      }
+
+      // ストアを更新
+      setUsers(users.map((u) => (u.id === editingUser.id ? result.data : u)));
+      toast.success('ユーザー情報を更新しました');
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('ユーザー情報の更新に失敗しました');
       throw error;
     }
   };
@@ -410,7 +458,7 @@ export default function UsersPage() {
               <DropdownMenuItem
                 onClick={() => {
                   setEditingUser(user);
-                  setDialogOpen(true);
+                  setEditDialogOpen(true);
                 }}
               >
                 <Edit className="mr-2 h-4 w-4" />
@@ -600,6 +648,14 @@ export default function UsersPage() {
             avatar: '',
           });
         }}
+      />
+
+      {/* Edit User Dialog */}
+      <UserFormDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        user={editingUser}
+        onSubmit={handleEditUser}
       />
     </div>
   );

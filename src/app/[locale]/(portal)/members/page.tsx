@@ -66,44 +66,51 @@ export default function MembersPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  // Auto refresh
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      setLastUpdated(new Date());
-      // In real app, would refetch data here
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [autoRefresh]);
-
   // tenantId を取得
   const currentUser = useUserStore(state => state.currentUser);
   const tenantId = currentUser?.tenantId || '';
 
-  // API経由でメンバーデータを取得
+  // API経由でメンバーデータを取得（勤怠データ含む）
   const fetchMembers = useCallback(async () => {
     if (!tenantId) {
       setLoading(false);
       return;
     }
     try {
-      const response = await fetch(`/api/users?tenantId=${tenantId}`);
+      const response = await fetch(`/api/members/status?tenantId=${tenantId}`);
       if (response.ok) {
         const data = await response.json();
-        const users: User[] = data.data || [];
+        const membersData = data.data?.members || [];
 
-        // Transform users to members with status
-        const apiMembers: Member[] = users.map((user: User) => ({
-          ...user,
-          currentStatus: (['present', 'remote', 'business_trip', 'training', 'absent', 'not_checked_in'] as const)[
-            Math.floor(Math.random() * 6)
-          ] as MemberStatus,
-          workLocation: Math.random() > 0.5 ? user.department : '本社',
-          lastActivity: `${Math.floor(Math.random() * 60)}分前`,
-          workingTime: `${Math.floor(Math.random() * 8 + 1)}h ${Math.floor(Math.random() * 60)}m`,
-          checkedInAt: Math.random() > 0.3 ? `${Math.floor(Math.random() * 3 + 8)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}` : undefined,
+        // APIレスポンスをMember型にマッピング
+        const apiMembers: Member[] = membersData.map((member: {
+          id: string;
+          email: string;
+          name: string;
+          department: string | null;
+          position: string | null;
+          role: string;
+          avatar: string | null;
+          currentStatus: string;
+          workLocation: string | null;
+          checkedInAt: string | null;
+          workingTime: string | null;
+          lastActivity: string | null;
+        }) => ({
+          id: member.id,
+          email: member.email,
+          name: member.name,
+          department: member.department || '',
+          position: member.position || '',
+          role: member.role,
+          avatar: member.avatar,
+          tenantId,
+          status: 'active' as const,
+          currentStatus: member.currentStatus as MemberStatus,
+          workLocation: member.workLocation || undefined,
+          checkedInAt: member.checkedInAt || undefined,
+          workingTime: member.workingTime || undefined,
+          lastActivity: member.lastActivity || undefined,
         }));
 
         setMembers(apiMembers);
@@ -120,6 +127,18 @@ export default function MembersPage() {
   useEffect(() => {
     fetchMembers();
   }, [fetchMembers]);
+
+  // Auto refresh
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      fetchMembers();
+      setLastUpdated(new Date());
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchMembers]);
 
   // Filter members
   const filteredMembers = members.filter(member => {
@@ -259,7 +278,14 @@ export default function MembersPage() {
             {autoRefresh ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
             自動更新
           </Button>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              fetchMembers();
+              setLastUpdated(new Date());
+            }}
+          >
             <RefreshCw className="mr-2 h-4 w-4" />
             更新
           </Button>

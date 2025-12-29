@@ -117,7 +117,7 @@ export default function AnnouncementsPage() {
     // 既読/未読フィルター
     if (statusFilter !== 'all') {
       filtered = filtered.filter((a) => {
-        const userStatus = getUserStatus(a.id, currentUserId);
+        const userStatus = getUserStatus(a.id);
         return userStatus === statusFilter;
       });
     }
@@ -134,14 +134,14 @@ export default function AnnouncementsPage() {
   const stats = useMemo(() => {
     const total = announcements.filter((a) => a.published).length;
     const unread = announcements.filter((a) => {
-      const status = getUserStatus(a.id, currentUserId);
+      const status = getUserStatus(a.id);
       return a.published && status === 'unread';
     }).length;
     const urgent = announcements.filter((a) => a.published && a.priority === 'urgent').length;
     const requiresAction = announcements.filter((a) => a.published && a.requiresAction).length;
 
     return { total, unread, urgent, requiresAction };
-  }, [announcements, getUserStatus, currentUserId]);
+  }, [announcements, getUserStatus]);
 
   // 詳細表示
   const handleViewDetail = (announcement: Announcement) => {
@@ -149,7 +149,7 @@ export default function AnnouncementsPage() {
     setDetailDialogOpen(true);
 
     // 既読にする
-    const userStatus = getUserStatus(announcement.id, currentUserId);
+    const userStatus = getUserStatus(announcement.id);
     if (userStatus === 'unread') {
       markAsRead(announcement.id, currentUserId);
     }
@@ -321,7 +321,7 @@ export default function AnnouncementsPage() {
           </Card>
         ) : (
           filteredAnnouncements.map((announcement) => {
-            const userStatus = getUserStatus(announcement.id, currentUserId);
+            const userStatus = getUserStatus(announcement.id);
             const isUnread = userStatus === 'unread';
             const isOverdue = announcement.actionDeadline && new Date(announcement.actionDeadline) < new Date();
 
