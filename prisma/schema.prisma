@@ -1552,3 +1552,178 @@ model year_end_adjustment_settings {
 
   @@index([tenantId])
 }
+
+// ============================================
+// Phase 4: 勤怠マスタ
+// ============================================
+
+// 勤務パターン（日勤、夜勤、フレックス等）
+model work_patterns {
+  id                   String   @id
+  tenantId             String
+  name                 String
+  code                 String
+  description          String?
+  workStartTime        String   // 始業時間 "09:00"
+  workEndTime          String   // 終業時間 "18:00"
+  breakStartTime       String?  // 休憩開始 "12:00"
+  breakEndTime         String?  // 休憩終了 "13:00"
+  breakDurationMinutes Int      @default(60)
+  workingMinutes       Int      @default(480) // 所定労働時間（分）
+  isFlexTime           Boolean  @default(false)
+  coreTimeStart        String?  // フレックスのコアタイム開始
+  coreTimeEnd          String?  // フレックスのコアタイム終了
+  isNightShift         Boolean  @default(false) // 夜勤フラグ
+  isDefault            Boolean  @default(false)
+  isActive             Boolean  @default(true)
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+// 残業ルール
+model overtime_rules {
+  id                         String   @id
+  tenantId                   String   @unique
+  calculationMethod          String   @default("daily") // daily, weekly, monthly
+  dailyOvertimeThreshold     Int      @default(480) // 日次残業開始時間（分）
+  weeklyOvertimeThreshold    Int      @default(2400) // 週次残業開始時間（分）
+  monthlyOvertimeThreshold   Int      @default(10080) // 月次残業開始時間（分）
+  lateNightStartHour         Int      @default(22) // 深夜開始時刻
+  lateNightEndHour           Int      @default(5) // 深夜終了時刻
+  normalOvertimeRate         Float    @default(1.25) // 通常残業割増率
+  lateNightOvertimeRate      Float    @default(1.5) // 深夜残業割増率
+  holidayOvertimeRate        Float    @default(1.35) // 休日出勤割増率
+  holidayLateNightRate       Float    @default(1.6) // 休日深夜割増率
+  enableMinutesRounding      Boolean  @default(true)
+  roundingUnit               Int      @default(15) // 丸め単位（分）
+  roundingMethod             String   @default("floor") // floor, ceil, round
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime
+
+  @@index([tenantId])
+}
+
+// 36協定設定
+model article36_agreements {
+  id                          String    @id
+  tenantId                    String
+  fiscalYear                  Int
+  effectiveStartDate          DateTime  @db.Date
+  effectiveEndDate            DateTime  @db.Date
+  monthlyOvertimeLimit        Int       @default(45) // 月間残業上限（時間）
+  yearlyOvertimeLimit         Int       @default(360) // 年間残業上限（時間）
+  specialClauseEnabled        Boolean   @default(false) // 特別条項
+  specialMonthlyLimit         Int?      // 特別条項時の月間上限
+  specialYearlyLimit          Int?      // 特別条項時の年間上限
+  specialMonthsPerYear        Int?      // 特別条項の適用回数（年間）
+  holidayWorkLimit            Int?      // 休日出勤上限（日/月）
+  lateNightWorkRestriction    Boolean   @default(false)
+  healthCheckupRequired       Boolean   @default(true) // 80時間超えで健康診断
+  doctorInterviewRequired     Boolean   @default(true) // 100時間超えで医師面談
+  workerRepresentativeName    String?   // 労働者代表氏名
+  workerRepresentativeDate    DateTime? @db.Date
+  employerRepresentativeName  String?   // 使用者代表氏名
+  employerRepresentativeDate  DateTime? @db.Date
+  submittedToLabor            Boolean   @default(false)
+  laborSubmissionDate         DateTime? @db.Date
+  isActive                    Boolean   @default(true)
+  notes                       String?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime
+
+  @@unique([tenantId, fiscalYear])
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+}
+
+// 休暇種別マスタ
+model leave_types {
+  id                   String   @id
+  tenantId             String
+  name                 String
+  code                 String
+  description          String?
+  category             String   // paid, special, sick, compensatory, other
+  isPaid               Boolean  @default(true)
+  defaultDays          Int      @default(0) // 年間付与日数
+  maxCarryoverDays     Int      @default(0) // 繰越上限
+  carryoverMonths      Int      @default(0) // 繰越有効月数
+  minRequestDays       Float    @default(0.5) // 最小申請単位
+  requiresApproval     Boolean  @default(true)
+  requiresDocument     Boolean  @default(false) // 証明書類必須
+  documentTypes        String[] // 必要書類種別
+  allowHalfDay         Boolean  @default(true) // 半日休暇
+  allowHourly          Boolean  @default(false) // 時間単位休暇
+  isLegalLeave         Boolean  @default(false) // 法定休暇
+  isActive             Boolean  @default(true)
+  sortOrder            Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, category])
+}
+
+// 休日カレンダー（会社休日、祝日）
+model company_holidays {
+  id           String   @id
+  tenantId     String
+  date         DateTime @db.Date
+  name         String
+  type         String   // national_holiday, company_holiday, substitute, other
+  isHalfDay    Boolean  @default(false)
+  description  String?
+  fiscalYear   Int
+  isRecurring  Boolean  @default(false) // 毎年繰り返し
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+
+  @@unique([tenantId, date])
+  @@index([tenantId])
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, date])
+  @@index([tenantId, type])
+}
+
+// 有給休暇付与ルール
+model paid_leave_rules {
+  id                    String   @id
+  tenantId              String   @unique
+  grantMonth            Int      @default(4) // 付与月（1-12）
+  grantDay              Int      @default(1) // 付与日
+  grantTiming           String   @default("hire_anniversary") // hire_anniversary, fixed_date, hire_month_end
+  initialGrantDays      Int      @default(10) // 初年度付与日数
+  maxGrantDays          Int      @default(20) // 最大付与日数
+  carryoverEnabled      Boolean  @default(true)
+  maxCarryoverDays      Int      @default(20) // 繰越上限
+  carryoverExpiryMonths Int      @default(24) // 繰越有効期間（月）
+  proportionalGrant     Boolean  @default(true) // 比例付与
+  hourlyLeaveEnabled    Boolean  @default(false) // 時間単位有給
+  hourlyLeaveMaxDays    Int      @default(5) // 時間単位有給の年間上限日数
+  plannedLeaveEnabled   Boolean  @default(false) // 計画年休
+  plannedLeaveDays      Int      @default(5) // 計画年休日数
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
+
+  @@index([tenantId])
+}
+
+// 有給付与実績（勤続年数による付与テーブル）
+model paid_leave_grant_table {
+  id             String   @id
+  tenantId       String
+  yearsOfService Float    // 勤続年数（0.5 = 6ヶ月）
+  grantDays      Int      // 付与日数
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  @@unique([tenantId, yearsOfService])
+  @@index([tenantId])
+}
