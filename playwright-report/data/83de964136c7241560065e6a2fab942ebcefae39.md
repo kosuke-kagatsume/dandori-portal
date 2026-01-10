@@ -1,0 +1,159 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "メインコンテンツへスキップ" [ref=e3] [cursor=pointer]:
+      - /url: "#main-content"
+    - complementary [ref=e4]:
+      - link "Dandori Portal Dandori Portal" [ref=e6] [cursor=pointer]:
+        - /url: /ja/dashboard
+        - generic [ref=e7]:
+          - img "Dandori Portal" [ref=e8]
+          - generic [ref=e9]: Dandori Portal
+      - navigation [ref=e10]:
+        - link "ダッシュボード" [ref=e11] [cursor=pointer]:
+          - /url: /ja/dashboard
+          - img [ref=e12]
+          - generic [ref=e17]: ダッシュボード
+        - link "アナウンス" [ref=e18] [cursor=pointer]:
+          - /url: /ja/announcements
+          - img [ref=e19]
+          - generic [ref=e22]: アナウンス
+        - link "勤怠管理" [ref=e23] [cursor=pointer]:
+          - /url: /ja/attendance
+          - img [ref=e24]
+          - generic [ref=e27]: 勤怠管理
+        - link "有給管理" [ref=e28] [cursor=pointer]:
+          - /url: /ja/leave
+          - img [ref=e29]
+          - generic [ref=e31]: 有給管理
+        - link "ワークフロー" [ref=e32] [cursor=pointer]:
+          - /url: /ja/workflow
+          - img [ref=e33]
+          - generic [ref=e37]: ワークフロー
+      - button "メニューを折りたたむ" [expanded] [ref=e39] [cursor=pointer]:
+        - generic [ref=e40]: メニューを折りたたむ
+        - img
+    - generic [ref=e41]:
+      - banner [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - button "ダ ダンドリワーク Asia/Tokyo" [ref=e46] [cursor=pointer]:
+              - generic [ref=e48]: ダ
+              - generic [ref=e49]:
+                - generic [ref=e50]: ダンドリワーク
+                - generic [ref=e51]: Asia/Tokyo
+              - img
+            - generic [ref=e52]:
+              - img [ref=e53]
+              - textbox "検索..." [ref=e56]
+              - generic:
+                - img
+                - text: K
+          - generic [ref=e57]:
+            - generic [ref=e58]: "最終更新: 10:15"
+            - generic [ref=e60]:
+              - generic [ref=e61]: DEMO
+              - button "一般社員 (田中太郎)" [ref=e62] [cursor=pointer]:
+                - generic [ref=e63]: 一般社員
+                - generic [ref=e64]: (田中太郎)
+                - img
+            - button [ref=e65] [cursor=pointer]:
+              - img
+            - button "EN" [ref=e66] [cursor=pointer]:
+              - img
+              - generic [ref=e67]: EN
+            - button "田中太郎" [ref=e68] [cursor=pointer]:
+              - img "田中太郎" [ref=e70]
+      - main [ref=e71]:
+        - generic [ref=e72]:
+          - generic [ref=e74]:
+            - link "D Dandori Portal" [ref=e75] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e77]: D
+              - generic [ref=e78]: Dandori Portal
+            - generic [ref=e80]: 入社手続きポータル
+          - main [ref=e81]:
+            - generic [ref=e83]:
+              - generic [ref=e84]:
+                - heading "入社手続きダッシュボード" [level=1] [ref=e85]
+                - paragraph [ref=e86]: ようこそ、新入太郎さん
+              - generic [ref=e88]:
+                - generic [ref=e89]:
+                  - heading "入社手続き進捗" [level=2] [ref=e90]
+                  - generic [ref=e91]: 39%
+                - generic [ref=e94]:
+                  - generic [ref=e95]: 0 / 4 フォーム完了
+                  - generic [ref=e96]: 期限超過 44日
+              - generic [ref=e99]:
+                - img [ref=e100]
+                - generic [ref=e102]:
+                  - heading "次のアクション" [level=3] [ref=e103]
+                  - paragraph [ref=e104]: 入社案内を入力してください
+                  - paragraph [ref=e105]: "提出期限: 2025年11月1日"
+              - generic [ref=e106]:
+                - heading "提出フォーム一覧" [level=2] [ref=e107]
+                - generic [ref=e108]:
+                  - generic [ref=e109]:
+                    - generic [ref=e110]:
+                      - generic [ref=e111]:
+                        - img [ref=e113]
+                        - generic [ref=e115]:
+                          - heading "入社案内" [level=3] [ref=e116]
+                          - text: 未提出
+                      - generic [ref=e117]: 41%
+                    - link "続きを入力" [ref=e120] [cursor=pointer]:
+                      - /url: /ja/onboarding/demo-onboarding-001/basic-info
+                  - generic [ref=e121]:
+                    - generic [ref=e122]:
+                      - generic [ref=e123]:
+                        - img [ref=e125]
+                        - generic [ref=e127]:
+                          - heading "家族情報" [level=3] [ref=e128]
+                          - text: 未提出
+                      - generic [ref=e129]: 50%
+                    - link "続きを入力" [ref=e132] [cursor=pointer]:
+                      - /url: /ja/onboarding/demo-onboarding-001/family-info
+                  - generic [ref=e133]:
+                    - generic [ref=e134]:
+                      - generic [ref=e135]:
+                        - img [ref=e137]
+                        - generic [ref=e139]:
+                          - heading "給与振込口座" [level=3] [ref=e140]
+                          - text: 未提出
+                      - generic [ref=e141]: 45%
+                    - link "続きを入力" [ref=e144] [cursor=pointer]:
+                      - /url: /ja/onboarding/demo-onboarding-001/bank-account
+                  - generic [ref=e145]:
+                    - generic [ref=e146]:
+                      - generic [ref=e147]:
+                        - img [ref=e149]
+                        - generic [ref=e151]:
+                          - heading "通勤経路" [level=3] [ref=e152]
+                          - text: 未提出
+                      - generic [ref=e153]: 19%
+                    - link "続きを入力" [ref=e156] [cursor=pointer]:
+                      - /url: /ja/onboarding/demo-onboarding-001/commute-route
+              - generic [ref=e157]:
+                - heading "必要書類について" [level=3] [ref=e158]
+                - generic [ref=e159]:
+                  - paragraph [ref=e160]: 入社手続きには以下の書類が必要になる場合があります：
+                  - list [ref=e161]:
+                    - listitem [ref=e162]: 年金手帳（基礎年金番号が分かるもの）
+                    - listitem [ref=e163]: 雇用保険被保険者証（お持ちの方のみ）
+                    - listitem [ref=e164]: 給与所得者の扶養控除等（異動）申告書（前職がある方）
+                    - listitem [ref=e165]: マイナンバーカードまたは通知カード
+                    - listitem [ref=e166]: 通勤経路の地図・スクリーンショット
+                  - paragraph [ref=e167]: ※書類が手元にない場合は、後で提出することも可能です
+          - generic [ref=e170]:
+            - paragraph [ref=e171]: © 2025 Dandori Portal. All rights reserved.
+            - generic [ref=e172]:
+              - link "ヘルプ" [ref=e173] [cursor=pointer]:
+                - /url: "#"
+              - link "お問い合わせ" [ref=e174] [cursor=pointer]:
+                - /url: "#"
+    - region "Notifications alt+T"
+  - region "Notifications alt+T"
+  - alert [ref=e175]
+```

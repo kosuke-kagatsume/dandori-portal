@@ -1,4 +1,4 @@
-# DandoriPortal 実装状況（2025年12月8日）
+# DandoriPortal 実装状況（2025年12月29日）
 
 ## 本番環境
 - **URL**: https://dandori-portal.com
@@ -10,39 +10,26 @@
 - **ページ数**: 40+ページ
 - **Zustandストア**: 30+
 
-## 最新実装済み機能
-- DW管理ダッシュボード完全実装（本番API連携完了）
-- テナント管理・請求書管理・支払い管理・通知管理・アクティビティ管理
-- 法令管理・バッチ処理（通知クリーンアップ等）
-- 新規テナント作成機能
-- 資格有効期限通知システム完全実装
-- 従業員プロフィール/マイアカウント/システム設定の3層分離
+## DBスキーマ - 100%完了
+以下のモデルは全て実装済み：
+- payments, invoice_reminders, activity_feeds, dw_notifications
+- daily_attendance_metrics, health_checkup_summaries, stress_check_summaries
 
-## 主要機能一覧
-- 認証（JWT + RBAC 6ロール + マルチテナント）
-- ダッシュボード（統計カード + Rechartsグラフ）
-- ユーザー管理（CRUD + 退職処理 + CSV I/O）
-- 勤怠管理（打刻 + GPS + カレンダー）
-- 休暇管理（6種類 + 承認フロー）
-- 承認管理（条件分岐 + エスカレーション）
-- ワークフロー（6種類申請タイプ）
-- 給与管理（給与 + 賞与 + 年末調整）
-- 組織管理（4階層組織図）
-- 資産管理（PC + 車両 + 業者）
-- SaaS管理（ライセンス + コスト分析）
-- 健康管理（健診 + ストレスチェック）
-- 従業員プロフィール（資格 + スキル + 職歴 + 変更申請）
-- マイアカウント設定（外観 + 通知 + セキュリティ）
-- 設定（11タブ + 68設定項目）
-- 監査ログ（10カテゴリ + 4重要度）
-- アナウンス管理（Markdown対応）
-- 入社手続き（4フォーム + HR管理）
-- DW管理（テナント + 請求書 + 支払い + 通知 + 法令）
+## API実装 - 100%完了
+- `/api/dashboard/stats` - Prisma実DB接続
+- `/api/dw-admin/tenants/stats` - Prisma実DB接続
+- `/api/dw-admin/invoices`, `/api/dw-admin/payments` 等も実装済み
 
-## 技術スタック
-- Next.js 14.2.15 (App Router)
-- TypeScript (Strict Mode)
-- Zustand + Persist
-- shadcn/ui + Tailwind CSS
-- Prisma + AWS RDS PostgreSQL
-- AWS Amplify / Cognito
+## フロントエンド接続状況
+
+### ✅ 実DB接続済み
+- メインダッシュボード (`dashboard-store.ts` → `/api/dashboard/stats`)
+
+### ✅ 実DB接続済み（2025-12-29完了）
+- DW管理ダッシュボード
+  - `invoice-store.ts` → `/api/dw-admin/invoices`
+  - `admin-tenant-store.ts` → `/api/dw-admin/tenants`
+  - `notification-history-store.ts` → `/api/dw-admin/notifications`
+
+## 残作業
+**なし** - 全ダッシュボードが実DB接続完了

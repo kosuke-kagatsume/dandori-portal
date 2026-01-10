@@ -1,0 +1,361 @@
+# Page snapshot
+
+```yaml
+- generic:
+  - generic:
+    - link:
+      - /url: "#main-content"
+      - text: メインコンテンツへスキップ
+    - complementary:
+      - generic:
+        - link:
+          - /url: /ja/dashboard
+          - generic:
+            - img
+            - generic: Dandori Portal
+      - navigation:
+        - link:
+          - /url: /ja/dashboard
+          - img
+          - generic: ダッシュボード
+        - link:
+          - /url: /ja/announcements
+          - img
+          - generic: アナウンス
+        - link:
+          - /url: /ja/attendance
+          - img
+          - generic: 勤怠管理
+        - link:
+          - /url: /ja/leave
+          - img
+          - generic: 有給管理
+        - link:
+          - /url: /ja/workflow
+          - img
+          - generic: ワークフロー
+      - generic:
+        - button [expanded]:
+          - generic: メニューを折りたたむ
+          - img
+    - generic:
+      - banner:
+        - generic:
+          - generic:
+            - generic:
+              - button:
+                - generic:
+                  - generic: ダ
+                - generic:
+                  - generic: ダンドリワーク
+                  - generic: Asia/Tokyo
+                - img
+            - generic:
+              - img
+              - textbox:
+                - /placeholder: 検索...
+              - generic:
+                - img
+                - text: K
+          - generic:
+            - generic: "最終更新: 10:15"
+            - generic:
+              - generic:
+                - generic: DEMO
+                - button:
+                  - generic: 一般社員
+                  - generic: (田中太郎)
+                  - img
+            - button:
+              - img
+            - button:
+              - img
+              - generic: EN
+            - button [expanded]:
+              - generic:
+                - img
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: 私の勤怠
+                - generic:
+                  - img
+              - generic:
+                - generic: 出勤中
+                - generic:
+                  - img
+                  - paragraph: 08:45 出勤
+            - generic:
+              - generic:
+                - generic: 月間稼働率
+                - generic:
+                  - img
+              - generic:
+                - generic: 87.5%
+                - generic:
+                  - img
+                  - paragraph: +2.1% 先月比
+          - generic:
+            - generic:
+              - generic:
+                - img
+                - text: 権限制限のお知らせ
+            - generic:
+              - paragraph: 一般社員として、自分の情報のみ閲覧可能です。チームや全社の情報を見るには、マネージャー以上の権限が必要です。
+              - generic:
+                - paragraph: 閲覧可能な情報：
+                - list:
+                  - listitem: ✅ 自分の勤怠記録
+                  - listitem: ✅ 自分の有給残日数
+                  - listitem: ❌ 他の社員の情報
+                  - listitem: ❌ 承認機能
+          - heading [level=2]: 個人統計
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - text: 個人勤怠トレンド
+                - generic: 過去7日間の出退勤時刻と労働時間
+              - generic:
+                - generic:
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: 12/9
+                          - generic:
+                            - generic: 12/10
+                          - generic:
+                            - generic: 12/11
+                          - generic:
+                            - generic: 12/12
+                          - generic:
+                            - generic: 12/13
+                          - generic:
+                            - generic: 12/14
+                          - generic:
+                            - generic: 12/15
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: "0"
+                          - generic:
+                            - generic: "5"
+                          - generic:
+                            - generic: "10"
+                          - generic:
+                            - generic: "15"
+                          - generic:
+                            - generic: "20"
+                    - generic:
+                      - list:
+                        - listitem:
+                          - img
+                          - text: 出勤時刻
+                        - listitem:
+                          - img
+                          - text: 退勤時刻
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - text: 休暇取得履歴
+                - generic: 過去6ヶ月の有給休暇の使用状況
+              - generic:
+                - generic:
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: 8月
+                          - generic:
+                            - generic: 9月
+                          - generic:
+                            - generic: 10月
+                          - generic:
+                            - generic: 11月
+                          - generic:
+                            - generic: 12月
+                          - generic:
+                            - generic: 1月
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: "0"
+                          - generic:
+                            - generic: "5"
+                          - generic:
+                            - generic: "10"
+                          - generic:
+                            - generic: "15"
+                          - generic:
+                            - generic: "20"
+                    - generic:
+                      - list:
+                        - listitem:
+                          - img
+                          - text: 使用日数
+                        - listitem:
+                          - img
+                          - text: 残日数
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - text: 月次労働時間
+                - generic: 標準労働時間と実績の比較
+              - generic:
+                - generic:
+                  - generic:
+                    - img:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: 8月
+                          - generic:
+                            - generic: 9月
+                          - generic:
+                            - generic: 10月
+                          - generic:
+                            - generic: 11月
+                          - generic:
+                            - generic: 12月
+                          - generic:
+                            - generic: 1月
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic: "0"
+                          - generic:
+                            - generic: "40"
+                          - generic:
+                            - generic: "80"
+                          - generic:
+                            - generic: "120"
+                          - generic:
+                            - generic: "160"
+                    - generic:
+                      - list:
+                        - listitem:
+                          - img
+                          - text: 標準時間
+                        - listitem:
+                          - img
+                          - text: 残業時間
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - text: 有給残日数
+                - generic: 現在の有給休暇の状況
+              - generic:
+                - generic:
+                  - generic:
+                    - paragraph: "12"
+                    - paragraph: 残日数
+                  - generic:
+                    - paragraph: "8"
+                    - paragraph: 使用済み
+                - generic:
+                  - generic:
+                    - paragraph: "2"
+                    - paragraph: 申請中
+                  - generic:
+                    - paragraph: "3"
+                    - paragraph: 失効予定
+                - progressbar
+                - paragraph: 年間20日中 8日使用済み
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - text: 最近のアクティビティ
+                - generic: 自分の活動
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - paragraph: 田中太郎
+                      - paragraph: 有給申請を提出
+                    - generic: 5分前
+                - button: すべての活動を表示
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - text: システム接続状況
+                - generic: システム接続状態
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: データベース
+                    - generic:
+                      - img
+                      - text: 接続中
+                  - generic:
+                    - generic: 外部API
+                    - generic:
+                      - img
+                      - text: 接続中
+                  - generic:
+                    - generic: メール配信
+                    - generic:
+                      - img
+                      - text: メンテナンス中
+                - generic:
+                  - paragraph: "最終更新: 2024年1月15日 14:30"
+          - generic:
+            - generic:
+              - generic: クイックアクション
+              - generic: 一般社員として実行可能な操作
+            - generic:
+              - generic:
+                - link:
+                  - /url: /ja/attendance
+                  - button:
+                    - img
+                    - generic: 出勤する
+                - link:
+                  - /url: /ja/leave
+                  - button:
+                    - img
+                    - generic: 有給申請
+    - region "Notifications alt+T"
+  - region "Notifications alt+T":
+    - list:
+      - listitem:
+        - generic:
+          - img
+        - generic:
+          - generic: ログインしました
+      - listitem:
+        - generic:
+          - img
+        - generic:
+          - generic: デモアカウントの情報を入力しました。ログインボタンを押してください。
+  - alert
+  - generic: "40"
+  - menu "田中太郎" [active] [ref=e1]:
+    - generic [ref=e3]:
+      - paragraph [ref=e4]: 田中太郎
+      - paragraph [ref=e5]: tanaka@dandori.local
+      - paragraph [ref=e6]: 営業部 - スタッフ
+    - separator [ref=e7]
+    - menuitem "マイアカウント" [ref=e8]:
+      - img
+      - generic [ref=e9]: マイアカウント
+    - menuitem "従業員情報" [ref=e10]:
+      - img
+      - generic [ref=e11]: 従業員情報
+    - separator [ref=e12]
+    - menuitem "ログアウト" [ref=e13]:
+      - img
+      - generic [ref=e14]: ログアウト
+```
