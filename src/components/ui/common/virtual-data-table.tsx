@@ -157,8 +157,55 @@ const VirtualDataTableComponent = function VirtualDataTable<TData>({
             />
           </div>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {filteredData.length} / {data.length} 件
+        {/* 件数表示とページネーションを横並びに配置 */}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {filteredData.length} / {data.length} 件
+          </div>
+          {/* ページネーション（仮想スクロール無効時のみ） */}
+          {!enableVirtualization && table.getPageCount() > 1 && (
+            <div className="flex items-center space-x-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm px-2">
+                {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -248,56 +295,6 @@ const VirtualDataTableComponent = function VirtualDataTable<TData>({
         </div>
       </div>
 
-      {/* ページネーション（仮想スクロール無効時のみ） */}
-      {!enableVirtualization && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            {table.getState().pagination.pageIndex * pageSize + 1} -{' '}
-            {Math.min(
-              (table.getState().pagination.pageIndex + 1) * pageSize,
-              filteredData.length
-            )}{' '}
-            / {filteredData.length} 件
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm">
-              {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
-            </span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

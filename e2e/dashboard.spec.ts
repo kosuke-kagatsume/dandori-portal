@@ -45,14 +45,14 @@ test.describe('Dashboard Display', () => {
     // Wait for page to load
     await page.waitForTimeout(1500);
 
-    // Look for stat cards - they usually contain numbers and labels
-    const statCards = page.locator('[class*="card"]').filter({
-      hasText: /総|合計|残|pending|approved|total/i
+    // Look for stat cards - they are wrapped in links with card classes
+    const statCards = page.locator('[class*="Card"], [class*="card"]').filter({
+      hasText: /総従業員|出勤|承認|申請|従業員数|attendance|approval|employee/i
     });
 
     const cardCount = await statCards.count();
 
-    // Dashboard should have at least some stat cards
+    // Dashboard should have at least some stat cards (KPI cards wrapped in Links)
     expect(cardCount).toBeGreaterThan(0);
 
     // Verify numeric values are displayed (numbers in cards)
@@ -150,14 +150,14 @@ test.describe('Dashboard Display', () => {
       await page.waitForTimeout(500);
 
       // Verify dropdown items are visible
-      const profileLink = page.locator('text=/プロフィール|Profile/i').first();
-      const settingsLink = page.locator('text=/設定|Settings/i').first();
+      const accountLink = page.locator('text=/マイアカウント|アカウント|Profile|Account/i').first();
+      const profileLink = page.locator('text=/従業員情報|プロフィール|Employee/i').first();
 
       // At least one of these should be visible
+      const accountVisible = await accountLink.isVisible({ timeout: 2000 });
       const profileVisible = await profileLink.isVisible({ timeout: 2000 });
-      const settingsVisible = await settingsLink.isVisible({ timeout: 2000 });
 
-      expect(profileVisible || settingsVisible).toBeTruthy();
+      expect(accountVisible || profileVisible).toBeTruthy();
     }
   });
 

@@ -173,9 +173,9 @@ test.describe('Leave Request and Approval Flow', () => {
     // Login as demo user
     await loginAsDemo(page);
 
-    // Navigate to approval page
-    await page.goto('/ja/approval');
-    await expect(page.locator('h1')).toContainText('承認管理');
+    // Navigate to workflow page (approval is part of workflow)
+    await page.goto('/ja/workflow');
+    await expect(page.locator('h1')).toContainText('ワークフロー');
 
     // Wait for page to load
     await page.waitForTimeout(1000);

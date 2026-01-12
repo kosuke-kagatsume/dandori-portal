@@ -44,12 +44,12 @@ test.describe('Login Flow', () => {
     await page.waitForTimeout(1500);
 
     // Verify stat cards are displayed (using same selector as dashboard.spec.ts)
-    const statCards = page.locator('[class*="card"]').filter({
-      hasText: /総|合計|残|pending|approved|total/i
+    const statCards = page.locator('[class*="Card"], [class*="card"]').filter({
+      hasText: /総従業員|出勤|承認|申請|従業員数|attendance|approval|employee/i
     });
     const cardCount = await statCards.count();
 
-    // Should have at least some stat cards
+    // Should have at least some stat cards (KPI cards wrapped in Links)
     expect(cardCount).toBeGreaterThan(0);
   });
 

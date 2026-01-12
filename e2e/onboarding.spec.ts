@@ -173,7 +173,7 @@ test.describe('Onboarding Flow', () => {
     // Verify redirect to dashboard or success message
     const redirectUrl = page.url();
     const isOnDashboard = redirectUrl.includes('/onboarding') && !redirectUrl.includes('/basic-info');
-    const hasSuccessMessage = await page.locator('text=/成功|保存しました|submitted|提出済み/i').isVisible({ timeout: 3000 });
+    const hasSuccessMessage = await page.locator('text=/成功|保存しました|submitted/i').first().isVisible({ timeout: 3000 });
 
     expect(isOnDashboard || hasSuccessMessage).toBeTruthy();
   });
@@ -212,7 +212,7 @@ test.describe('Onboarding Flow', () => {
     // Verify redirect or success
     const redirectUrl = page.url();
     const isOnDashboard = redirectUrl.includes('/onboarding') && !redirectUrl.includes('/family-info');
-    const hasSuccessMessage = await page.locator('text=/成功|保存しました|submitted|提出済み/i').isVisible({ timeout: 3000 });
+    const hasSuccessMessage = await page.locator('text=/成功|保存しました|submitted|提出済み/i').first().isVisible({ timeout: 3000 });
 
     expect(isOnDashboard || hasSuccessMessage).toBeTruthy();
   });
@@ -462,12 +462,12 @@ test.describe('Onboarding Flow', () => {
     await loginAsApplicant(page);
     await navigateToOnboarding(page);
 
-    // Check for deadline information
-    const deadlineInfo = page.locator('text=/期限|deadline|まで/i');
+    // Check for deadline information (use .first() to handle multiple matches)
+    const deadlineInfo = page.locator('text=/期限|deadline|まで/i').first();
     const hasDeadline = await deadlineInfo.isVisible({ timeout: 3000 });
 
-    // Check for next action card (using text selector)
-    const nextActionCard = page.locator('text=/次のアクション|次に/i');
+    // Check for next action card (using text selector, .first() to handle multiple matches)
+    const nextActionCard = page.locator('text=/次のアクション|次に/i').first();
     const hasNextAction = await nextActionCard.isVisible({ timeout: 3000 });
 
     // At least one should be visible (deadline or next action)

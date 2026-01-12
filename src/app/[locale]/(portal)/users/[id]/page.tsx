@@ -33,6 +33,9 @@ export default function UserDetailPage({ params }: { params: { id: string; local
   const currentUser = useUserStore(state => state.currentUser);
   const tenantId = currentUser?.tenantId || '';
 
+  // 経営者は閲覧のみ（編集不可）
+  const isExecutive = currentUser?.role === 'executive';
+
   // API経由でユーザーデータを取得
   useEffect(() => {
     const fetchUser = async () => {
@@ -188,6 +191,51 @@ export default function UserDetailPage({ params }: { params: { id: string; local
     retired: 'outline',
   } as const;
 
+  // ユーザー編集ハンドラー
+  const handleEditUser = async (data: {
+    name: string;
+    email: string;
+    phone?: string;
+    department: string;
+    position: string;
+    hireDate: Date;
+    status: 'active' | 'inactive' | 'suspended' | 'retired';
+    roles: string[];
+  }) => {
+    if (!user) return;
+
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          department: data.department,
+          position: data.position,
+          hireDate: data.hireDate.toISOString().split('T')[0],
+          status: data.status,
+          roles: data.roles,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update user');
+      }
+
+      // ストアを更新
+      setUsers(users.map((u) => (u.id === user.id ? result.data : u)));
+      toast.success('ユーザー情報を更新しました');
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('ユーザー情報の更新に失敗しました');
+      throw error;
+    }
+  };
+
   // CSV出力ハンドラー
   const handleExportCSV = () => {
     if (saasDetails.length === 0) {
@@ -216,10 +264,13 @@ export default function UserDetailPage({ params }: { params: { id: string; local
           <h1 className="text-3xl font-bold tracking-tight">ユーザー詳細</h1>
           <p className="text-muted-foreground">ユーザー情報とSaaS利用状況</p>
         </div>
-        <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-          <Edit className="mr-2 h-4 w-4" />
-          編集
-        </Button>
+        {/* 経営者は編集不可 */}
+        {!isExecutive && (
+          <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            編集
+          </Button>
+        )}
       </div>
 
       {/* プロフィールカード */}
@@ -787,6 +838,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         user={user}
+        onSubmit={handleEditUser}
       />
     </div>
   );

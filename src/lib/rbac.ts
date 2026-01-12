@@ -26,8 +26,8 @@ export type UserRole =
 export const MENU_PERMISSIONS = {
   dashboard: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'],
   announcements: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // アナウンス一覧（全社員）
-  users: ['hr', 'admin'],
-  members: ['manager', 'executive', 'hr', 'admin'], // システム管理者追加
+  users: ['executive', 'hr', 'admin'], // 経営者追加（閲覧のみ）
+  members: ['employee', 'manager', 'executive', 'hr', 'admin'], // 一般社員追加
   attendance: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // システム管理者追加
   leave: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // システム管理者追加
   workflow: ['employee', 'manager', 'executive', 'hr', 'admin', 'applicant'], // システム管理者追加

@@ -89,6 +89,9 @@ export default function UsersPage() {
   const currentUser = useUserStore(state => state.currentUser);
   const tenantId = currentUser?.tenantId || '';
 
+  // 経営者は閲覧のみ（編集・招待・退職処理不可）
+  const isExecutive = currentUser?.role === 'executive';
+
   // APIからユーザーを取得
   const fetchUsers = useCallback(async () => {
     if (!tenantId) {
@@ -436,7 +439,7 @@ export default function UsersPage() {
       header: '操作',
       cell: ({ row }) => {
         const user = row.original;
-        
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -455,27 +458,32 @@ export default function UsersPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 詳細表示
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setEditingUser(user);
-                  setEditDialogOpen(true);
-                }}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                編集
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  setRetiringUser(user);
-                  setRetireDialogOpen(true);
-                }}
-                className="text-orange-600"
-                disabled={user.status === 'retired'}
-              >
-                <UserX className="mr-2 h-4 w-4" />
-                退職処理
-              </DropdownMenuItem>
+              {/* 経営者は編集・退職処理不可 */}
+              {!isExecutive && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditingUser(user);
+                      setEditDialogOpen(true);
+                    }}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    編集
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setRetiringUser(user);
+                      setRetireDialogOpen(true);
+                    }}
+                    className="text-orange-600"
+                    disabled={user.status === 'retired'}
+                  >
+                    <UserX className="mr-2 h-4 w-4" />
+                    退職処理
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -520,33 +528,38 @@ export default function UsersPage() {
               <SelectItem value="suspended">停止のみ</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="w-full sm:w-auto">
-            <Download className="mr-2 h-4 w-4" />
-            エクスポート
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => importInputRef?.click()}
-            className="w-full sm:w-auto"
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            インポート
-          </Button>
-          <input
-            ref={(el) => setImportInputRef(el)}
-            type="file"
-            accept=".csv"
-            onChange={handleImportCSV}
-            style={{ display: 'none' }}
-          />
-          <Button
-            onClick={() => setInviteDialogOpen(true)}
-            className="w-full sm:w-auto"
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            ユーザー招待
-          </Button>
+          {/* 経営者はエクスポート・インポート・招待不可 */}
+          {!isExecutive && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleExportCSV} className="w-full sm:w-auto">
+                <Download className="mr-2 h-4 w-4" />
+                エクスポート
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => importInputRef?.click()}
+                className="w-full sm:w-auto"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                インポート
+              </Button>
+              <input
+                ref={(el) => setImportInputRef(el)}
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+                style={{ display: 'none' }}
+              />
+              <Button
+                onClick={() => setInviteDialogOpen(true)}
+                className="w-full sm:w-auto"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                ユーザー招待
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

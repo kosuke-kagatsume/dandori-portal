@@ -207,6 +207,14 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-6">
+      {/* ページタイトル */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">
+          {currentUser ? `${ROLE_LABELS[currentUserRole]}としてログイン中` : 'デモモードで実行中'}
+        </p>
+      </div>
+
       {/* クイックアクション - ページTOPに移動 */}
       <Card>
         <CardHeader>
@@ -280,103 +288,111 @@ export function DashboardContent() {
       }`}>
         {/* Card 1: 総従業員数（管理者系のみ） */}
         {canViewAll && (
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">
-                {t('totalEmployees')}
-              </CardTitle>
-              <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-                <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
-                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : kpiData.totalEmployees}
-              </div>
-              <div className="flex items-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3 text-green-600" />
-                <p className="text-xs text-orange-700 dark:text-orange-300">
-                  アクティブユーザー
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <Link href="/ja/users">
+            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 cursor-pointer">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-orange-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                  {t('totalEmployees')}
+                </CardTitle>
+                <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+                  <Users className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-orange-900 dark:text-orange-100">
+                  {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : kpiData.totalEmployees}
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  <TrendingUp className="h-3 w-3 text-green-600" />
+                  <p className="text-xs text-orange-700 dark:text-orange-300">
+                    アクティブユーザー
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         )}
 
         {/* Card: 本日の出勤状況 */}
-        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
-              {t('todayAttendance')}
-            </CardTitle>
-            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-              <Clock className="h-4 w-4 text-green-600 dark:text-green-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-900 dark:text-green-100">
-              {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : `${kpiData.attendanceRate}%`}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <Users className="h-3 w-3 text-green-600" />
-              <p className="text-xs text-green-700 dark:text-green-300">
-                {isLoadingStats ? '...' : `${kpiData.todayAttendance}名出勤中`}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 2: 承認依頼（自分が承認すべきもの）- 承認権限がある場合 */}
-        {canApprove && (
-          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+        <Link href="/ja/members">
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 cursor-pointer">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400/20 to-transparent rounded-full -mr-16 -mt-16" />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                {t('approvalRequests')}
+              <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
+                {t('todayAttendance')}
               </CardTitle>
               <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <Clock className="h-4 w-4 text-green-600 dark:text-green-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">
-                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.pendingApprovals : 3)}
+              <div className="text-3xl font-bold text-green-900 dark:text-green-100">
+                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : `${kpiData.attendanceRate}%`}
               </div>
               <div className="flex items-center gap-1 mt-1">
-                <Clock className="h-3 w-3 text-amber-600" />
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  自分が承認すべき申請
+                <Users className="h-3 w-3 text-green-600" />
+                <p className="text-xs text-green-700 dark:text-green-300">
+                  {isLoadingStats ? '...' : `${kpiData.todayAttendance}名出勤中`}
                 </p>
               </div>
             </CardContent>
           </Card>
+        </Link>
+
+        {/* Card 2: 承認依頼（自分が承認すべきもの）- 承認権限がある場合 */}
+        {canApprove && (
+          <Link href="/ja/workflow">
+            <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 cursor-pointer">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  {t('approvalRequests')}
+                </CardTitle>
+                <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+                  <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">
+                  {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.pendingApprovals : 3)}
+                </div>
+                <div className="flex items-center gap-1 mt-1">
+                  <Clock className="h-3 w-3 text-amber-600" />
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    自分が承認すべき申請
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         )}
 
         {/* Card 3: 申請中（自分の申請）- 全員表示 */}
-        <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
-              {t('myPendingRequests')}
-            </CardTitle>
-            <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
-              <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
-              {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : 2}
-            </div>
-            <div className="flex items-center gap-1 mt-1">
-              <Activity className="h-3 w-3 text-blue-600" />
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                承認されたら件数が減ります
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/ja/workflow">
+          <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 cursor-pointer">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-transparent rounded-full -mr-16 -mt-16" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                {t('myPendingRequests')}
+              </CardTitle>
+              <div className="p-2 bg-white/50 dark:bg-black/20 rounded-lg backdrop-blur">
+                <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
+                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : 2}
+              </div>
+              <div className="flex items-center gap-1 mt-1">
+                <Activity className="h-3 w-3 text-blue-600" />
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  承認されたら件数が減ります
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* 権限別グラフセクション - 要件に応じて表示を制御 */}

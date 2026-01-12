@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 // import { useTranslations } from 'next-intl';
 import { ColumnDef } from '@tanstack/react-table';
 import { useUserStore } from '@/lib/store/user-store';
-import { 
+import {
   Users,
   MapPin,
   Home,
@@ -19,6 +19,10 @@ import {
   Filter,
   Play,
   Pause,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ArrowUpDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { VirtualDataTable } from '@/components/ui/common/virtual-data-table';
 import { MemberCard } from '@/features/members/member-card';
@@ -63,6 +68,9 @@ export default function MembersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'department' | 'checkedInAt'>('name');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20; // カードビューのページサイズ
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -140,15 +148,37 @@ export default function MembersPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, fetchMembers]);
 
-  // Filter members
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (member.department || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || member.currentStatus === statusFilter;
-    const matchesLocation = locationFilter === 'all' || member.workLocation === locationFilter;
-    
-    return matchesSearch && matchesStatus && matchesLocation;
-  });
+  // フィルター変更時にページをリセット
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, locationFilter, sortBy]);
+
+  // Filter and sort members
+  const filteredMembers = members
+    .filter(member => {
+      const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (member.department || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || member.currentStatus === statusFilter;
+      const matchesLocation = locationFilter === 'all' || member.workLocation === locationFilter;
+
+      return matchesSearch && matchesStatus && matchesLocation;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name, 'ja');
+        case 'department':
+          return (a.department || '').localeCompare(b.department || '', 'ja');
+        case 'checkedInAt':
+          // 出勤時刻でソート（未出勤は最後に）
+          if (!a.checkedInAt && !b.checkedInAt) return 0;
+          if (!a.checkedInAt) return 1;
+          if (!b.checkedInAt) return -1;
+          return a.checkedInAt.localeCompare(b.checkedInAt);
+        default:
+          return 0;
+      }
+    });
 
   // Calculate stats
   const stats = {
@@ -292,9 +322,15 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* Stats Summary */}
+      {/* Stats Summary - クリックでフィルタ */}
       <div className="grid gap-4 md:grid-cols-6">
-        <Card>
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            statusFilter === 'all' && "ring-2 ring-primary"
+          )}
+          onClick={() => setStatusFilter('all')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">総メンバー</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -304,7 +340,13 @@ export default function MembersPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            statusFilter === 'present' && "ring-2 ring-green-500"
+          )}
+          onClick={() => setStatusFilter('present')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">出社</CardTitle>
             <MapPin className="h-4 w-4 text-green-600" />
@@ -314,7 +356,13 @@ export default function MembersPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            statusFilter === 'remote' && "ring-2 ring-blue-500"
+          )}
+          onClick={() => setStatusFilter('remote')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">在宅</CardTitle>
             <Home className="h-4 w-4 text-blue-600" />
@@ -324,7 +372,13 @@ export default function MembersPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            statusFilter === 'business_trip' && "ring-2 ring-purple-500"
+          )}
+          onClick={() => setStatusFilter('business_trip')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">出張</CardTitle>
             <Plane className="h-4 w-4 text-purple-600" />
@@ -334,7 +388,13 @@ export default function MembersPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            statusFilter === 'training' && "ring-2 ring-orange-500"
+          )}
+          onClick={() => setStatusFilter('training')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">研修</CardTitle>
             <GraduationCap className="h-4 w-4 text-orange-600" />
@@ -344,7 +404,13 @@ export default function MembersPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className={cn(
+            "cursor-pointer transition-all hover:shadow-md",
+            statusFilter === 'absent' && "ring-2 ring-red-500"
+          )}
+          onClick={() => setStatusFilter('absent')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">休暇・欠勤</CardTitle>
             <UserX className="h-4 w-4 text-red-600" />
@@ -394,6 +460,18 @@ export default function MembersPage() {
               <SelectItem value="開発部">開発部</SelectItem>
             </SelectContent>
           </Select>
+
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'name' | 'department' | 'checkedInAt')}>
+            <SelectTrigger className="w-36">
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="並び順" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">名前順</SelectItem>
+              <SelectItem value="department">部署順</SelectItem>
+              <SelectItem value="checkedInAt">出勤時刻順</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center gap-2">
@@ -415,11 +493,64 @@ export default function MembersPage() {
 
       {/* Content */}
       {viewMode === 'card' ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredMembers.map((member) => (
-            <MemberCard key={member.id} member={member} />
-          ))}
-        </div>
+        <>
+          {/* ページネーション情報（カードビュー上部） */}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              {filteredMembers.length} 件中 {Math.min((currentPage - 1) * pageSize + 1, filteredMembers.length)} - {Math.min(currentPage * pageSize, filteredMembers.length)} 件を表示
+            </div>
+            {filteredMembers.length > pageSize && (
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm px-2">
+                  {currentPage} / {Math.ceil(filteredMembers.length / pageSize)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredMembers.length / pageSize), p + 1))}
+                  disabled={currentPage >= Math.ceil(filteredMembers.length / pageSize)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(Math.ceil(filteredMembers.length / pageSize))}
+                  disabled={currentPage >= Math.ceil(filteredMembers.length / pageSize)}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredMembers
+              .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+              .map((member) => (
+                <MemberCard key={member.id} member={member} />
+              ))}
+          </div>
+        </>
       ) : (
         <Card>
           <CardContent className="p-6">

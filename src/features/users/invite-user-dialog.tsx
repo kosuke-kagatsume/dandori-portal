@@ -59,6 +59,7 @@ interface InviteUserDialogProps {
 const roleOptions: Array<{ value: UserRole; label: string }> = [
   { value: 'employee', label: roleDisplayNames.employee },
   { value: 'manager', label: roleDisplayNames.manager },
+  { value: 'executive', label: roleDisplayNames.executive },
   { value: 'hr', label: roleDisplayNames.hr },
   { value: 'admin', label: roleDisplayNames.admin },
 ];
