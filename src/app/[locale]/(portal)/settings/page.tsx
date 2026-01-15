@@ -25,6 +25,7 @@ import {
   CreditCard,
   CalendarDays,
   AlertTriangle,
+  FileUp,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -46,6 +47,7 @@ import {
 import { MasterDataPanel } from '@/components/settings/master-data-panel';
 import { LeaveTypeMasterPanel } from '@/features/leave/leave-type-master-panel';
 import { AlertMasterPanel } from '@/features/attendance/alert-master-panel';
+import { DataManagementPanel } from '@/features/data-management/data-management-panel';
 import { cn } from '@/lib/utils';
 
 type SettingCategory = {
@@ -123,6 +125,14 @@ const settingCategories: SettingCategory[] = [
     icon: Database,
     badge: '管理者',
     requiresRole: ['admin'],
+  },
+  {
+    id: 'data-import',
+    title: 'データ管理',
+    description: 'CSV取込・出力',
+    icon: FileUp,
+    badge: '人事',
+    requiresRole: ['hr', 'admin'],
   },
   {
     id: 'billing',
@@ -264,6 +274,8 @@ export default function SettingsPage() {
         return <WorkflowTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'master-data':
         return <MasterDataPanel />;
+      case 'data-import':
+        return <DataManagementPanel />;
       case 'billing':
         return <BillingTab />;
       case 'system':
