@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { ColumnDef } from '@tanstack/react-table';
 import { useLeaveManagementStore, LeaveType, LeaveRequest } from '@/lib/store/leave-management-store';
+import { useUserStore } from '@/lib/store/user-store';
 import {
   Calendar,
   Plus,
@@ -55,7 +56,7 @@ export default function LeavePage() {
       'expiringDays': '失効予定',
       'requestList': '申請一覧',
       'balanceManagement': '残日数管理',
-      'pendingApprovals': '承認待ち申請',
+      'pendingApprovals': '承認依頼申請',
     };
     return translations[key] || key;
   };
@@ -64,6 +65,7 @@ export default function LeavePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+  const [editingRequest, setEditingRequest] = useState<LeaveRequest | null>(null);
   const [activeTab, setActiveTab] = useState('requests');
 
   // Zustand ストアから状態と関数を取得
@@ -75,10 +77,20 @@ export default function LeavePage() {
     initializeLeaveBalance,
     deleteRequest,
     cancelLeaveRequest,
+    updateLeaveRequest,
   } = useLeaveManagementStore();
 
-  const currentUserId = '1'; // 現在のユーザー（田中太郎）
+  // 現在のログインユーザーを取得
+  const { currentUser, currentDemoUser, isDemoMode } = useUserStore();
+  const currentUserId = isDemoMode ? (currentDemoUser?.id || '1') : (currentUser?.id || '1');
+  const currentUserName = isDemoMode ? (currentDemoUser?.name || '田中太郎') : (currentUser?.name || '田中太郎');
   const currentYear = new Date().getFullYear();
+
+  // ユーザーの権限を確認
+  const currentUserRoles = isDemoMode
+    ? (currentDemoUser?.roles || ['employee'])
+    : (currentUser?.roles || ['employee']);
+  const isHR = currentUserRoles.includes('hr') || currentUserRoles.includes('admin');
 
   // 初期化：破損データのリセットとサンプルデータの作成
   useEffect(() => {
@@ -102,24 +114,24 @@ export default function LeavePage() {
       store.initializeLeaveBalance(currentUserId, currentYear, 20);
     }
 
-    // サンプルデータは requests が空の場合のみ追加
-    const currentRequests = store.requests;
-    if (currentRequests.length === 0) {
+    // 現在のユーザーのリクエストがない場合のみサンプルデータを追加
+    const userCurrentRequests = store.requests.filter(r => r.userId === currentUserId);
+    if (userCurrentRequests.length === 0) {
       // まだデータがない場合のみサンプルを追加
       const sampleRequests = [
         {
-          userId: '1',
-          userName: '田中太郎',
+          userId: currentUserId,
+          userName: currentUserName,
           type: 'paid' as LeaveType,
           startDate: '2025-01-20',
           endDate: '2025-01-22',
           days: 3,
           reason: '家族旅行のため',
-          status: 'pending' as const, // pendingのままにして、usedには含めない
+          status: 'pending' as const,
         },
         {
-          userId: '1',
-          userName: '田中太郎',
+          userId: currentUserId,
+          userName: currentUserName,
           type: 'sick' as LeaveType,
           startDate: '2025-01-10',
           endDate: '2025-01-10',
@@ -128,8 +140,8 @@ export default function LeavePage() {
           status: 'pending' as const,
         },
         {
-          userId: '1',
-          userName: '田中太郎',
+          userId: currentUserId,
+          userName: currentUserName,
           type: 'paid' as LeaveType,
           startDate: '2025-02-05',
           endDate: '2025-02-07',
@@ -138,8 +150,8 @@ export default function LeavePage() {
           status: 'pending' as const,
         },
         {
-          userId: '1',
-          userName: '田中太郎',
+          userId: currentUserId,
+          userName: currentUserName,
           type: 'paid' as LeaveType,
           startDate: '2024-12-28',
           endDate: '2025-01-03',
@@ -153,7 +165,7 @@ export default function LeavePage() {
     }
 
     setLoading(false);
-  }, []);
+  }, [currentUserId, currentUserName, currentYear]);
 
   // ユーザーリクエストと休暇残数のメモ化
   const userRequests = useMemo(() => getUserRequests(currentUserId), [getUserRequests, currentUserId]);
@@ -165,7 +177,7 @@ export default function LeavePage() {
 
       createLeaveRequest({
         userId: currentUserId,
-        userName: '田中太郎', // TODO: 実際のユーザー名を取得
+        userName: currentUserName,
         type: data.type || 'paid',
         startDate: data.startDate,
         endDate: data.endDate,
@@ -200,6 +212,33 @@ export default function LeavePage() {
     } catch (error) {
       console.error('Failed to delete request:', error);
       toast.error('削除に失敗しました');
+    }
+  };
+
+  const handleEditRequest = (request: LeaveRequest) => {
+    setEditingRequest(request);
+    setDialogOpen(true);
+  };
+
+  const handleUpdateRequest = async (data: any) => {
+    if (!editingRequest) return;
+
+    try {
+      updateLeaveRequest(editingRequest.id, {
+        type: data.type || editingRequest.type,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        days: data.days,
+        reason: data.reason,
+      });
+
+      toast.success('休暇申請を更新しました');
+      setDialogOpen(false);
+      setEditingRequest(null);
+    } catch (error) {
+      console.error('Failed to update request:', error);
+      toast.error('休暇申請の更新に失敗しました');
+      throw error;
     }
   };
 
@@ -371,9 +410,10 @@ export default function LeavePage() {
                 <Eye className="mr-2 h-4 w-4" />
                 詳細表示
               </DropdownMenuItem>
+              {/* 承認待ち: 本人が編集・取り消し可能 */}
               {request.status === 'pending' && (
                 <>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleEditRequest(request)}>
                     <Edit className="mr-2 h-4 w-4" />
                     編集
                   </DropdownMenuItem>
@@ -383,7 +423,20 @@ export default function LeavePage() {
                     onClick={() => handleCancelRequest(request.id)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    キャンセル
+                    取り消し
+                  </DropdownMenuItem>
+                </>
+              )}
+              {/* 承認済み: 人事のみ取り消し可能 */}
+              {request.status === 'approved' && isHR && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    onClick={() => handleCancelRequest(request.id)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    取り消し（人事）
                   </DropdownMenuItem>
                 </>
               )}
@@ -434,7 +487,7 @@ export default function LeavePage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-muted-foreground">
-            有給休暇の申請と管理を行います
+            休暇等の申請と管理を行います
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -448,7 +501,7 @@ export default function LeavePage() {
           </Button>
           <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
-            有給申請
+            休暇申請
           </Button>
         </div>
       </div>
@@ -670,8 +723,20 @@ export default function LeavePage() {
       {/* Leave Request Dialog */}
       <LeaveRequestDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={handleCreateRequest}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEditingRequest(null);
+          }
+        }}
+        onSubmit={editingRequest ? handleUpdateRequest : handleCreateRequest}
+        initialData={editingRequest ? {
+          type: editingRequest.type,
+          startDate: editingRequest.startDate,
+          endDate: editingRequest.endDate,
+          reason: editingRequest.reason,
+        } : undefined}
+        isEditMode={!!editingRequest}
       />
 
       {/* Leave Detail Dialog */}

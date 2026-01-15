@@ -46,6 +46,8 @@ export interface TodayAttendanceStatus {
   approvalReason?: string;
   // 日付変更検出用
   recordDate?: string;
+  // ユーザー識別用（同一PC複数ユーザー対応）
+  userId?: string;
 }
 
 interface AttendanceStore {
@@ -72,6 +74,9 @@ interface AttendanceStore {
 
   // 日付変更をチェックしてリセット
   checkAndResetForNewDay: () => void;
+
+  // ユーザー変更をチェックしてリセット（同一PC複数ユーザー対応）
+  checkAndResetForUserChange: (userId: string) => void;
 
   // 手動リセット（デバッグ/テスト用）
   resetTodayStatus: () => void;
@@ -115,6 +120,22 @@ export const useAttendanceStore = create<AttendanceStore>()(
         if (!todayStatus.recordDate || todayStatus.recordDate !== today) {
           console.log('[AttendanceStore] 日付変更を検出。本日の勤怠状況をリセットします。');
           set({ todayStatus: getInitialTodayStatus() });
+        }
+      },
+
+      // ユーザー変更をチェックしてリセット（同一PC複数ユーザー対応）
+      checkAndResetForUserChange: (userId: string) => {
+        const { todayStatus } = get();
+
+        // userIdが設定されていない、またはユーザーが変わっている場合はリセット
+        if (todayStatus.userId && todayStatus.userId !== userId) {
+          console.log('[AttendanceStore] ユーザー変更を検出。勤怠状況をリセットします。');
+          set({ todayStatus: { ...getInitialTodayStatus(), userId } });
+        } else if (!todayStatus.userId) {
+          // userIdが未設定の場合は設定のみ
+          set((state) => ({
+            todayStatus: { ...state.todayStatus, userId }
+          }));
         }
       },
 

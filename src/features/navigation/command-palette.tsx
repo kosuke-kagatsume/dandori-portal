@@ -70,7 +70,7 @@ const navigationCommands = [
   },
   {
     id: 'leave',
-    title: '有給管理',
+    title: '休暇管理',
     href: '/ja/leave',
     icon: Calendar,
     keywords: ['leave', '有給', 'vacation', '休暇'],

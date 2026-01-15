@@ -35,7 +35,7 @@
     "users": "ユーザー管理",
     "members": "メンバー状況",
     "attendance": "勤怠管理",
-    "leave": "有給管理",
+    "leave": "休暇管理",
     "workflows": "ワークフロー",
     "payroll": "給与管理",
     "evaluation": "人事評価",
@@ -120,7 +120,7 @@
     "notes": "備考"
   },
   "leave": {
-    "title": "有給管理",
+    "title": "休暇管理",
     "remainingDays": "残日数",
     "usedDays": "使用済み",
     "pendingRequests": "申請中",

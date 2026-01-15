@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, Suspense, lazy, memo, useMemo } from 'react';
-// import { useTranslations } from 'next-intl';
-import { ColumnDef } from '@tanstack/react-table';
 import { generateRealisticAttendanceData } from '@/lib/realistic-mock-data';
 import { useAttendanceStore } from '@/lib/attendance-store';
 import {
@@ -13,42 +11,49 @@ import {
   Timer,
   Home,
   AlertTriangle,
-  CheckCircle,
-  XCircle,
-  MapPin,
-  Edit,
-  MoreHorizontal,
   TrendingUp,
   Download,
+  FileCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { OptimizedDataTable } from '@/components/ui/common/optimized-data-table';
 import { StatCardsLoadingSkeleton, TableLoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { toast } from 'sonner';
 import { exportAttendanceToCSV } from '@/lib/csv/csv-export';
 import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
+import { useUserStore } from '@/lib/store/user-store';
 
 // 重いコンポーネントをlazyロード
-const LazyAdvancedCheckIn = lazy(() => 
-  import('@/features/attendance/advanced-check-in').then(module => ({ 
-    default: module.AdvancedCheckIn 
+const LazySimplePunchCard = lazy(() =>
+  import('@/features/attendance/simple-punch-card').then(module => ({
+    default: module.SimplePunchCard
   }))
 );
 
-const LazyAttendanceCalendar = lazy(() => 
-  import('@/features/attendance/attendance-calendar').then(module => ({ 
-    default: module.AttendanceCalendar 
+const LazyAttendanceCalendar = lazy(() =>
+  import('@/features/attendance/attendance-calendar').then(module => ({
+    default: module.AttendanceCalendar
+  }))
+);
+
+const LazyMonthlyAttendanceList = lazy(() =>
+  import('@/features/attendance/monthly-attendance-list').then(module => ({
+    default: module.MonthlyAttendanceList
+  }))
+);
+
+const LazyAttendanceClosingDialog = lazy(() =>
+  import('@/features/attendance/attendance-closing-dialog').then(module => ({
+    default: module.AttendanceClosingDialog
+  }))
+);
+
+const LazyTeamAttendance = lazy(() =>
+  import('@/features/attendance/team-attendance').then(module => ({
+    default: module.TeamAttendance
   }))
 );
 
@@ -150,10 +155,27 @@ export default function AttendancePage() {
     return translations[key] || key;
   };
   const [loading, setLoading] = useState(true);
+  const [closingDialogOpen, setClosingDialogOpen] = useState(false);
+
+  // Current month for closing dialog
+  const currentDate = new Date();
+  const closingYear = currentDate.getFullYear();
+  const closingMonth = currentDate.getMonth() + 1;
 
   // Attendance store integration
-  const { getTodayRecord, setOnAttendanceUpdate } = useAttendanceStore();
+  const { getTodayRecord } = useAttendanceStore();
   const { records: allHistoryRecords, addOrUpdateRecord } = useAttendanceHistoryStore();
+
+  // ユーザー権限の確認
+  const { currentUser, currentDemoUser, isDemoMode } = useUserStore();
+  const currentUserRoles = isDemoMode
+    ? (currentDemoUser?.roles || ['employee'])
+    : (currentUser?.roles || ['employee']);
+
+  // チーム勤怠タブを表示できる権限（人事/マネージャー/経営者/システム管理者）
+  const canViewTeamAttendance = currentUserRoles.some(role =>
+    ['hr', 'manager', 'executive', 'admin', 'system_admin'].includes(role)
+  );
 
   // ストアのデータを表示用に変換
   const records = useMemo(() => {
@@ -298,173 +320,6 @@ export default function AttendancePage() {
     setLoading(false);
   }, []);
 
-
-  const getStatusBadge = (status: AttendanceRecord['status']) => {
-    const config = {
-      present: { label: '出勤', variant: 'default' as const, icon: CheckCircle },
-      remote: { label: '在宅', variant: 'secondary' as const, icon: Home },
-      absent: { label: '欠勤', variant: 'outline' as const, icon: XCircle },
-      late: { label: '遅刻', variant: 'destructive' as const, icon: AlertTriangle },
-      early_leave: { label: '早退', variant: 'destructive' as const, icon: AlertTriangle },
-    };
-
-    const { label, variant, icon: Icon } = config[status];
-    return (
-      <Badge variant={variant} className="flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {label}
-      </Badge>
-    );
-  };
-
-  // メモ化された列定義
-  const columns: ColumnDef<AttendanceRecord>[] = useMemo(() => [
-    {
-      accessorKey: 'date',
-      header: '日付',
-      cell: ({ row }) => {
-        const record = row.original;
-        const date = new Date(record.date);
-        return (
-          <div>
-            <div className="font-medium">
-              {date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              ({record.dayOfWeek})
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'userName',
-      header: 'ユーザー',
-      cell: ({ row }) => {
-        return (
-          <div className="font-medium">
-            {row.original.userName}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'checkIn',
-      header: '出勤',
-      cell: ({ row }) => {
-        const time = row.original.checkIn;
-        return time ? (
-          <div className="flex items-center gap-1">
-            <CheckCircle className="h-3 w-3 text-green-500" />
-            {time}
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        );
-      },
-    },
-    {
-      accessorKey: 'checkOut',
-      header: '退勤',
-      cell: ({ row }) => {
-        const time = row.original.checkOut;
-        return time ? (
-          <div className="flex items-center gap-1">
-            <CheckCircle className="h-3 w-3 text-green-500" />
-            {time}
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        );
-      },
-    },
-    {
-      accessorKey: 'breakTime',
-      header: '休憩',
-    },
-    {
-      accessorKey: 'workHours',
-      header: '実働',
-      cell: ({ row }) => {
-        const hours = row.original.workHours;
-        return hours > 0 ? `${hours.toFixed(1)}h` : '-';
-      },
-    },
-    {
-      accessorKey: 'overtime',
-      header: '残業',
-      cell: ({ row }) => {
-        const overtime = row.original.overtime;
-        return overtime > 0 ? (
-          <span className="text-orange-600 font-medium">
-            {overtime.toFixed(1)}h
-          </span>
-        ) : (
-          '-'
-        );
-      },
-    },
-    {
-      accessorKey: 'status',
-      header: 'ステータス',
-      cell: ({ row }) => getStatusBadge(row.original.status),
-    },
-    {
-      accessorKey: 'workType',
-      header: '勤務形態',
-      cell: ({ row }) => {
-        const type = row.original.workType;
-        const config = {
-          office: { label: 'オフィス', icon: MapPin },
-          remote: { label: 'リモート', icon: Home },
-          hybrid: { label: 'ハイブリッド', icon: MapPin },
-        };
-        
-        const { label, icon: Icon } = config[type];
-        return (
-          <div className="flex items-center gap-1">
-            <Icon className="h-3 w-3" />
-            <span className="text-sm">{label}</span>
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'note',
-      header: '備考',
-      cell: ({ row }) => {
-        const note = row.original.note;
-        return note ? (
-          <span className="text-sm text-muted-foreground truncate max-w-32">
-            {note}
-          </span>
-        ) : (
-          '-'
-        );
-      },
-    },
-    {
-      id: 'actions',
-      header: '操作',
-      cell: () => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>操作</DropdownMenuLabel>
-            <DropdownMenuItem>
-              <Edit className="mr-2 h-4 w-4" />
-              修正
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
-  ], []);
-
   // メモ化されたカレンダーレコード
   const calendarRecords = useMemo(() => records.map(record => ({
     date: new Date(record.date),
@@ -478,6 +333,40 @@ export default function AttendancePage() {
     workType: record.workType,
     note: record.note,
   })), [records]);
+
+  // 月間勤怠一覧用のレコード
+  const monthlyListRecords = useMemo(() => {
+    return allHistoryRecords.map(record => ({
+      date: record.date,
+      status: record.status === 'present' ? 'present' as const :
+              record.status === 'absent' || record.status === 'holiday' || record.status === 'leave' ? 'absent' as const :
+              record.status === 'late' ? 'late' as const :
+              record.status === 'early' ? 'early_leave' as const :
+              record.workLocation === 'home' ? 'remote' as const : 'present' as const,
+      checkIn: record.checkIn || undefined,
+      checkOut: record.checkOut || undefined,
+      breakStart: record.breakStart || undefined,
+      breakEnd: record.breakEnd || undefined,
+      breakMinutes: record.totalBreakMinutes,
+      workHours: (record.workMinutes || 0) / 60,
+      overtime: (record.overtimeMinutes || 0) / 60,
+      workLocation: record.workLocation as 'office' | 'home' | 'client' | 'other' | undefined,
+      note: record.memo || undefined,
+      approvalStatus: record.approvalStatus as 'pending' | 'approved' | 'rejected' | undefined,
+    }));
+  }, [allHistoryRecords]);
+
+  // 勤怠記録更新ハンドラー
+  const handleRecordUpdate = (date: string, updates: Record<string, unknown>) => {
+    const existingRecord = allHistoryRecords.find(r => r.date === date);
+    if (existingRecord) {
+      addOrUpdateRecord({
+        ...existingRecord,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -509,85 +398,58 @@ export default function AttendancePage() {
             <CardContent className="p-6">
               <div className="animate-pulse space-y-4">
                 <div className="h-8 bg-gray-200 rounded"></div>
-                <div className="h-32 bg-gray-200 rounded"></div>
+                <div className="h-16 bg-gray-200 rounded"></div>
               </div>
             </CardContent>
           </Card>
         }>
-          <LazyAdvancedCheckIn />
+          <LazySimplePunchCard />
         </Suspense>
       </div>
 
       {/* Tabs Content */}
       <Tabs defaultValue="list" className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className={`grid w-full ${canViewTeamAttendance ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger value="list" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">{t('attendanceList')}</span>
             <span className="sm:hidden">一覧</span>
           </TabsTrigger>
-          <TabsTrigger value="team" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('teamAttendance')}</span>
-            <span className="sm:hidden">チーム</span>
+          <TabsTrigger value="summary" className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            <span className="hidden sm:inline">勤務表</span>
+            <span className="sm:hidden">勤務表</span>
           </TabsTrigger>
+          {canViewTeamAttendance && (
+            <TabsTrigger value="team" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('teamAttendance')}</span>
+              <span className="sm:hidden">チーム</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="calendar" className="flex items-center gap-2">
             <CalendarIcon className="h-4 w-4" />
             <span className="hidden sm:inline">{t('calendar')}</span>
             <span className="sm:hidden">カレンダー</span>
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('statistics')}</span>
-            <span className="sm:hidden">統計</span>
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="list" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>勤怠一覧</CardTitle>
-                  <CardDescription>過去の勤怠記録を確認・管理</CardDescription>
-                </div>
-                <Button
-                  onClick={handleExportCSV}
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  CSV出力
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <OptimizedDataTable
-                columns={columns}
-                data={records}
-                searchKey="date"
-                searchPlaceholder="日付で検索..."
-                pageSize={20}
-              />
-            </CardContent>
-          </Card>
+          <Suspense fallback={<TableLoadingSkeleton />}>
+            <LazyMonthlyAttendanceList
+              records={monthlyListRecords}
+              onRecordUpdate={handleRecordUpdate}
+            />
+          </Suspense>
         </TabsContent>
 
-        <TabsContent value="team" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>チーム勤怠状況</CardTitle>
-              <CardDescription>
-                チームメンバーの今日の勤怠状況
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                チーム勤怠機能は開発中です
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {canViewTeamAttendance && (
+          <TabsContent value="team" className="space-y-4">
+            <Suspense fallback={<TableLoadingSkeleton />}>
+              <LazyTeamAttendance />
+            </Suspense>
+          </TabsContent>
+        )}
 
         <TabsContent value="calendar" className="space-y-4">
           <Suspense fallback={<TableLoadingSkeleton />}>
@@ -595,68 +457,171 @@ export default function AttendancePage() {
           </Suspense>
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  月次実績サマリー
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>総実働時間</span>
-                    <span className="font-medium">162.5h</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>平均出勤時刻</span>
-                    <span className="font-medium">09:12</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>平均退勤時刻</span>
-                    <span className="font-medium">18:34</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>残業日数</span>
-                    <span className="font-medium">12日</span>
-                  </div>
+        <TabsContent value="summary" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5" />
+                    勤務表
+                  </CardTitle>
+                  <CardDescription>月間勤怠の集計と締め申請</CardDescription>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleExportCSV}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    CSV出力
+                  </Button>
+                  <Button
+                    onClick={() => setClosingDialogOpen(true)}
+                    className="flex items-center gap-2"
+                  >
+                    <FileCheck className="h-4 w-4" />
+                    締め申請
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* 月間サマリー */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">所定労働時間</div>
+                  <div className="text-2xl font-bold">160h</div>
+                  <div className="text-xs text-muted-foreground">20日 × 8h</div>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">総実働時間</div>
+                  <div className="text-2xl font-bold">162.5h</div>
+                  <Progress value={101.5} className="mt-2 h-1" />
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">残業時間</div>
+                  <div className="text-2xl font-bold text-orange-600">28.5h</div>
+                  <div className="text-xs text-muted-foreground">36協定上限: 45h</div>
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">深夜労働</div>
+                  <div className="text-2xl font-bold">2.5h</div>
+                  <div className="text-xs text-muted-foreground">22:00-05:00</div>
+                </div>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>36協定状況</CardTitle>
-                <CardDescription>
-                  法定労働時間の管理状況
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>月間残業時間</span>
-                    <span>28.5h / 45h</span>
-                  </div>
-                  <Progress value={63.3} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    上限まで 16.5時間
-                  </p>
+              {/* 詳細データテーブル */}
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium">日付</th>
+                        <th className="px-4 py-3 text-left font-medium">曜日</th>
+                        <th className="px-4 py-3 text-left font-medium">出勤</th>
+                        <th className="px-4 py-3 text-left font-medium">退勤</th>
+                        <th className="px-4 py-3 text-left font-medium">休憩</th>
+                        <th className="px-4 py-3 text-left font-medium">実働</th>
+                        <th className="px-4 py-3 text-left font-medium">残業</th>
+                        <th className="px-4 py-3 text-left font-medium">勤務形態</th>
+                        <th className="px-4 py-3 text-left font-medium">備考</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {records.slice(0, 10).map((record) => (
+                        <tr key={record.id} className="hover:bg-muted/30">
+                          <td className="px-4 py-2">{new Date(record.date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}</td>
+                          <td className="px-4 py-2">{record.dayOfWeek}</td>
+                          <td className="px-4 py-2">{record.checkIn || '-'}</td>
+                          <td className="px-4 py-2">{record.checkOut || '-'}</td>
+                          <td className="px-4 py-2">{record.breakTime}</td>
+                          <td className="px-4 py-2">{record.workHours > 0 ? `${record.workHours.toFixed(1)}h` : '-'}</td>
+                          <td className="px-4 py-2">
+                            {record.overtime > 0 ? (
+                              <span className="text-orange-600 font-medium">{record.overtime.toFixed(1)}h</span>
+                            ) : '-'}
+                          </td>
+                          <td className="px-4 py-2">
+                            <Badge variant="outline" className="text-xs">
+                              {record.workType === 'office' ? 'オフィス' : record.workType === 'remote' ? 'リモート' : 'ハイブリッド'}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-2 text-muted-foreground truncate max-w-[150px]">{record.note || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>深夜労働時間</span>
-                    <span>2.5h</span>
-                  </div>
-                  <Progress value={12.5} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+
+              {/* 36協定状況 */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">36協定状況</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>月間残業時間</span>
+                        <span>28.5h / 45h</span>
+                      </div>
+                      <Progress value={63.3} className="h-2" />
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>年間残業時間</span>
+                        <span>180h / 360h</span>
+                      </div>
+                      <Progress value={50} className="h-2" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">勤務統計</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>平均出勤時刻</span>
+                      <span className="font-medium">09:12</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>平均退勤時刻</span>
+                      <span className="font-medium">18:34</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>残業日数</span>
+                      <span className="font-medium">12日</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>在宅勤務日数</span>
+                      <span className="font-medium">8日</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 勤怠締め申請ダイアログ */}
+      <Suspense fallback={null}>
+        <LazyAttendanceClosingDialog
+          open={closingDialogOpen}
+          onOpenChange={setClosingDialogOpen}
+          year={closingYear}
+          month={closingMonth}
+          onSubmit={async (data) => {
+            console.log('Closing request submitted:', data);
+            // TODO: 実際のAPI呼び出し
+          }}
+        />
+      </Suspense>
     </div>
   );
 }

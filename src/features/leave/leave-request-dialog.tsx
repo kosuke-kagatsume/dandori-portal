@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -171,6 +171,13 @@ interface LeaveRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: LeaveRequestData) => Promise<void>;
+  initialData?: {
+    type?: string;
+    startDate?: string;
+    endDate?: string;
+    reason?: string;
+  };
+  isEditMode?: boolean;
 }
 
 const leaveTypes = [
@@ -182,13 +189,26 @@ const leaveTypes = [
   { value: 'bereavement', label: '忌引休暇', description: '親族の死亡による休暇', daysRequired: false, color: 'gray' },
 ];
 
-export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveRequestDialogProps) {
+export function LeaveRequestDialog({ open, onOpenChange, onSubmit, initialData, isEditMode = false }: LeaveRequestDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showApprovalFlow, setShowApprovalFlow] = useState(false);
   const { createFlow, submitRequest } = useApprovalStore();
   const currentUserId = '1'; // 現在のユーザー（田中太郎）
-  const [selectedType, setSelectedType] = useState<string>('annual');
+  const [selectedType, setSelectedType] = useState<string>(initialData?.type || 'annual');
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
+
+  // Map leave type from store to form type
+  const mapLeaveType = (type?: string) => {
+    const typeMap: Record<string, string> = {
+      'paid': 'annual',
+      'sick': 'sick',
+      'special': 'personal',
+      'compensatory': 'personal',
+      'half_day_am': 'annual',
+      'half_day_pm': 'annual',
+    };
+    return (type && typeMap[type]) || 'annual';
+  };
 
   const {
     register,
@@ -201,13 +221,27 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
   } = useForm<LeaveRequestData>({
     resolver: zodResolver(leaveRequestSchema),
     defaultValues: {
-      type: 'annual',
-      startDate: new Date(),
-      endDate: new Date(),
-      reason: '',
+      type: mapLeaveType(initialData?.type) as LeaveRequestData['type'],
+      startDate: initialData?.startDate ? new Date(initialData.startDate) : new Date(),
+      endDate: initialData?.endDate ? new Date(initialData.endDate) : new Date(),
+      reason: initialData?.reason || '',
       emergencyContact: '',
     },
   });
+
+  // Reset form when initialData changes (for edit mode)
+  useEffect(() => {
+    if (initialData && open) {
+      reset({
+        type: mapLeaveType(initialData.type) as LeaveRequestData['type'],
+        startDate: initialData.startDate ? new Date(initialData.startDate) : new Date(),
+        endDate: initialData.endDate ? new Date(initialData.endDate) : new Date(),
+        reason: initialData.reason || '',
+        emergencyContact: '',
+      });
+      setSelectedType(mapLeaveType(initialData.type));
+    }
+  }, [initialData, open, reset]);
 
   const startDate = watch('startDate');
   const endDate = watch('endDate');
@@ -285,7 +319,7 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit }: LeaveReques
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <DialogHeader>
             <DialogTitle>
-              {showApprovalFlow ? '申請内容確認・承認フロー' : '有給申請'}
+              {showApprovalFlow ? '申請内容確認・承認フロー' : isEditMode ? '休暇申請を編集' : '休暇申請を新規作成します'}
             </DialogTitle>
             <DialogDescription>
               {showApprovalFlow 
