@@ -23,6 +23,7 @@ import {
   Database,
   ChevronRight,
   CreditCard,
+  CalendarDays,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -42,6 +43,7 @@ import {
   RegionalTab,
 } from '@/features/settings/tabs';
 import { MasterDataPanel } from '@/components/settings/master-data-panel';
+import { LeaveTypeMasterPanel } from '@/features/leave/leave-type-master-panel';
 import { cn } from '@/lib/utils';
 
 type SettingCategory = {
@@ -89,6 +91,14 @@ const settingCategories: SettingCategory[] = [
     title: '勤怠',
     description: '勤務時間、休日、有給設定',
     icon: Clock,
+  },
+  {
+    id: 'leave',
+    title: '休暇種別',
+    description: '休暇種別マスタ、有給自動付与',
+    icon: CalendarDays,
+    badge: '人事',
+    requiresRole: ['hr', 'admin'],
   },
   {
     id: 'workflow',
@@ -236,6 +246,8 @@ export default function SettingsPage() {
         return <YearEndTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'attendance':
         return <AttendanceTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
+      case 'leave':
+        return <LeaveTypeMasterPanel />;
       case 'workflow':
         return <WorkflowTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'master-data':
