@@ -14,6 +14,7 @@ import {
   TrendingUp,
   Download,
   FileCheck,
+  CalendarClock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +55,12 @@ const LazyAttendanceClosingDialog = lazy(() =>
 const LazyTeamAttendance = lazy(() =>
   import('@/features/attendance/team-attendance').then(module => ({
     default: module.TeamAttendance
+  }))
+);
+
+const LazyShiftManagement = lazy(() =>
+  import('@/features/attendance/shift-management').then(module => ({
+    default: module.ShiftManagement
   }))
 );
 
@@ -409,7 +416,7 @@ export default function AttendancePage() {
 
       {/* Tabs Content */}
       <Tabs defaultValue="list" className="space-y-4 w-full">
-        <TabsList className={`grid w-full ${canViewTeamAttendance ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}>
+        <TabsList className={`grid w-full ${canViewTeamAttendance ? 'grid-cols-3 md:grid-cols-5' : 'grid-cols-4'}`}>
           <TabsTrigger value="list" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">{t('attendanceList')}</span>
@@ -425,6 +432,13 @@ export default function AttendancePage() {
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">{t('teamAttendance')}</span>
               <span className="sm:hidden">チーム</span>
+            </TabsTrigger>
+          )}
+          {canViewTeamAttendance && (
+            <TabsTrigger value="shift" className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4" />
+              <span className="hidden sm:inline">シフト</span>
+              <span className="sm:hidden">シフト</span>
             </TabsTrigger>
           )}
           <TabsTrigger value="calendar" className="flex items-center gap-2">
@@ -447,6 +461,14 @@ export default function AttendancePage() {
           <TabsContent value="team" className="space-y-4">
             <Suspense fallback={<TableLoadingSkeleton />}>
               <LazyTeamAttendance />
+            </Suspense>
+          </TabsContent>
+        )}
+
+        {canViewTeamAttendance && (
+          <TabsContent value="shift" className="space-y-4">
+            <Suspense fallback={<TableLoadingSkeleton />}>
+              <LazyShiftManagement />
             </Suspense>
           </TabsContent>
         )}

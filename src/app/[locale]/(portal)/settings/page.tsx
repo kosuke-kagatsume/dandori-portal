@@ -24,6 +24,7 @@ import {
   ChevronRight,
   CreditCard,
   CalendarDays,
+  AlertTriangle,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -44,6 +45,7 @@ import {
 } from '@/features/settings/tabs';
 import { MasterDataPanel } from '@/components/settings/master-data-panel';
 import { LeaveTypeMasterPanel } from '@/features/leave/leave-type-master-panel';
+import { AlertMasterPanel } from '@/features/attendance/alert-master-panel';
 import { cn } from '@/lib/utils';
 
 type SettingCategory = {
@@ -97,6 +99,14 @@ const settingCategories: SettingCategory[] = [
     title: '休暇種別',
     description: '休暇種別マスタ、有給自動付与',
     icon: CalendarDays,
+    badge: '人事',
+    requiresRole: ['hr', 'admin'],
+  },
+  {
+    id: 'alert',
+    title: 'アラート設定',
+    description: '勤怠アラート、36協定設定',
+    icon: AlertTriangle,
     badge: '人事',
     requiresRole: ['hr', 'admin'],
   },
@@ -248,6 +258,8 @@ export default function SettingsPage() {
         return <AttendanceTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'leave':
         return <LeaveTypeMasterPanel />;
+      case 'alert':
+        return <AlertMasterPanel />;
       case 'workflow':
         return <WorkflowTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'master-data':
