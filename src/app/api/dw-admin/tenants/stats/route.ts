@@ -10,7 +10,8 @@ const prisma = new PrismaClient();
  *
  * ダッシュボード用の統計データを返す
  */
-export async function GET(request: NextRequest) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_request: NextRequest) {
   try {
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);

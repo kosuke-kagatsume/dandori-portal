@@ -17,10 +17,8 @@ import {
 } from '@/components/ui/table';
 import {
   Bell,
-  BellOff,
   Clock,
   AlertCircle,
-  CheckCircle,
   Calendar,
   Settings,
   RefreshCw,

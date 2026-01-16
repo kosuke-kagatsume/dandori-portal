@@ -29,9 +29,9 @@ const documentTypeLabels: Record<DocumentType, string> = {
   purchase_request: '購買申請',
 };
 
-export function WorkflowTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function WorkflowTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   const {
-    flows,
     initialized: flowsInitialized,
     getFlowsByDocumentType,
     getStats,

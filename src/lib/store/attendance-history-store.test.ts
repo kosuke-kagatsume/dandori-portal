@@ -3,7 +3,8 @@
  */
 
 import { useAttendanceHistoryStore } from './attendance-history-store';
-import type { AttendanceRecord } from './attendance-history-store';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { AttendanceRecord } from './attendance-history-store'; // 型定義参照用
 
 describe('AttendanceHistoryStore', () => {
   beforeEach(() => {
@@ -275,7 +276,7 @@ describe('AttendanceHistoryStore', () => {
     });
 
     it('休憩終了ができる', () => {
-      const { startBreak, endBreak, getTodayStatus, addOrUpdateRecord } = useAttendanceHistoryStore.getState();
+      const { endBreak, getTodayStatus, addOrUpdateRecord } = useAttendanceHistoryStore.getState();
       const today = new Date().toISOString().split('T')[0];
 
       // 休憩開始時刻を過去の時刻に設定（確実に時間差を作る）
@@ -472,7 +473,7 @@ describe('AttendanceHistoryStore', () => {
 
   describe('複合的な勤怠フロー', () => {
     it('出勤→休憩開始→休憩終了→退勤の一連の流れができる', () => {
-      const { checkIn, startBreak, endBreak, checkOut, getTodayStatus, addOrUpdateRecord } =
+      const { checkIn, endBreak, checkOut, getTodayStatus, addOrUpdateRecord } =
         useAttendanceHistoryStore.getState();
       const today = new Date().toISOString().split('T')[0];
 

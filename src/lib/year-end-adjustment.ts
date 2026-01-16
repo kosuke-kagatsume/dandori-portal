@@ -76,15 +76,18 @@ export interface YearEndAdjustmentResult {
 
 export class YearEndAdjustmentCalculator {
 
+  /* eslint-disable @typescript-eslint/no-unused-vars */
   // 給与所得控除額の計算テーブル（2025年）
+  // 注意: 一部のcalc関数で引数incomeが使われていないのは仕様（固定金額を返す）
   private static EMPLOYMENT_INCOME_DEDUCTION_TABLE = [
-    { min: 0, max: 1625000, calc: (income: number) => 550000 },
+    { min: 0, max: 1625000, calc: (_income: number) => 550000 },
     { min: 1625000, max: 1800000, calc: (income: number) => income * 0.4 - 100000 },
     { min: 1800000, max: 3600000, calc: (income: number) => income * 0.3 + 80000 },
     { min: 3600000, max: 6600000, calc: (income: number) => income * 0.2 + 440000 },
     { min: 6600000, max: 8500000, calc: (income: number) => income * 0.1 + 1100000 },
-    { min: 8500000, max: Infinity, calc: (income: number) => 1950000 },
+    { min: 8500000, max: Infinity, calc: (_income: number) => 1950000 },
   ];
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 
   // 所得税率テーブル（2025年）
   private static TAX_RATE_TABLE = [

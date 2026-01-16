@@ -112,7 +112,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
       toast.success(user ? 'User updated successfully' : 'User created successfully');
       reset();
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       toast.error(user ? 'Failed to update user' : 'Failed to create user');
     } finally {
       setIsSubmitting(false);

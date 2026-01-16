@@ -23,7 +23,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useScheduledChangesStore, type ScheduledChange } from '@/lib/store/scheduled-changes-store';
+import { useScheduledChangesStore } from '@/lib/store/scheduled-changes-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
 import { UserPlus, ArrowRightLeft, UserX, ShieldCheck } from 'lucide-react';
@@ -267,7 +267,7 @@ export function CreateScheduledChangeDialog({
                     権限 <span className="text-red-500">*</span>
                   </Label>
                   <Select
-                    onValueChange={(value) => hireForm.setValue('role', value as any)}
+                    onValueChange={(value) => hireForm.setValue('role', value as 'employee' | 'manager' | 'hr' | 'admin')}
                     defaultValue="employee"
                   >
                     <SelectTrigger id="hire-role">
@@ -433,7 +433,7 @@ export function CreateScheduledChangeDialog({
                   退職理由 <span className="text-red-500">*</span>
                 </Label>
                 <Select
-                  onValueChange={(value) => retirementForm.setValue('retirementReason', value as any)}
+                  onValueChange={(value) => retirementForm.setValue('retirementReason', value as 'voluntary' | 'company' | 'retirement' | 'termination' | 'death' | 'other')}
                   defaultValue="voluntary"
                 >
                   <SelectTrigger id="retirement-reason">

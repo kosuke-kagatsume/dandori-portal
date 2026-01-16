@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, AlertCircle, TrendingUp, TrendingDown, DollarSign, FileText, Calculator } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, FileText, Calculator } from 'lucide-react';
 import type { YearEndAdjustmentResult } from '@/lib/payroll/year-end-adjustment-types';
 
 interface YearEndAdjustmentResultProps {

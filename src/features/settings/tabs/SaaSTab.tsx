@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import type { SettingsTabProps } from '../types';
 
-export function SaaSTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function SaaSTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   return (
     <Card>
       <CardHeader>

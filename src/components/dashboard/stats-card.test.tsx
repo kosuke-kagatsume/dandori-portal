@@ -5,7 +5,7 @@
  * covering rendering, data display, loading states, and interactions.
  */
 
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StatsCard } from './stats-card';
 import { Users, TrendingUp, AlertCircle, Calendar } from 'lucide-react';
@@ -67,7 +67,7 @@ describe('StatsCard', () => {
     });
 
     it('applies correct CSS classes and gradient', () => {
-      const { container } = render(
+      render(
         <StatsCard
           title="Leave Balance"
           value={12}

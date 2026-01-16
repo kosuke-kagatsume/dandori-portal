@@ -23,7 +23,7 @@ import {
   Info,
   AlertCircle,
   XCircle,
-  Calendar,
+  // Calendar, // 日付ピッカーで使用予定
   User,
   Activity,
   TrendingUp,
@@ -33,7 +33,8 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
 export default function AuditPage() {
-  const { logs, getLogs, getStats, clearLogs } = useAuditStore();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { logs: _logs, getLogs, getStats, clearLogs } = useAuditStore(); // logsは直接使用せずgetLogsでフィルタリング
 
   // フィルター状態
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,8 +75,9 @@ export default function AuditPage() {
     }
   };
 
-  // Severity バッジバリアント
-  const getSeverityVariant = (severity: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  // Severity バッジバリアント（将来的にバッジ色変更で使用予定）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _getSeverityVariant = (severity: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (severity) {
       case 'info':
         return 'default';

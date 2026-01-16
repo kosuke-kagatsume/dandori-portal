@@ -1,7 +1,9 @@
-import { WorkflowRequest, WorkflowType, WorkflowStatus, ApproverRole } from './workflow-store';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { WorkflowRequest, WorkflowType, WorkflowStatus, ApproverRole } from './workflow-store'; // 型定義参照用
 
 // デモ用の従業員データ
-const employees = [
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _employees = [
   { id: '1', name: '田中太郎', department: '営業部', role: 'manager' },
   { id: '2', name: '山田花子', department: '営業部', role: 'staff' },
   { id: '3', name: '佐藤次郎', department: '開発部', role: 'manager' },

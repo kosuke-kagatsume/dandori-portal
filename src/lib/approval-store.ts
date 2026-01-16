@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ApprovalFlow, createApprovalFlow, processApproval, returnToSender, getPendingApprovalsForUser, RequestMetadata, checkForOverdueApprovals, escalateApproval } from './approval-system';
+import { ApprovalFlow, ApprovalStep, createApprovalFlow, processApproval, returnToSender, getPendingApprovalsForUser, RequestMetadata, checkForOverdueApprovals, escalateApproval } from './approval-system';
 
 interface ApprovalStore {
   // 承認フローの管理
@@ -52,7 +52,7 @@ interface ApprovalStore {
   // エスカレーション機能
   checkOverdueApprovals: () => Array<{
     flow: ApprovalFlow;
-    step: any;
+    step: ApprovalStep;
     hoursOverdue: number;
   }>;
   escalateApproval: (flowId: string) => void;

@@ -83,10 +83,12 @@ export default function BasicInfoFormPage() {
   const { register, handleSubmit, errors, formState, watch, updateForm, submitForm } =
     useBasicInfoForm();
 
-  const hasPensionBook = watch('socialInsurance.hasPensionBook');
-  const hasEmploymentInsurance = watch(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _hasPensionBook = watch('socialInsurance.hasPensionBook'); // 条件付きフォームで使用予定
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _hasEmploymentInsurance = watch(
     'socialInsurance.hasEmploymentInsurance'
-  );
+  ); // 条件付きフォームで使用予定
   const sameAsCurrent = watch('residentAddress.sameAsCurrent');
 
   const onSubmit = async (data: BasicInfoFormInput) => {
@@ -443,7 +445,7 @@ export default function BasicInfoFormPage() {
                 入力エラーがあります（{Object.keys(errors).length}件）
               </h3>
               <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-                {Object.entries(errors).map(([key, error]: [string, any]) => (
+                {Object.entries(errors).map(([key, error]: [string, { message?: string }]) => (
                   <li key={key}>
                     {key}: {error.message}
                   </li>

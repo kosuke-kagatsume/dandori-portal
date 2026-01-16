@@ -108,7 +108,8 @@ interface LeaveManagementActions {
 
 type LeaveManagementStore = LeaveManagementState & LeaveManagementActions;
 
-// デフォルトの年次有給休暇日数を計算
+// デフォルトの年次有給休暇日数を計算（将来の有給自動付与機能で使用予定）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const calculateDefaultPaidLeaveDays = (hireDate: string): number => {
   const now = new Date();
   const hire = new Date(hireDate);
@@ -390,7 +391,8 @@ export const useLeaveManagementStore = create<LeaveManagementStore>()(
       onRehydrateStorage: () => (state) => {
         if (state && state.balances) {
           // オブジェクトをMapに変換
-          state.balances = new Map(Object.entries(state.balances as any));
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          state.balances = new Map(Object.entries(state.balances as Record<string, unknown>)) as Map<string, LeaveBalance>;
         }
       },
     }

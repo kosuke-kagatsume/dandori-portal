@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, FileText, Send } from 'lucide-react';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
-import { getNextInvoiceNumber, calculateDueDate } from '@/lib/billing/invoice-generator';
+import { calculateDueDate } from '@/lib/billing/invoice-generator';
 import type { InvoiceItem } from '@/lib/billing/invoice-generator';
 import { toast } from 'sonner';
 
@@ -28,7 +28,7 @@ export function CreateInvoiceDialog({
   tenantName,
   billingEmail,
 }: CreateInvoiceDialogProps) {
-  const { createInvoice, getAllInvoices, markAsSent } = useInvoiceStore();
+  const { createInvoice, markAsSent } = useInvoiceStore();
 
   // 請求月（今月がデフォルト）
   const [billingMonth, setBillingMonth] = useState(() => {

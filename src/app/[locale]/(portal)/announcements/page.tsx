@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -59,12 +59,15 @@ export default function AnnouncementsPage() {
     isLoading,
     fetchAnnouncements,
     markAsRead,
+    markAsCompleted,
   } = useAnnouncementsStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState<AnnouncementPriority | 'all'>('all');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<AnnouncementType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [requiresActionFilter, setRequiresActionFilter] = useState<boolean>(false);
+  const [priorityFilter, setPriorityFilter] = useState<AnnouncementPriority | 'all'>('all'); // 統計カードクリック用に保持
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
@@ -104,9 +107,14 @@ export default function AnnouncementsPage() {
       );
     }
 
-    // 優先度フィルター
+    // 優先度フィルター（統計カードクリック用）
     if (priorityFilter !== 'all') {
       filtered = filtered.filter((a) => a.priority === priorityFilter);
+    }
+
+    // 部署フィルター
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter((a) => a.createdByDepartment === departmentFilter);
     }
 
     // 種別フィルター
@@ -118,8 +126,17 @@ export default function AnnouncementsPage() {
     if (statusFilter !== 'all') {
       filtered = filtered.filter((a) => {
         const userStatus = getUserStatus(a.id);
+        if (statusFilter === 'read') {
+          // 既読フィルター：'read' または 'completed' のアイテムを表示
+          return userStatus === 'read' || userStatus === 'completed';
+        }
         return userStatus === statusFilter;
       });
+    }
+
+    // 対応が必要フィルター
+    if (requiresActionFilter) {
+      filtered = filtered.filter((a) => a.requiresAction);
     }
 
     // 日付でソート（新しい順）
@@ -128,7 +145,18 @@ export default function AnnouncementsPage() {
       const dateB = new Date(b.publishedAt || b.createdAt);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [mounted, announcements, searchQuery, priorityFilter, typeFilter, statusFilter, getUserStatus, currentUserId]);
+  }, [mounted, announcements, searchQuery, priorityFilter, departmentFilter, typeFilter, statusFilter, requiresActionFilter, getUserStatus, currentUserId]);
+
+  // 部署リストを取得
+  const departments = useMemo(() => {
+    const deptSet = new Set<string>();
+    announcements.forEach((a) => {
+      if (a.createdByDepartment) {
+        deptSet.add(a.createdByDepartment);
+      }
+    });
+    return Array.from(deptSet).sort();
+  }, [announcements]);
 
   // 統計
   const stats = useMemo(() => {
@@ -205,7 +233,16 @@ export default function AnnouncementsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50 hover:border-blue-300"
+          onClick={() => {
+            setStatusFilter('unread');
+            setPriorityFilter('all');
+            setRequiresActionFilter(false);
+            setTypeFilter('all');
+            setDepartmentFilter('all');
+          }}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               未読
@@ -216,7 +253,16 @@ export default function AnnouncementsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50 hover:border-red-300"
+          onClick={() => {
+            setPriorityFilter('urgent');
+            setStatusFilter('all');
+            setRequiresActionFilter(false);
+            setTypeFilter('all');
+            setDepartmentFilter('all');
+          }}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               緊急
@@ -227,7 +273,16 @@ export default function AnnouncementsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50 hover:border-orange-300"
+          onClick={() => {
+            setRequiresActionFilter(true);
+            setStatusFilter('all');
+            setPriorityFilter('all');
+            setTypeFilter('all');
+            setDepartmentFilter('all');
+          }}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               対応が必要
@@ -260,22 +315,21 @@ export default function AnnouncementsPage() {
               />
             </div>
 
-            {/* 優先度フィルター */}
-            <Select value={priorityFilter} onValueChange={(v: any) => setPriorityFilter(v)}>
+            {/* 部署フィルター */}
+            <Select value={departmentFilter} onValueChange={(v) => setDepartmentFilter(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="優先度" />
+                <SelectValue placeholder="部署" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべての優先度</SelectItem>
-                <SelectItem value="urgent">緊急</SelectItem>
-                <SelectItem value="high">高</SelectItem>
-                <SelectItem value="normal">通常</SelectItem>
-                <SelectItem value="low">低</SelectItem>
+                <SelectItem value="all">すべての部署</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
             {/* 種別フィルター */}
-            <Select value={typeFilter} onValueChange={(v: any) => setTypeFilter(v)}>
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as 'general' | 'deadline' | 'system' | 'event' | 'policy' | 'emergency' | 'all')}>
               <SelectTrigger>
                 <SelectValue placeholder="種別" />
               </SelectTrigger>
@@ -291,7 +345,7 @@ export default function AnnouncementsPage() {
             </Select>
 
             {/* 既読/未読フィルター */}
-            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'unread' | 'read')}>
               <SelectTrigger>
                 <SelectValue placeholder="ステータス" />
               </SelectTrigger>
@@ -357,7 +411,7 @@ export default function AnnouncementsPage() {
                           <Calendar className="h-3 w-3" />
                           {new Date(announcement.publishedAt || announcement.createdAt).toLocaleDateString('ja-JP')}
                         </div>
-                        <div>投稿者: {announcement.createdByName}</div>
+                        <div>投稿者: {announcement.createdByName}{announcement.createdByDepartment && ` 部署: ${announcement.createdByDepartment}`}</div>
                         {announcement.actionDeadline && (
                           <div className={`flex items-center gap-1 ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
                             <Clock className="h-3 w-3" />
@@ -404,7 +458,7 @@ export default function AnnouncementsPage() {
                         <Calendar className="h-3 w-3" />
                         {new Date(selectedAnnouncement.publishedAt || selectedAnnouncement.createdAt).toLocaleDateString('ja-JP')}
                       </div>
-                      <div>投稿者: {selectedAnnouncement.createdByName}</div>
+                      <div>投稿者: {selectedAnnouncement.createdByName}{selectedAnnouncement.createdByDepartment && ` 部署: ${selectedAnnouncement.createdByDepartment}`}</div>
                     </DialogDescription>
                   </div>
                 </div>
@@ -446,18 +500,45 @@ export default function AnnouncementsPage() {
                   </div>
                 )}
 
-                {/* 確認ボタン */}
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setDetailDialogOpen(false);
-                      setSelectedAnnouncement(null);
-                    }}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    確認しました
-                  </Button>
+                {/* 確認・対応ボタン */}
+                <div className="flex justify-end gap-2">
+                  {(() => {
+                    const userStatus = getUserStatus(selectedAnnouncement.id);
+                    const isRead = userStatus === 'read' || userStatus === 'completed';
+                    const isCompleted = userStatus === 'completed';
+
+                    return (
+                      <>
+                        <Button
+                          variant={isRead ? "secondary" : "outline"}
+                          onClick={() => {
+                            if (!isRead) {
+                              markAsRead(selectedAnnouncement.id, currentUserId);
+                            }
+                          }}
+                          disabled={isRead}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          {isRead ? '確認済み' : '確認しました'}
+                        </Button>
+
+                        {selectedAnnouncement.requiresAction && (
+                          <Button
+                            variant={isCompleted ? "secondary" : "outline"}
+                            onClick={() => {
+                              if (!isCompleted) {
+                                markAsCompleted(selectedAnnouncement.id, currentUserId);
+                              }
+                            }}
+                            disabled={isCompleted}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            {isCompleted ? '対応済み' : '対応済みにする'}
+                          </Button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </>

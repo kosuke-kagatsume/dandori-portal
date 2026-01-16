@@ -101,7 +101,7 @@ export function useEmployeeProfile() {
       } else {
         setError(data.error);
       }
-    } catch (err) {
+    } catch {
       setError('プロフィールの取得に失敗しました');
     } finally {
       setLoading(false);
@@ -139,7 +139,7 @@ export function useEmployeeProfile() {
 
       const data = await response.json();
       return data;
-    } catch (err) {
+    } catch {
       return { success: false, error: '変更申請の送信に失敗しました' };
     }
   }, [userId, tenantId]);

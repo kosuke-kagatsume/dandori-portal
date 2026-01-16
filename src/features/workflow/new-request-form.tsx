@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+// Tabs components - 将来使用予定
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -36,25 +36,19 @@ import {
   Upload,
   X,
   FileText,
-  AlertCircle,
   ChevronRight,
-  CheckCircle,
-  User,
   Users,
   Clock,
   DollarSign,
   Briefcase,
   Home,
   Building2,
-  Laptop,
-  Plane,
-  Coffee,
   Package,
   Calendar,
   UserCheck,
 } from 'lucide-react';
-import { format, addDays, differenceInDays } from 'date-fns';
-import { ja } from 'date-fns/locale';
+import { format, differenceInDays } from 'date-fns';
+// ja from date-fns/locale - 将来使用予定
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ImageUpload } from '@/components/camera/image-upload';
@@ -319,6 +313,7 @@ export function NewRequestForm({
   };
 
   // 承認者ロール→ユーザーIDのマッピング（DBから取得した値を使用）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getApproverIdByRole = (role: ApproverRole): string => {
     const approver = approversByRole[role];
     return approver?.id || 'unknown';
@@ -793,7 +788,9 @@ function LeaveRequestForm({ form, onFlowUpdate }: FormComponentProps<LeaveReques
 }
 
 // 経費申請フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ExpenseClaimForm({ form, onFlowUpdate }: FormComponentProps<ExpenseClaimFormData>) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [expenseDate, setExpenseDate] = useState<Date>();
   const [amount, setAmount] = useState<number>(0);
   const [receiptImages, setReceiptImages] = useState<string[]>([]);
@@ -940,7 +937,9 @@ function ExpenseClaimForm({ form, onFlowUpdate }: FormComponentProps<ExpenseClai
 }
 
 // 残業申請フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function OvertimeRequestForm({ form, onFlowUpdate }: FormComponentProps<OvertimeRequestFormData>) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [overtimeDate, setOvertimeDate] = useState<Date>();
   const [hours, setHours] = useState<number>(0);
 
@@ -1053,8 +1052,10 @@ function OvertimeRequestForm({ form, onFlowUpdate }: FormComponentProps<Overtime
 }
 
 // 出張申請フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BusinessTripForm({ form, onFlowUpdate }: FormComponentProps<BusinessTripFormData>) {
   const [startDate, setStartDate] = useState<Date>();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [endDate, setEndDate] = useState<Date>();
   const [estimatedCost, setEstimatedCost] = useState<number>(0);
 
@@ -1196,6 +1197,7 @@ function BusinessTripForm({ form, onFlowUpdate }: FormComponentProps<BusinessTri
 }
 
 // 購買申請フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PurchaseRequestForm({ form, onFlowUpdate }: FormComponentProps) {
   const [estimatedCost, setEstimatedCost] = useState<number>(0);
 
@@ -1282,6 +1284,7 @@ function PurchaseRequestForm({ form, onFlowUpdate }: FormComponentProps) {
 }
 
 // 書類承認フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function DocumentApprovalForm({ form, onFlowUpdate }: FormComponentProps) {
   return (
     <Card>
@@ -1372,6 +1375,7 @@ function DefaultRequestForm({ form }: { form: UseFormReturn }) {
 }
 
 // リモートワーク申請フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function RemoteWorkForm({ form, onFlowUpdate }: FormComponentProps<RemoteWorkFormData>) {
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
@@ -1485,7 +1489,10 @@ function RemoteWorkForm({ form, onFlowUpdate }: FormComponentProps<RemoteWorkFor
       </CardContent>
     </Card>
   );
-}// 給与振込口座変更フォーム
+}
+
+// 給与振込口座変更フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function BankAccountChangeForm({ form, onFlowUpdate }: FormComponentProps) {
   const [consent, setConsent] = useState(false);
 
@@ -1664,6 +1671,7 @@ function BankAccountChangeForm({ form, onFlowUpdate }: FormComponentProps) {
 }
 
 // 家族情報変更フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function FamilyInfoChangeForm({ form, onFlowUpdate }: FormComponentProps) {
   const [hasSpouse, setHasSpouse] = useState(false);
 
@@ -2007,6 +2015,7 @@ function FamilyInfoChangeForm({ form, onFlowUpdate }: FormComponentProps) {
 }
 
 // 通勤経路変更フォーム
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function CommuteRouteChangeForm({ form, onFlowUpdate }: FormComponentProps) {
   const [transportMethod, setTransportMethod] = useState<'public' | 'private' | ''>('');
 

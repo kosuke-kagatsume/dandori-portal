@@ -9,7 +9,7 @@ interface OfflineDB extends DBSchema {
     value: {
       id: string;
       type: 'workflow' | 'attendance' | 'leave' | 'expense';
-      data: Record<string, any>;
+      data: Record<string, unknown>;
       createdAt: number;
       updatedAt: number;
       synced: boolean;
@@ -21,7 +21,7 @@ interface OfflineDB extends DBSchema {
       id: string;
       action: string;
       endpoint: string;
-      data: Record<string, any>;
+      data: Record<string, unknown>;
       createdAt: number;
       retryCount: number;
       maxRetries: number;
@@ -69,7 +69,7 @@ export async function initOfflineDB(): Promise<IDBPDatabase<OfflineDB>> {
 export async function saveDraft(
   id: string,
   type: 'workflow' | 'attendance' | 'leave' | 'expense',
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): Promise<void> {
   const db = await initOfflineDB();
   const now = Date.now();
@@ -128,7 +128,7 @@ export async function savePendingAction(
   id: string,
   action: string,
   endpoint: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   maxRetries: number = 3
 ): Promise<void> {
   const db = await initOfflineDB();

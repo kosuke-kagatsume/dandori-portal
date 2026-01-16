@@ -89,6 +89,7 @@ export interface Announcement {
   // メタ情報
   createdBy: string;                // 作成者ID
   createdByName: string;            // 作成者名
+  createdByDepartment?: string;     // 作成者部署
   createdAt: string;
   updatedAt: string;
   published: boolean;               // 公開済みか
@@ -451,52 +452,8 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
 
       // API統合: 既読にする
       markAsRead: async (announcementId, userId) => {
-        try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            set((state) => ({
-              announcements: state.announcements.map((announcement) => {
-                if (announcement.id !== announcementId) return announcement;
-
-                const existingState = announcement.userStates.find((s) => s.userId === userId);
-
-                if (existingState) {
-                  return {
-                    ...announcement,
-                    userStates: announcement.userStates.map((s) =>
-                      s.userId === userId && s.status === 'unread'
-                        ? {
-                            ...s,
-                            status: 'read' as UserAnnouncementStatus,
-                            readAt: new Date().toISOString(),
-                          }
-                        : s
-                    ),
-                  };
-                } else {
-                  return {
-                    ...announcement,
-                    userStates: [
-                      ...announcement.userStates,
-                      {
-                        userId,
-                        status: 'read' as UserAnnouncementStatus,
-                        readAt: new Date().toISOString(),
-                      },
-                    ],
-                  };
-                }
-              }),
-            }));
-            return;
-          }
-
-          await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=demo`, {
-            method: 'POST',
-            body: JSON.stringify({ userId }),
-          });
-
-          // ローカル状態を更新（オプティミスティックアップデート）
+        // ローカル状態を即座に更新（オプティミスティックアップデート）
+        const updateState = () => {
           set((state) => ({
             announcements: state.announcements.map((announcement) => {
               if (announcement.id !== announcementId) return announcement;
@@ -504,10 +461,14 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
               const existingState = announcement.userStates.find((s) => s.userId === userId);
 
               if (existingState) {
+                // 既に既読以上の状態なら何もしない
+                if (existingState.status !== 'unread') {
+                  return announcement;
+                }
                 return {
                   ...announcement,
                   userStates: announcement.userStates.map((s) =>
-                    s.userId === userId && s.status === 'unread'
+                    s.userId === userId
                       ? {
                           ...s,
                           status: 'read' as UserAnnouncementStatus,
@@ -531,9 +492,22 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
               }
             }),
           }));
+        };
+
+        // 即座にローカル状態を更新
+        updateState();
+
+        try {
+          // デモモードでなければAPIも呼び出す
+          if (process.env.NEXT_PUBLIC_ENV !== 'demo' && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+            await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=demo`, {
+              method: 'POST',
+              body: JSON.stringify({ userId }),
+            });
+          }
         } catch (error) {
           console.error('Failed to mark as read:', error);
-          throw error;
+          // APIエラー時もローカル状態は維持（後でリロード時に同期される）
         }
       },
 

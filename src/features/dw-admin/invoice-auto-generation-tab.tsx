@@ -18,13 +18,11 @@ import {
 import {
   FileText,
   Calendar,
-  DollarSign,
   CheckCircle,
   AlertCircle,
   Play,
   Settings,
   TrendingUp,
-  Users,
 } from 'lucide-react';
 import { useInvoiceAutoGenerationStore } from '@/lib/store/invoice-auto-generation-store';
 import { toast } from 'sonner';

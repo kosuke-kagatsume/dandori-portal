@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// Select components - 将来使用予定
 import { Separator } from '@/components/ui/separator';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { Clock, MapPin, Calendar, Hourglass, Loader2 } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 
-export function AttendanceTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function AttendanceTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   const {
     attendanceSettings,
     updateAttendanceSettings,

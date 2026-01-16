@@ -12,7 +12,6 @@ import {
   Clock,
   Calendar,
   GitBranch,
-  MapPin,
   FileText,
   ChevronLeft,
   ClipboardCheck,
@@ -120,7 +119,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
             const navItem = (
               <Link
                 key={item.key}
-                href={item.href as any}
+                href={item.href}
                 prefetch={true}
                 onClick={() => onNavigate?.()}
                 className={cn(

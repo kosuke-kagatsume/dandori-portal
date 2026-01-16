@@ -5,7 +5,7 @@ import {
   getUnsyncedActions,
   markDraftAsSynced,
   markActionAsSynced,
-  deleteDraft,
+  // deleteDraft - 将来使用予定
   deletePendingAction,
   incrementActionRetry,
 } from './offline-storage';
@@ -152,25 +152,21 @@ class BackgroundSyncManager {
   }
 
   // ドラフトを同期
-  private async syncDraft(draft: any): Promise<void> {
-    // ドラフトのタイプに応じてAPIエンドポイントを決定
-    let endpoint = '';
-    switch (draft.type) {
-      case 'workflow':
-        endpoint = '/api/workflows';
-        break;
-      case 'attendance':
-        endpoint = '/api/attendance';
-        break;
-      case 'leave':
-        endpoint = '/api/leave/requests';
-        break;
-      case 'expense':
-        endpoint = '/api/expenses';
-        break;
-      default:
-        throw new Error(`Unknown draft type: ${draft.type}`);
+  private async syncDraft(draft: { id: string; type: string; data: Record<string, unknown> }): Promise<void> {
+    // ドラフトのタイプを検証
+    const validTypes = ['workflow', 'attendance', 'leave', 'expense'];
+    if (!validTypes.includes(draft.type)) {
+      throw new Error(`Unknown draft type: ${draft.type}`);
     }
+
+    // APIエンドポイントマッピング（実際のAPI実装時に有効化）
+    // const endpointMap: Record<string, string> = {
+    //   workflow: '/api/workflows',
+    //   attendance: '/api/attendance',
+    //   leave: '/api/leave/requests',
+    //   expense: '/api/expenses',
+    // };
+    // const endpoint = endpointMap[draft.type];
 
     // APIに送信（実際のAPI実装時に有効化）
     // const response = await fetch(endpoint, {
@@ -191,7 +187,7 @@ class BackgroundSyncManager {
   }
 
   // アクションを同期
-  private async syncAction(action: any): Promise<void> {
+  private async syncAction(action: { id: string; endpoint: string; data: Record<string, unknown> }): Promise<void> {
     try {
       // APIに送信（実際のAPI実装時に有効化）
       // const response = await fetch(action.endpoint, {

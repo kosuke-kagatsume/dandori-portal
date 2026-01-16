@@ -24,10 +24,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Search } from 'lucide-react';
-import { performanceMonitor } from '@/lib/performance';
+// import { performanceMonitor } from '@/lib/performance';
 import { performanceCache } from '@/lib/performance-cache';
 
 interface VirtualDataTableProps<TData> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columns: ColumnDef<TData, any>[];
   data: TData[];
   searchKey?: string;
@@ -42,7 +43,8 @@ interface VirtualDataTableProps<TData> {
 const VirtualDataTableComponent = function VirtualDataTable<TData>({
   columns,
   data,
-  searchKey = 'id',
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  searchKey: _searchKey = 'id', // globalFilterを使用しているため直接使用しないが、APIとして保持
   searchPlaceholder = '検索...',
   rowHeight = 53,
   overscan = 5,
@@ -73,6 +75,7 @@ const VirtualDataTableComponent = function VirtualDataTable<TData>({
 
     if (globalFilter) {
       const searchValue = globalFilter.toLowerCase();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       result = data.filter((item: any) => {
         return Object.values(item).some((value) =>
           String(value).toLowerCase().includes(searchValue)

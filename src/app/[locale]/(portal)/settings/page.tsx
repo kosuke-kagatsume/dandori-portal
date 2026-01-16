@@ -26,6 +26,7 @@ import {
   CalendarDays,
   AlertTriangle,
   FileUp,
+  Megaphone,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
@@ -48,7 +49,10 @@ import { MasterDataPanel } from '@/components/settings/master-data-panel';
 import { LeaveTypeMasterPanel } from '@/features/leave/leave-type-master-panel';
 import { AlertMasterPanel } from '@/features/attendance/alert-master-panel';
 import { DataManagementPanel } from '@/features/data-management/data-management-panel';
+import { AnnouncementTypeMasterPanel } from '@/features/announcements/announcement-type-master-panel';
+import { DashboardSettingsPanel } from '@/features/dashboard/dashboard-settings-panel';
 import { cn } from '@/lib/utils';
+import { LayoutDashboard } from 'lucide-react';
 
 type SettingCategory = {
   id: string;
@@ -65,6 +69,14 @@ const settingCategories: SettingCategory[] = [
     title: '外観',
     description: 'テーマ、通知の設定',
     icon: Palette,
+  },
+  {
+    id: 'dashboard',
+    title: 'ダッシュボード',
+    description: 'クイックアクションの表示設定',
+    icon: LayoutDashboard,
+    badge: '管理者',
+    requiresRole: ['admin'],
   },
   {
     id: 'regional',
@@ -135,6 +147,14 @@ const settingCategories: SettingCategory[] = [
     requiresRole: ['hr', 'admin'],
   },
   {
+    id: 'announcement-types',
+    title: 'アナウンス設定',
+    description: 'アナウンス種別マスタ',
+    icon: Megaphone,
+    badge: '人事',
+    requiresRole: ['hr', 'admin'],
+  },
+  {
     id: 'billing',
     title: '請求・契約',
     description: '請求情報、契約プラン',
@@ -155,14 +175,16 @@ const settingCategories: SettingCategory[] = [
 export default function SettingsPage() {
   const mounted = useIsMounted();
   const { currentUser, currentDemoUser, switchDemoRole } = useUserStore();
-  const {
-    companyInfo,
-    payrollSettings,
-    yearEndAdjustmentSettings,
-    updateCompanyInfo,
-    updatePayrollSettings,
-    updateYearEndAdjustmentSettings
-  } = useCompanySettingsStore();
+  // 会社設定（将来的に設定画面で使用予定）
+  // const {
+  //   companyInfo,
+  //   payrollSettings,
+  //   yearEndAdjustmentSettings,
+  //   updateCompanyInfo,
+  //   updatePayrollSettings,
+  //   updateYearEndAdjustmentSettings
+  // } = useCompanySettingsStore();
+  useCompanySettingsStore(); // ストア初期化のため
   const [settings, setSettings] = useState<SimpleSettings>(defaultSettings);
   const [hasChanges, setHasChanges] = useState(false);
   const [openSheet, setOpenSheet] = useState<string | null>(null);
@@ -183,7 +205,7 @@ export default function SettingsPage() {
   // Load role from localStorage for demo mode
   useEffect(() => {
     if (typeof window !== 'undefined' && !currentUser) {
-      const storedRole = localStorage.getItem('demo-role') as any;
+      const storedRole = localStorage.getItem('demo-role') as UserRole | null;
       if (storedRole && !currentDemoUser) {
         switchDemoRole(storedRole);
       }
@@ -199,7 +221,7 @@ export default function SettingsPage() {
           const parsed = JSON.parse(stored);
           setSettings({ ...defaultSettings, ...parsed });
           applyTheme(parsed.theme || 'light');
-        } catch (e) {
+        } catch {
           // Ignore error
         }
       }
@@ -237,7 +259,7 @@ export default function SettingsPage() {
       localStorage.setItem('dandori_simple_settings', JSON.stringify(settings));
       setHasChanges(false);
       toast.success('設定を保存しました');
-    } catch (error) {
+    } catch {
       toast.error('設定の保存に失敗しました');
     }
   };
@@ -256,6 +278,8 @@ export default function SettingsPage() {
     switch (categoryId) {
       case 'appearance':
         return <AppearanceTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
+      case 'dashboard':
+        return <DashboardSettingsPanel />;
       case 'regional':
         return <RegionalTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'company':
@@ -276,6 +300,8 @@ export default function SettingsPage() {
         return <MasterDataPanel />;
       case 'data-import':
         return <DataManagementPanel />;
+      case 'announcement-types':
+        return <AnnouncementTypeMasterPanel />;
       case 'billing':
         return <BillingTab />;
       case 'system':

@@ -146,7 +146,7 @@ export function PerformanceEvaluationForm({
   const [evaluatorComments, setEvaluatorComments] = useState(initialData?.evaluatorComments || '');
 
   // 評価項目の更新
-  const updateItem = (itemId: string, field: keyof EvaluationItem, value: any) => {
+  const updateItem = (itemId: string, field: keyof EvaluationItem, value: string | number) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {

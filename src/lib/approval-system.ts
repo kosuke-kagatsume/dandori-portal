@@ -403,8 +403,9 @@ export function getPendingApprovalsForUser(userId: string, flows: ApprovalFlow[]
 // 自動承認ルールをチェック
 export function checkAutoApprovalRules(
   requestType: ApprovalFlow['requestType'],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   applicantId: string,
-  requestData: any
+  requestData: { days?: number; leaveType?: string; isWeekend?: boolean }
 ): boolean {
   // 例: 1日以下の有給は自動承認
   if (requestType === 'leave' && requestData.days <= 1 && requestData.leaveType === 'annual') {

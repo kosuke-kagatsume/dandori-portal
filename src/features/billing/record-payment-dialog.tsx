@@ -118,7 +118,7 @@ export function RecordPaymentDialog({ invoice, open, onClose }: RecordPaymentDia
           {/* 支払い方法 */}
           <div>
             <Label htmlFor="paymentMethod">支払い方法 *</Label>
-            <Select value={paymentMethod} onValueChange={(value: any) => setPaymentMethod(value)}>
+            <Select value={paymentMethod} onValueChange={(value: unknown) => setPaymentMethod(value)}>
               <SelectTrigger className="mt-2">
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4" />

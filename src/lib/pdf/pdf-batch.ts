@@ -81,8 +81,8 @@ export async function batchGeneratePayrollPDFs(
 
     // チャンクを並列処理
     const chunkResults = await Promise.allSettled(
-      chunk.map(async (payroll, chunkIndex) => {
-        const actualIndex = i + chunkIndex;
+      chunk.map(async (payroll) => {
+        // actualIndex available if needed: i + chunkIndex
         try {
           const pdf = await generatePayrollPDF(payroll);
           return { data: payroll, pdf };
@@ -94,8 +94,8 @@ export async function batchGeneratePayrollPDFs(
     );
 
     // 結果を集計
-    chunkResults.forEach((result, chunkIndex) => {
-      const actualIndex = i + chunkIndex;
+    chunkResults.forEach((result) => {
+      // actualIndex available if needed: i + chunkIndex
       const isSuccess = result.status === 'fulfilled' && !result.value.error;
 
       if (isSuccess) {
@@ -157,8 +157,8 @@ export async function batchGenerateBonusPDFs(
     const chunk = bonuses.slice(i, i + concurrency);
 
     const chunkResults = await Promise.allSettled(
-      chunk.map(async (bonus, chunkIndex) => {
-        const actualIndex = i + chunkIndex;
+      chunk.map(async (bonus) => {
+        // actualIndex available if needed: i + chunkIndex
         try {
           const pdf = await generateBonusPDF(bonus);
           return { data: bonus, pdf };
@@ -169,8 +169,8 @@ export async function batchGenerateBonusPDFs(
       })
     );
 
-    chunkResults.forEach((result, chunkIndex) => {
-      const actualIndex = i + chunkIndex;
+    chunkResults.forEach((result) => {
+      // actualIndex available if needed: i + chunkIndex
       const isSuccess = result.status === 'fulfilled' && !result.value.error;
 
       if (isSuccess) {
@@ -231,8 +231,8 @@ export async function batchGenerateWithholdingSlipPDFs(
     const chunk = slips.slice(i, i + concurrency);
 
     const chunkResults = await Promise.allSettled(
-      chunk.map(async (slip, chunkIndex) => {
-        const actualIndex = i + chunkIndex;
+      chunk.map(async (slip) => {
+        // actualIndex available if needed: i + chunkIndex
         try {
           const pdf = await generateWithholdingSlipPDF(slip);
           return { data: slip, pdf };
@@ -243,8 +243,8 @@ export async function batchGenerateWithholdingSlipPDFs(
       })
     );
 
-    chunkResults.forEach((result, chunkIndex) => {
-      const actualIndex = i + chunkIndex;
+    chunkResults.forEach((result) => {
+      // actualIndex available if needed: i + chunkIndex
       const isSuccess = result.status === 'fulfilled' && !result.value.error;
 
       if (isSuccess) {

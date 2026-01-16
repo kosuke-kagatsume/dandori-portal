@@ -56,7 +56,8 @@ const positions = {
 };
 
 // 部署構成（User.unitId → 部署名のマッピング）
-const departmentMapping: Record<string, { name: string; division: string }> = {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _departmentMapping: Record<string, { name: string; division: string }> = {
   'dept-1': { name: '経営企画室', division: 'executive' },
   'dept-2': { name: 'フロントエンド課', division: 'development' },
   'dept-3': { name: 'バックエンド課', division: 'development' },

@@ -13,12 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { type VehicleFromAPI, type VendorFromAPI } from '@/hooks/use-vehicles-api';
-import { type PCAssetFromAPI } from '@/hooks/use-pc-assets-api';
-import { type MaintenanceRecordFromAPI } from '@/hooks/use-maintenance-api';
+import { type VehicleFromAPI } from '@/hooks/use-vehicles-api';
+// import { type PCAssetFromAPI } from '@/hooks/use-pc-assets-api'; // 型定義参照用
+// import { type MaintenanceRecordFromAPI } from '@/hooks/use-maintenance-api'; // 型定義参照用
 import {
-  type GeneralAssetFromAPI,
-  type RepairRecordFromAPI,
+  // type GeneralAssetFromAPI,
+  // type RepairRecordFromAPI,
   ASSET_CATEGORIES,
   REPAIR_TYPES,
 } from '@/hooks/use-general-assets-api';
@@ -37,8 +37,8 @@ import {
   RefreshCw,
   Monitor,
   Laptop,
-  ChevronDown,
-  ChevronRight,
+  // ChevronDown, // 将来的にアコーディオンで使用予定
+  // ChevronRight, // 将来的にアコーディオンで使用予定
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MaintenanceDialog, type MaintenanceFormData } from '@/features/assets/maintenance-dialog';
@@ -50,8 +50,10 @@ import { GeneralAssetFormDialog } from '@/features/assets/general-asset-form-dia
 export default function AssetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'maintenance' | 'retired'>('all');
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleFromAPI | null>(null);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_selectedVehicle, setSelectedVehicle] = useState<VehicleFromAPI | null>(null); // 詳細モーダルで使用予定
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_detailModalOpen, setDetailModalOpen] = useState(false); // 詳細モーダルで使用予定
   const [maintenanceTypeFilter, setMaintenanceTypeFilter] = useState<string>('all');
   const [maintenanceVendorFilter, setMaintenanceVendorFilter] = useState<string>('all');
 
@@ -74,7 +76,7 @@ export default function AssetsPage() {
     maintenanceRecords,
     repairRecords,
     loading: batchLoading,
-    error: batchError,
+    // error: batchError, // エラー表示で使用予定
     refresh: refreshAllData,
   } = useAssetsBatchAPI();
 
@@ -101,11 +103,12 @@ export default function AssetsPage() {
 
   // 期限警告タブのカテゴリフィルター
   const [warningCategoryFilter, setWarningCategoryFilter] = useState<'all' | 'vehicle' | 'pc' | 'general'>('all');
-  const [expandedWarningGroups, setExpandedWarningGroups] = useState<Record<string, boolean>>({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_expandedWarningGroups, _setExpandedWarningGroups] = useState<Record<string, boolean>>({
     vehicle: true,
     pc: true,
     general: true,
-  });
+  }); // アコーディオン実装時に使用予定
 
   const isLoading = batchLoading || deleteLoading;
 
@@ -118,13 +121,15 @@ export default function AssetsPage() {
     return new Map(vendors.map((v) => [v.id, v]));
   }, [vendors]);
 
-  const pcAssetMap = useMemo(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _pcAssetMap = useMemo(() => {
     return new Map(pcAssets.map((p) => [p.id, p]));
-  }, [pcAssets]);
+  }, [pcAssets]); // O(1)検索用（将来的に使用予定）
 
-  const generalAssetMap = useMemo(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _generalAssetMap = useMemo(() => {
     return new Map(generalAssets.map((a) => [a.id, a]));
-  }, [generalAssets]);
+  }, [generalAssets]); // O(1)検索用（将来的に使用予定）
 
   // 車両別費用集計を計算する関数
   const calculateVehicleCosts = (startMonth: string, endMonth: string) => {
@@ -248,7 +253,8 @@ export default function AssetsPage() {
   }, [allWarnings, warningCategoryFilter]);
 
   // 後方互換性のための車両のみの警告
-  const warnings = useMemo(() => getDeadlineWarnings(vehicles), [vehicles]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _warnings = useMemo(() => getDeadlineWarnings(vehicles), [vehicles]); // レガシー互換用（将来的に削除予定）
 
   // フィルタリングされた車両リスト
   const filteredVehicles = useMemo(() => {

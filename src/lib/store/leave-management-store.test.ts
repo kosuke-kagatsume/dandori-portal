@@ -3,7 +3,8 @@
  */
 
 import { useLeaveManagementStore } from './leave-management-store';
-import type { LeaveRequest, LeaveBalance } from './leave-management-store';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { LeaveRequest, LeaveBalance } from './leave-management-store'; // 型定義参照用
 
 describe('LeaveManagementStore', () => {
   // 現在の年度を使用

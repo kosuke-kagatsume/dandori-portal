@@ -30,6 +30,8 @@ export function isTokenExpired(issuedAt: number, expiresIn: number): boolean {
  */
 export function isTokenNearExpiry(issuedAt: number, expiresIn: number): boolean {
   const now = Date.now();
+  // expiresAt は将来の機能拡張用（期限切れチェックの詳細ロギング等）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const expiresAt = issuedAt + expiresIn * 1000;
   const threshold = issuedAt + (expiresIn * 0.8) * 1000; // 80%経過
   return now >= threshold;

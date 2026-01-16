@@ -26,9 +26,9 @@ const documentTypeLabels: Record<DocumentType, string> = {
 /**
  * 承認フロータブ
  */
-export function ApprovalFlowTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function ApprovalFlowTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   const {
-    flows,
     initialized,
     getFlowsByDocumentType,
     getStats,

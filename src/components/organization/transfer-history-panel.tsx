@@ -27,7 +27,6 @@ import {
   UserCog,
   Search,
   Download,
-  Filter
 } from 'lucide-react';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import type { TransferHistory } from '@/types';
@@ -39,7 +38,8 @@ interface TransferHistoryPanelProps {
 }
 
 export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProps) {
-  const { getAllTransferHistories, getTransferHistoriesByUser } = useOrganizationStore();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { getAllTransferHistories, getTransferHistoriesByUser: _getTransferHistoriesByUser } = useOrganizationStore(); // getTransferHistoriesByUserは将来的にユーザー別履歴で使用予定
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'transfer' | 'promotion' | 'demotion' | 'role_change'>('all');
   const [filterPeriod, setFilterPeriod] = useState<'all' | '1month' | '3months' | '6months' | '1year'>('all');

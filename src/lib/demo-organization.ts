@@ -1,4 +1,5 @@
-import type { OrganizationNode, OrganizationMember, UserRole, TransferHistory } from '@/types';
+import type { OrganizationNode, OrganizationMember, TransferHistory } from '@/types';
+// UserRole - 型定義として将来使用予定
 
 // デモ組織メンバー
 export const demoMembers: OrganizationMember[] = [

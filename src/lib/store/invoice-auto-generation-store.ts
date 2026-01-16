@@ -119,7 +119,7 @@ export const useInvoiceAutoGenerationStore = create<InvoiceAutoGenerationStore>(
 
       // 一括請求書生成
       generateInvoicesForAllTenants: (executionType) => {
-        const { settings, addHistory } = get();
+        const { addHistory } = get();
         const invoiceStore = useInvoiceStore.getState();
         const tenantStore = useAdminTenantStore.getState();
 

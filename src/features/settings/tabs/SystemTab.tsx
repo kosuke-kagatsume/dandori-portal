@@ -4,13 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShieldCheck, Database, Trash2, AlertTriangle, HardDrive, Settings } from 'lucide-react';
+import { Trash2, AlertTriangle, HardDrive, Settings } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { BackupPanel } from '@/components/backup/backup-panel';
 import { toast } from 'sonner';
 
-export function SystemTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function SystemTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   const { resetSettings } = useCompanySettingsStore();
 
   const handleResetAllSettings = () => {

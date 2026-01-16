@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MaintenanceRecord, MaintenanceType, TireType, Vehicle } from '@/types/asset';
+import { MaintenanceRecord, MaintenanceType, Vehicle } from '@/types/asset';
 import { useVehicleStore } from '@/lib/store/vehicle-store';
 
 interface MaintenanceFormModalProps {

@@ -241,7 +241,8 @@ export default function HealthPage() {
   // APIからのデータ
   const [checkups, setCheckups] = useState<HealthCheckup[]>([]);
   const [stressChecks, setStressChecks] = useState<StressCheck[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_isLoading, setIsLoading] = useState(true); // ローディング状態管理（setIsLoadingで更新）
 
   const [activeTab, setActiveTab] = useState('checkups');
   const [searchQuery, setSearchQuery] = useState('');

@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
         status: 'pending',
         currentStep: 0,
         approval_steps: {
-          create: approval_steps?.map((step: any, index: number) => ({
+          create: approval_steps?.map((step: { approverRole: string; approverId: string; approverName: string; executionMode?: string; timeoutHours?: number }, index: number) => ({
             tenantId,
             order: index,
             approverRole: step.approverRole,

@@ -69,7 +69,7 @@ export function hasMenuAccess(
  */
 export function getAccessibleMenus(userRole: UserRole): MenuKey[] {
   return Object.entries(MENU_PERMISSIONS)
-    .filter(([_, roles]) => roles.includes(userRole))
+    .filter(([, roles]) => roles.includes(userRole))
     .map(([key]) => key as MenuKey);
 }
 

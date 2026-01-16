@@ -3,7 +3,8 @@
  */
 
 import { useVehicleStore } from './vehicle-store';
-import type { Vehicle, Vendor, MaintenanceRecord, MonthlyMileage } from '@/types/asset';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { Vehicle, Vendor, MaintenanceRecord, MonthlyMileage } from '@/types/asset'; // 型定義参照用
 
 describe('VehicleStore', () => {
   beforeEach(() => {
@@ -1143,7 +1144,7 @@ describe('VehicleStore', () => {
 
   describe('getCostSummary', () => {
     it('指定期間の費用集計を取得できる', () => {
-      const { addVehicle, addVendor, addMaintenanceRecord, getCostSummary } = useVehicleStore.getState();
+      const { addVehicle, getCostSummary } = useVehicleStore.getState();
 
       // リース車両を追加
       const leasedVehicle = {

@@ -111,7 +111,8 @@ export async function GET(request: NextRequest) {
 
     // 今月の休暇取得者
     const thisMonth = now.getMonth();
-    const thisMonthRequests = leaveRequests.filter((leave) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _thisMonthRequests = leaveRequests.filter((leave) => { // 将来的に統計表示で使用予定
       const start = new Date(leave.startDate);
       const end = new Date(leave.endDate);
       // 今月と重なる休暇

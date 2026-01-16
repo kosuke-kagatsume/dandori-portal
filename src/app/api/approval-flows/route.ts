@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Prismaのクエリ結果の型が複雑なため、anyを許容
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {

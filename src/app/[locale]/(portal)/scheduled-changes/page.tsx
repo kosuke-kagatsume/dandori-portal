@@ -52,7 +52,7 @@ import { exportScheduledChangesToCSV } from '@/lib/csv/scheduled-changes-csv';
 export default function ScheduledChangesPage() {
   const {
     changes,
-    getPendingChanges,
+    // getPendingChanges, // フィルタリングはstatsで代用
     cancelScheduledChange,
     applyScheduledChange,
     deleteScheduledChange,
@@ -307,7 +307,7 @@ export default function ScheduledChangesPage() {
       </div>
 
       {/* タブとテーブル */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="space-y-4 w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'pending' | 'applied' | 'cancelled')} className="space-y-4 w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="all">
             全て ({stats.total})

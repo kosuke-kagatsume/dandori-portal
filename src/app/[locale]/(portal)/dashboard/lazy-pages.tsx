@@ -16,8 +16,9 @@ function PageLoader() {
   );
 }
 
-// カードローダー（小さいコンポーネント用）
-function CardLoader() {
+// カードローダー（小さいコンポーネント用）将来的にカードの遅延読み込みで使用予定
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _CardLoader() {
   return (
     <Card className="animate-pulse">
       <CardContent className="p-6">

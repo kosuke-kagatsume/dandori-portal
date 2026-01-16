@@ -14,7 +14,7 @@ import {
   AlertCircle,
   FileText,
   TrendingUp,
-  TrendingDown,
+  // TrendingDown, // 統計グラフで使用予定
   MoreHorizontal,
   Eye,
   Edit,
@@ -70,11 +70,11 @@ export default function LeavePage() {
 
   // Zustand ストアから状態と関数を取得
   const {
-    requests,
+    // requests, // getUserRequestsで取得するため直接使用せず
     getUserRequests,
-    getPendingRequests,
+    // getPendingRequests, // 将来的に承認依頼一覧で使用予定
     getLeaveBalance,
-    initializeLeaveBalance,
+    // initializeLeaveBalance, // 初期化は別途実行済み
     deleteRequest,
     cancelLeaveRequest,
     updateLeaveRequest,
@@ -171,7 +171,7 @@ export default function LeavePage() {
   const userRequests = useMemo(() => getUserRequests(currentUserId), [getUserRequests, currentUserId]);
   const balance = useMemo(() => getLeaveBalance(currentUserId, currentYear), [getLeaveBalance, currentUserId, currentYear]);
 
-  const handleCreateRequest = async (data: any) => {
+  const handleCreateRequest = async (data: { type?: string; startDate: string; endDate: string; days: number; reason: string }) => {
     try {
       const { createLeaveRequest } = useLeaveManagementStore.getState();
 
@@ -220,7 +220,7 @@ export default function LeavePage() {
     setDialogOpen(true);
   };
 
-  const handleUpdateRequest = async (data: any) => {
+  const handleUpdateRequest = async (data: { type?: string; startDate: string; endDate: string; days: number; reason: string }) => {
     if (!editingRequest) return;
 
     try {

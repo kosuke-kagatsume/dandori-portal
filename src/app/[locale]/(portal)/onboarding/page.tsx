@@ -7,7 +7,7 @@ import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 import { ProgressIndicator } from '@/features/onboarding/components/ProgressIndicator';
 import { FormCard } from '@/features/onboarding/components/FormCard';
 import { NextActionCard } from '@/features/onboarding/components/NextActionCard';
-import { DocumentTextIcon } from '@heroicons/react/24/outline';
+// import { DocumentTextIcon } from '@heroicons/react/24/outline'; // アイコン表示で使用予定
 
 /**
  * Onboarding Dashboard Page

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,14 @@ import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+// Select関連コンポーネント（将来的に言語選択で使用予定）
+// import {
+//   Select,
+//   SelectContent,
+//   SelectItem,
+//   SelectTrigger,
+//   SelectValue,
+// } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -49,9 +50,10 @@ import { useUIStore, useUserStore } from '@/lib/store';
 import { AvatarUploadButton } from '@/features/profile/avatar-upload-button';
 
 export default function AccountPage() {
-  const router = useRouter();
+  // const router = useRouter(); // 将来的にページ遷移で使用予定
   const params = useParams();
-  const currentLocale = (params?.locale as string) || 'ja';
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _currentLocale = (params?.locale as string) || 'ja'; // 将来的に言語切り替えで使用予定
 
   const { theme, setTheme } = useUIStore();
   const { currentUser, updateUser } = useUserStore();

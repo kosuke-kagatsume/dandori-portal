@@ -125,7 +125,7 @@ export function CreateApprovalFlowDialog({
   };
 
   // ステップ更新
-  const updateStep = (index: number, field: keyof ApprovalStep, value: any) => {
+  const updateStep = (index: number, field: keyof ApprovalStep, value: string | number | boolean | string[]) => {
     const newSteps = [...steps];
     newSteps[index] = { ...newSteps[index], [field]: value };
     setSteps(newSteps);
@@ -150,7 +150,7 @@ export function CreateApprovalFlowDialog({
   };
 
   // 条件更新
-  const updateCondition = (index: number, field: keyof ApprovalCondition, value: any) => {
+  const updateCondition = (index: number, field: keyof ApprovalCondition, value: string | number) => {
     const newConditions = [...conditions];
     newConditions[index] = { ...newConditions[index], [field]: value };
     setConditions(newConditions);
@@ -174,7 +174,7 @@ export function CreateApprovalFlowDialog({
     }
 
     // フロー作成
-    const flowId = createFlow({
+    createFlow({
       name: name.trim(),
       description: description.trim() || undefined,
       type: flowType,

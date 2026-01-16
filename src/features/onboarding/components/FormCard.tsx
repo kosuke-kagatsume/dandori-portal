@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormProgress, FormStatus } from '@/types/onboarding';
+import { FormProgress } from '@/types/onboarding';
 import {
   CheckCircleIcon,
   ClockIcon,

@@ -54,7 +54,7 @@ export function useAccountSettings() {
       } else {
         setError(data.error);
       }
-    } catch (err) {
+    } catch {
       setError('設定の取得に失敗しました');
     } finally {
       setLoading(false);
@@ -90,7 +90,7 @@ export function useAccountSettings() {
         setSettings(result.data);
       }
       return result;
-    } catch (err) {
+    } catch {
       return { success: false, error: 'プロフィールの更新に失敗しました' };
     } finally {
       setSaving(false);
@@ -125,7 +125,7 @@ export function useAccountSettings() {
         setSettings(result.data);
       }
       return result;
-    } catch (err) {
+    } catch {
       return { success: false, error: '外観設定の更新に失敗しました' };
     } finally {
       setSaving(false);
@@ -161,7 +161,7 @@ export function useAccountSettings() {
         setSettings(result.data);
       }
       return result;
-    } catch (err) {
+    } catch {
       return { success: false, error: '通知設定の更新に失敗しました' };
     } finally {
       setSaving(false);
@@ -196,7 +196,7 @@ export function useAccountSettings() {
         setSettings(result.data);
       }
       return result;
-    } catch (err) {
+    } catch {
       return { success: false, error: 'パスワードの変更に失敗しました' };
     } finally {
       setSaving(false);
@@ -224,7 +224,7 @@ export function useAccountSettings() {
         setSettings(result.data);
       }
       return result;
-    } catch (err) {
+    } catch {
       return { success: false, error: '2FA設定の更新に失敗しました' };
     } finally {
       setSaving(false);

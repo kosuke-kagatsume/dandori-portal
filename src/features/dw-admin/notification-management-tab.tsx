@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/table';
 import {
   Mail,
-  Send,
   AlertCircle,
   Clock,
   CheckCircle,
@@ -46,8 +45,6 @@ export function NotificationManagementTab() {
   const {
     getAllNotifications,
     getStats,
-    getNotificationsByType,
-    getNotificationsByTenant,
   } = useNotificationHistoryStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -206,7 +203,7 @@ export function NotificationManagementTab() {
             </div>
 
             {/* タイプフィルタ */}
-            <Select value={typeFilter} onValueChange={(v: any) => setTypeFilter(v)}>
+            <Select value={typeFilter} onValueChange={(v: NotificationType | 'all') => setTypeFilter(v)}>
               <SelectTrigger className="w-[200px]">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue placeholder="通知タイプ" />
@@ -222,7 +219,7 @@ export function NotificationManagementTab() {
             </Select>
 
             {/* ステータスフィルタ */}
-            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+            <Select value={statusFilter} onValueChange={(v: NotificationStatus | 'all') => setStatusFilter(v)}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="mr-2 h-4 w-4" />
                 <SelectValue placeholder="ステータス" />

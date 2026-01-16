@@ -5,7 +5,7 @@
 /**
  * Convert data to CSV format
  */
-export function convertToCSV(data: any[], headers: string[]): string {
+export function convertToCSV(data: Record<string, unknown>[], headers: string[]): string {
   const headerRow = headers.join(',');
   const dataRows = data.map((row) => {
     return headers

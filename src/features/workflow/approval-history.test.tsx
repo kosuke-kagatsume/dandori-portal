@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { WorkflowRequest, ApprovalStep } from '@/lib/workflow-store';
+import { ApprovalStep } from '@/lib/workflow-store';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 

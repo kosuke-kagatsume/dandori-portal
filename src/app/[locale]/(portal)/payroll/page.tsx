@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calculator, Users, TrendingUp, DollarSign, FileText, Calendar, CheckCircle, AlertCircle, Eye, Download } from 'lucide-react';
+import { Calculator, Users, TrendingUp, DollarSign, FileText, Calendar, CheckCircle, Eye, Download } from 'lucide-react';
 import { usePayrollStore } from '@/lib/store/payroll-store';
 import { useToast } from '@/hooks/use-toast';
 import { PayrollDetailModal } from '@/components/features/payroll/payroll-detail-modal';
@@ -67,16 +67,16 @@ export default function PayrollPage() {
 
   const {
     salaryMasters,
-    calculations,
-    bonusCalculations,
+    // calculations, // 計算結果はgetCalculationsByPeriodで取得
+    // bonusCalculations, // 計算結果はgetBonusCalculationsByPeriodで取得
     isCalculating,
     runPayroll,
     getCalculationsByPeriod,
     getBonusCalculationsByPeriod,
     runBonusCalculation,
     runYearEndAdjustment,
-    getYearEndAdjustment,
-    resetToSeed,
+    // getYearEndAdjustment, // 年末調整取得は別途実行
+    // resetToSeed, // シードリセットは初期化時のみ
   } = usePayrollStore();
 
   // 起動時の再シード保険 & 自動給与計算

@@ -7,47 +7,47 @@ import { useNotificationStore } from '@/lib/store/notification-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import {
-  GitBranch,
+  // GitBranch, // フロー図で使用予定
   FileText,
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle,
-  Play,
-  Pause,
-  Send,
+  // AlertCircle, // アラート表示で使用予定
+  // Play, // 再生ボタンで使用予定
+  // Pause, // 一時停止ボタンで使用予定
+  // Send, // 送信ボタンで使用予定
   Users,
   Calendar,
   DollarSign,
   Package,
   Briefcase,
-  ChevronRight,
-  MoreVertical,
+  // ChevronRight, // アコーディオンで使用予定
+  // MoreVertical, // メニューボタンで使用予定
   Plus,
   Search,
   User,
-  MessageSquare,
+  // MessageSquare, // コメント機能で使用予定
   Eye,
   UserCheck,
-  TrendingUp,
+  // TrendingUp, // 統計グラフで使用予定
   ClipboardList,
   CheckCheck,
-  ArrowRight,
+  // ArrowRight, // 矢印アイコンで使用予定
   Timer,
   AlertTriangle,
   UserX,
   Home,
   Building2,
-  Laptop,
+  // Laptop, // PC関連アイコンで使用予定
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+// import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // アバター表示で使用予定
 import {
   Select,
   SelectContent,
@@ -55,14 +55,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+// ドロップダウンメニュー（アクションメニューで使用予定）
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuLabel,
+//   DropdownMenuSeparator,
+//   DropdownMenuTrigger,
+// } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -216,7 +217,7 @@ export default function WorkflowPage() {
       setShowApprovalDialog(false);
       setSelectedRequest(null);
       setComment('');
-    } catch (error) {
+    } catch {
       toast.error('処理に失敗しました');
     }
   };

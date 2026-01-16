@@ -19,7 +19,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Tabs,
@@ -35,19 +34,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  Shield, 
-  Plus, 
+import {
+  Shield,
+  // Plus, // 追加ボタンで使用予定
   Settings,
-  Users,
+  // Users, // ユーザーアイコンで使用予定
   Eye,
-  Edit,
-  Trash2,
+  // Edit, // 編集ボタンで使用予定
+  // Trash2, // 削除ボタンで使用予定
   Search,
-  Info
+  // Info, // 情報アイコンで使用予定
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { OrganizationMember, UserRole, PermissionItem, PermissionCategory } from '@/types';
+import type { OrganizationMember, UserRole } from '@/types';
 import { permissionDefinitions, roleDefinitions } from '@/lib/demo-organization';
 
 interface PermissionManagementPanelProps {
@@ -81,7 +80,8 @@ const roleLabels: Record<UserRole, string> = {
 
 export function PermissionManagementPanel({
   members,
-  onMemberPermissionUpdate,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onMemberPermissionUpdate: _onMemberPermissionUpdate, // 将来的に権限更新で使用予定
   onRoleUpdate
 }: PermissionManagementPanelProps) {
   const [activeTab, setActiveTab] = useState('roles');

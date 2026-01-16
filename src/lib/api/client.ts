@@ -11,12 +11,12 @@
  */
 
 import type {
-  ApiResponse,
-  ApiError as ApiErrorType,
+  // ApiResponse - 将来使用予定
+  // ApiErrorType - 将来使用予定
   LoginRequest,
   LoginResponse,
   RefreshTokenRequest,
-  RefreshTokenResponse,
+  // RefreshTokenResponse - 将来使用予定
 } from './types';
 
 /**
@@ -292,7 +292,7 @@ class APIClient {
               { ...options, headers: refreshedHeaders },
               retryCount
             );
-          } catch (refreshError) {
+          } catch {
             // リフレッシュ失敗時は元のレスポンスを処理
             return await this.handleResponse<T>(response);
           }
@@ -471,7 +471,7 @@ export function getAPIClient(): APIClient {
   if (!defaultClient) {
     defaultClient = new APIClient({
       baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || '/api',
-      onTokenRefresh: (accessToken) => {
+      onTokenRefresh: () => {
         console.log('[API Client] Token refreshed successfully');
       },
       onUnauthorized: () => {

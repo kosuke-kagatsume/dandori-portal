@@ -46,6 +46,7 @@ function addQueryStats(stats: QueryStats) {
  * DATABASE_URLに接続プールパラメータを追加
  * Prisma + PostgreSQLでの最適な接続プール設定を適用
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getDatasourceUrl(): string {
   const baseUrl = process.env.DATABASE_URL || '';
 

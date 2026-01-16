@@ -3,7 +3,8 @@
  */
 
 import { useUIStore } from './ui-store';
-import type { Theme, Locale, Density, ViewMode } from '@/types';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { Theme, Locale, Density, ViewMode } from '@/types'; // 型定義参照用
 
 describe('UIStore', () => {
   beforeEach(() => {

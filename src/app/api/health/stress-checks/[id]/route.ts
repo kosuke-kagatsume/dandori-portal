@@ -140,7 +140,7 @@ export async function PUT(
       interviewScheduled,
       interviewScheduledAt,
       interviewCompleted,
-      interviewCompletedAt,
+      // interviewCompletedAt, // 完了日時は自動設定
       interviewNotes,
       doctorName,
       doctorOpinion,

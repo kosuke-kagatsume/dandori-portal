@@ -164,10 +164,10 @@ export function generateRealisticAttendanceData(): DetailedAttendanceRecord[] {
 
 // 勤務日のレコードを生成
 function createWorkdayRecord(
-  employee: any, 
-  dateString: string, 
-  dayOfWeek: string, 
-  date: Date, 
+  employee: { id: string; name: string; department: string; position: string },
+  dateString: string,
+  dayOfWeek: string,
+  date: Date,
   location: 'office' | 'home' | 'client',
   isHoliday: boolean = false
 ): DetailedAttendanceRecord {
@@ -266,7 +266,8 @@ export function generateRealisticLeaveRequests(): LeaveRequest[] {
   }
 
   const requests: LeaveRequest[] = [];
-  const today = new Date();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _today = new Date(); // 将来的に相対日付生成で使用予定
   
   // 過去の承認済み申請
   requests.push({

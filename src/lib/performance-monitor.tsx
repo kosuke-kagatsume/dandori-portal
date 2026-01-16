@@ -5,7 +5,8 @@ import { performanceMonitor } from '@/lib/performance';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Activity, TrendingUp, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+// TrendingUp - 将来使用予定
 
 interface PerformanceMetricReport {
   count: number;

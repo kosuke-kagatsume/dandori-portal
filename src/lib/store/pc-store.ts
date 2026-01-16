@@ -147,7 +147,8 @@ const initialState = {
 let idCounter = 0;
 
 const createPCStore = () => {
-  const storeCreator = (set: any, get: any) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const storeCreator = (set: (fn: (state: PCStoreState) => Partial<PCStoreState>) => void, get: () => PCStoreState & Record<string, unknown>) => ({
     ...initialState,
 
     // PC CRUD

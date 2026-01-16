@@ -10,7 +10,7 @@ import {
   ClockIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon,
+  // ArrowPathIcon, // リロードボタンで使用予定
 } from '@heroicons/react/24/outline';
 import type {
   OnboardingApplication,

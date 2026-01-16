@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   LineChart,
@@ -40,7 +41,6 @@ import {
   generateCompanyAttendanceTrend,
   generateDepartmentLeaveRate,
   generateDepartmentAverageSalary,
-  generateHeadcountTrend,
 } from '@/lib/mock-data/dashboard-charts-data';
 import { useDashboardStore } from '@/lib/store/dashboard-store';
 
@@ -395,14 +395,20 @@ export function DepartmentSalaryChart() {
 
 // 今後の入退社予定データ（デモ）
 const upcomingPersonnelChanges = [
-  { id: 1, name: '新入社員A', type: 'join', date: '2025年1月6日', department: '開発部' },
-  { id: 2, name: '新入社員B', type: 'join', date: '2025年1月6日', department: '営業部' },
-  { id: 3, name: '退職者C', type: 'leave', date: '2025年1月31日', department: '総務部' },
-  { id: 4, name: '新入社員D', type: 'join', date: '2025年2月1日', department: 'マーケティング部' },
-  { id: 5, name: '退職者E', type: 'leave', date: '2025年2月28日', department: '経理部' },
+  { id: 'user-001', name: '新入社員A', type: 'join', date: '2025年1月6日', department: '開発部' },
+  { id: 'user-002', name: '新入社員B', type: 'join', date: '2025年1月6日', department: '営業部' },
+  { id: 'user-003', name: '退職者C', type: 'leave', date: '2025年1月31日', department: '総務部' },
+  { id: 'user-004', name: '新入社員D', type: 'join', date: '2025年2月1日', department: 'マーケティング部' },
+  { id: 'user-005', name: '退職者E', type: 'leave', date: '2025年2月28日', department: '経理部' },
 ];
 
 export function HeadcountTrendChart() {
+  const router = useRouter();
+
+  const handleMemberClick = (userId: string) => {
+    router.push(`/ja/users/${userId}`);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -410,12 +416,16 @@ export function HeadcountTrendChart() {
           <Users className="h-5 w-5 text-purple-500" />
           入退社予定
         </CardTitle>
-        <CardDescription>今後の入社・退職予定</CardDescription>
+        <CardDescription>今後の入社・退職予定（クリックでユーザー詳細へ）</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
           {upcomingPersonnelChanges.map((person) => (
-            <div key={person.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+            <div
+              key={person.id}
+              className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+              onClick={() => handleMemberClick(person.id)}
+            >
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-full ${
                   person.type === 'join'
@@ -634,20 +644,25 @@ const CATEGORY_JAPANESE: Record<string, string> = {
 
 export function AssetUtilizationChart() {
   const { assetUtilization, isLoading, fetchDashboardStats } = useDashboardStore();
+  const router = useRouter();
 
   useEffect(() => {
     fetchDashboardStats();
   }, [fetchDashboardStats]);
 
+  const handleClick = () => {
+    router.push('/ja/assets');
+  };
+
   if (isLoading) {
     return (
-      <Card>
+      <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={handleClick}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5 text-green-500" />
             資産利用状況
           </CardTitle>
-          <CardDescription>社内資産の利用状況</CardDescription>
+          <CardDescription>社内資産の利用状況（クリックで詳細へ）</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[300px]">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -666,13 +681,13 @@ export function AssetUtilizationChart() {
   ];
 
   return (
-    <Card>
+    <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={handleClick}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5 text-green-500" />
           資産利用状況
         </CardTitle>
-        <CardDescription>社内資産の利用状況</CardDescription>
+        <CardDescription>社内資産の利用状況（クリックで詳細へ）</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">

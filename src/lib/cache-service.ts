@@ -13,7 +13,7 @@ interface CacheOptions {
 
 class CacheService {
   // L1: メモリキャッシュ（アプリケーション内）
-  private memoryCache = new Map<string, CacheEntry<any>>();
+  private memoryCache = new Map<string, CacheEntry<unknown>>();
   
   // L2: SessionStorage（ブラウザセッション内）
   private sessionCache = typeof window !== 'undefined' ? window.sessionStorage : null;
@@ -202,7 +202,7 @@ class CacheService {
         ttl,
       };
       this.sessionCache.setItem(this.CACHE_PREFIX + key, JSON.stringify(entry));
-    } catch (e) {
+    } catch {
       // ストレージ容量エラーの場合は古いエントリを削除
       this.cleanupStorage(this.sessionCache);
     }
@@ -219,7 +219,7 @@ class CacheService {
         ttl,
       };
       this.localCache.setItem(this.CACHE_PREFIX + key, JSON.stringify(entry));
-    } catch (e) {
+    } catch {
       // ストレージ容量エラーの場合は古いエントリを削除
       this.cleanupStorage(this.localCache);
     }

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Camera, Loader2, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+// import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +43,7 @@ export function AvatarUploadButton({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Data URLからBlobを作成
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const dataURLtoBlob = (dataUrl: string): Blob => {
     const arr = dataUrl.split(',');
     const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';

@@ -47,6 +47,8 @@ export function DashboardContent() {
     showLeaveBalance: false,      // 有給残日数（デフォルト非表示）
     showRecentActivity: false,    // 最近のアクティビティ（デフォルト非表示）
     showSystemStatus: false,      // システム接続状況（デフォルト非表示）
+    showAttendanceButton: true,   // 勤怠打刻ボタン（デフォルト表示）
+    showLeaveRequestButton: true, // 休暇申請ボタン（デフォルト表示）
   });
 
   // ローカルストレージから設定を読み込み
@@ -180,7 +182,7 @@ export function DashboardContent() {
   const rolePermissions: Record<UserRole, { viewAll: boolean; viewTeam: boolean; approve: boolean; manageSystem: boolean; manageUsers: boolean }> = {
     employee: { viewAll: false, viewTeam: false, approve: false, manageSystem: false, manageUsers: false },
     manager: { viewAll: false, viewTeam: true, approve: true, manageSystem: false, manageUsers: false },
-    executive: { viewAll: true, viewTeam: true, approve: true, manageSystem: false, manageUsers: false },
+    executive: { viewAll: true, viewTeam: true, approve: true, manageSystem: false, manageUsers: true },
     hr: { viewAll: true, viewTeam: true, approve: true, manageSystem: false, manageUsers: true },
     admin: { viewAll: true, viewTeam: true, approve: true, manageSystem: true, manageUsers: true },
     applicant: { viewAll: false, viewTeam: false, approve: false, manageSystem: false, manageUsers: false },
@@ -225,29 +227,31 @@ export function DashboardContent() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-            {/* 全員共通: 出勤する */}
-            <Link href="/ja/attendance">
-              <Button className="h-16 w-full flex flex-col space-y-1">
-                <Clock className="h-5 w-5" />
-                <span className="text-sm">出勤する</span>
-              </Button>
-            </Link>
-            {/* 全員共通: 有給申請 */}
-            <Link href="/ja/leave">
-              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                <Calendar className="h-5 w-5" />
-                <span className="text-sm">有給申請</span>
-              </Button>
-            </Link>
-            {/* チーム管理者以上: メンバー確認 */}
-            {canViewTeam && (
-              <Link href="/ja/members">
-                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
-                  <Users className="h-5 w-5" />
-                  <span className="text-sm">メンバー確認</span>
+            {/* 全員共通: 勤怠打刻（ON/OFF設定可能） */}
+            {dashboardSettings.showAttendanceButton && (
+              <Link href="/ja/attendance">
+                <Button className="h-16 w-full flex flex-col space-y-1">
+                  <Clock className="h-5 w-5" />
+                  <span className="text-sm">勤怠打刻</span>
                 </Button>
               </Link>
             )}
+            {/* 全員共通: 休暇申請（ON/OFF設定可能） */}
+            {dashboardSettings.showLeaveRequestButton && (
+              <Link href="/ja/leave">
+                <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                  <Calendar className="h-5 w-5" />
+                  <span className="text-sm">休暇申請</span>
+                </Button>
+              </Link>
+            )}
+            {/* 全員共通: メンバー確認 */}
+            <Link href="/ja/members">
+              <Button variant="outline" className="h-16 w-full flex flex-col space-y-1">
+                <Users className="h-5 w-5" />
+                <span className="text-sm">メンバー確認</span>
+              </Button>
+            </Link>
             {/* 承認権限: 承認待ち */}
             {canApprove && (
               <Link href="/ja/workflow">
@@ -387,7 +391,7 @@ export function DashboardContent() {
               <div className="flex items-center gap-1 mt-1">
                 <Activity className="h-3 w-3 text-blue-600" />
                 <p className="text-xs text-blue-700 dark:text-blue-300">
-                  承認されたら件数が減ります
+                  未承認の申請
                 </p>
               </div>
             </CardContent>

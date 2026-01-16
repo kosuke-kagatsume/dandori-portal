@@ -24,9 +24,9 @@ import {
   BarChart3,
   TreePine,
   List,
-  Search,
+  // Search, // 検索機能で使用予定
   Plus,
-  Settings
+  // Settings, // 設定ボタンで使用予定
 } from 'lucide-react';
 import { OrganizationChart } from '@/components/organization/organization-chart';
 import { UserManagementPanel } from '@/components/organization/user-management-panel';

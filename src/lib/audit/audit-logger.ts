@@ -1,6 +1,7 @@
 'use client';
 
-import { useAuditStore, type AuditAction, type AuditCategory, type AuditLog } from '@/lib/store/audit-store';
+import { useAuditStore, type AuditLog } from '@/lib/store/audit-store';
+// AuditAction, AuditCategory - 型定義として将来使用予定
 import { useUserStore } from '@/lib/store/user-store';
 
 type AuditLogInput = Omit<AuditLog, 'id' | 'timestamp' | 'userId' | 'userName' | 'userRole' | 'ipAddress' | 'userAgent'>;

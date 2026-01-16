@@ -44,7 +44,8 @@ export function VehicleDetailModal({
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceRecord | undefined>(undefined);
   const [mileageFormOpen, setMileageFormOpen] = useState(false);
   const [editingMileage, setEditingMileage] = useState<MonthlyMileage | undefined>(undefined);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_deleteConfirmOpen, _setDeleteConfirmOpen] = useState(false); // 削除確認ダイアログで使用予定
 
   if (!vehicle) return null;
 

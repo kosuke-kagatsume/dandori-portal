@@ -303,7 +303,6 @@ describe('AuditStore', () => {
       // Clear logs and add test data with known timestamps
       useAuditStore.setState({ logs: [] });
 
-      const now = new Date();
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
       const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 

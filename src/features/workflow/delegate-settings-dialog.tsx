@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useWorkflowStore } from '@/lib/workflow-store';
-import { useUserStore } from '@/lib/store/user-store';
+// useUserStore - 将来使用予定
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,

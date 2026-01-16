@@ -17,10 +17,17 @@ export function getCookie(name: string): string | null {
   return null;
 }
 
+interface DemoUserFromCookie {
+  id: string;
+  name: string;
+  email?: string;
+  role?: string;
+}
+
 /**
  * デモセッションCookieからユーザー情報を取得
  */
-export function getDemoUserFromCookie(): any | null {
+export function getDemoUserFromCookie(): DemoUserFromCookie | null {
   try {
     const demoSessionCookie = getCookie('demo_session');
     if (demoSessionCookie) {

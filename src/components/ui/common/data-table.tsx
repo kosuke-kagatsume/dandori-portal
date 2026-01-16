@@ -13,7 +13,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { memo, useMemo, useCallback } from 'react';
+import { memo } from 'react';
 import {
   Table,
   TableBody,
@@ -40,6 +40,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DataTableProps<TData> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   columns: ColumnDef<TData, any>[];
   data: TData[];
   searchKey?: string;

@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       tenantId,
-      profileId,
+      // profileId, // 将来的にプロファイルIDでの紐付けで使用予定
       userId,
       name,
       organization,

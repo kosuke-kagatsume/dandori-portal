@@ -7,10 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Building2, Mail, Calendar, Users, CreditCard, Globe, AlertCircle, CheckCircle, Lock, Loader2 } from 'lucide-react';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
-import { useInvoiceStore } from '@/lib/store/invoice-store';
+// useInvoiceStore - 将来使用予定
 import { toast } from 'sonner';
 import { calculateMonthlyPrice, calculateTax, calculateTotalWithTax } from '@/lib/billing/pricing-calculator';
 
@@ -21,7 +20,7 @@ interface CreateTenantDialogProps {
 
 export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
   const { addTenant, isSubdomainAvailable } = useAdminTenantStore();
-  const { initializeInvoices } = useInvoiceStore();
+  // initializeInvoices from useInvoiceStore() - 将来使用予定
 
   // フォーム状態
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -277,9 +276,9 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
       setSubdomainStatus('idle');
       setStep(1);
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create tenant:', error);
-      toast.error(error.message || 'テナントの作成に失敗しました');
+      toast.error(error instanceof Error ? error.message : 'テナントの作成に失敗しました');
     } finally {
       setIsCreating(false);
     }

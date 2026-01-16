@@ -262,7 +262,7 @@ export function useOptimizedImage(
       setLoading(false);
       options?.onLoad?.();
     };
-    img.onerror = (e) => {
+    img.onerror = () => {
       setError(new Error('Failed to load image'));
       setLoading(false);
     };

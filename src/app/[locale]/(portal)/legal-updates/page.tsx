@@ -30,7 +30,7 @@ import {
   Clock,
   ExternalLink,
   FileText,
-  TrendingUp,
+  // TrendingUp, // 統計グラフで使用予定
   Loader2,
   RefreshCw,
 } from 'lucide-react';

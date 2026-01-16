@@ -16,7 +16,7 @@ interface OptimizedDataTableProps<TData> {
 }
 
 // メモ化されたテーブル行コンポーネント
-const TableRowMemo = memo(({ row, columns }: { row: Row<unknown>; columns: ColumnDef<unknown, unknown>[] }) => (
+const TableRowMemo = memo(({ row }: { row: Row<unknown>; columns: ColumnDef<unknown, unknown>[] }) => (
   <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
     {row.getVisibleCells().map((cell: Cell<unknown, unknown>) => (
       <TableCell key={cell.id}>
@@ -53,7 +53,8 @@ TableHeaderMemo.displayName = 'TableHeaderMemo';
 function OptimizedDataTableComponent<TData>({
   columns,
   data,
-  searchKey = 'id',
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  searchKey: _searchKey = 'id', // globalFilterを使用しているため直接使用しないが、APIとして保持
   searchPlaceholder = '検索...',
   pageSize = 50,
 }: OptimizedDataTableProps<TData>) {

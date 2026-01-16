@@ -40,7 +40,7 @@ import {
   type AnnouncementType,
 } from '@/lib/store/announcements-store';
 import { useUserStore } from '@/lib/store';
-import { cn } from '@/lib/utils';
+// import { cn } from '@/lib/utils'; // 将来的にスタイリングで使用予定
 import { CreateAnnouncementDialog } from '@/features/announcements/create-announcement-dialog';
 
 export default function AnnouncementsAdminPage() {
@@ -227,7 +227,7 @@ export default function AnnouncementsAdminPage() {
             </div>
 
             {/* タイプ */}
-            <Select value={filterType} onValueChange={(value) => setFilterType(value as any)}>
+            <Select value={filterType} onValueChange={(value) => setFilterType(value as AnnouncementType | 'all')}>
               <SelectTrigger>
                 <SelectValue placeholder="タイプ" />
               </SelectTrigger>
@@ -245,7 +245,7 @@ export default function AnnouncementsAdminPage() {
             {/* 優先度 */}
             <Select
               value={filterPriority}
-              onValueChange={(value) => setFilterPriority(value as any)}
+              onValueChange={(value) => setFilterPriority(value as 'urgent' | 'high' | 'normal' | 'low' | 'all')}
             >
               <SelectTrigger>
                 <SelectValue placeholder="優先度" />
@@ -260,7 +260,7 @@ export default function AnnouncementsAdminPage() {
             </Select>
 
             {/* ステータス */}
-            <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as any)}>
+            <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as 'published' | 'draft' | 'all')}>
               <SelectTrigger>
                 <SelectValue placeholder="ステータス" />
               </SelectTrigger>

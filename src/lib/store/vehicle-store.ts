@@ -12,8 +12,8 @@ import type {
   DeadlineWarning,
   CostSummary,
   MonthlyMileage,
-  MaintenanceType,
-  TireType,
+  // MaintenanceType, // 将来的に使用予定
+  // TireType, // 将来的に使用予定
 } from '@/types/asset';
 
 const DATA_VERSION = 1;
@@ -413,7 +413,8 @@ const initialState = {
 let idCounter = 0;
 
 const createVehicleStore = () => {
-  const storeCreator = (set: any, get: any) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const storeCreator = (set: (fn: (state: VehicleState) => Partial<VehicleState>) => void, get: () => VehicleState & Record<string, unknown>) => ({
     ...initialState,
 
     // 車両CRUD

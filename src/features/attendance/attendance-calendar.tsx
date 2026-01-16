@@ -14,7 +14,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import {
-  Clock,
   Calendar as CalendarIcon,
   CheckCircle,
   XCircle,
@@ -24,7 +23,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { MountGate } from '@/components/common/MountGate';
 import { toast } from 'sonner';
 
@@ -102,7 +100,8 @@ export function AttendanceCalendar({ records }: AttendanceCalendarProps) {
     );
   };
 
-  const getStatusColor = (status: AttendanceRecord['status']) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _getStatusColor = (status: AttendanceRecord['status']) => {
     switch (status) {
       case 'present': return 'bg-green-500';
       case 'remote': return 'bg-blue-500';
@@ -133,7 +132,8 @@ export function AttendanceCalendar({ records }: AttendanceCalendarProps) {
     }
   };
 
-  const handleDateClick = (clickedDate: Date) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleDateClick = (clickedDate: Date) => {
     const record = getRecordForDate(clickedDate);
     if (record) {
       setSelectedRecord(record);

@@ -42,8 +42,8 @@ function ActualLoginForm() {
 
       toast.success('ログインしました');
       router.push(`/${locale}/dashboard`);
-    } catch (error: any) {
-      const errorMessage = error?.message || 'ログインに失敗しました';
+    } catch (error: unknown) {
+      const errorMessage = (error as Error)?.message || 'ログインに失敗しました';
       setLocalError(errorMessage);
       toast.error(errorMessage);
     }

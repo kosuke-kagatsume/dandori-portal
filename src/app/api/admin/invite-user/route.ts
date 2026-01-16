@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, name, role, tenantId, tenantName } = await request.json();
+    const { email, name, role, tenantId } = await request.json();
 
     // バリデーション
     if (!email || !name) {

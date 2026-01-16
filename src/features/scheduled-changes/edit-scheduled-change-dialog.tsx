@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
@@ -253,7 +253,7 @@ export function EditScheduledChangeDialog({
                   権限 <span className="text-red-500">*</span>
                 </Label>
                 <Select
-                  onValueChange={(value) => hireForm.setValue('role', value as any)}
+                  onValueChange={(value) => hireForm.setValue('role', value as 'employee' | 'manager' | 'hr' | 'admin')}
                   defaultValue={hireForm.getValues('role')}
                 >
                   <SelectTrigger id="edit-hire-role">
@@ -407,7 +407,7 @@ export function EditScheduledChangeDialog({
                 退職理由 <span className="text-red-500">*</span>
               </Label>
               <Select
-                onValueChange={(value) => retirementForm.setValue('retirementReason', value as any)}
+                onValueChange={(value) => retirementForm.setValue('retirementReason', value as 'voluntary' | 'company' | 'contract_end' | 'retirement' | 'other')}
                 defaultValue={retirementForm.getValues('retirementReason')}
               >
                 <SelectTrigger id="edit-retirement-reason">

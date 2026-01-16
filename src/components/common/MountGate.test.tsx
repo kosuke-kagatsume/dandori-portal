@@ -20,7 +20,7 @@ describe('MountGate', () => {
   });
 
   it('初期状態ではfallbackを表示する（同期的には確認できないがロジックは正しい）', () => {
-    const { rerender } = render(
+    render(
       <MountGate fallback={<div>ローディング中...</div>}>
         <div>メインコンテンツ</div>
       </MountGate>
@@ -32,7 +32,7 @@ describe('MountGate', () => {
   });
 
   it('fallbackが指定されない場合はnullを返す', async () => {
-    const { container } = render(
+    render(
       <MountGate>
         <div>コンテンツ</div>
       </MountGate>

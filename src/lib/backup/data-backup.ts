@@ -107,73 +107,73 @@ export function restoreFromBackup(backup: BackupData): { success: boolean; error
     // 各ストアにデータをリストア
     try {
       useUserStore.setState(backup.stores.users);
-    } catch (e) {
+    } catch {
       errors.push('ユーザーデータのリストアに失敗しました');
     }
 
     try {
       useAttendanceHistoryStore.setState(backup.stores.attendance);
-    } catch (e) {
+    } catch {
       errors.push('勤怠データのリストアに失敗しました');
     }
 
     try {
       useLeaveManagementStore.setState(backup.stores.leave);
-    } catch (e) {
+    } catch {
       errors.push('休暇データのリストアに失敗しました');
     }
 
     try {
       usePayrollStore.setState(backup.stores.payroll);
-    } catch (e) {
+    } catch {
       errors.push('給与データのリストアに失敗しました');
     }
 
     try {
       useWorkflowStore.setState(backup.stores.workflow);
-    } catch (e) {
+    } catch {
       errors.push('ワークフローデータのリストアに失敗しました');
     }
 
     try {
       useSaaSStore.setState(backup.stores.saas);
-    } catch (e) {
+    } catch {
       errors.push('SaaSデータのリストアに失敗しました');
     }
 
     try {
       usePCStore.setState(backup.stores.pc);
-    } catch (e) {
+    } catch {
       errors.push('PC資産データのリストアに失敗しました');
     }
 
     try {
       useVehicleStore.setState(backup.stores.vehicle);
-    } catch (e) {
+    } catch {
       errors.push('車両データのリストアに失敗しました');
     }
 
     try {
       usePerformanceEvaluationStore.setState(backup.stores.evaluation);
-    } catch (e) {
+    } catch {
       errors.push('評価データのリストアに失敗しました');
     }
 
     try {
       useOrganizationStore.setState(backup.stores.organization);
-    } catch (e) {
+    } catch {
       errors.push('組織データのリストアに失敗しました');
     }
 
     try {
       useCompanySettingsStore.setState(backup.stores.settings);
-    } catch (e) {
+    } catch {
       errors.push('設定データのリストアに失敗しました');
     }
 
     try {
       useAuditStore.setState(backup.stores.audit);
-    } catch (e) {
+    } catch {
       errors.push('監査ログのリストアに失敗しました');
     }
 
@@ -181,7 +181,7 @@ export function restoreFromBackup(backup: BackupData): { success: boolean; error
       success: errors.length === 0,
       errors,
     };
-  } catch (e) {
+  } catch {
     errors.push('バックアップデータの読み込みに失敗しました');
     return { success: false, errors };
   }
@@ -200,7 +200,7 @@ export function importBackupFile(file: File): Promise<{ success: boolean; errors
         const backup: BackupData = JSON.parse(jsonString);
         const result = restoreFromBackup(backup);
         resolve(result);
-      } catch (error) {
+      } catch {
         resolve({
           success: false,
           errors: ['バックアップファイルの形式が不正です'],

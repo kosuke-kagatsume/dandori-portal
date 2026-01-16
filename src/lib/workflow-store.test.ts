@@ -1,4 +1,5 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { renderHook, act, waitFor } from '@testing-library/react'; // waitForは将来的に非同期テストで使用予定
 import { useWorkflowStore } from './workflow-store';
 
 // Mock dependencies

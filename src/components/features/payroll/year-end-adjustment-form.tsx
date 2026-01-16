@@ -36,10 +36,13 @@ export function YearEndAdjustmentForm({
   const [dependentElderly, setDependentElderly] = useState(0);
   const [dependentElderlyLiving, setDependentElderlyLiving] = useState(0);
 
-  // 障害者控除
-  const [disabilityGeneral, setDisabilityGeneral] = useState(0);
-  const [disabilitySpecial, setDisabilitySpecial] = useState(0);
-  const [disabilitySpecialLiving, setDisabilitySpecialLiving] = useState(0);
+  // 障害者控除（将来的にUIで設定可能にする予定）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [disabilityGeneral, _setDisabilityGeneral] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [disabilitySpecial, _setDisabilitySpecial] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [disabilitySpecialLiving, _setDisabilitySpecialLiving] = useState(0);
 
   // 生命保険料
   const [lifeGeneral, setLifeGeneral] = useState(0);
@@ -60,10 +63,13 @@ export function YearEndAdjustmentForm({
   const [mortgageRate, setMortgageRate] = useState(0.01);
   const [mortgageMax, setMortgageMax] = useState(400000);
 
-  // その他控除
-  const [widow, setWidow] = useState(0);
-  const [singleParent, setSingleParent] = useState(0);
-  const [workingStudent, setWorkingStudent] = useState(0);
+  // その他控除（将来的にUIで設定可能にする予定）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [widow, _setWidow] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [singleParent, _setSingleParent] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [workingStudent, _setWorkingStudent] = useState(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

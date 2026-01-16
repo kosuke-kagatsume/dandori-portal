@@ -10,7 +10,8 @@ import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { Building2, User, FileText, Loader2 } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 
-export function CompanyTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function CompanyTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   const {
     companyInfo,
     updateCompanyInfo,

@@ -6,7 +6,6 @@ import {
   XCircle,
   FileText,
   Calendar,
-  Building,
   User,
   AlertTriangle,
 } from 'lucide-react';
@@ -124,7 +123,8 @@ export function CertificationReviewDialog({
     }
   };
 
-  const handleStartReview = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleStartReview = async () => {
     if (renewal.status === 'pending') {
       await reviewRenewal(renewal.id, 'start_review');
     }

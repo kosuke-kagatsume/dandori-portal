@@ -173,6 +173,7 @@ export function useExpiringCertifications(days = 90) {
 export function useCertificationRenewals() {
   const { currentUser } = useUserStore();
   const { currentTenant } = useTenantStore();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [renewals, setRenewals] = useState<any[]>([]);
   const [counts, setCounts] = useState({
     pending: 0,
@@ -292,6 +293,7 @@ export function useCertificationRenewals() {
 
 export function useCertificationDashboard() {
   const { currentTenant } = useTenantStore();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [dashboard, setDashboard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 

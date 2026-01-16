@@ -277,7 +277,7 @@ export function logBundleSize() {
 export function logMemoryUsage() {
   if (typeof window === 'undefined') return;
 
-  // @ts-ignore - performance.memoryはChrome/Edge専用
+  // @ts-expect-error - performance.memoryはChrome/Edge専用
   const memory = performance.memory;
 
   if (memory) {

@@ -6,11 +6,8 @@ import {
   Clock,
   FileCheck,
   RefreshCw,
-  Users,
   ChevronRight,
   Mail,
-  CheckCircle2,
-  XCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,16 +22,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useCertificationDashboard, useCertificationRenewals } from '@/hooks/use-certification-notifications';
-import { useUserStore } from '@/lib/store';
+import { useCertificationDashboard } from '@/hooks/use-certification-notifications';
+// useCertificationRenewals, useUserStore - 将来使用予定
 import { format } from 'date-fns';
 import { CertificationReviewDialog } from './certification-review-dialog';
 
 export function CertificationAdminDashboard() {
   const { dashboard, loading, refetch } = useCertificationDashboard();
-  const { reviewRenewal, submitting } = useCertificationRenewals();
-  const { currentUser } = useUserStore();
-  const [selectedRenewal, setSelectedRenewal] = useState<any>(null);
+  // reviewRenewal, submitting from useCertificationRenewals() - 将来使用予定
+  // currentUser from useUserStore() - 将来使用予定
+  const [selectedRenewal, setSelectedRenewal] = useState<Record<string, unknown> | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
   if (loading) {
@@ -54,12 +51,13 @@ export function CertificationAdminDashboard() {
     underReview: 0,
   };
 
-  const handleSendNotification = async (certificationId: string, userId: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleSendNotification = async (_certificationId: string, _userId: string) => {
     // TODO: 通知送信API呼び出し
     alert('通知送信機能は準備中です');
   };
 
-  const handleOpenReview = (renewal: any) => {
+  const handleOpenReview = (renewal: Record<string, unknown>) => {
     setSelectedRenewal(renewal);
     setReviewDialogOpen(true);
   };
@@ -176,7 +174,7 @@ export function CertificationAdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      dashboard?.expiringCertifications.map((cert: any) => (
+                      dashboard?.expiringCertifications.map((cert: Record<string, unknown>) => (
                         <TableRow key={cert.id}>
                           <TableCell>
                             <div>
@@ -257,7 +255,7 @@ export function CertificationAdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      dashboard?.expiredCertifications.map((cert: any) => (
+                      dashboard?.expiredCertifications.map((cert: Record<string, unknown>) => (
                         <TableRow key={cert.id}>
                           <TableCell>
                             <div>
@@ -328,7 +326,7 @@ export function CertificationAdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      dashboard?.pendingRenewals.map((renewal: any) => (
+                      dashboard?.pendingRenewals.map((renewal: Record<string, unknown>) => (
                         <TableRow key={renewal.id}>
                           <TableCell>
                             <div>

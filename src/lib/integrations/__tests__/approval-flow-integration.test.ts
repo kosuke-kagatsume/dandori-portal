@@ -8,7 +8,8 @@ import type { ResolvedApprovalRoute } from '@/types/approval-flow';
 import type { OrganizationMember } from '@/types/organization';
 
 describe('承認フロー統合テスト', () => {
-  // デモ組織メンバーデータ
+  // デモ組織メンバーデータ - テスト用に保持
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const demoMembers: OrganizationMember[] = [
     {
       id: 'M001',
@@ -242,6 +243,7 @@ describe('承認フロー統合テスト', () => {
     });
 
     it('サポートされていないタイプはundefinedを返す', () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = workflowTypeToDocumentType('document_approval' as any);
       expect(result).toBeUndefined();
     });

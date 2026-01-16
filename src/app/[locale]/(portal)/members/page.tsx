@@ -11,7 +11,7 @@ import {
   Plane,
   GraduationCap,
   UserX,
-  Clock,
+  // Clock, // 出勤時刻表示で使用予定
   LayoutGrid,
   List,
   RefreshCw,
@@ -27,7 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LazyAvatar } from '@/components/ui/lazy-avatar';
 import {
   Select,
@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ArrowUpDown } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { VirtualDataTable } from '@/components/ui/common/virtual-data-table';
 import { MemberCard } from '@/features/members/member-card';
 import { toast } from 'sonner';
@@ -52,6 +52,7 @@ type Member = User & {
   lastActivity?: string;
   workingTime?: string;
   checkedInAt?: string;
+  employeeNumber?: string;  // 社員番号
 };
 
 export default function MembersPage() {
@@ -68,7 +69,8 @@ export default function MembersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all');
   const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'department' | 'checkedInAt'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'department' | 'employeeNumber'>('name');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20; // カードビューのページサイズ
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -104,6 +106,7 @@ export default function MembersPage() {
           checkedInAt: string | null;
           workingTime: string | null;
           lastActivity: string | null;
+          employeeNumber: string | null;
         }) => ({
           id: member.id,
           email: member.email,
@@ -119,6 +122,7 @@ export default function MembersPage() {
           checkedInAt: member.checkedInAt || undefined,
           workingTime: member.workingTime || undefined,
           lastActivity: member.lastActivity || undefined,
+          employeeNumber: member.employeeNumber || undefined,
         }));
 
         setMembers(apiMembers);
@@ -151,17 +155,29 @@ export default function MembersPage() {
   // フィルター変更時にページをリセット
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, locationFilter, sortBy]);
+  }, [searchTerm, statusFilter, locationFilter, departmentFilter, sortBy]);
+
+  // 動的に部署リストを取得
+  const departments = Array.from(new Set(members.map(m => m.department).filter((d): d is string => !!d))).sort((a, b) => a.localeCompare(b, 'ja'));
+
+  // 動的に勤務地リストを取得
+  const locations = Array.from(new Set(members.map(m => m.workLocation).filter((l): l is string => !!l))).sort((a, b) => a.localeCompare(b, 'ja'));
 
   // Filter and sort members
   const filteredMembers = members
     .filter(member => {
       const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (member.department || '').toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || member.currentStatus === statusFilter;
+                           (member.department || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (member.employeeNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+      // 休暇・欠勤フィルターは absent と not_checked_in の両方を含める
+      const matchesStatus = statusFilter === 'all' ||
+                           (statusFilter === 'absent'
+                             ? (member.currentStatus === 'absent' || member.currentStatus === 'not_checked_in')
+                             : member.currentStatus === statusFilter);
       const matchesLocation = locationFilter === 'all' || member.workLocation === locationFilter;
+      const matchesDepartment = departmentFilter === 'all' || member.department === departmentFilter;
 
-      return matchesSearch && matchesStatus && matchesLocation;
+      return matchesSearch && matchesStatus && matchesLocation && matchesDepartment;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -169,12 +185,12 @@ export default function MembersPage() {
           return a.name.localeCompare(b.name, 'ja');
         case 'department':
           return (a.department || '').localeCompare(b.department || '', 'ja');
-        case 'checkedInAt':
-          // 出勤時刻でソート（未出勤は最後に）
-          if (!a.checkedInAt && !b.checkedInAt) return 0;
-          if (!a.checkedInAt) return 1;
-          if (!b.checkedInAt) return -1;
-          return a.checkedInAt.localeCompare(b.checkedInAt);
+        case 'employeeNumber':
+          // 社員番号でソート
+          if (!a.employeeNumber && !b.employeeNumber) return 0;
+          if (!a.employeeNumber) return 1;
+          if (!b.employeeNumber) return -1;
+          return a.employeeNumber.localeCompare(b.employeeNumber, 'ja', { numeric: true });
         default:
           return 0;
       }
@@ -218,6 +234,7 @@ export default function MembersPage() {
     {
       accessorKey: 'name',
       header: 'メンバー',
+      enableSorting: false, // 上部フィルタで並び替えするためソート無効
       cell: ({ row }) => {
         const member = row.original;
         return (
@@ -230,10 +247,18 @@ export default function MembersPage() {
             />
             <div>
               <div className="font-medium">{member.name}</div>
-              <div className="text-sm text-muted-foreground">{member.department}</div>
+              <div className="text-xs text-muted-foreground">{member.department}</div>
             </div>
           </div>
         );
+      },
+    },
+    {
+      accessorKey: 'employeeNumber',
+      header: '社員番号',
+      cell: ({ row }) => {
+        const empNo = row.original.employeeNumber;
+        return empNo ? <span className="font-mono text-sm">{empNo}</span> : <span className="text-muted-foreground">-</span>;
       },
     },
     {
@@ -255,25 +280,9 @@ export default function MembersPage() {
     {
       accessorKey: 'workLocation',
       header: '勤務地',
-    },
-    {
-      accessorKey: 'checkedInAt',
-      header: '出勤時刻',
       cell: ({ row }) => {
-        const time = row.original.checkedInAt;
-        return time ? time : <span className="text-muted-foreground">未出勤</span>;
-      },
-    },
-    {
-      accessorKey: 'workingTime',
-      header: '稼働時間',
-    },
-    {
-      accessorKey: 'lastActivity',
-      header: '最終活動',
-      cell: ({ row }) => {
-        const activity = row.original.lastActivity;
-        return <span className="text-sm text-muted-foreground">{activity}</span>;
+        const location = row.original.workLocation;
+        return location ? location : <span className="text-muted-foreground">-</span>;
       },
     },
   ];
@@ -281,7 +290,7 @@ export default function MembersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -449,27 +458,39 @@ export default function MembersPage() {
             </SelectContent>
           </Select>
 
+          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="部署" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部署</SelectItem>
+              {departments.map((dept) => (
+                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={locationFilter} onValueChange={setLocationFilter}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="勤務地" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">すべて</SelectItem>
-              <SelectItem value="本社">本社</SelectItem>
-              <SelectItem value="営業部">営業部</SelectItem>
-              <SelectItem value="開発部">開発部</SelectItem>
+              {locations.map((loc) => (
+                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'name' | 'department' | 'checkedInAt')}>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'name' | 'department' | 'employeeNumber')}>
             <SelectTrigger className="w-36">
               <ArrowUpDown className="h-4 w-4 mr-2" />
               <SelectValue placeholder="並び順" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="name">名前順</SelectItem>
+              <SelectItem value="employeeNumber">社員番号順</SelectItem>
               <SelectItem value="department">部署順</SelectItem>
-              <SelectItem value="checkedInAt">出勤時刻順</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -554,14 +575,63 @@ export default function MembersPage() {
       ) : (
         <Card>
           <CardContent className="p-6">
+            {/* ページネーション情報（リスト表示上部） */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-sm text-muted-foreground">
+                {filteredMembers.length} / {members.length} 件
+              </div>
+              {filteredMembers.length > pageSize && (
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm px-2">
+                    {currentPage} / {Math.ceil(filteredMembers.length / pageSize)}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredMembers.length / pageSize), p + 1))}
+                    disabled={currentPage >= Math.ceil(filteredMembers.length / pageSize)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setCurrentPage(Math.ceil(filteredMembers.length / pageSize))}
+                    disabled={currentPage >= Math.ceil(filteredMembers.length / pageSize)}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
             <VirtualDataTable
               columns={columns}
-              data={filteredMembers}
+              data={filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
               searchKey="name"
               searchPlaceholder="メンバー検索..."
-              enableVirtualization={filteredMembers.length > 100}
+              enableVirtualization={false}
               enableCaching={true}
-              pageSize={50}
+              pageSize={pageSize}
             />
           </CardContent>
         </Card>

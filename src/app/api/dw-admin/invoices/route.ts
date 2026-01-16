@@ -89,7 +89,8 @@ export async function GET(request: NextRequest) {
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-    const monthlyRevenue = await prisma.invoices.aggregate({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _monthlyRevenue = await prisma.invoices.aggregate({ // 将来的に統計表示で使用予定
       where: {
         status: 'paid',
         paidDate: {

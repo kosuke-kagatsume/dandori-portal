@@ -127,7 +127,7 @@ const createRetiredYearEndStore = () => {
     },
 
     sendWithholdingSlipsToRetired: async (retiredUsers, year) => {
-      const { addSendHistory, isAlreadySent, sendWithholdingSlipToUser } = get();
+      const { isAlreadySent, sendWithholdingSlipToUser } = get();
 
       // フィルター: 送信済みを除外
       const unsentUsers = retiredUsers.filter(user => !isAlreadySent(user.id, year));

@@ -13,7 +13,7 @@ import type {
   BonusData,
   WithholdingSlipData,
   PDFConfig,
-  PDFGenerationResult,
+  // PDFGenerationResult - 将来使用予定
 } from '@/types/pdf';
 
 /**
@@ -25,7 +25,7 @@ export const generatePayrollPDF = async (payrollData: PayrollData): Promise<jsPD
     const allowanceItems = [
       { label: PDF_TEXT.PAYROLL.BASIC_SALARY, value: payrollData.basicSalary },
       ...Object.entries(payrollData.allowances)
-        .filter(([_, value]) => value > 0)
+        .filter(([, value]) => value > 0)
         .map(([key, value]) => ({
           label: ALLOWANCE_LABELS[key] || key,
           value,
@@ -34,7 +34,7 @@ export const generatePayrollPDF = async (payrollData: PayrollData): Promise<jsPD
 
     // 控除項目
     const deductionItems = Object.entries(payrollData.deductions)
-      .filter(([_, value]) => value > 0)
+      .filter(([, value]) => value > 0)
       .map(([key, value]) => ({
         label: DEDUCTION_LABELS[key] || key,
         value,
@@ -109,7 +109,7 @@ export const generateBonusPDF = async (bonusData: BonusData): Promise<jsPDF> => 
 
     // 控除項目
     const deductionItems = Object.entries(bonusData.deductions)
-      .filter(([_, value]) => value > 0)
+      .filter(([, value]) => value > 0)
       .map(([key, value]) => ({
         label: DEDUCTION_LABELS[key] || key,
         value,

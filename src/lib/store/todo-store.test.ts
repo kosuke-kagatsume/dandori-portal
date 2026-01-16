@@ -3,7 +3,8 @@
  */
 
 import { useTodoStore } from './todo-store';
-import type { Todo } from './todo-store';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { Todo } from './todo-store'; // 型定義参照用
 
 describe('TodoStore', () => {
   beforeEach(() => {
@@ -15,7 +16,7 @@ describe('TodoStore', () => {
 
   describe('addTodo', () => {
     it('新しいTodoを追加できる', () => {
-      const { addTodo, todos } = useTodoStore.getState();
+      const { addTodo } = useTodoStore.getState();
 
       addTodo({
         title: 'テストTodo',

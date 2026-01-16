@@ -134,7 +134,8 @@ export class QueryBatcher<T> {
             const pendingPromise = this.pending.get(batchId);
             if (pendingPromise) {
               // 型安全でないがresolveを呼ぶ必要がある
-              const result = results.get(batchId) || null;
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const _result = results.get(batchId) || null;
               // この時点でpendingPromiseの解決はここでは直接できない
               // 代わりに別のアプローチを使用
             }

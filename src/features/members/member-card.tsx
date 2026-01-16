@@ -20,6 +20,7 @@ interface MemberCardProps {
     workLocation?: string;
     lastActivity?: string;
     workingTime?: string;
+    employeeNumber?: string;
   };
 }
 
@@ -102,28 +103,11 @@ export function MemberCard({ member }: MemberCardProps) {
             </div>
 
             <div className="space-y-1 text-xs text-muted-foreground">
+              {member.employeeNumber && (
+                <p>社員番号：{member.employeeNumber}</p>
+              )}
               <p>{member.department}</p>
               <p>{member.position}</p>
-              
-              {member.workLocation && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  <span>{member.workLocation}</span>
-                </div>
-              )}
-              
-              {member.workingTime && (
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <span>稼働: {member.workingTime}</span>
-                </div>
-              )}
-              
-              {member.lastActivity && (
-                <p className="text-xs">
-                  最終活動: {member.lastActivity}
-                </p>
-              )}
             </div>
           </div>
         </div>

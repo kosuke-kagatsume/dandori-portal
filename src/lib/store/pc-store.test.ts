@@ -3,7 +3,8 @@
  */
 
 import { usePCStore } from './pc-store';
-import type { PCAsset, SoftwareLicense } from '@/types/asset';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { PCAsset, SoftwareLicense } from '@/types/asset'; // 型定義参照用
 
 describe('PCStore', () => {
   beforeEach(() => {

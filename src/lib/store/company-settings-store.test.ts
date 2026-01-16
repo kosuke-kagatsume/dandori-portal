@@ -3,7 +3,8 @@
  */
 
 import { useCompanySettingsStore } from './company-settings-store';
-import type { CompanyInfo, PayrollSettings, YearEndAdjustmentSettings } from './company-settings-store';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { CompanyInfo, PayrollSettings, YearEndAdjustmentSettings } from './company-settings-store'; // 型定義参照用
 
 describe('CompanySettingsStore', () => {
   beforeEach(() => {

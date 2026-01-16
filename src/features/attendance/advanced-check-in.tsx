@@ -14,11 +14,7 @@ import {
   Home,
   Building2,
   AlertTriangle,
-  ChevronRight,
   Wifi,
-  Calendar,
-  Timer,
-  TrendingUp,
   Activity
 } from 'lucide-react';
 import { toast } from 'sonner';

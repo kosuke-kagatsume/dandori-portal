@@ -77,13 +77,35 @@ export function workflowTypeToDocumentType(workflowType: WorkflowType | Document
  * }
  * ```
  */
-export function generateApprovalStepsFromFlow(resolvedRoute: any): any[] {
+interface ApprovalRouteStep {
+  name: string;
+  approvers: Array<{ userId?: string; id?: string; name: string; email: string; role: string }>;
+  mode: string;
+  timeoutHours?: number;
+  allowDelegate?: boolean;
+}
+
+interface ResolvedApprovalRouteInput {
+  steps: ApprovalRouteStep[];
+}
+
+export function generateApprovalStepsFromFlow(resolvedRoute: ResolvedApprovalRouteInput): Array<{
+  id: string;
+  order: number;
+  name: string;
+  approvers: Array<{ userId: string; name: string; email: string; role: string; status: string }>;
+  status: string;
+  required: boolean;
+  mode: string;
+  timeoutHours?: number;
+  allowDelegate?: boolean;
+}> {
   // ResolvedApprovalRouteからワークフロー用の承認ステップを生成
-  return resolvedRoute.steps.map((step: any, index: number) => ({
+  return resolvedRoute.steps.map((step, index) => ({
     id: `step_${Date.now()}_${index}`,
     order: index + 1,
     name: step.name,
-    approvers: step.approvers.map((approver: any) => ({
+    approvers: step.approvers.map((approver) => ({
       userId: approver.userId || approver.id, // userId優先、なければidを使用
       name: approver.name,
       email: approver.email,
@@ -101,6 +123,7 @@ export function generateApprovalStepsFromFlow(resolvedRoute: any): any[] {
 /**
  * 承認フローIDからフロー情報を取得するヘルパー
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getApprovalFlowInfo(flowId: string): {
   name: string;
   type: string;

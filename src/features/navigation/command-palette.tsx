@@ -2,24 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Calculator,
+import {
   Calendar,
-  CreditCard,
-  Settings,
   Smile,
   User,
   LayoutDashboard,
   Users,
   UserCheck,
   Clock,
-  GitBranch,
-  Building2,
-  MapPin,
-  FileText,
 } from 'lucide-react';
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,

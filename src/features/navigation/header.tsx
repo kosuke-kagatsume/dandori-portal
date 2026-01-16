@@ -26,11 +26,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  useUIStore, 
-  useTenantStore, 
-  useUserStore, 
-  useNotificationStore 
+import {
+  useUIStore,
+  useUserStore,
+  useNotificationStore
 } from '@/lib/store';
 import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenterV2 } from './notification-center-v2';
@@ -44,15 +43,11 @@ export function Header() {
   const currentLocale = (params?.locale as string) || 'ja';
   const { signOut } = useAuth();
   const t = useTranslations('common');
-  const { 
-    theme, 
-    setTheme, 
-    locale, 
-    setLocale, 
-    commandPaletteOpen, 
-    setCommandPaletteOpen 
+  const {
+    commandPaletteOpen,
+    setCommandPaletteOpen
   } = useUIStore();
-  const { currentTenant } = useTenantStore();
+  // currentTenant from useTenantStore() - 将来使用予定 (import removed)
   const { currentUser, setCurrentUser } = useUserStore();
   const { unreadCount } = useNotificationStore();
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());

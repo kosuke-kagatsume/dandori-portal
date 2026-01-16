@@ -38,8 +38,10 @@ import { toast } from 'sonner';
  */
 export default function OnboardingAdminDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const locale = params?.locale as string;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _router = useRouter(); // 将来的にページ遷移で使用予定
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _locale = params?.locale as string; // 将来的にi18nで使用予定
   const applicationId = params?.applicationId as string;
 
   // Zustand stores

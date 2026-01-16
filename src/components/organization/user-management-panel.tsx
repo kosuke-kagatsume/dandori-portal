@@ -37,25 +37,24 @@ import {
 } from '@/components/ui/table';
 import { 
   Search, 
-  Plus, 
+  Plus,
   MoreHorizontal,
   Edit,
   Trash2,
   UserCheck,
   Mail,
-  Shield,
-  Building2
+  // Building2, // 組織アイコンで使用予定
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OrganizationMember, UserRole, OrganizationNode } from '@/types';
 
 interface UserManagementPanelProps {
   members: OrganizationMember[];
-  organizationNodes: OrganizationNode[];
+  organizationNodes?: OrganizationNode[]; // 組織ノード（将来的に移動先選択で使用予定）
   onMemberUpdate?: (memberId: string, updates: Partial<OrganizationMember>) => void;
   onMemberAdd?: (member: Omit<OrganizationMember, 'id'>) => void;
   onMemberRemove?: (memberId: string) => void;
-  onMemberMove?: (memberId: string, targetNodeId: string) => void;
+  onMemberMove?: (memberId: string, targetNodeId: string) => void; // 将来的にメンバー移動で使用予定
   selectedMemberId?: string;
 }
 
@@ -98,11 +97,13 @@ const getStatusColor = (status: OrganizationMember['status']) => {
 
 export function UserManagementPanel({
   members,
-  organizationNodes,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  organizationNodes: _organizationNodes,
   onMemberUpdate,
   onMemberAdd,
   onMemberRemove,
-  onMemberMove,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onMemberMove: _onMemberMove,
   selectedMemberId
 }: UserManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');

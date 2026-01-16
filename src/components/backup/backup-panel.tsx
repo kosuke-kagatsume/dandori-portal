@@ -18,7 +18,6 @@ import {
   downloadBackupJSON,
   importBackupFile,
   getBackupSize,
-  validateBackup,
 } from '@/lib/backup/data-backup';
 import { toast } from 'sonner';
 
@@ -43,7 +42,7 @@ export function BackupPanel() {
       toast.success('バックアップが完了しました', {
         description: 'JSONファイルがダウンロードされました',
       });
-    } catch (error) {
+    } catch {
       toast.error('バックアップに失敗しました', {
         description: 'エラーが発生しました',
       });
@@ -76,7 +75,7 @@ export function BackupPanel() {
           description: result.errors.join(', '),
         });
       }
-    } catch (error) {
+    } catch {
       toast.error('リストアに失敗しました', {
         description: 'ファイルの読み込みエラー',
       });

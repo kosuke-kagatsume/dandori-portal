@@ -22,7 +22,8 @@ import { useRetiredYearEndStore } from '@/lib/store/retired-yearend-store';
 import { FileText, Calendar, QrCode, Send, CheckCircle, XCircle, Clock, Mail, Loader2 } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 
-export function YearEndTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function YearEndTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   const {
     yearEndAdjustmentSettings,
     updateYearEndAdjustmentSettings,

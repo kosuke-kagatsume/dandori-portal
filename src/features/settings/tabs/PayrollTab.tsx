@@ -12,7 +12,8 @@ import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { DollarSign, Calendar, Shield, Loader2 } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 
-export function PayrollTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function PayrollTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   const {
     payrollSettings,
     updatePayrollSettings,

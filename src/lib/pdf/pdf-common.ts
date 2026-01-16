@@ -5,7 +5,8 @@
 
 import { jsPDF } from 'jspdf';
 import { loadJapaneseFont } from './font-loader';
-import { PDF_COMPANY, PDF_LAYOUT, PDF_TEXT } from '@/config/pdf-constants';
+import { PDF_COMPANY, PDF_LAYOUT } from '@/config/pdf-constants';
+// PDF_TEXT - 将来使用予定
 import type { PDFConfig, PDFSection } from '@/types/pdf';
 
 /**
@@ -96,7 +97,7 @@ const drawEmployeeInfo = (
   }
   if (config.extraFields) {
     const extraEntries = Object.entries(config.extraFields);
-    extraEntries.forEach(([key, value], index) => {
+    extraEntries.forEach(([, value], index) => {
       if (index % 2 === 0) {
         // 左側
         doc.text(value, MARGIN.LEFT, y);
@@ -353,6 +354,7 @@ export const generateBasePDF = async (config: PDFConfig): Promise<jsPDF> => {
 
   // 5. 合計バー（オプション）
   if (config.summaryBar) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     y = drawSummaryBar(doc, config.summaryBar, y);
   }
 

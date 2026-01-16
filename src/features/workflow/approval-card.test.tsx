@@ -243,7 +243,7 @@ describe('ApprovalCard', () => {
     });
 
     it('should enable approve and reject simultaneously', async () => {
-      const user = userEvent.setup();
+      userEvent.setup();
       const onApprove = jest.fn();
       const onReject = jest.fn();
 

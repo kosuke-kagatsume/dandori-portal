@@ -1,15 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+// import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { 
-  Bell, 
-  X, 
-  Check, 
-  Star, 
+import {
+  Bell,
+  X,
+  Check,
+  Star,
   ExternalLink,
-  MoreHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {

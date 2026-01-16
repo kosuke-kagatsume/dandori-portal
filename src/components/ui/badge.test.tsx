@@ -20,30 +20,28 @@ describe('Badge', () => {
   });
 
   it('secondary バリアントを適用できる', () => {
-    const { container } = render(<Badge variant="secondary">Secondary</Badge>);
+    render(<Badge variant="secondary">Secondary</Badge>);
 
     const badge = screen.getByText('Secondary');
     expect(badge).toBeInTheDocument();
   });
 
   it('destructive バリアントを適用できる', () => {
-    const { container } = render(<Badge variant="destructive">Error</Badge>);
+    render(<Badge variant="destructive">Error</Badge>);
 
     const badge = screen.getByText('Error');
     expect(badge).toBeInTheDocument();
   });
 
   it('outline バリアントを適用できる', () => {
-    const { container } = render(<Badge variant="outline">Outline</Badge>);
+    render(<Badge variant="outline">Outline</Badge>);
 
     const badge = screen.getByText('Outline');
     expect(badge).toBeInTheDocument();
   });
 
   it('カスタムクラス名を追加できる', () => {
-    const { container } = render(
-      <Badge className="custom-class">Custom</Badge>
-    );
+    render(<Badge className="custom-class">Custom</Badge>);
 
     const badge = screen.getByText('Custom');
     expect(badge).toHaveClass('custom-class');

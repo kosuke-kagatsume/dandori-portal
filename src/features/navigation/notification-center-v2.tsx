@@ -3,13 +3,11 @@
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { 
-  Bell, 
+import {
+  Bell,
   Search,
   FileText,
   Lock,
-  Users,
-  AlertCircle,
   Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,7 +18,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';

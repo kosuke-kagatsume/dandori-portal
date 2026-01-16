@@ -11,8 +11,6 @@ import {
   Calendar,
   AlertCircle,
   UserCheck,
-  FileText,
-  TrendingUp,
   Award,
   MessageSquare,
   Settings,
@@ -44,7 +42,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import { useApprovalStore } from '@/lib/approval-store';
+// useApprovalStore - 将来使用予定
 
 export type NotificationType = 
   | 'leave_request' 
@@ -96,11 +94,9 @@ export function NotificationPanel({
   const [filter, setFilter] = useState<'all' | 'unread' | 'archived'>('all');
   const [selectedType, setSelectedType] = useState<NotificationType | 'all'>('all');
   
-  const { getNotificationCount } = useApprovalStore();
-  const currentUserId = '1'; // 現在のユーザー（田中太郎）
+  // getNotificationCount from useApprovalStore() - 将来使用予定
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
-  const approvalCount = getNotificationCount(currentUserId);
 
   const filteredNotifications = notifications.filter(n => {
     if (filter === 'unread' && n.isRead) return false;

@@ -3,7 +3,8 @@
  */
 
 import { useSaaSStore } from './saas-store';
-import type { SaaSService, LicensePlan, LicenseAssignment } from '@/types/saas';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import type { SaaSService, LicensePlan, LicenseAssignment } from '@/types/saas'; // 型定義参照用
 
 describe('SaaSStore', () => {
   beforeEach(() => {

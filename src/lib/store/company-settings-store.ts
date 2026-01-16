@@ -233,7 +233,8 @@ const initialState = {
 };
 
 const createCompanySettingsStore = () => {
-  const storeCreator = (set: any, get: any) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const storeCreator = (set: (fn: (state: CompanySettingsState) => Partial<CompanySettingsState>) => void, get: () => CompanySettingsState & Record<string, unknown>) => ({
     ...initialState,
 
     // 同期アクション（UI用）

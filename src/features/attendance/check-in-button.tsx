@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Clock, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,7 +31,7 @@ export function CheckInButton({
         await onCheckIn();
         toast.success('出勤しました');
       }
-    } catch (error) {
+    } catch {
       toast.error(isCheckedIn ? '退勤に失敗しました' : '出勤に失敗しました');
     } finally {
       setLoading(false);

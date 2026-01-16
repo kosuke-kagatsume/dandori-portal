@@ -20,7 +20,8 @@ export function CameraCapture({
   onOpenChange,
   onCapture,
   maxSizeKB = 2048, // デフォルト2MB
-  aspectRatio = 4 / 3,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  aspectRatio: _aspectRatio = 4 / 3, // 将来的にアスペクト比制御で使用予定
   title = '写真を撮影',
 }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);

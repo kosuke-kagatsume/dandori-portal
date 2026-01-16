@@ -177,6 +177,7 @@ describe('BulkApprovalBar', () => {
 
     it('should require rejection reason', async () => {
       const user = userEvent.setup();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { toast } = require('sonner');
 
       render(
@@ -230,6 +231,7 @@ describe('BulkApprovalBar', () => {
 
     it('should not reject with whitespace-only reason', async () => {
       const user = userEvent.setup();
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { toast } = require('sonner');
 
       render(

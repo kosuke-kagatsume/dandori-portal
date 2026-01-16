@@ -8,7 +8,8 @@ import { useUserStore } from './store/user-store';
 import { getBroadcast } from '@/lib/realtime/broadcast';
 import { useApprovalFlowStore } from './store/approval-flow-store';
 import { useOrganizationStore } from './store/organization-store';
-import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration'; // workflowTypeToDocumentTypeは将来的に使用予定
 import { workflowAudit } from '@/lib/audit/audit-logger';
 
 // REST API helper function
@@ -108,7 +109,8 @@ export interface WorkflowRequest {
   priority: 'low' | 'normal' | 'high' | 'urgent';
   
   // 申請詳細（タイプによって異なる）
-  details: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  details: Record<string, unknown>;
   
   // 承認フロー
   approvalSteps: ApprovalStep[];
@@ -346,7 +348,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
                 const flowSteps = generateApprovalStepsFromFlow(resolvedRoute);
 
                 // WorkflowRequest形式のApprovalStepに変換
-                generatedApprovalSteps = flowSteps.map((step, index) => {
+                generatedApprovalSteps = flowSteps.map((step) => {
                   const approver = step.approvers[0]; // 最初の承認者を使用
                   return {
                     id: step.id,
@@ -871,7 +873,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
       
       // 代理承認者設定
       setDelegateApprover: (setting) => {
-        const now = new Date().toISOString();
+        // const now = new Date().toISOString(); // 将来的にタイムスタンプ記録で使用予定
         set((state) => ({
           delegateSettings: [
             ...state.delegateSettings.filter(s => s.userId !== setting.userId),

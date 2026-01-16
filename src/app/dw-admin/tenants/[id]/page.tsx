@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +39,7 @@ import { toast } from 'sonner';
 import { CreateInvoiceDialog } from '@/features/dw-admin/components/create-invoice-dialog';
 
 export default function TenantDetailPage() {
-  const mounted = useIsMounted();
+  useIsMounted(); // マウント状態の監視
   const params = useParams();
   const tenantId = params?.id as string;
   const router = useRouter();

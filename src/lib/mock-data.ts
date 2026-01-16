@@ -195,6 +195,7 @@ export function generateUserCertifications(userId: string) {
 }
 
 // ユーザーごとのスキルデータを生成
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function generateUserSkills(userId: string) {
   const numSkills = Math.floor(Math.random() * 7) + 3; // 3～9個のスキル
   const userSkills = [];
@@ -288,7 +289,8 @@ export function generateLeaveData() {
 
 // ダッシュボードの統計データ
 export function getDashboardStats() {
-  const users = generateMockUsers();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _users = generateMockUsers();
   const attendance = generateAttendanceData();
 
   return {

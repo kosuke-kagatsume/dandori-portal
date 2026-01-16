@@ -37,14 +37,15 @@ import {
   updateFamilyInfoForm as apiUpdateFamilyInfoForm,
   updateBankAccountForm as apiUpdateBankAccountForm,
   updateCommuteRouteForm as apiUpdateCommuteRouteForm,
-  approveBasicInfoForm as apiApproveBasicInfoForm,
-  approveFamilyInfoForm as apiApproveFamilyInfoForm,
-  approveBankAccountForm as apiApproveBankAccountForm,
-  approveCommuteRouteForm as apiApproveCommuteRouteForm,
-  returnBasicInfoForm as apiReturnBasicInfoForm,
-  returnFamilyInfoForm as apiReturnFamilyInfoForm,
-  returnBankAccountForm as apiReturnBankAccountForm,
-  returnCommuteRouteForm as apiReturnCommuteRouteForm,
+  // 承認・差戻しAPI（将来的にバックエンド実装時に有効化）
+  // approveBasicInfoForm as apiApproveBasicInfoForm,
+  // approveFamilyInfoForm as apiApproveFamilyInfoForm,
+  // approveBankAccountForm as apiApproveBankAccountForm,
+  // approveCommuteRouteForm as apiApproveCommuteRouteForm,
+  // returnBasicInfoForm as apiReturnBasicInfoForm,
+  // returnFamilyInfoForm as apiReturnFamilyInfoForm,
+  // returnBankAccountForm as apiReturnBankAccountForm,
+  // returnCommuteRouteForm as apiReturnCommuteRouteForm,
 } from '@/lib/api/onboarding';
 import { APIError } from '@/lib/api/client';
 
@@ -843,7 +844,8 @@ export const useOnboardingStore = create<OnboardingStore>()(
         }
       },
 
-      returnForm: (formType, comment, returnedBy) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      returnForm: (formType, comment, _returnedBy) => {
         const now = new Date().toISOString();
 
         switch (formType) {

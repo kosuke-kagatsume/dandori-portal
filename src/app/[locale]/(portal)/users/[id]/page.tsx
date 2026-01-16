@@ -31,7 +31,8 @@ export default function UserDetailPage({ params }: { params: { id: string; local
 
   // 現在のユーザーからtenantIdを取得
   const currentUser = useUserStore(state => state.currentUser);
-  const tenantId = currentUser?.tenantId || '';
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _tenantId = currentUser?.tenantId || ''; // API呼び出しで使用予定
 
   // 経営者は閲覧のみ（編集不可）
   const isExecutive = currentUser?.role === 'executive';

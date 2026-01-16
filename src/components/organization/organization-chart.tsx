@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +12,7 @@ import {
   Building2, 
   UserCheck,
   Mail,
-  Calendar
+  // Calendar, // 日付表示で使用予定
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OrganizationNode, OrganizationMember } from '@/types';
