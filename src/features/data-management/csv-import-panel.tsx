@@ -48,16 +48,18 @@ import {
   importAttendance,
   importLeaveUsage,
   importLeaveGrant,
+  importTransferReservation,
   generateEmployeeTemplate,
   generateAttendanceTemplate,
   generateLeaveUsageTemplate,
   generateLeaveGrantTemplate,
+  generateTransferReservationTemplate,
   downloadTemplate,
   type CSVImportResult,
   type CSVImportError,
 } from '@/lib/csv/csv-import';
 
-type ImportType = 'employee' | 'attendance' | 'leave-usage' | 'leave-grant';
+type ImportType = 'employee' | 'attendance' | 'leave-usage' | 'leave-grant' | 'transfer-reservation';
 
 interface ImportConfig {
   id: ImportType;
@@ -110,6 +112,16 @@ const importConfigs: ImportConfig[] = [
     templateGenerator: generateLeaveGrantTemplate,
     templateFilename: 'leave_grant_template.csv',
     importFunction: importLeaveGrant,
+  },
+  {
+    id: 'transfer-reservation',
+    title: '異動予約データ',
+    description: '従業員の異動予約をインポート',
+    icon: <Users className="h-5 w-5" />,
+    maxRows: 3000,
+    templateGenerator: generateTransferReservationTemplate,
+    templateFilename: 'transfer_reservation_template.csv',
+    importFunction: importTransferReservation,
   },
 ];
 
@@ -195,7 +207,7 @@ export function CSVImportPanel() {
 
       {/* タブ */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as ImportType); handleReset(); }}>
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           {importConfigs.map(config => (
             <TabsTrigger key={config.id} value={config.id} className="flex items-center gap-2">
               {config.icon}

@@ -606,6 +606,130 @@ export function importLeaveGrant(
   };
 }
 
+// ===== 従業員異動予約データインポート =====
+
+export interface TransferReservationImportRow {
+  employeeNumber: string;
+  effectiveDate: string;
+  newDepartment?: string;
+  newPosition?: string;
+  newEmploymentType?: string;
+  newWorkLocation?: string;
+  reason?: string;
+}
+
+const TRANSFER_RESERVATION_HEADERS = {
+  '従業員番号': 'employeeNumber',
+  '異動日': 'effectiveDate',
+  '異動先部署': 'newDepartment',
+  '新役職': 'newPosition',
+  '新雇用形態': 'newEmploymentType',
+  '新勤務地': 'newWorkLocation',
+  '異動理由': 'reason',
+};
+
+export function importTransferReservation(
+  csvText: string,
+  options: CSVImportOptions = {}
+): CSVImportResult<TransferReservationImportRow> {
+  const { maxRows = 3000 } = options;
+  const { headers, rows } = parseCSV(csvText, options);
+
+  const errors: CSVImportError[] = [];
+  const warnings: string[] = [];
+  const data: TransferReservationImportRow[] = [];
+
+  // ヘッダーのマッピング
+  const headerMap = new Map<number, string>();
+  headers.forEach((header, index) => {
+    const fieldName = TRANSFER_RESERVATION_HEADERS[header as keyof typeof TRANSFER_RESERVATION_HEADERS];
+    if (fieldName) {
+      headerMap.set(index, fieldName);
+    }
+  });
+
+  // 必須ヘッダーチェック
+  const requiredFields = ['employeeNumber', 'effectiveDate'];
+  const mappedFields = Array.from(headerMap.values());
+  const missingFields = requiredFields.filter(f => !mappedFields.includes(f));
+
+  if (missingFields.length > 0) {
+    errors.push({
+      row: 0,
+      message: `必須列が見つかりません: ${missingFields.join(', ')}`,
+    });
+    return {
+      success: false,
+      data: [],
+      errors,
+      warnings,
+      totalRows: rows.length,
+      successRows: 0,
+      errorRows: rows.length,
+    };
+  }
+
+  // 行数チェック
+  if (rows.length > maxRows) {
+    warnings.push(`最大${maxRows}行までインポートできます。${rows.length - maxRows}行がスキップされます。`);
+  }
+
+  // データ行を処理
+  const processRows = rows.slice(0, maxRows);
+
+  processRows.forEach((row, rowIndex) => {
+    const rowData: Record<string, string> = {};
+
+    headerMap.forEach((fieldName, colIndex) => {
+      rowData[fieldName] = row[colIndex] || '';
+    });
+
+    // バリデーション
+    const rowErrors: string[] = [];
+
+    if (!rowData.employeeNumber) {
+      rowErrors.push('従業員番号は必須です');
+    }
+    if (!rowData.effectiveDate) {
+      rowErrors.push('異動日は必須です');
+    } else if (!isValidDate(rowData.effectiveDate)) {
+      rowErrors.push('異動日の形式が不正です（YYYY-MM-DD）');
+    } else {
+      // 異動日が過去でないかチェック
+      const effectiveDate = new Date(rowData.effectiveDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (effectiveDate < today) {
+        rowErrors.push('異動日は本日以降の日付を指定してください');
+      }
+    }
+
+    // 少なくとも1つの異動項目が必要
+    if (!rowData.newDepartment && !rowData.newPosition && !rowData.newEmploymentType && !rowData.newWorkLocation) {
+      rowErrors.push('異動先部署、新役職、新雇用形態、新勤務地のいずれかを指定してください');
+    }
+
+    if (rowErrors.length > 0) {
+      errors.push({
+        row: rowIndex + 2,
+        message: rowErrors.join(', '),
+      });
+    } else {
+      data.push(rowData as unknown as TransferReservationImportRow);
+    }
+  });
+
+  return {
+    success: errors.length === 0,
+    data,
+    errors,
+    warnings,
+    totalRows: rows.length,
+    successRows: data.length,
+    errorRows: errors.length,
+  };
+}
+
 // ===== バリデーションヘルパー =====
 
 function isValidEmail(email: string): boolean {
@@ -645,6 +769,11 @@ export function generateLeaveUsageTemplate(): string {
 
 export function generateLeaveGrantTemplate(): string {
   const headers = Object.keys(LEAVE_GRANT_HEADERS);
+  return headers.join(',') + '\n';
+}
+
+export function generateTransferReservationTemplate(): string {
+  const headers = Object.keys(TRANSFER_RESERVATION_HEADERS);
   return headers.join(',') + '\n';
 }
 
