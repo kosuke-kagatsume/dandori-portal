@@ -14,7 +14,7 @@ import { createPCAssetSchema, validateWithSchema } from '@/lib/validation/asset-
 const demoPCAssets = [
   {
     id: 'pc-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     assetNumber: 'PC-001',
     manufacturer: 'Dell',
     model: 'Latitude 5520',
@@ -37,7 +37,7 @@ const demoPCAssets = [
   },
   {
     id: 'pc-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     assetNumber: 'PC-002',
     manufacturer: 'Apple',
     model: 'MacBook Pro 14"',
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     const pcAsset = await prisma.pc_assets.create({
       data: {
         id: randomUUID(),
-        tenantId: data.tenantId || 'tenant-demo-001',
+        tenantId: data.tenantId || 'tenant-1',
         assetNumber: data.assetNumber,
         manufacturer: data.manufacturer,
         model: data.model,

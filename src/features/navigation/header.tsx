@@ -57,7 +57,7 @@ export function Header() {
     if (!currentUser) {
       setCurrentUser({
         id: '1',
-        tenantId: 'tenant-demo-001',
+        tenantId: 'tenant-1',
         name: '山田太郎',
         email: 'yamada@example.com',
         department: '開発部',

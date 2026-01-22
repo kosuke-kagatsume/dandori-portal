@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     const {
-      tenantId = 'tenant-demo-001',
+      tenantId = 'tenant-1',
       name,
       description,
       documentType,

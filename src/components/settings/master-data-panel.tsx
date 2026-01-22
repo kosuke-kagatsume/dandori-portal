@@ -77,7 +77,7 @@ export function MasterDataPanel() {
   // テナントIDの設定とデータの取得
   useEffect(() => {
     // user-storeからtenantIdを取得、なければデフォルト値を使用
-    const storeTenantId = userStoreTenantId || 'tenant-demo-001';
+    const storeTenantId = userStoreTenantId || 'tenant-1';
     if (storeTenantId !== tenantId) {
       setTenantId(storeTenantId);
     }

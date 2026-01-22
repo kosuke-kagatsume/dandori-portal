@@ -15,7 +15,7 @@ import { createVendorSchema, validateWithSchema } from '@/lib/validation/asset-s
 const demoVendors = [
   {
     id: 'vendor-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: 'トヨタモビリティサービス',
     phone: '03-1234-5678',
     address: '東京都港区芝浦1-1-1',
@@ -28,7 +28,7 @@ const demoVendors = [
   },
   {
     id: 'vendor-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: 'オートバックス品川店',
     phone: '03-9876-5432',
     address: '東京都品川区東品川2-2-2',
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     const createData: Prisma.vendorsUncheckedCreateInput = {
       id: randomUUID(),
-      tenantId: data.tenantId || 'tenant-demo-001',
+      tenantId: data.tenantId || 'tenant-1',
       name: data.name,
       phone: data.phone ?? undefined,
       address: data.address ?? undefined,

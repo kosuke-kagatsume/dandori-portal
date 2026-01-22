@@ -399,7 +399,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
           }
 
           // 本番モード: REST APIに保存
-          const tenantId = 'tenant-demo-001'; // 仮のテナントID
+          const tenantId = 'tenant-1'; // 仮のテナントID
 
           const result = await apiCreateWorkflow({
             tenantId,

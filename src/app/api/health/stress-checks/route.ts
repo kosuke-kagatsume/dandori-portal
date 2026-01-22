@@ -6,7 +6,7 @@ import { getTenantId, successResponse } from '@/lib/api/api-helpers';
 const demoStressChecks = [
   {
     id: 'stress-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-001',
     userName: '田中太郎',
     fiscalYear: 2024,
@@ -29,7 +29,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-002',
     userName: '山田花子',
     fiscalYear: 2024,
@@ -52,7 +52,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-003',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-003',
     userName: '佐藤次郎',
     fiscalYear: 2024,
@@ -75,7 +75,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-004',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-004',
     userName: '鈴木一郎',
     fiscalYear: 2024,
@@ -98,7 +98,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-005',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-005',
     userName: '高橋真理',
     fiscalYear: 2024,
@@ -121,7 +121,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-006',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-006',
     userName: '伊藤健',
     fiscalYear: 2024,
@@ -144,7 +144,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-007',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-007',
     userName: '渡辺美咲',
     fiscalYear: 2024,
@@ -167,7 +167,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-008',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-008',
     userName: '中村大輔',
     fiscalYear: 2024,

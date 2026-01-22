@@ -82,7 +82,7 @@ export function useEmployeeProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const tenantId = currentTenant?.id || 'tenant-demo-001';
+  const tenantId = currentTenant?.id || 'tenant-1';
   const userId = currentUser?.id;
 
   // プロフィール取得
@@ -217,7 +217,7 @@ export function useChangeRequests() {
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const tenantId = currentTenant?.id || 'tenant-demo-001';
+  const tenantId = currentTenant?.id || 'tenant-1';
   const userId = currentUser?.id;
 
   const fetchRequests = useCallback(async () => {

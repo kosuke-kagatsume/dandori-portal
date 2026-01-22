@@ -77,7 +77,7 @@ export async function PUT(request: NextRequest) {
       settings = await prisma.user_account_settings.create({
         data: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: tenantId || 'tenant-demo-001',
+          tenantId: tenantId || 'tenant-1',
           userId,
           ...data,
           updatedAt: new Date(),
@@ -117,7 +117,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-demo-001',
+          tenantId: data.tenantId || 'tenant-1',
           userId,
           passwordChangedAt: new Date(),
           updatedAt: new Date(),
@@ -145,7 +145,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-demo-001',
+          tenantId: data.tenantId || 'tenant-1',
           userId,
           twoFactorEnabled: true,
           twoFactorSecret: data.twoFactorSecret,
@@ -176,7 +176,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-demo-001',
+          tenantId: data.tenantId || 'tenant-1',
           userId,
           ...data,
           updatedAt: new Date(),
@@ -203,7 +203,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-demo-001',
+          tenantId: data.tenantId || 'tenant-1',
           userId,
           theme: data.theme,
           language: data.language,
@@ -230,7 +230,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-demo-001',
+          tenantId: data.tenantId || 'tenant-1',
           userId,
           quickActionSettings: JSON.stringify(data.quickActionSettings),
           updatedAt: new Date(),

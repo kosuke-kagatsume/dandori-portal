@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = searchParams.get('tenantId') || 'tenant-1';
 
     const settings = await prisma.payroll_settings.findUnique({
       where: { tenantId },
@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      tenantId = 'tenant-demo-001',
+      tenantId = 'tenant-1',
       paymentDay,
       paymentDayType,
       closingDay,

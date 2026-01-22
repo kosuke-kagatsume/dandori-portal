@@ -11,7 +11,7 @@ import {
 const demoSaaSServices = [
   {
     id: 'saas-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: 'Microsoft 365 Business',
     category: 'productivity',
     vendor: 'Microsoft',
@@ -53,7 +53,7 @@ const demoSaaSServices = [
   },
   {
     id: 'saas-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: 'Slack',
     category: 'communication',
     vendor: 'Salesforce',
@@ -94,7 +94,7 @@ const demoSaaSServices = [
   },
   {
     id: 'saas-003',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: 'Salesforce',
     category: 'sales',
     vendor: 'Salesforce',
@@ -134,7 +134,7 @@ const demoSaaSServices = [
   },
   {
     id: 'saas-004',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: 'Zoom',
     category: 'communication',
     vendor: 'Zoom Video Communications',
@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      tenantId = 'tenant-demo-001',
+      tenantId = 'tenant-1',
       name,
       category,
       vendor,

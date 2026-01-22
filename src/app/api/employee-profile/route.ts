@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest) {
       // 作成
       profile = await prisma.employee_profiles.create({
         data: {
-          tenantId: tenantId || 'tenant-demo-001',
+          tenantId: tenantId || 'tenant-1',
           userId,
           ...data,
         },

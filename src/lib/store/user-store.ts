@@ -135,7 +135,7 @@ const createUserStore = () => {
   const initialDemoUser = demoUsers.employee;
   const initialCurrentUser: User = {
     id: initialDemoUser.id,
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: initialDemoUser.name,
     email: initialDemoUser.email,
     phone: '090-1234-5678',
@@ -158,7 +158,7 @@ const createUserStore = () => {
       error: null,
 
       // API統合用（本番では認証後にテナントIDが設定される）
-      tenantId: IS_DEMO_BUILD ? 'tenant-demo-001' : null,
+      tenantId: IS_DEMO_BUILD ? 'tenant-1' : null,
 
       // デモモードの初期状態（ビルド時に確定、localStorageからは読み込まない）
       isDemoMode: IS_DEMO_BUILD,
@@ -228,7 +228,7 @@ const createUserStore = () => {
 
           const user: User = {
             id: apiUser.id,
-            tenantId: apiUser.tenantId || 'tenant-demo-001',
+            tenantId: apiUser.tenantId || 'tenant-1',
             name: apiUser.name || apiUser.email?.split('@')[0] || 'ユーザー',
             email: apiUser.email || '',
             phone: apiUser.phone || '',
@@ -387,7 +387,7 @@ const createUserStore = () => {
 
           const user: User = {
             id: apiUser.id,
-            tenantId: apiUser.tenantId || 'tenant-demo-001',
+            tenantId: apiUser.tenantId || 'tenant-1',
             name: apiUser.name || apiUser.email?.split('@')[0] || 'ユーザー',
             email: apiUser.email || '',
             phone: apiUser.phone || '',
@@ -697,7 +697,7 @@ const createUserStore = () => {
         // currentUserも同時に更新（サイドバーのRBACチェック用）
         const currentUser: User = {
           id: demoUser.id,
-          tenantId: 'tenant-demo-001',
+          tenantId: 'tenant-1',
           name: demoUser.name,
           email: demoUser.email,
           phone: '090-1234-5678',

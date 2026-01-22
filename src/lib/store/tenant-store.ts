@@ -13,14 +13,14 @@ interface TenantState {
   initializeTenants: () => void;
 }
 
-// デフォルトテナントデータ
+// デフォルトテナントデータ（デモ用サンプル会社）
 const getDefaultTenants = (): Tenant[] => [
   {
-    id: 'tenant-dandori-work',
-    name: 'ダンドリワーク',
+    id: 'tenant-1',
+    name: '株式会社サンプル',
     timezone: 'Asia/Tokyo',
     closingDay: '末' as const,
-    weekStartDay: 0,
+    weekStartDay: 1,
   },
 ];
 

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
     const changeRequest = await prisma.employee_change_requests.create({
       data: {
-        tenantId: tenantId || 'tenant-demo-001',
+        tenantId: tenantId || 'tenant-1',
         userId,
         requestType,
         fieldName,

@@ -63,7 +63,7 @@ interface ApprovalFlowStore {
  */
 const generateDemoFlows = (): ApprovalFlow[] => {
   const now = new Date().toISOString();
-  const companyId = 'tenant-demo-001';
+  const companyId = 'tenant-1';
   const createdBy = 'system';
 
   return [
@@ -314,7 +314,7 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
       fetchFlows: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch('/api/approval-flows?tenantId=tenant-demo-001');
+          const response = await fetch('/api/approval-flows?tenantId=tenant-1');
           const result = await response.json();
 
           if (result.success && result.data.length > 0) {
@@ -341,7 +341,7 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ...request,
-              tenantId: 'tenant-demo-001',
+              tenantId: 'tenant-1',
             }),
           });
           const result = await response.json();
@@ -366,7 +366,7 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
             createdBy: 'user',
             createdAt: now,
             updatedAt: now,
-            companyId: 'tenant-demo-001',
+            companyId: 'tenant-1',
           };
           set((state) => ({
             flows: [...state.flows, newFlow],

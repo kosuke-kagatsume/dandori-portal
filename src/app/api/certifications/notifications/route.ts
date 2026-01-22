@@ -67,13 +67,13 @@ export async function POST(request: NextRequest) {
 
     // 通知設定を取得
     let settings = await prisma.certification_notification_settings.findUnique({
-      where: { tenantId: tenantId || 'tenant-demo-001' },
+      where: { tenantId: tenantId || 'tenant-1' },
     });
 
     // 設定がなければデフォルト値で作成
     if (!settings) {
       settings = await prisma.certification_notification_settings.create({
-        data: { tenantId: tenantId || 'tenant-demo-001' },
+        data: { tenantId: tenantId || 'tenant-1' },
       });
     }
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // 通知作成
     const notification = await prisma.certification_notifications.create({
       data: {
-        tenantId: tenantId || 'tenant-demo-001',
+        tenantId: tenantId || 'tenant-1',
         certificationId,
         userId,
         notificationType,

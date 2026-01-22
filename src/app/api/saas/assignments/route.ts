@@ -11,7 +11,7 @@ import {
 const demoLicenseAssignments = [
   {
     id: 'assign-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     serviceId: 'saas-001',
     planId: 'plan-001',
     userId: 'user-001',
@@ -30,7 +30,7 @@ const demoLicenseAssignments = [
   },
   {
     id: 'assign-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     serviceId: 'saas-001',
     planId: 'plan-001',
     userId: 'user-002',
@@ -49,7 +49,7 @@ const demoLicenseAssignments = [
   },
   {
     id: 'assign-003',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     serviceId: 'saas-002',
     planId: 'plan-002',
     userId: 'user-001',
@@ -68,7 +68,7 @@ const demoLicenseAssignments = [
   },
   {
     id: 'assign-004',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     serviceId: 'saas-003',
     planId: 'plan-003',
     userId: 'user-003',
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      tenantId = 'tenant-demo-001',
+      tenantId = 'tenant-1',
       serviceId,
       planId,
       userId,

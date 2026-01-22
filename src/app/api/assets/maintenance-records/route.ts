@@ -15,7 +15,7 @@ import { createMaintenanceRecordSchema, validateWithSchema } from '@/lib/validat
 const demoMaintenanceRecords = [
   {
     id: 'maint-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     vehicleId: 'vehicle-001',
     type: 'oil_change',
     date: new Date('2024-02-20'),
@@ -33,7 +33,7 @@ const demoMaintenanceRecords = [
   },
   {
     id: 'maint-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     vehicleId: 'vehicle-002',
     type: 'tire_change',
     date: new Date('2024-01-15'),
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 
     const createData: Prisma.maintenance_recordsUncheckedCreateInput = {
       id: randomUUID(),
-      tenantId: data.tenantId || 'tenant-demo-001',
+      tenantId: data.tenantId || 'tenant-1',
       vehicleId: data.vehicleId,
       type: data.type,
       date: new Date(data.date),

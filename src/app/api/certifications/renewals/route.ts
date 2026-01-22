@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     const renewal = await prisma.certification_renewals.create({
       data: {
-        tenantId: tenantId || 'tenant-demo-001',
+        tenantId: tenantId || 'tenant-1',
         certificationId,
         userId,
         newIssueDate: new Date(newIssueDate),

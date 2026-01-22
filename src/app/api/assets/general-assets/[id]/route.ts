@@ -8,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = searchParams.get('tenantId') || 'tenant-1';
 
     const asset = await prisma.general_assets.findFirst({
       where: {
@@ -46,7 +46,7 @@ export async function PUT(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = searchParams.get('tenantId') || 'tenant-1';
 
     const body = await request.json();
 
@@ -108,7 +108,7 @@ export async function DELETE(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = searchParams.get('tenantId') || 'tenant-1';
 
     // 存在確認
     const existing = await prisma.general_assets.findFirst({

@@ -13,7 +13,7 @@ import { createGeneralAssetSchema, validateWithSchema } from '@/lib/validation/a
 const demoGeneralAssets = [
   {
     id: 'asset-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     assetNumber: 'GA-001',
     category: 'office_equipment',
     name: '複合機 MX-3661',
@@ -33,7 +33,7 @@ const demoGeneralAssets = [
   },
   {
     id: 'asset-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     assetNumber: 'GA-002',
     category: 'furniture',
     name: '会議テーブル（大）',

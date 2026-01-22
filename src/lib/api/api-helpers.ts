@@ -103,7 +103,7 @@ export function handleApiError(error: unknown, operation: string) {
 // テナントID取得（将来の認証統合用）
 export function getTenantId(searchParams: URLSearchParams): string {
   // TODO: 認証からテナントIDを取得するように変更
-  return searchParams.get('tenantId') || 'tenant-demo-001';
+  return searchParams.get('tenantId') || 'tenant-1';
 }
 
 // バリデーションヘルパー

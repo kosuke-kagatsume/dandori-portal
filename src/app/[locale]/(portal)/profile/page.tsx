@@ -125,7 +125,7 @@ export default function ProfilePage() {
     expiryDate: '',
   });
 
-  const tenantId = currentTenant?.id || 'tenant-demo-001';
+  const tenantId = currentTenant?.id || 'tenant-1';
   const userId = currentUser?.id;
 
   // プロフィール取得

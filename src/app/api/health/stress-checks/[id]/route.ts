@@ -6,7 +6,7 @@ import { getTenantId, successResponse } from '@/lib/api/api-helpers';
 const demoStressChecks = [
   {
     id: 'stress-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-001',
     userName: '田中太郎',
     fiscalYear: 2024,
@@ -26,7 +26,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-003',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-003',
     userName: '佐藤次郎',
     fiscalYear: 2024,
@@ -47,7 +47,7 @@ const demoStressChecks = [
   },
   {
     id: 'stress-006',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-006',
     userName: '伊藤健',
     fiscalYear: 2024,

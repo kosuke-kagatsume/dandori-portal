@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       role: 'admin',
       roles: ['admin'],
       department: '営業部',
-      tenantId: 'tenant-demo-001',
+      tenantId: 'tenant-1',
       created_at: new Date().toISOString(),
     };
 
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
         role: 'admin',
         roles: ['admin'],
         department: '営業部',
-        tenantId: 'tenant-demo-001',
+        tenantId: 'tenant-1',
         created_at: new Date().toISOString(),
       };
 

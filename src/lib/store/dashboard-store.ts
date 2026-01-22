@@ -65,7 +65,7 @@ const initialState = {
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   ...initialState,
 
-  fetchDashboardStats: async (tenantId = 'tenant-demo-001') => {
+  fetchDashboardStats: async (tenantId = 'tenant-1') => {
     // 5分以内に取得済みならキャッシュを使用
     const lastFetched = get().lastFetched;
     if (lastFetched && Date.now() - lastFetched.getTime() < 5 * 60 * 1000) {

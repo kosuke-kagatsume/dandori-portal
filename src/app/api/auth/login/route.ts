@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         role: 'admin',
         roles: ['admin'],
         department: '営業部',
-        tenantId: 'tenant-demo-001',
+        tenantId: 'tenant-1',
       };
 
       const accessToken = sign(

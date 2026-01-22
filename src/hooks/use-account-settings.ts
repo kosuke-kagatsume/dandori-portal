@@ -35,7 +35,7 @@ export function useAccountSettings() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const tenantId = currentTenant?.id || 'tenant-demo-001';
+  const tenantId = currentTenant?.id || 'tenant-1';
   const userId = currentUser?.id;
 
   // 設定取得

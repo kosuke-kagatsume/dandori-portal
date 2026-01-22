@@ -14,7 +14,7 @@ import { createRepairRecordSchema, validateWithSchema } from '@/lib/validation/a
 const demoRepairRecords = [
   {
     id: 'repair-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     pcAssetId: 'pc-001',
     repairType: 'hardware',
     date: new Date('2024-01-20'),
@@ -32,7 +32,7 @@ const demoRepairRecords = [
   },
   {
     id: 'repair-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     generalAssetId: 'asset-001',
     repairType: 'maintenance',
     date: new Date('2024-02-10'),

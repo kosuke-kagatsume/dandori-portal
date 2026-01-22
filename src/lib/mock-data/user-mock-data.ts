@@ -10,7 +10,7 @@ import type { User } from '@/types';
 export const mockUsers: User[] = [
   {
     id: 'user-1',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '田中太郎',
     email: 'tanaka@example.com',
     department: '開発部',
@@ -24,7 +24,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-2',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '佐藤花子',
     email: 'sato@example.com',
     department: '開発部',
@@ -38,7 +38,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-3',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '鈴木一郎',
     email: 'suzuki@example.com',
     department: '営業部',
@@ -52,7 +52,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-4',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '山田美咲',
     email: 'yamada@example.com',
     department: '営業部',
@@ -66,7 +66,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-5',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '伊藤健太',
     email: 'ito@example.com',
     department: '総務部',
@@ -80,7 +80,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-6',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '渡辺由美',
     email: 'watanabe@example.com',
     department: '総務部',
@@ -94,7 +94,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-7',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '高橋直樹',
     email: 'takahashi@example.com',
     department: '経理部',
@@ -108,7 +108,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-8',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '小林恵子',
     email: 'kobayashi@example.com',
     department: '人事部',
@@ -122,7 +122,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-9',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '加藤修',
     email: 'kato@example.com',
     department: 'マーケティング部',
@@ -136,7 +136,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-10',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '吉田真一',
     email: 'yoshida@example.com',
     department: '開発部',
@@ -150,7 +150,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-11',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '中村美穂',
     email: 'nakamura@example.com',
     department: 'デザイン部',
@@ -164,7 +164,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-12',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '木村拓也',
     email: 'kimura@example.com',
     department: 'デザイン部',
@@ -178,7 +178,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-13',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '林真理子',
     email: 'hayashi@example.com',
     department: 'マーケティング部',
@@ -192,7 +192,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-14',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '斎藤健',
     email: 'saito@example.com',
     department: '営業部',
@@ -206,7 +206,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'user-15',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     name: '松本美香',
     email: 'matsumoto@example.com',
     department: '人事部',

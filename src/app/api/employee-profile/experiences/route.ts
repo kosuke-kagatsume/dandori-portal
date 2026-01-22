@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     if (!profile) {
       profile = await prisma.employee_profiles.create({
         data: {
-          tenantId: tenantId || 'tenant-demo-001',
+          tenantId: tenantId || 'tenant-1',
           userId,
         },
       });

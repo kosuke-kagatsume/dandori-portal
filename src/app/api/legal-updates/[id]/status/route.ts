@@ -9,7 +9,7 @@ export async function PUT(
   try {
     const body = await request.json();
     const {
-      tenantId = 'tenant-demo-001',
+      tenantId = 'tenant-1',
       status,
       notes,
       completedBy,
@@ -98,7 +98,7 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-demo-001';
+    const tenantId = searchParams.get('tenantId') || 'tenant-1';
 
     const tenantStatus = await prisma.tenant_legal_statuses.findUnique({
       where: {

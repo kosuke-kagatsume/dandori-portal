@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      tenantId = 'tenant-demo-001',
+      tenantId = 'tenant-1',
       serviceId,
       planName,
       billingCycle = 'monthly',

@@ -6,7 +6,7 @@ import { getTenantId, successResponse } from '@/lib/api/api-helpers';
 const demoHealthCheckups = [
   {
     id: 'checkup-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-001',
     userName: '田中太郎',
     checkupDate: new Date('2024-04-15'),
@@ -28,7 +28,7 @@ const demoHealthCheckups = [
   },
   {
     id: 'checkup-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-002',
     userName: '山田花子',
     checkupDate: new Date('2024-04-16'),
@@ -50,7 +50,7 @@ const demoHealthCheckups = [
   },
   {
     id: 'checkup-003',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-003',
     userName: '佐藤次郎',
     checkupDate: new Date('2024-04-17'),
@@ -74,7 +74,7 @@ const demoHealthCheckups = [
   },
   {
     id: 'checkup-004',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-004',
     userName: '鈴木一郎',
     checkupDate: new Date('2024-04-18'),
@@ -96,7 +96,7 @@ const demoHealthCheckups = [
   },
   {
     id: 'checkup-005',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-005',
     userName: '高橋真理',
     checkupDate: new Date('2024-04-19'),
@@ -118,7 +118,7 @@ const demoHealthCheckups = [
   },
   {
     id: 'checkup-006',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-006',
     userName: '伊藤健',
     checkupDate: new Date('2024-04-20'),
@@ -143,7 +143,7 @@ const demoHealthCheckups = [
   },
   {
     id: 'checkup-007',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-007',
     userName: '渡辺美咲',
     checkupDate: new Date('2024-04-21'),
@@ -165,7 +165,7 @@ const demoHealthCheckups = [
   },
   {
     id: 'checkup-008',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     userId: 'user-008',
     userName: '中村大輔',
     checkupDate: new Date('2024-04-22'),

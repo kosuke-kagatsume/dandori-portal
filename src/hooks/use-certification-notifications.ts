@@ -45,7 +45,7 @@ export function useCertificationNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const tenantId = currentTenant?.id || 'tenant-demo-001';
+  const tenantId = currentTenant?.id || 'tenant-1';
   const userId = currentUser?.id;
 
   const fetchNotifications = useCallback(async () => {
@@ -137,7 +137,7 @@ export function useExpiringCertifications(days = 90) {
   });
   const [loading, setLoading] = useState(true);
 
-  const tenantId = currentTenant?.id || 'tenant-demo-001';
+  const tenantId = currentTenant?.id || 'tenant-1';
 
   const fetchCertifications = useCallback(async () => {
     try {
@@ -184,7 +184,7 @@ export function useCertificationRenewals() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const tenantId = currentTenant?.id || 'tenant-demo-001';
+  const tenantId = currentTenant?.id || 'tenant-1';
   const userId = currentUser?.id;
 
   const fetchRenewals = useCallback(async (filterUserId?: string) => {
@@ -297,7 +297,7 @@ export function useCertificationDashboard() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const tenantId = currentTenant?.id || 'tenant-demo-001';
+  const tenantId = currentTenant?.id || 'tenant-1';
 
   const fetchDashboard = useCallback(async () => {
     try {

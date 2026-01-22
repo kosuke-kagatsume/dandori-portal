@@ -15,7 +15,7 @@ import { createVehicleSchema, validateWithSchema } from '@/lib/validation/asset-
 const demoVehicles = [
   {
     id: 'vehicle-001',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     vehicleNumber: 'V-001',
     licensePlate: '品川 300 あ 1234',
     make: 'トヨタ',
@@ -39,7 +39,7 @@ const demoVehicles = [
   },
   {
     id: 'vehicle-002',
-    tenantId: 'tenant-demo-001',
+    tenantId: 'tenant-1',
     vehicleNumber: 'V-002',
     licensePlate: '品川 500 い 5678',
     make: 'ホンダ',
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
 
     const createData: Prisma.vehiclesUncheckedCreateInput = {
       id: randomUUID(),
-      tenantId: data.tenantId || 'tenant-demo-001',
+      tenantId: data.tenantId || 'tenant-1',
       vehicleNumber: data.vehicleNumber,
       licensePlate: data.licensePlate,
       make: data.make,

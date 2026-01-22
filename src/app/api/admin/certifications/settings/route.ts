@@ -45,7 +45,7 @@ export async function PUT(request: NextRequest) {
       warningThresholdDays,
     } = body;
 
-    const finalTenantId = tenantId || 'tenant-demo-001';
+    const finalTenantId = tenantId || 'tenant-1';
 
     const settings = await prisma.certification_notification_settings.upsert({
       where: { tenantId: finalTenantId },

@@ -7,8 +7,8 @@ const intlMiddleware = createMiddleware({
   defaultLocale: 'ja'
 });
 
-// メインドメインのデフォルトテナント
-const DEFAULT_TENANT_ID = 'tenant-006'; // 株式会社ダンドリワーク
+// メインドメインのデフォルトテナント（デモ用サンプル会社）
+const DEFAULT_TENANT_ID = 'tenant-1'; // 株式会社サンプル
 
 // テナント情報のキャッシュ（メモリ内）
 // Edge Runtimeでもグローバル変数は利用可能
