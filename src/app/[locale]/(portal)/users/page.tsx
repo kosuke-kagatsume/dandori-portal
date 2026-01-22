@@ -509,7 +509,7 @@ export default function UsersPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight whitespace-nowrap">{t('title')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-muted-foreground mt-1">
             システムに登録されているユーザーを管理します
           </p>

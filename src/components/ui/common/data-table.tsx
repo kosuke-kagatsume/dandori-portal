@@ -79,8 +79,8 @@ function DataTableComponent<TData>({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center space-x-2 flex-1">
           {searchKey && (
             <Input
               placeholder={searchPlaceholder}
@@ -88,13 +88,13 @@ function DataTableComponent<TData>({
               onChange={(event) =>
                 table.getColumn(searchKey)?.setFilterValue(event.target.value)
               }
-              className="max-w-sm"
+              className="w-full sm:max-w-sm"
             />
           )}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
+            <Button variant="outline" size="sm">
               列表示 <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -119,9 +119,9 @@ function DataTableComponent<TData>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      
-      <div className="rounded-md border">
-        <Table>
+
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -165,12 +165,12 @@ function DataTableComponent<TData>({
         </Table>
       </div>
       
-      <div className="flex items-center justify-between px-2">
-        <div className="flex-1 text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-2">
+        <div className="text-sm text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} / {table.getFilteredRowModel().rows.length} 行を選択中
         </div>
-        
-        <div className="flex items-center space-x-6 lg:space-x-8">
+
+        <div className="flex flex-wrap items-center gap-4 sm:space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium">行数</p>
             <Select

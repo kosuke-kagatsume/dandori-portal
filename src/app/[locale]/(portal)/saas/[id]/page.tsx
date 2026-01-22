@@ -195,26 +195,30 @@ export default function SaaSServiceDetailPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/ja/saas')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">{service.name}</h1>
-          <p className="text-muted-foreground">{service.vendor || '（ベンダー未設定）'}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="flex items-center gap-4 flex-1">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/ja/saas')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">{service.name}</h1>
+            <p className="text-muted-foreground text-sm sm:text-base truncate">{service.vendor || '（ベンダー未設定）'}</p>
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchService}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          更新
-        </Button>
-        <Button variant="outline" onClick={() => setIsEditServiceOpen(true)}>
-          <Edit className="mr-2 h-4 w-4" />
-          編集
-        </Button>
-        <Button variant="destructive" onClick={handleDeleteService}>
-          <Trash2 className="mr-2 h-4 w-4" />
-          削除
-        </Button>
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+          <Button variant="outline" size="sm" onClick={fetchService}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            更新
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsEditServiceOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            編集
+          </Button>
+          <Button variant="destructive" size="sm" onClick={handleDeleteService}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            削除
+          </Button>
+        </div>
       </div>
 
       {/* サービス詳細 */}
@@ -223,7 +227,7 @@ export default function SaaSServiceDetailPage() {
           <CardTitle>サービス情報</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h3 className="text-sm font-medium text-muted-foreground mb-2">基本情報</h3>
               <div className="space-y-2">
@@ -330,16 +334,16 @@ export default function SaaSServiceDetailPage() {
             <div className="space-y-4">
               {plans.map((plan) => (
                 <Card key={plan.id}>
-                  <CardContent className="flex items-center justify-between p-6">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">{plan.planName}</h3>
+                  <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                        <h3 className="font-semibold text-base sm:text-lg">{plan.planName}</h3>
                         {plan.isActive && (
                           <Badge variant="default" className="bg-green-500">現在のプラン</Badge>
                         )}
                       </div>
 
-                      <div className="grid grid-cols-3 gap-6 mt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mt-4">
                         <div className="flex items-center gap-2">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
                           <div>
@@ -387,7 +391,7 @@ export default function SaaSServiceDetailPage() {
                       )}
                     </div>
 
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2 sm:ml-4 mt-4 sm:mt-0">
                       <Button
                         variant="outline"
                         size="sm"
@@ -438,16 +442,16 @@ export default function SaaSServiceDetailPage() {
             <div className="space-y-4">
               {assignments.map((assignment) => (
                 <Card key={assignment.id}>
-                  <CardContent className="flex items-center justify-between p-6">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">{assignment.userName || '不明'}</h3>
+                  <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                        <h3 className="font-semibold text-base sm:text-lg">{assignment.userName || '不明'}</h3>
                         <Badge variant={assignment.status === 'active' ? 'default' : 'secondary'}>
                           {statusLabels[assignment.status] || assignment.status}
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-6 mt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mt-4">
                         <div>
                           <p className="text-sm text-muted-foreground">プラン</p>
                           <p className="font-medium">{assignment.plan?.planName || '未設定'}</p>
@@ -479,7 +483,7 @@ export default function SaaSServiceDetailPage() {
                       )}
                     </div>
 
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-2 sm:ml-4 mt-4 sm:mt-0">
                       <Button
                         variant="outline"
                         size="sm"

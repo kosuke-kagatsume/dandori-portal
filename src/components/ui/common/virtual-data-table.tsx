@@ -148,20 +148,20 @@ const VirtualDataTableComponent = function VirtualDataTable<TData>({
   return (
     <div className="space-y-4">
       {/* 検索バー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center space-x-2">
-          <div className="relative">
+          <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              className="pl-9 max-w-sm"
+              className="pl-9 w-full sm:max-w-sm"
             />
           </div>
         </div>
         {/* 件数表示とページネーションを横並びに配置 */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between sm:justify-end gap-4">
           <div className="text-sm text-muted-foreground">
             {filteredData.length} / {data.length} 件
           </div>
@@ -213,10 +213,10 @@ const VirtualDataTableComponent = function VirtualDataTable<TData>({
       </div>
 
       {/* テーブル */}
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <div
           ref={parentRef}
-          className="overflow-auto"
+          className="overflow-auto min-w-full"
           style={{ height: enableVirtualization ? '600px' : 'auto' }}
           onScroll={handleScroll}
         >

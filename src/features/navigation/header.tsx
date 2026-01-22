@@ -107,10 +107,10 @@ export function Header() {
 
   return (
     <>
-      <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center pl-16 pr-4 md:px-6">
+      <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 overflow-hidden">
+        <div className="flex h-16 items-center pl-14 pr-2 md:px-6 max-w-full">
           {/* Left Section - Tenant Switcher & Search */}
-          <div className="flex items-center space-x-4 flex-1">
+          <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
             {/* Tenant Switcher - Hidden on mobile */}
             <div className="hidden sm:block">
               <TenantSwitcher />
@@ -144,7 +144,7 @@ export function Header() {
           </div>
 
           {/* Right Section - Actions & User Menu */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
             {/* Last Updated - Hidden on mobile and tablet */}
             <div className="hidden lg:flex items-center text-xs text-muted-foreground">
               最終更新: {lastUpdated.toLocaleTimeString('ja-JP', {

@@ -164,7 +164,7 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Main Content */}
         <div className={cn(
-          'flex-1 flex flex-col min-h-screen transition-all duration-300',
+          'flex-1 flex flex-col min-h-screen transition-all duration-300 overflow-x-hidden',
           // モバイル: マージンなし、デスクトップ: サイドバーの幅に応じたマージン
           'ml-0',
           sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
@@ -185,7 +185,7 @@ export function AppShell({ children }: AppShellProps) {
           <Header />
 
           {/* Page Content - メインコンテンツ */}
-          <main id="main-content" className="flex-1 overflow-auto p-6" role="main">
+          <main id="main-content" className="flex-1 overflow-x-auto p-4 sm:p-6" role="main">
             {children}
           </main>
         </div>
