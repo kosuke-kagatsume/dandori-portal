@@ -14,7 +14,7 @@ import { IS_DEMO_BUILD } from '@/config/demo';
 
 // REST API helper functions
 const API_BASE = '/api/users';
-const getTenantId = () => 'default-tenant';
+const getTenantId = () => 'tenant-1';
 
 async function apiFetchUsers(tenantId: string): Promise<User[]> {
   const params = new URLSearchParams({ tenantId });

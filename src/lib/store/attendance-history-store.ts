@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 // REST API helper functions
 const API_BASE = '/api/attendance';
-const getTenantId = () => 'default-tenant';
+const getTenantId = () => 'tenant-1';
 
 async function apiFetchAttendanceRecords(userId: string, startDate?: string, endDate?: string) {
   const params = new URLSearchParams({ tenantId: getTenantId(), userId });
