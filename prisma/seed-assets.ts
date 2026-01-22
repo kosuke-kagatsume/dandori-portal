@@ -22,6 +22,7 @@ async function seedAssets() {
         email: 'yamada@autoservice.example.com',
         rating: 5,
         notes: '車検・点検に強い',
+    updatedAt: new Date(),
       },
     }),
     prisma.vendors.upsert({
@@ -37,6 +38,7 @@ async function seedAssets() {
         email: 'suzuki@tire-tokyo.example.com',
         rating: 4,
         notes: 'タイヤ交換専門',
+    updatedAt: new Date(),
       },
     }),
     prisma.vendors.upsert({
@@ -52,6 +54,7 @@ async function seedAssets() {
         email: 'tanaka@pcrepair.example.com',
         rating: 5,
         notes: 'PC修理・メンテナンス',
+    updatedAt: new Date(),
       },
     }),
   ]);
@@ -85,6 +88,7 @@ async function seedAssets() {
         mileageTracking: true,
         currentMileage: 25000,
         notes: '営業車',
+    updatedAt: new Date(),
       },
     }),
     prisma.vehicles.upsert({
@@ -116,6 +120,7 @@ async function seedAssets() {
         mileageTracking: true,
         currentMileage: 35000,
         notes: '通勤用',
+    updatedAt: new Date(),
       },
     }),
     prisma.vehicles.upsert({
@@ -140,6 +145,7 @@ async function seedAssets() {
         mileageTracking: true,
         currentMileage: 12000,
         notes: '電気自動車・エコカー',
+    updatedAt: new Date(),
       },
     }),
   ]);
@@ -213,6 +219,7 @@ async function seedAssets() {
         performedBy: 'user-admin',
         performedByName: '管理者',
         notes: '問題なく完了',
+    updatedAt: new Date(),
       },
     }),
     prisma.maintenance_records.create({
@@ -229,6 +236,7 @@ async function seedAssets() {
         performedBy: 'user-admin',
         performedByName: '管理者',
         notes: 'スタッドレスタイヤ装着',
+    updatedAt: new Date(),
       },
     }),
     prisma.maintenance_records.create({
@@ -245,6 +253,7 @@ async function seedAssets() {
         performedBy: 'user-admin',
         performedByName: '管理者',
         notes: 'ブレーキパッド残量50%',
+    updatedAt: new Date(),
       },
     }),
     prisma.maintenance_records.create({
@@ -288,6 +297,7 @@ async function seedAssets() {
         warrantyExpiration: new Date('2026-10-31'),
         status: 'active',
         notes: '開発用',
+    updatedAt: new Date(),
       },
     }),
     prisma.pc_assets.upsert({
@@ -313,6 +323,7 @@ async function seedAssets() {
         assignedDate: new Date('2023-04-10'),
         status: 'active',
         notes: '営業・プレゼン用',
+    updatedAt: new Date(),
       },
     }),
     prisma.pc_assets.upsert({
@@ -334,6 +345,7 @@ async function seedAssets() {
         warrantyExpiration: new Date('2027-01-14'),
         status: 'active',
         notes: '予備機',
+    updatedAt: new Date(),
       },
     }),
   ]);

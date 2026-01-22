@@ -19,6 +19,7 @@ async function main() {
       timezone: 'Asia/Tokyo',
       closingDay: '末',
       weekStartDay: 1,
+      updatedAt: new Date(),
     },
   });
   console.log('✅ Created tenant:', tenant.name);
@@ -36,6 +37,7 @@ async function main() {
       memberCount: 50,
       description: '会社全体',
       isActive: true,
+      updatedAt: new Date(),
     },
   });
 
@@ -52,6 +54,7 @@ async function main() {
       memberCount: 10,
       description: '人事・総務・労務',
       isActive: true,
+      updatedAt: new Date(),
     },
   });
 
@@ -68,6 +71,7 @@ async function main() {
       memberCount: 20,
       description: '営業・マーケティング',
       isActive: true,
+      updatedAt: new Date(),
     },
   });
 
@@ -84,6 +88,7 @@ async function main() {
       memberCount: 20,
       description: 'プロダクト開発',
       isActive: true,
+      updatedAt: new Date(),
     },
   });
 
@@ -229,7 +234,10 @@ async function main() {
     await prisma.users.upsert({
       where: { email: userData.email },
       update: {},
-      create: userData,
+      create: {
+        ...userData,
+        updatedAt: new Date(),
+      },
     });
   }
 
@@ -257,7 +265,9 @@ async function main() {
       if (!isPresent) {
         // 欠勤または休暇
         const isLeave = Math.random() > 0.5;
+        const absentDateStr = date.toISOString().split('T')[0];
         attendanceRecords.push({
+          id: `att-${user.id}-${absentDateStr}`,
           tenantId: tenant.id,
           userId: user.id,
           date: new Date(date.setHours(0, 0, 0, 0)),
@@ -266,6 +276,7 @@ async function main() {
           workMinutes: 0,
           overtimeMinutes: 0,
           workLocation: 'office',
+          updatedAt: new Date(),
         });
         continue;
       }
@@ -325,7 +336,9 @@ async function main() {
         approvalReason = '早退のため承認が必要です';
       }
 
+      const dateStr = date.toISOString().split('T')[0];
       attendanceRecords.push({
+        id: `att-${user.id}-${dateStr}`,
         tenantId: tenant.id,
         userId: user.id,
         date: new Date(date.setHours(0, 0, 0, 0)),
@@ -340,6 +353,7 @@ async function main() {
         status,
         approvalStatus,
         approvalReason,
+        updatedAt: new Date(),
       });
     }
   }

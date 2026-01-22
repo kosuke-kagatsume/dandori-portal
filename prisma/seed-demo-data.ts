@@ -3,86 +3,87 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 const TENANT_ID = 'tenant-1'; // 株式会社サンプル
+const ID_PREFIX = 't1-'; // tenant-1用のIDプレフィックス
 
 // 部門データ
 const departments = [
-  { id: 'dept-001', name: '経営企画室' },
-  { id: 'dept-002', name: '人事部' },
-  { id: 'dept-003', name: '営業部' },
-  { id: 'dept-004', name: '開発部' },
-  { id: 'dept-005', name: '総務部' },
-  { id: 'dept-006', name: 'マーケティング部' },
+  { id: `${ID_PREFIX}dept-001`, name: '経営企画室' },
+  { id: `${ID_PREFIX}dept-002`, name: '人事部' },
+  { id: `${ID_PREFIX}dept-003`, name: '営業部' },
+  { id: `${ID_PREFIX}dept-004`, name: '開発部' },
+  { id: `${ID_PREFIX}dept-005`, name: '総務部' },
+  { id: `${ID_PREFIX}dept-006`, name: 'マーケティング部' },
 ];
 
 // 役職データ
 const positions = [
-  { id: 'pos-001', name: '代表取締役', level: 1 },
-  { id: 'pos-002', name: '取締役', level: 2 },
-  { id: 'pos-003', name: '部長', level: 3 },
-  { id: 'pos-004', name: '課長', level: 4 },
-  { id: 'pos-005', name: '係長', level: 5 },
-  { id: 'pos-006', name: '主任', level: 6 },
-  { id: 'pos-007', name: '一般社員', level: 7 },
+  { id: `${ID_PREFIX}pos-001`, name: '代表取締役', level: 1 },
+  { id: `${ID_PREFIX}pos-002`, name: '取締役', level: 2 },
+  { id: `${ID_PREFIX}pos-003`, name: '部長', level: 3 },
+  { id: `${ID_PREFIX}pos-004`, name: '課長', level: 4 },
+  { id: `${ID_PREFIX}pos-005`, name: '係長', level: 5 },
+  { id: `${ID_PREFIX}pos-006`, name: '主任', level: 6 },
+  { id: `${ID_PREFIX}pos-007`, name: '一般社員', level: 7 },
 ];
 
 // ユーザーデータ（30人）
 const users = [
   // 経営層
-  { id: 'user-001', name: '鈴木一郎', email: 'suzuki@demo.dandori-portal.com', department: '経営企画室', position: '代表取締役', role: 'executive' },
-  { id: 'user-002', name: '田中美咲', email: 'tanaka.m@demo.dandori-portal.com', department: '経営企画室', position: '取締役', role: 'executive' },
+  { id: `${ID_PREFIX}user-001`, name: '鈴木一郎', email: 'suzuki@demo.dandori-portal.com', department: '経営企画室', position: '代表取締役', role: 'executive' },
+  { id: `${ID_PREFIX}user-002`, name: '田中美咲', email: 'tanaka.m@demo.dandori-portal.com', department: '経営企画室', position: '取締役', role: 'executive' },
 
   // 人事部
-  { id: 'user-003', name: '山田太郎', email: 'yamada@demo.dandori-portal.com', department: '人事部', position: '部長', role: 'hr' },
-  { id: 'user-004', name: '佐藤花子', email: 'sato.h@demo.dandori-portal.com', department: '人事部', position: '課長', role: 'hr' },
-  { id: 'user-005', name: '高橋健一', email: 'takahashi@demo.dandori-portal.com', department: '人事部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-003`, name: '山田太郎', email: 'yamada@demo.dandori-portal.com', department: '人事部', position: '部長', role: 'hr' },
+  { id: `${ID_PREFIX}user-004`, name: '佐藤花子', email: 'sato.h@demo.dandori-portal.com', department: '人事部', position: '課長', role: 'hr' },
+  { id: `${ID_PREFIX}user-005`, name: '高橋健一', email: 'takahashi@demo.dandori-portal.com', department: '人事部', position: '一般社員', role: 'employee' },
 
   // 営業部
-  { id: 'user-006', name: '伊藤誠', email: 'ito@demo.dandori-portal.com', department: '営業部', position: '部長', role: 'manager' },
-  { id: 'user-007', name: '渡辺由美', email: 'watanabe@demo.dandori-portal.com', department: '営業部', position: '課長', role: 'manager' },
-  { id: 'user-008', name: '中村大輔', email: 'nakamura@demo.dandori-portal.com', department: '営業部', position: '係長', role: 'employee' },
-  { id: 'user-009', name: '小林優子', email: 'kobayashi@demo.dandori-portal.com', department: '営業部', position: '主任', role: 'employee' },
-  { id: 'user-010', name: '加藤翔太', email: 'kato@demo.dandori-portal.com', department: '営業部', position: '一般社員', role: 'employee' },
-  { id: 'user-011', name: '吉田春香', email: 'yoshida@demo.dandori-portal.com', department: '営業部', position: '一般社員', role: 'employee' },
-  { id: 'user-012', name: '山口隆', email: 'yamaguchi@demo.dandori-portal.com', department: '営業部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-006`, name: '伊藤誠', email: 'ito@demo.dandori-portal.com', department: '営業部', position: '部長', role: 'manager' },
+  { id: `${ID_PREFIX}user-007`, name: '渡辺由美', email: 'watanabe@demo.dandori-portal.com', department: '営業部', position: '課長', role: 'manager' },
+  { id: `${ID_PREFIX}user-008`, name: '中村大輔', email: 'nakamura@demo.dandori-portal.com', department: '営業部', position: '係長', role: 'employee' },
+  { id: `${ID_PREFIX}user-009`, name: '小林優子', email: 'kobayashi@demo.dandori-portal.com', department: '営業部', position: '主任', role: 'employee' },
+  { id: `${ID_PREFIX}user-010`, name: '加藤翔太', email: 'kato@demo.dandori-portal.com', department: '営業部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-011`, name: '吉田春香', email: 'yoshida@demo.dandori-portal.com', department: '営業部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-012`, name: '山口隆', email: 'yamaguchi@demo.dandori-portal.com', department: '営業部', position: '一般社員', role: 'employee' },
 
   // 開発部
-  { id: 'user-013', name: '松本英樹', email: 'matsumoto@demo.dandori-portal.com', department: '開発部', position: '部長', role: 'manager' },
-  { id: 'user-014', name: '井上真理', email: 'inoue@demo.dandori-portal.com', department: '開発部', position: '課長', role: 'manager' },
-  { id: 'user-015', name: '木村拓也', email: 'kimura@demo.dandori-portal.com', department: '開発部', position: '係長', role: 'employee' },
-  { id: 'user-016', name: '林直樹', email: 'hayashi@demo.dandori-portal.com', department: '開発部', position: '主任', role: 'employee' },
-  { id: 'user-017', name: '清水愛', email: 'shimizu@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
-  { id: 'user-018', name: '森田健太', email: 'morita@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
-  { id: 'user-019', name: '阿部さくら', email: 'abe@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
-  { id: 'user-020', name: '池田光', email: 'ikeda@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
-  { id: 'user-021', name: '橋本遼', email: 'hashimoto@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-013`, name: '松本英樹', email: 'matsumoto@demo.dandori-portal.com', department: '開発部', position: '部長', role: 'manager' },
+  { id: `${ID_PREFIX}user-014`, name: '井上真理', email: 'inoue@demo.dandori-portal.com', department: '開発部', position: '課長', role: 'manager' },
+  { id: `${ID_PREFIX}user-015`, name: '木村拓也', email: 'kimura@demo.dandori-portal.com', department: '開発部', position: '係長', role: 'employee' },
+  { id: `${ID_PREFIX}user-016`, name: '林直樹', email: 'hayashi@demo.dandori-portal.com', department: '開発部', position: '主任', role: 'employee' },
+  { id: `${ID_PREFIX}user-017`, name: '清水愛', email: 'shimizu@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-018`, name: '森田健太', email: 'morita@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-019`, name: '阿部さくら', email: 'abe@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-020`, name: '池田光', email: 'ikeda@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-021`, name: '橋本遼', email: 'hashimoto@demo.dandori-portal.com', department: '開発部', position: '一般社員', role: 'employee' },
 
   // 総務部
-  { id: 'user-022', name: '石川和也', email: 'ishikawa@demo.dandori-portal.com', department: '総務部', position: '部長', role: 'manager' },
-  { id: 'user-023', name: '前田美穂', email: 'maeda@demo.dandori-portal.com', department: '総務部', position: '課長', role: 'employee' },
-  { id: 'user-024', name: '藤田一樹', email: 'fujita@demo.dandori-portal.com', department: '総務部', position: '一般社員', role: 'employee' },
-  { id: 'user-025', name: '岡田恵', email: 'okada@demo.dandori-portal.com', department: '総務部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-022`, name: '石川和也', email: 'ishikawa@demo.dandori-portal.com', department: '総務部', position: '部長', role: 'manager' },
+  { id: `${ID_PREFIX}user-023`, name: '前田美穂', email: 'maeda@demo.dandori-portal.com', department: '総務部', position: '課長', role: 'employee' },
+  { id: `${ID_PREFIX}user-024`, name: '藤田一樹', email: 'fujita@demo.dandori-portal.com', department: '総務部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-025`, name: '岡田恵', email: 'okada@demo.dandori-portal.com', department: '総務部', position: '一般社員', role: 'employee' },
 
   // マーケティング部
-  { id: 'user-026', name: '後藤智子', email: 'goto@demo.dandori-portal.com', department: 'マーケティング部', position: '部長', role: 'manager' },
-  { id: 'user-027', name: '長谷川潤', email: 'hasegawa@demo.dandori-portal.com', department: 'マーケティング部', position: '課長', role: 'employee' },
-  { id: 'user-028', name: '村上美月', email: 'murakami@demo.dandori-portal.com', department: 'マーケティング部', position: '主任', role: 'employee' },
-  { id: 'user-029', name: '近藤大地', email: 'kondo@demo.dandori-portal.com', department: 'マーケティング部', position: '一般社員', role: 'employee' },
-  { id: 'user-030', name: '坂本彩', email: 'sakamoto@demo.dandori-portal.com', department: 'マーケティング部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-026`, name: '後藤智子', email: 'goto@demo.dandori-portal.com', department: 'マーケティング部', position: '部長', role: 'manager' },
+  { id: `${ID_PREFIX}user-027`, name: '長谷川潤', email: 'hasegawa@demo.dandori-portal.com', department: 'マーケティング部', position: '課長', role: 'employee' },
+  { id: `${ID_PREFIX}user-028`, name: '村上美月', email: 'murakami@demo.dandori-portal.com', department: 'マーケティング部', position: '主任', role: 'employee' },
+  { id: `${ID_PREFIX}user-029`, name: '近藤大地', email: 'kondo@demo.dandori-portal.com', department: 'マーケティング部', position: '一般社員', role: 'employee' },
+  { id: `${ID_PREFIX}user-030`, name: '坂本彩', email: 'sakamoto@demo.dandori-portal.com', department: 'マーケティング部', position: '一般社員', role: 'employee' },
 ];
 
 // SaaSサービスデータ
 const saasServices = [
-  { id: 'saas-001', name: 'Chatwork', category: 'コミュニケーション', vendor: 'Chatwork株式会社', pricePerUser: 700 },
-  { id: 'saas-002', name: 'LINE WORKS', category: 'コミュニケーション', vendor: 'ワークスモバイルジャパン', pricePerUser: 450 },
-  { id: 'saas-003', name: 'Google Workspace', category: '生産性ツール', vendor: 'Google', pricePerUser: 1360 },
-  { id: 'saas-004', name: 'GitHub', category: '開発ツール', vendor: 'GitHub', pricePerUser: 2100 },
-  { id: 'saas-005', name: 'Figma', category: 'デザインツール', vendor: 'Figma', pricePerUser: 1800 },
-  { id: 'saas-006', name: 'Salesforce', category: '営業支援', vendor: 'Salesforce', pricePerUser: 18000 },
-  { id: 'saas-007', name: 'Notion', category: 'プロジェクト管理', vendor: 'Notion Labs', pricePerUser: 1000 },
-  { id: 'saas-008', name: 'Zoom', category: 'コミュニケーション', vendor: 'Zoom Video', pricePerUser: 2200 },
-  { id: 'saas-009', name: 'AWS', category: '開発ツール', vendor: 'Amazon', fixedPrice: 350000 },
-  { id: 'saas-010', name: 'Jira', category: 'プロジェクト管理', vendor: 'Atlassian', pricePerUser: 1200 },
-  { id: 'saas-011', name: 'HubSpot', category: '営業支援', vendor: 'HubSpot', fixedPrice: 96000 },
+  { id: `${ID_PREFIX}saas-001`, name: 'Chatwork', category: 'コミュニケーション', vendor: 'Chatwork株式会社', pricePerUser: 700 },
+  { id: `${ID_PREFIX}saas-002`, name: 'LINE WORKS', category: 'コミュニケーション', vendor: 'ワークスモバイルジャパン', pricePerUser: 450 },
+  { id: `${ID_PREFIX}saas-003`, name: 'Google Workspace', category: '生産性ツール', vendor: 'Google', pricePerUser: 1360 },
+  { id: `${ID_PREFIX}saas-004`, name: 'GitHub', category: '開発ツール', vendor: 'GitHub', pricePerUser: 2100 },
+  { id: `${ID_PREFIX}saas-005`, name: 'Figma', category: 'デザインツール', vendor: 'Figma', pricePerUser: 1800 },
+  { id: `${ID_PREFIX}saas-006`, name: 'Salesforce', category: '営業支援', vendor: 'Salesforce', pricePerUser: 18000 },
+  { id: `${ID_PREFIX}saas-007`, name: 'Notion', category: 'プロジェクト管理', vendor: 'Notion Labs', pricePerUser: 1000 },
+  { id: `${ID_PREFIX}saas-008`, name: 'Zoom', category: 'コミュニケーション', vendor: 'Zoom Video', pricePerUser: 2200 },
+  { id: `${ID_PREFIX}saas-009`, name: 'AWS', category: '開発ツール', vendor: 'Amazon', fixedPrice: 350000 },
+  { id: `${ID_PREFIX}saas-010`, name: 'Jira', category: 'プロジェクト管理', vendor: 'Atlassian', pricePerUser: 1200 },
+  { id: `${ID_PREFIX}saas-011`, name: 'HubSpot', category: '営業支援', vendor: 'HubSpot', fixedPrice: 96000 },
 ];
 
 async function main() {
