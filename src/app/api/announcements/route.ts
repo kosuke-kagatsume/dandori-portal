@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     const announcements = await prisma.announcements.findMany({
       where,
       include: {
-        reads: {
+        announcement_reads: {
           select: {
             userId: true,
             readAt: true,

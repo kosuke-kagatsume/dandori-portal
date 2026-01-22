@@ -170,7 +170,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
           // APIレスポンスをストア形式に変換（既存のuserStatesとマージ）
           const announcements = response.data.map((item) => {
             // APIから取得したuserStates
-            const apiUserStates: UserAnnouncementState[] = (item as unknown as { reads?: Array<{ userId: string; readAt: string; actionCompleted: boolean; actionCompletedAt?: string }> }).reads?.map((read) => ({
+            const apiUserStates: UserAnnouncementState[] = (item as unknown as { announcement_reads?: Array<{ userId: string; readAt: string; actionCompleted: boolean; actionCompletedAt?: string }> }).announcement_reads?.map((read) => ({
               userId: read.userId,
               status: read.actionCompleted ? 'completed' as UserAnnouncementStatus : 'read' as UserAnnouncementStatus,
               readAt: read.readAt,

@@ -20,7 +20,7 @@ export async function GET(
     const announcement = await prisma.announcements.findFirst({
       where: { id, tenantId },
       include: {
-        reads: {
+        announcement_reads: {
           select: {
             userId: true,
             readAt: true,
