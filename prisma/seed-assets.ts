@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function seedAssets() {
-  const tenantId = 'tenant-demo-001';
+  const tenantId = 'tenant-1';
 
   console.log('Seeding assets data...');
 

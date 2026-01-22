@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const tenantId = 'tenant-demo-001';
+const tenantId = 'tenant-1';
 
 // 業者デモデータ
 const demoVendors = [

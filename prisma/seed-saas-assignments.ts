@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const tenantId = 'tenant-demo-001';
+const tenantId = 'tenant-1';
 
 // 50名のデモメンバー定義（demo-organization.tsと連携）
 // 部門別に分類してSaaS割り当てを決定
