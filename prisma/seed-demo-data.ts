@@ -72,16 +72,17 @@ const users = [
 
 // SaaSサービスデータ
 const saasServices = [
-  { id: 'saas-001', name: 'Slack', category: 'コミュニケーション', vendor: 'Slack Technologies', pricePerUser: 1500 },
-  { id: 'saas-002', name: 'Google Workspace', category: '生産性ツール', vendor: 'Google', pricePerUser: 1360 },
-  { id: 'saas-003', name: 'GitHub', category: '開発ツール', vendor: 'GitHub', pricePerUser: 2100 },
-  { id: 'saas-004', name: 'Figma', category: 'デザインツール', vendor: 'Figma', pricePerUser: 1800 },
-  { id: 'saas-005', name: 'Salesforce', category: '営業支援', vendor: 'Salesforce', pricePerUser: 18000 },
-  { id: 'saas-006', name: 'Notion', category: 'プロジェクト管理', vendor: 'Notion Labs', pricePerUser: 1000 },
-  { id: 'saas-007', name: 'Zoom', category: 'コミュニケーション', vendor: 'Zoom Video', pricePerUser: 2200 },
-  { id: 'saas-008', name: 'AWS', category: '開発ツール', vendor: 'Amazon', fixedPrice: 350000 },
-  { id: 'saas-009', name: 'Jira', category: 'プロジェクト管理', vendor: 'Atlassian', pricePerUser: 1200 },
-  { id: 'saas-010', name: 'HubSpot', category: '営業支援', vendor: 'HubSpot', fixedPrice: 96000 },
+  { id: 'saas-001', name: 'Chatwork', category: 'コミュニケーション', vendor: 'Chatwork株式会社', pricePerUser: 700 },
+  { id: 'saas-002', name: 'LINE WORKS', category: 'コミュニケーション', vendor: 'ワークスモバイルジャパン', pricePerUser: 450 },
+  { id: 'saas-003', name: 'Google Workspace', category: '生産性ツール', vendor: 'Google', pricePerUser: 1360 },
+  { id: 'saas-004', name: 'GitHub', category: '開発ツール', vendor: 'GitHub', pricePerUser: 2100 },
+  { id: 'saas-005', name: 'Figma', category: 'デザインツール', vendor: 'Figma', pricePerUser: 1800 },
+  { id: 'saas-006', name: 'Salesforce', category: '営業支援', vendor: 'Salesforce', pricePerUser: 18000 },
+  { id: 'saas-007', name: 'Notion', category: 'プロジェクト管理', vendor: 'Notion Labs', pricePerUser: 1000 },
+  { id: 'saas-008', name: 'Zoom', category: 'コミュニケーション', vendor: 'Zoom Video', pricePerUser: 2200 },
+  { id: 'saas-009', name: 'AWS', category: '開発ツール', vendor: 'Amazon', fixedPrice: 350000 },
+  { id: 'saas-010', name: 'Jira', category: 'プロジェクト管理', vendor: 'Atlassian', pricePerUser: 1200 },
+  { id: 'saas-011', name: 'HubSpot', category: '営業支援', vendor: 'HubSpot', fixedPrice: 96000 },
 ];
 
 async function main() {
@@ -565,8 +566,10 @@ async function main() {
   }
 
   const serviceAssignments: Record<string, string[]> = {};
-  // Slack - 全員
-  if (serviceIdMap['Slack']) serviceAssignments[serviceIdMap['Slack']] = createdUsers.map(u => u.id);
+  // Chatwork - 全員
+  if (serviceIdMap['Chatwork']) serviceAssignments[serviceIdMap['Chatwork']] = createdUsers.map(u => u.id);
+  // LINE WORKS - 全員
+  if (serviceIdMap['LINE WORKS']) serviceAssignments[serviceIdMap['LINE WORKS']] = createdUsers.map(u => u.id);
   // Google Workspace - 全員
   if (serviceIdMap['Google Workspace']) serviceAssignments[serviceIdMap['Google Workspace']] = createdUsers.map(u => u.id);
   // GitHub - 開発部のみ
