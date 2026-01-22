@@ -165,7 +165,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
           const response = await apiFetch<{
             success: boolean;
             data: Announcement[];
-          }>(`${API_BASE}?tenantId=demo`);
+          }>(`${API_BASE}?tenantId=tenant-1`);
 
           // APIレスポンスをストア形式に変換（既存のuserStatesとマージ）
           const announcements = response.data.map((item) => {
@@ -231,7 +231,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}?tenantId=demo`, {
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}?tenantId=tenant-1`, {
             method: 'POST',
             body: JSON.stringify(announcement),
           });
@@ -280,7 +280,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=demo`, {
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
             method: 'PUT',
             body: JSON.stringify(updates),
           });
@@ -324,7 +324,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          await apiFetch<{ success: boolean }>(`${API_BASE}/${id}?tenantId=demo`, {
+          await apiFetch<{ success: boolean }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
             method: 'DELETE',
           });
 
@@ -368,7 +368,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=demo`, {
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
             method: 'PUT',
             body: JSON.stringify({ published: true }),
           });
@@ -420,7 +420,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
             return;
           }
 
-          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=demo`, {
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
             method: 'PUT',
             body: JSON.stringify({ published: false }),
           });
@@ -500,7 +500,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         try {
           // デモモードでなければAPIも呼び出す
           if (process.env.NEXT_PUBLIC_ENV !== 'demo' && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
-            await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=demo`, {
+            await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=tenant-1`, {
               method: 'POST',
               body: JSON.stringify({ userId }),
             });
