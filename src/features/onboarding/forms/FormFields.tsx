@@ -1,14 +1,14 @@
 'use client';
 
-import { UseFormRegister, FieldErrors } from 'react-hook-form';
+import { UseFormRegister, FieldErrors, FieldValues } from 'react-hook-form';
 
-interface InputFieldProps<T = Record<string, unknown>> {
+interface InputFieldProps {
   label: string;
   name: string;
   type?: string;
   required?: boolean;
   placeholder?: string;
-  register: UseFormRegister<T>;
+  register: UseFormRegister<FieldValues>;
   errors?: FieldErrors;
   helpText?: string;
 }

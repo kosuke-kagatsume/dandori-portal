@@ -127,15 +127,16 @@ export async function GET(request: NextRequest) {
         userId: true,
         userName: true,
         userEmail: true,
-        userDepartment: true,
+        departmentId: true,
+        departmentName: true,
         assignedDate: true,
-        expiryDate: true,
+        revokedDate: true,
         status: true,
-        isActive: true,
+        lastUsedAt: true,
         notes: true,
         createdAt: true,
         updatedAt: true,
-        service: {
+        saas_services: {
           select: {
             id: true,
             name: true,
@@ -143,7 +144,7 @@ export async function GET(request: NextRequest) {
             licenseType: true,
           },
         },
-        plan: {
+        saas_license_plans: {
           select: {
             id: true,
             planName: true,
@@ -202,27 +203,27 @@ export async function POST(request: NextRequest) {
 
     const assignment = await prisma.saas_license_assignments.create({
       data: {
+        id: `assign-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         tenantId,
         serviceId,
         planId,
         userId,
         userName,
         userEmail,
-        userDepartment,
+        departmentName: userDepartment,
         assignedDate: assignedDate ? new Date(assignedDate) : new Date(),
-        expiryDate: expiryDate ? new Date(expiryDate) : null,
-        isActive,
+        updatedAt: new Date(),
         notes,
       },
       include: {
-        service: {
+        saas_services: {
           select: {
             id: true,
             name: true,
             category: true,
           },
         },
-        plan: true,
+        saas_license_plans: true,
       },
     });
 

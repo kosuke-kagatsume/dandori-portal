@@ -10,8 +10,8 @@ export async function GET(
     const assignment = await prisma.saas_license_assignments.findUnique({
       where: { id: params.id },
       include: {
-        service: true,
-        plan: true,
+        saas_services: true,
+        saas_license_plans: true,
       },
     });
 
@@ -52,9 +52,9 @@ export async function PUT(
       userName,
       userEmail,
       userDepartment,
+      departmentName,
       assignedDate,
-      expiryDate,
-      isActive,
+      status,
       notes,
     } = body;
 
@@ -65,21 +65,21 @@ export async function PUT(
         userId,
         userName,
         userEmail,
-        userDepartment,
+        departmentName: departmentName || userDepartment,
         assignedDate: assignedDate ? new Date(assignedDate) : undefined,
-        expiryDate: expiryDate ? new Date(expiryDate) : null,
-        isActive,
+        status,
         notes,
+        updatedAt: new Date(),
       },
       include: {
-        service: {
+        saas_services: {
           select: {
             id: true,
             name: true,
             category: true,
           },
         },
-        plan: true,
+        saas_license_plans: true,
       },
     });
 

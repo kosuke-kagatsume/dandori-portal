@@ -10,7 +10,7 @@ export async function GET(
     const plan = await prisma.saas_license_plans.findUnique({
       where: { id: params.id },
       include: {
-        service: true,
+        saas_services: true,
       },
     });
 
@@ -93,13 +93,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    // 関連する割り当てをnullに設定（プランIDを削除）
-    await prisma.saas_license_assignments.updateMany({
-      where: { planId: params.id },
-      data: { planId: null },
-    });
-
-    // プランを削除
+    // プランを削除（関連する割り当てはCascadeで自動削除）
     await prisma.saas_license_plans.delete({
       where: { id: params.id },
     });

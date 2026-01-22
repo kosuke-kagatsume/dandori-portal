@@ -10,7 +10,7 @@ export async function GET(
     const pcAsset = await prisma.pc_assets.findUnique({
       where: { id: params.id },
       include: {
-        softwareLicenses: true,
+        software_licenses: true,
       },
     });
 
