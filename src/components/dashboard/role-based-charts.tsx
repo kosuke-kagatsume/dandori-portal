@@ -394,12 +394,13 @@ export function DepartmentSalaryChart() {
 }
 
 // 今後の入退社予定データ（デモ）
+// 注意: IDはDBのユーザーIDと一致させる必要がある（t1-プレフィックス付き）
 const upcomingPersonnelChanges = [
-  { id: 'user-001', name: '新入社員A', type: 'join', date: '2025年1月6日', department: '開発部' },
-  { id: 'user-002', name: '新入社員B', type: 'join', date: '2025年1月6日', department: '営業部' },
-  { id: 'user-003', name: '退職者C', type: 'leave', date: '2025年1月31日', department: '総務部' },
-  { id: 'user-004', name: '新入社員D', type: 'join', date: '2025年2月1日', department: 'マーケティング部' },
-  { id: 'user-005', name: '退職者E', type: 'leave', date: '2025年2月28日', department: '経理部' },
+  { id: 't1-user-017', name: '清水愛', type: 'join', date: '2025年1月6日', department: '開発部' },
+  { id: 't1-user-010', name: '加藤翔太', type: 'join', date: '2025年1月6日', department: '営業部' },
+  { id: 't1-user-023', name: '前田美穂', type: 'leave', date: '2025年1月31日', department: '総務部' },
+  { id: 't1-user-029', name: '近藤大地', type: 'join', date: '2025年2月1日', department: 'マーケティング部' },
+  { id: 't1-user-024', name: '藤田一樹', type: 'leave', date: '2025年2月28日', department: '総務部' },
 ];
 
 export function HeadcountTrendChart() {

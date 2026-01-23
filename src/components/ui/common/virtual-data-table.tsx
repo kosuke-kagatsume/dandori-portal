@@ -58,11 +58,13 @@ const VirtualDataTableComponent = function VirtualDataTable<TData>({
   const parentRef = useRef<HTMLDivElement>(null);
   const scrollingRef = useRef<number | null>(null);
 
-  // キャッシュキーの生成
+  // キャッシュキーの生成（dataの変更も反映）
   const cacheKey = useMemo(() => {
     if (!enableCaching) return null;
-    return `table_data_${globalFilter}_${JSON.stringify(sorting)}`;
-  }, [globalFilter, sorting, enableCaching]);
+    // dataの長さとIDを含めてキャッシュキーを生成（外部フィルタリング変更を検知）
+    const dataHash = `${data.length}_${(data[0] as { id?: string })?.id || 'empty'}`;
+    return `table_data_${dataHash}_${globalFilter}_${JSON.stringify(sorting)}`;
+  }, [globalFilter, sorting, enableCaching, data]);
 
   // フィルター処理をキャッシュ
   const filteredData = useMemo(() => {

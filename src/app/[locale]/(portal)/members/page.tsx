@@ -68,8 +68,7 @@ export default function MembersPage() {
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<MemberStatus | 'all'>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'department' | 'employeeNumber'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'department' | 'employeeNumber' | 'checkedInAt'>('name');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20; // カードビューのページサイズ
@@ -160,13 +159,10 @@ export default function MembersPage() {
   // フィルター変更時にページをリセット
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, locationFilter, departmentFilter, sortBy]);
+  }, [searchTerm, statusFilter, departmentFilter, sortBy]);
 
   // 動的に部署リストを取得
   const departments = Array.from(new Set(members.map(m => m.department).filter((d): d is string => !!d))).sort((a, b) => a.localeCompare(b, 'ja'));
-
-  // 動的に勤務地リストを取得
-  const locations = Array.from(new Set(members.map(m => m.workLocation).filter((l): l is string => !!l))).sort((a, b) => a.localeCompare(b, 'ja'));
 
   // Filter and sort members
   const filteredMembers = members
@@ -179,10 +175,9 @@ export default function MembersPage() {
                            (statusFilter === 'absent'
                              ? (member.currentStatus === 'absent' || member.currentStatus === 'not_checked_in')
                              : member.currentStatus === statusFilter);
-      const matchesLocation = locationFilter === 'all' || member.workLocation === locationFilter;
       const matchesDepartment = departmentFilter === 'all' || member.department === departmentFilter;
 
-      return matchesSearch && matchesStatus && matchesLocation && matchesDepartment;
+      return matchesSearch && matchesStatus && matchesDepartment;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -196,6 +191,12 @@ export default function MembersPage() {
           if (!a.employeeNumber) return 1;
           if (!b.employeeNumber) return -1;
           return a.employeeNumber.localeCompare(b.employeeNumber, 'ja', { numeric: true });
+        case 'checkedInAt':
+          // 出勤時刻でソート（出勤している人が先、未出勤は後）
+          if (!a.checkedInAt && !b.checkedInAt) return 0;
+          if (!a.checkedInAt) return 1;
+          if (!b.checkedInAt) return -1;
+          return a.checkedInAt.localeCompare(b.checkedInAt);
         default:
           return 0;
       }
@@ -259,20 +260,14 @@ export default function MembersPage() {
       },
     },
     {
-      accessorKey: 'employeeNumber',
-      header: '社員番号',
-      cell: ({ row }) => {
-        const empNo = row.original.employeeNumber;
-        return empNo ? <span className="font-mono text-sm">{empNo}</span> : <span className="text-muted-foreground">-</span>;
-      },
-    },
-    {
       accessorKey: 'position',
       header: '役職',
+      enableSorting: false,
     },
     {
       accessorKey: 'currentStatus',
       header: 'ステータス',
+      enableSorting: false,
       cell: ({ row }) => {
         const status = row.original.currentStatus;
         return (
@@ -285,9 +280,37 @@ export default function MembersPage() {
     {
       accessorKey: 'workLocation',
       header: '勤務地',
+      enableSorting: false,
       cell: ({ row }) => {
         const location = row.original.workLocation;
         return location ? location : <span className="text-muted-foreground">-</span>;
+      },
+    },
+    {
+      accessorKey: 'checkedInAt',
+      header: '出勤時刻',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const time = row.original.checkedInAt;
+        return time ? <span className="font-mono text-sm">{time}</span> : <span className="text-muted-foreground">未出勤</span>;
+      },
+    },
+    {
+      accessorKey: 'workingTime',
+      header: '稼働時間',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const time = row.original.workingTime;
+        return time ? <span className="font-mono text-sm">{time}</span> : <span className="text-muted-foreground">-</span>;
+      },
+    },
+    {
+      accessorKey: 'lastActivity',
+      header: '最終活動',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const activity = row.original.lastActivity;
+        return activity ? <span className="text-sm">{activity}</span> : <span className="text-muted-foreground">-</span>;
       },
     },
   ];
@@ -475,27 +498,15 @@ export default function MembersPage() {
             </SelectContent>
           </Select>
 
-          <Select value={locationFilter} onValueChange={setLocationFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="勤務地" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">すべて</SelectItem>
-              {locations.map((loc) => (
-                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'name' | 'department' | 'employeeNumber')}>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'name' | 'department' | 'employeeNumber' | 'checkedInAt')}>
             <SelectTrigger className="w-36">
               <ArrowUpDown className="h-4 w-4 mr-2" />
               <SelectValue placeholder="並び順" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="name">名前順</SelectItem>
-              <SelectItem value="employeeNumber">社員番号順</SelectItem>
               <SelectItem value="department">部署順</SelectItem>
+              <SelectItem value="checkedInAt">出勤時刻順</SelectItem>
             </SelectContent>
           </Select>
         </div>
