@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface AuthUser {
@@ -13,21 +13,54 @@ interface AuthUser {
   tenantId?: string;
 }
 
+// 認証状態のグローバルキャッシュ（ページ遷移時の重複リクエストを防止）
+let authCache: { user: AuthUser | null; checked: boolean; timestamp: number } = {
+  user: null,
+  checked: false,
+  timestamp: 0,
+};
+const AUTH_CACHE_TTL = 5 * 60 * 1000; // 5分間キャッシュ
+
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(authCache.user);
+  const [loading, setLoading] = useState(!authCache.checked);
   const router = useRouter();
+  const fetchingRef = useRef(false);
 
   useEffect(() => {
     const getUser = async () => {
+      // デモモードの場合はAPIを呼ばない
+      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+      if (isDemoMode) {
+        authCache = { user: null, checked: true, timestamp: Date.now() };
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      // キャッシュが有効な場合はAPIを呼ばない
+      const now = Date.now();
+      if (authCache.checked && (now - authCache.timestamp) < AUTH_CACHE_TTL) {
+        setUser(authCache.user);
+        setLoading(false);
+        return;
+      }
+
+      // 既にフェッチ中の場合はスキップ
+      if (fetchingRef.current) {
+        return;
+      }
+      fetchingRef.current = true;
+
       try {
         // REST APIからユーザー情報を取得
         const response = await fetch('/api/auth/me', {
           credentials: 'include', // クッキーを送信
         });
 
-        // 401エラーは静かに処理
+        // 401エラーは静かに処理（コンソールにも出力しない）
         if (response.status === 401) {
+          authCache = { user: null, checked: true, timestamp: Date.now() };
           setUser(null);
           return;
         }
@@ -35,15 +68,19 @@ export function useAuth() {
         const data = await response.json();
 
         if (data.success && data.data?.user) {
+          authCache = { user: data.data.user, checked: true, timestamp: Date.now() };
           setUser(data.data.user);
         } else {
+          authCache = { user: null, checked: true, timestamp: Date.now() };
           setUser(null);
         }
-      } catch (error) {
-        console.error('Failed to get user:', error);
+      } catch {
+        // ネットワークエラーは静かに処理
+        authCache = { user: null, checked: true, timestamp: Date.now() };
         setUser(null);
       } finally {
         setLoading(false);
+        fetchingRef.current = false;
       }
     };
 

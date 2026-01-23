@@ -14,6 +14,7 @@ export const metadata: Metadata = {
   description: '段取りポータル - 統合型人事管理システム',
   manifest: '/manifest.json',
   appleWebApp: {
+    capable: true,
     statusBarStyle: 'default',
     title: 'Dandori Portal',
   },
@@ -26,6 +27,10 @@ export const metadata: Metadata = {
       { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
+  // 新しいmobile-web-app-capableメタタグを追加
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 };
 
 // Viewport設定（Next.js 14の新しいAPI）
@@ -35,8 +40,6 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#3B82F6',
-  // PWA設定（警告を消すため）
-  mobileWebAppCapable: true,
 };
 
 export default async function RootLayout({
