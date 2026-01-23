@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
+import { HydrationProvider } from '@/components/providers/hydration-provider';
 
 /**
  * ロケールレイアウト
@@ -20,9 +21,11 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider messages={messages} locale={locale}>
-      <Suspense fallback={<div className="min-h-screen bg-background" />}>
-        {children}
-      </Suspense>
+      <HydrationProvider>
+        <Suspense fallback={<div className="min-h-screen bg-background" />}>
+          {children}
+        </Suspense>
+      </HydrationProvider>
     </NextIntlClientProvider>
   );
 }

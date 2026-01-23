@@ -125,6 +125,9 @@ const createUIStore = () => {
     persist(storeCreator, {
       name: 'ui-storage',
       storage: createJSONStorage(() => localStorage),
+      // SSR/CSRの状態不一致を防ぐため、自動ハイドレーションを無効化
+      // HydrationProviderで明示的にrehydrateを呼び出す
+      skipHydration: true,
       partialize: (state) => ({
         theme: state.theme,
         locale: state.locale,
