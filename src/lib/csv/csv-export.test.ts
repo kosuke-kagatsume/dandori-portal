@@ -8,7 +8,8 @@ import {
   exportBonusToCSV,
   exportUsersToCSV,
 } from './csv-export'
-import type { AttendanceRecord, PayrollRecord, BonusRecord } from '@/types/csv'
+import type { AttendanceRecord } from '@/types/csv'
+import type { PayrollCalculation, BonusCalculation } from '@/lib/payroll/types'
 import type { User } from '@/types'
 
 // DOM操作のモック
@@ -43,7 +44,7 @@ beforeEach(() => {
 })
 
 describe('exportAttendanceToCSV', () => {
-  const mockRecords = [
+  const mockRecords: AttendanceRecord[] = [
     {
       userId: 'user-1',
       userName: 'テストユーザー1',
@@ -76,7 +77,7 @@ describe('exportAttendanceToCSV', () => {
       approvalStatus: 'pending',
       memo: '',
     },
-  ] as AttendanceRecord[]
+  ]
 
   it('正常にCSVファイルをダウンロードする', () => {
     const result = exportAttendanceToCSV(mockRecords)
@@ -109,36 +110,80 @@ describe('exportAttendanceToCSV', () => {
 })
 
 describe('exportPayrollToCSV', () => {
-  const mockRecords = [
+  const mockRecords: PayrollCalculation[] = [
     {
+      id: 'payroll-1',
       employeeId: 'emp-1',
       employeeName: '山田太郎',
       department: '営業部',
       period: '2024-01',
       basicSalary: 300000,
-      allowances: {},
-      deductions: {},
+      positionAllowance: 0,
+      skillAllowance: 0,
+      housingAllowance: 0,
+      familyAllowance: 0,
+      commutingAllowance: 0,
+      overtimePay: 0,
+      lateNightPay: 0,
+      holidayPay: 0,
       totalAllowances: 50000,
+      grossSalary: 350000,
+      workDays: 20,
+      totalWorkHours: 160,
+      overtimeHours: 0,
+      lateNightHours: 0,
+      holidayWorkHours: 0,
+      healthInsurance: 17500,
+      pension: 32000,
+      employmentInsurance: 2100,
+      incomeTax: 10000,
+      residentTax: 8400,
+      unionFee: 0,
+      savingsAmount: 0,
+      loanRepayment: 0,
+      otherDeductions: 0,
       totalDeductions: 70000,
       netSalary: 280000,
       status: 'paid',
-      paymentDate: '2024-01-25',
+      calculatedAt: '2024-01-25T00:00:00Z',
     },
     {
+      id: 'payroll-2',
       employeeId: 'emp-2',
       employeeName: '佐藤花子',
       department: '開発部',
       period: '2024-01',
       basicSalary: 350000,
-      allowances: {},
-      deductions: {},
+      positionAllowance: 0,
+      skillAllowance: 0,
+      housingAllowance: 0,
+      familyAllowance: 0,
+      commutingAllowance: 0,
+      overtimePay: 0,
+      lateNightPay: 0,
+      holidayPay: 0,
       totalAllowances: 60000,
+      grossSalary: 410000,
+      workDays: 20,
+      totalWorkHours: 160,
+      overtimeHours: 0,
+      lateNightHours: 0,
+      holidayWorkHours: 0,
+      healthInsurance: 20000,
+      pension: 37500,
+      employmentInsurance: 2500,
+      incomeTax: 12000,
+      residentTax: 8000,
+      unionFee: 0,
+      savingsAmount: 0,
+      loanRepayment: 0,
+      otherDeductions: 0,
       totalDeductions: 80000,
       netSalary: 330000,
       status: 'paid',
-      paymentDate: '2024-01-25',
+      calculatedAt: '2024-01-25T00:00:00Z',
     },
-  ] as PayrollRecord[]
+  ]
 
   it('正常にCSVファイルをダウンロードする', () => {
     const result = exportPayrollToCSV(mockRecords)
@@ -158,23 +203,34 @@ describe('exportPayrollToCSV', () => {
 })
 
 describe('exportBonusToCSV', () => {
-  const mockRecords = [
+  const mockRecords: BonusCalculation[] = [
     {
+      id: 'bonus-1',
       employeeId: 'emp-1',
       employeeName: '山田太郎',
       department: '営業部',
-      period: '2024-夏',
+      position: '課長',
+      period: '2024-07',
       bonusType: 'summer',
       basicBonus: 500000,
+      positionBonus: 0,
       performanceBonus: 100000,
-      performanceRating: 'A',
-      deductions: {},
+      specialAllowance: 0,
+      totalGrossBonus: 600000,
+      healthInsurance: 30000,
+      pension: 55000,
+      employmentInsurance: 3600,
+      incomeTax: 30000,
+      residentTax: 1400,
       totalDeductions: 120000,
       netBonus: 480000,
+      performanceRating: 'A',
+      performanceScore: 85,
       status: 'paid',
-      paymentDate: '2024-07-10',
+      calculatedAt: '2024-07-01T00:00:00Z',
+      paidAt: '2024-07-10T00:00:00Z',
     },
-  ] as BonusRecord[]
+  ]
 
   it('正常にCSVファイルをダウンロードする', () => {
     const result = exportBonusToCSV(mockRecords)

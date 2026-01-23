@@ -5,18 +5,28 @@
 import { useOrganizationStore } from './organization-store';
 import type { OrganizationNode, OrganizationMember } from '@/types';
 
-// テスト用のTransferHistory型定義
+// テスト用のTransferHistory型定義（実際の型定義に合わせて更新）
 interface TransferHistory {
   id: string;
-  userId?: string;
+  userId: string;
   userName: string;
+  type: 'transfer' | 'promotion' | 'demotion' | 'role_change';
   fromUnitId: string;
   fromUnitName: string;
   toUnitId: string;
   toUnitName: string;
+  fromPosition: string;
+  toPosition: string;
+  fromRole?: 'employee' | 'manager' | 'hr' | 'admin';
+  toRole?: 'employee' | 'manager' | 'hr' | 'admin';
   effectiveDate: string;
-  reason: string;
+  reason?: string;
+  notes?: string;
+  approvedBy?: string;
+  approvedByName?: string;
   createdAt: string;
+  createdBy: string;
+  createdByName: string;
 }
 
 describe('OrganizationStore', () => {
@@ -795,14 +805,20 @@ describe('OrganizationStore', () => {
     it('異動履歴を追加できる', () => {
       const transfer: TransferHistory = {
         id: 'transfer-1',
+        userId: 'user-001',
         userName: '田中太郎',
+        type: 'transfer',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
         toUnitId: 'node-2',
         toUnitName: '開発部',
+        fromPosition: '営業担当',
+        toPosition: 'エンジニア',
         effectiveDate: '2024-04-01',
         reason: '組織再編による配置転換',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       useOrganizationStore.getState().addTransferHistory(transfer);
@@ -815,26 +831,38 @@ describe('OrganizationStore', () => {
     it('複数の異動履歴を追加できる', () => {
       const transfer1: TransferHistory = {
         id: 'transfer-1',
+        userId: 'user-001',
         userName: '田中太郎',
+        type: 'transfer',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
         toUnitId: 'node-2',
         toUnitName: '開発部',
+        fromPosition: '営業担当',
+        toPosition: 'エンジニア',
         effectiveDate: '2024-04-01',
         reason: '組織再編',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       const transfer2: TransferHistory = {
         id: 'transfer-2',
+        userId: 'user-002',
         userName: '佐藤花子',
+        type: 'transfer',
         fromUnitId: 'node-2',
         fromUnitName: '開発部',
         toUnitId: 'node-3',
         toUnitName: '人事部',
+        fromPosition: 'エンジニア',
+        toPosition: '人事担当',
         effectiveDate: '2024-05-01',
         reason: 'キャリアアップ',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       useOrganizationStore.getState().addTransferHistory(transfer1);
@@ -849,26 +877,38 @@ describe('OrganizationStore', () => {
     it('ユーザーIDで異動履歴を取得できる', () => {
       const transfer1: TransferHistory = {
         id: 'transfer-1',
+        userId: 'user-001',
         userName: '田中太郎',
+        type: 'transfer',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
         toUnitId: 'node-2',
         toUnitName: '開発部',
+        fromPosition: '営業担当',
+        toPosition: 'エンジニア',
         effectiveDate: '2024-04-01',
         reason: '組織再編',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       const transfer2: TransferHistory = {
         id: 'transfer-2',
+        userId: 'user-001',
         userName: '田中太郎',
+        type: 'promotion',
         fromUnitId: 'node-2',
         fromUnitName: '開発部',
         toUnitId: 'node-3',
         toUnitName: '人事部',
+        fromPosition: 'エンジニア',
+        toPosition: 'シニアエンジニア',
         effectiveDate: '2024-06-01',
         reason: 'キャリアアップ',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       useOrganizationStore.setState({ transferHistories: [transfer1, transfer2] });
@@ -883,26 +923,38 @@ describe('OrganizationStore', () => {
     it('日付の新しい順にソートされる', () => {
       const transfer1: TransferHistory = {
         id: 'transfer-1',
+        userId: 'user-001',
         userName: '田中太郎',
+        type: 'transfer',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
         toUnitId: 'node-2',
         toUnitName: '開発部',
+        fromPosition: '営業担当',
+        toPosition: 'エンジニア',
         effectiveDate: '2024-04-01',
         reason: '組織再編',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       const transfer2: TransferHistory = {
         id: 'transfer-2',
+        userId: 'user-001',
         userName: '田中太郎',
+        type: 'promotion',
         fromUnitId: 'node-2',
         fromUnitName: '開発部',
         toUnitId: 'node-3',
         toUnitName: '人事部',
+        fromPosition: 'エンジニア',
+        toPosition: 'シニアエンジニア',
         effectiveDate: '2024-06-01',
         reason: 'キャリアアップ',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       useOrganizationStore.setState({ transferHistories: [transfer1, transfer2] });
@@ -919,26 +971,38 @@ describe('OrganizationStore', () => {
     it('組織IDで異動履歴を取得できる', () => {
       const transfer1: TransferHistory = {
         id: 'transfer-1',
+        userId: 'user-001',
         userName: '田中太郎',
+        type: 'transfer',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
         toUnitId: 'node-2',
         toUnitName: '開発部',
+        fromPosition: '営業担当',
+        toPosition: 'エンジニア',
         effectiveDate: '2024-04-01',
         reason: '組織再編',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       const transfer2: TransferHistory = {
         id: 'transfer-2',
+        userId: 'user-002',
         userName: '佐藤花子',
+        type: 'transfer',
         fromUnitId: 'node-2',
         fromUnitName: '開発部',
         toUnitId: 'node-3',
         toUnitName: '人事部',
+        fromPosition: 'エンジニア',
+        toPosition: '人事担当',
         effectiveDate: '2024-05-01',
         reason: 'キャリアアップ',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       };
 
       useOrganizationStore.setState({ transferHistories: [transfer1, transfer2] });
@@ -956,14 +1020,20 @@ describe('OrganizationStore', () => {
     it('最近の異動履歴を取得できる', () => {
       const transfers: TransferHistory[] = Array.from({ length: 15 }, (_, i) => ({
         id: `transfer-${i + 1}`,
+        userId: `user-${String(i + 1).padStart(3, '0')}`,
         userName: `ユーザー${i + 1}`,
+        type: 'transfer' as const,
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
         toUnitId: 'node-2',
         toUnitName: '開発部',
+        fromPosition: '営業担当',
+        toPosition: 'エンジニア',
         effectiveDate: `2024-${String(i + 1).padStart(2, '0')}-01`,
         reason: '組織再編',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       }));
 
       useOrganizationStore.setState({ transferHistories: transfers });
@@ -975,14 +1045,20 @@ describe('OrganizationStore', () => {
     it('デフォルトで10件取得する', () => {
       const transfers: TransferHistory[] = Array.from({ length: 15 }, (_, i) => ({
         id: `transfer-${i + 1}`,
+        userId: `user-${String(i + 1).padStart(3, '0')}`,
         userName: `ユーザー${i + 1}`,
+        type: 'transfer' as const,
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
         toUnitId: 'node-2',
         toUnitName: '開発部',
+        fromPosition: '営業担当',
+        toPosition: 'エンジニア',
         effectiveDate: `2024-${String(i + 1).padStart(2, '0')}-01`,
         reason: '組織再編',
         createdAt: new Date().toISOString(),
+        createdBy: 'admin-001',
+        createdByName: '管理者',
       }));
 
       useOrganizationStore.setState({ transferHistories: transfers });

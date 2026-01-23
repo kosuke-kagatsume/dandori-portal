@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UseFormRegister, FieldValues, FieldErrors, Path } from 'react-hook-form';
+import { UseFormRegister, FieldValues, Path } from 'react-hook-form';
 import {
   SectionHeader,
   FormSection,
@@ -31,8 +31,12 @@ export default function CommuteRouteFormPage() {
 
   const { register: _register, handleSubmit, errors: _errors, watch, updateForm, submitForm } = useCommuteRouteForm();
   // Cast register to FieldValues for FormFields component compatibility
-  const register = _register as UseFormRegister<FieldValues>;
-  const errors = _errors as FieldErrors<FieldValues>;
+  const register = _register as unknown as UseFormRegister<FieldValues>;
+  // Cast errors to any to handle nested field access and type mismatches
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const errors = _errors as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getErrorMessage = (error: any): string => String(error?.message || '');
 
   // Watch dynamic field values for conditional rendering
   const commuteStatus = watch('commuteStatus' as FormPath) as 'commute' | 'remote' | 'no-office';
@@ -40,9 +44,9 @@ export default function CommuteRouteFormPage() {
 
   const onSubmit = async (data: CommuteRouteFormInput) => {
     try {
-      updateForm(data);
+      updateForm(data as unknown as Parameters<typeof updateForm>[0]);
       await submitForm();
-      router.push(`/${locale}/onboarding/${applicationId}`);
+      (router.push as (path: string) => void)(`/${locale}/onboarding/${applicationId}`);
     } catch (error) {
       console.error('Failed to submit form:', error);
     }
@@ -163,7 +167,7 @@ export default function CommuteRouteFormPage() {
                 <option value="change">変更</option>
               </select>
               {errors.applicationType && (
-                <p className="mt-1 text-xs text-red-600">{errors.applicationType.message}</p>
+                <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.applicationType)}</p>
               )}
             </div>
             <div>
@@ -179,7 +183,7 @@ export default function CommuteRouteFormPage() {
               />
               <p className="mt-1 text-xs text-gray-500">現住所と同じ住所を入力してください</p>
               {errors.address && (
-                <p className="mt-1 text-xs text-red-600">{errors.address.message}</p>
+                <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.address)}</p>
               )}
             </div>
           </FormSection>
@@ -201,7 +205,7 @@ export default function CommuteRouteFormPage() {
                 <option value="no-office">出社不要</option>
               </select>
               {errors.commuteStatus && (
-                <p className="mt-1 text-xs text-red-600">{errors.commuteStatus.message}</p>
+                <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.commuteStatus)}</p>
               )}
             </div>
 
@@ -243,7 +247,7 @@ export default function CommuteRouteFormPage() {
                     <option value="private">自家用車</option>
                   </select>
                   {errors.transportMethod && (
-                    <p className="mt-1 text-xs text-red-600">{errors.transportMethod.message}</p>
+                    <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.transportMethod)}</p>
                   )}
                 </div>
               </FormSection>
@@ -274,7 +278,7 @@ export default function CommuteRouteFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.publicTransit?.departure && (
-                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.departure.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.publicTransit?.departure)}</p>
                     )}
                   </div>
 
@@ -290,7 +294,7 @@ export default function CommuteRouteFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.publicTransit?.arrival && (
-                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.arrival.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.publicTransit?.arrival)}</p>
                     )}
                   </div>
 
@@ -306,7 +310,7 @@ export default function CommuteRouteFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.publicTransit?.routeDetails && (
-                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.routeDetails.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.publicTransit?.routeDetails)}</p>
                     )}
                   </div>
 
@@ -324,7 +328,7 @@ export default function CommuteRouteFormPage() {
                       />
                       <p className="mt-1 text-xs text-gray-500">円</p>
                       {errors.publicTransit?.oneWayFare && (
-                        <p className="mt-1 text-xs text-red-600">{errors.publicTransit.oneWayFare.message}</p>
+                        <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.publicTransit?.oneWayFare)}</p>
                       )}
                     </div>
                     <div>
@@ -340,7 +344,7 @@ export default function CommuteRouteFormPage() {
                       />
                       <p className="mt-1 text-xs text-gray-500">分</p>
                       {errors.publicTransit?.travelTime && (
-                        <p className="mt-1 text-xs text-red-600">{errors.publicTransit.travelTime.message}</p>
+                        <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.publicTransit?.travelTime)}</p>
                       )}
                     </div>
                   </div>
@@ -359,7 +363,7 @@ export default function CommuteRouteFormPage() {
                       <option value="6months">6ヶ月定期</option>
                     </select>
                     {errors.publicTransit?.passType && (
-                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.passType.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.publicTransit?.passType)}</p>
                     )}
                   </div>
 
@@ -376,7 +380,7 @@ export default function CommuteRouteFormPage() {
                     />
                     <p className="mt-1 text-xs text-gray-500">選択した定期券種類の金額を入力</p>
                     {errors.publicTransit?.passFare && (
-                      <p className="mt-1 text-xs text-red-600">{errors.publicTransit.passFare.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.publicTransit?.passFare)}</p>
                     )}
                   </div>
 
@@ -424,7 +428,7 @@ export default function CommuteRouteFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.privateCar?.departure && (
-                      <p className="mt-1 text-xs text-red-600">{errors.privateCar.departure.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.privateCar?.departure)}</p>
                     )}
                   </div>
 
@@ -440,7 +444,7 @@ export default function CommuteRouteFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.privateCar?.arrival && (
-                      <p className="mt-1 text-xs text-red-600">{errors.privateCar.arrival.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.privateCar?.arrival)}</p>
                     )}
                   </div>
 
@@ -459,7 +463,7 @@ export default function CommuteRouteFormPage() {
                       />
                       <p className="mt-1 text-xs text-gray-500">km（小数点1桁まで）</p>
                       {errors.privateCar?.distance && (
-                        <p className="mt-1 text-xs text-red-600">{errors.privateCar.distance.message}</p>
+                        <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.privateCar?.distance)}</p>
                       )}
                     </div>
                     <div>
@@ -475,7 +479,7 @@ export default function CommuteRouteFormPage() {
                       />
                       <p className="mt-1 text-xs text-gray-500">分</p>
                       {errors.privateCar?.travelTime && (
-                        <p className="mt-1 text-xs text-red-600">{errors.privateCar.travelTime.message}</p>
+                        <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.privateCar?.travelTime)}</p>
                       )}
                     </div>
                   </div>
@@ -492,7 +496,7 @@ export default function CommuteRouteFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.privateCar?.carModel && (
-                      <p className="mt-1 text-xs text-red-600">{errors.privateCar.carModel.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.privateCar?.carModel)}</p>
                     )}
                   </div>
 
@@ -508,7 +512,7 @@ export default function CommuteRouteFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.privateCar?.licensePlate && (
-                      <p className="mt-1 text-xs text-red-600">{errors.privateCar.licensePlate.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.privateCar?.licensePlate)}</p>
                     )}
                   </div>
 
@@ -528,7 +532,7 @@ export default function CommuteRouteFormPage() {
                         <option value="electric">電気</option>
                       </select>
                       {errors.privateCar?.fuelType && (
-                        <p className="mt-1 text-xs text-red-600">{errors.privateCar.fuelType.message}</p>
+                        <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.privateCar?.fuelType)}</p>
                       )}
                     </div>
                     <div>
@@ -545,7 +549,7 @@ export default function CommuteRouteFormPage() {
                       />
                       <p className="mt-1 text-xs text-gray-500">km/L（電気の場合はkm/kWh）</p>
                       {errors.privateCar?.fuelEfficiency && (
-                        <p className="mt-1 text-xs text-red-600">{errors.privateCar.fuelEfficiency.message}</p>
+                        <p className="mt-1 text-xs text-red-600">{getErrorMessage(errors.privateCar?.fuelEfficiency)}</p>
                       )}
                     </div>
                   </div>
@@ -610,7 +614,7 @@ export default function CommuteRouteFormPage() {
           <div className="flex justify-end gap-4">
             <button
               type="button"
-              onClick={() => router.push(`/${locale}/onboarding`)}
+              onClick={() => (router.push as (path: string) => void)(`/${locale}/onboarding`)}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               キャンセル

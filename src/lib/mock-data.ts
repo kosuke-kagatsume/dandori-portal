@@ -257,7 +257,7 @@ function _generateAttendanceDataInternal() {
 // 勤怠データを生成（キャッシュ付き）
 export function generateAttendanceData(): MockAttendanceData[] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 内部モック型とキャッシュ型の互換性のため
-  return getCachedAttendanceData(_generateAttendanceDataInternal as () => MockAttendanceData[]) as unknown as MockAttendanceData[];
+  return getCachedAttendanceData(_generateAttendanceDataInternal as any) as unknown as MockAttendanceData[];
 }
 
 // 内部：休暇データを生成（50人分の集計）
@@ -291,7 +291,7 @@ function _generateLeaveDataInternal() {
 // 休暇データを生成（キャッシュ付き）
 export function generateLeaveData(): MockLeaveData[] {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 内部モック型とキャッシュ型の互換性のため
-  return getCachedLeaveData(_generateLeaveDataInternal as () => MockLeaveData[]) as unknown as MockLeaveData[];
+  return getCachedLeaveData(_generateLeaveDataInternal as any) as unknown as MockLeaveData[];
 }
 
 // ダッシュボードの統計データ

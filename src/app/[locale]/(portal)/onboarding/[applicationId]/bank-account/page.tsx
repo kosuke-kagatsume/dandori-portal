@@ -29,9 +29,9 @@ export default function BankAccountFormPage() {
 
   const onSubmit = async (data: BankAccountFormInput) => {
     try {
-      updateForm(data);
+      updateForm(data as unknown as Parameters<typeof updateForm>[0]);
       await submitForm();
-      router.push(`/${locale}/onboarding/${applicationId}`);
+      (router.push as (path: string) => void)(`/${locale}/onboarding/${applicationId}`);
     } catch (error) {
       console.error('Failed to submit form:', error);
     }
@@ -115,7 +115,7 @@ export default function BankAccountFormPage() {
                 <option value="change">変更</option>
               </select>
               {errors.applicationType && (
-                <p className="mt-1 text-xs text-red-600">{errors.applicationType.message}</p>
+                <p className="mt-1 text-xs text-red-600">{String(errors.applicationType.message || '')}</p>
               )}
             </div>
           </FormSection>
@@ -149,7 +149,7 @@ export default function BankAccountFormPage() {
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 {errors.bankName && (
-                  <p className="mt-1 text-xs text-red-600">{errors.bankName.message}</p>
+                  <p className="mt-1 text-xs text-red-600">{String(errors.bankName.message || '')}</p>
                 )}
               </div>
               <div>
@@ -166,7 +166,7 @@ export default function BankAccountFormPage() {
                 />
                 <p className="mt-1 text-xs text-gray-500">4桁の数字</p>
                 {errors.bankCode && (
-                  <p className="mt-1 text-xs text-red-600">{errors.bankCode.message}</p>
+                  <p className="mt-1 text-xs text-red-600">{String(errors.bankCode.message || '')}</p>
                 )}
               </div>
             </div>
@@ -184,7 +184,7 @@ export default function BankAccountFormPage() {
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 {errors.branchName && (
-                  <p className="mt-1 text-xs text-red-600">{errors.branchName.message}</p>
+                  <p className="mt-1 text-xs text-red-600">{String(errors.branchName.message || '')}</p>
                 )}
               </div>
               <div>
@@ -201,7 +201,7 @@ export default function BankAccountFormPage() {
                 />
                 <p className="mt-1 text-xs text-gray-500">3桁の数字</p>
                 {errors.branchCode && (
-                  <p className="mt-1 text-xs text-red-600">{errors.branchCode.message}</p>
+                  <p className="mt-1 text-xs text-red-600">{String(errors.branchCode.message || '')}</p>
                 )}
               </div>
             </div>
@@ -221,7 +221,7 @@ export default function BankAccountFormPage() {
                 />
                 <p className="mt-1 text-xs text-gray-500">7桁の数字</p>
                 {errors.accountNumber && (
-                  <p className="mt-1 text-xs text-red-600">{errors.accountNumber.message}</p>
+                  <p className="mt-1 text-xs text-red-600">{String(errors.accountNumber.message || '')}</p>
                 )}
               </div>
               <div>
@@ -237,7 +237,7 @@ export default function BankAccountFormPage() {
                 />
                 <p className="mt-1 text-xs text-gray-500">名字と名前の間に全角スペース</p>
                 {errors.accountHolderKana && (
-                  <p className="mt-1 text-xs text-red-600">{errors.accountHolderKana.message}</p>
+                  <p className="mt-1 text-xs text-red-600">{String(errors.accountHolderKana.message || '')}</p>
                 )}
               </div>
             </div>
@@ -290,7 +290,7 @@ export default function BankAccountFormPage() {
               </label>
             </div>
             {errors.consent && (
-              <p className="mt-1 text-xs text-red-600">{errors.consent.message}</p>
+              <p className="mt-1 text-xs text-red-600">{String(errors.consent.message || '')}</p>
             )}
           </FormSection>
 
@@ -298,7 +298,7 @@ export default function BankAccountFormPage() {
           <div className="flex justify-end gap-4">
             <button
               type="button"
-              onClick={() => router.push(`/${locale}/onboarding`)}
+              onClick={() => (router.push as (path: string) => void)(`/${locale}/onboarding`)}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               キャンセル

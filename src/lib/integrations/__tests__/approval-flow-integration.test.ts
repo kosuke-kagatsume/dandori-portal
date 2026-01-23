@@ -5,19 +5,20 @@
 
 import { generateApprovalStepsFromFlow, workflowTypeToDocumentType } from '../approval-flow-integration';
 
-// テスト用のローカル型定義（レガシースキーマ互換）
+// テスト用のローカル型定義（実際のgenerateApprovalStepsFromFlow入力型に合わせて更新）
 interface TestApprover {
   userId: string;
   name: string;
+  email: string;
   role: string;
 }
 
 interface TestApprovalStep {
-  id: string;
-  order: number;
-  status: string;
+  name: string;
   approvers: TestApprover[];
-  requiredApprovals: number;
+  mode: string;
+  timeoutHours?: number;
+  allowDelegate?: boolean;
 }
 
 interface ResolvedApprovalRoute {
@@ -82,17 +83,16 @@ describe('承認フロー統合テスト', () => {
         flowType: 'organization_based',
         steps: [
           {
-            id: 'STEP-001',
-            order: 1,
-            status: 'pending',
+            name: '直属上司承認',
             approvers: [
               {
                 userId: 'M002',
                 name: '田中花子',
+                email: 'tanaka@dandori.co.jp',
                 role: 'direct_manager',
               },
             ],
-            requiredApprovals: 1,
+            mode: 'serial',
           },
         ],
       };
@@ -113,30 +113,28 @@ describe('承認フロー統合テスト', () => {
         flowType: 'organization_based',
         steps: [
           {
-            id: 'STEP-001',
-            order: 1,
-            status: 'pending',
+            name: '直属上司承認',
             approvers: [
               {
                 userId: 'M002',
                 name: '田中花子',
+                email: 'tanaka@dandori.co.jp',
                 role: 'direct_manager',
               },
             ],
-            requiredApprovals: 1,
+            mode: 'serial',
           },
           {
-            id: 'STEP-002',
-            order: 2,
-            status: 'pending',
+            name: '上位管理者承認',
             approvers: [
               {
                 userId: 'M001',
                 name: '鈴木太郎',
+                email: 'suzuki@dandori.co.jp',
                 role: 'upper_manager',
               },
             ],
-            requiredApprovals: 1,
+            mode: 'serial',
           },
         ],
       };
@@ -163,30 +161,28 @@ describe('承認フロー統合テスト', () => {
         flowType: 'custom',
         steps: [
           {
-            id: 'STEP-001',
-            order: 1,
-            status: 'pending',
+            name: '一次承認',
             approvers: [
               {
                 userId: 'M002',
                 name: '田中花子',
+                email: 'tanaka@dandori.co.jp',
                 role: 'approver',
               },
             ],
-            requiredApprovals: 1,
+            mode: 'serial',
           },
           {
-            id: 'STEP-002',
-            order: 2,
-            status: 'pending',
+            name: '最終承認',
             approvers: [
               {
                 userId: 'M001',
                 name: '鈴木太郎',
+                email: 'suzuki@dandori.co.jp',
                 role: 'final_approver',
               },
             ],
-            requiredApprovals: 1,
+            mode: 'serial',
           },
         ],
       };
@@ -205,22 +201,22 @@ describe('承認フロー統合テスト', () => {
         flowType: 'custom',
         steps: [
           {
-            id: 'STEP-001',
-            order: 1,
-            status: 'pending',
+            name: '並列承認',
             approvers: [
               {
                 userId: 'M002',
                 name: '田中花子',
+                email: 'tanaka@dandori.co.jp',
                 role: 'approver',
               },
               {
                 userId: 'M003',
                 name: '佐藤次郎',
+                email: 'sato@dandori.co.jp',
                 role: 'approver',
               },
             ],
-            requiredApprovals: 2,
+            mode: 'parallel',
           },
         ],
       };
@@ -295,30 +291,28 @@ export function runManualTest() {
     flowType: 'organization_based',
     steps: [
       {
-        id: 'STEP-001',
-        order: 1,
-        status: 'pending',
+        name: '直属上司承認',
         approvers: [
           {
             userId: 'M002',
             name: '田中花子',
+            email: 'tanaka@dandori.co.jp',
             role: 'direct_manager',
           },
         ],
-        requiredApprovals: 1,
+        mode: 'serial',
       },
       {
-        id: 'STEP-002',
-        order: 2,
-        status: 'pending',
+        name: '上位管理者承認',
         approvers: [
           {
             userId: 'M001',
             name: '鈴木太郎',
+            email: 'suzuki@dandori.co.jp',
             role: 'upper_manager',
           },
         ],
-        requiredApprovals: 1,
+        mode: 'serial',
       },
     ],
   };
@@ -340,17 +334,16 @@ export function runManualTest() {
     flowType: 'organization_based',
     steps: [
       {
-        id: 'STEP-001',
-        order: 1,
-        status: 'pending',
+        name: '直属上司承認',
         approvers: [
           {
             userId: 'M001',
             name: '鈴木太郎',
+            email: 'suzuki@dandori.co.jp',
             role: 'direct_manager',
           },
         ],
-        requiredApprovals: 1,
+        mode: 'serial',
       },
     ],
   };
@@ -372,30 +365,28 @@ export function runManualTest() {
     flowType: 'custom',
     steps: [
       {
-        id: 'STEP-001',
-        order: 1,
-        status: 'pending',
+        name: '一次承認',
         approvers: [
           {
             userId: 'M002',
             name: '田中花子',
+            email: 'tanaka@dandori.co.jp',
             role: 'approver',
           },
         ],
-        requiredApprovals: 1,
+        mode: 'serial',
       },
       {
-        id: 'STEP-002',
-        order: 2,
-        status: 'pending',
+        name: '最終承認',
         approvers: [
           {
             userId: 'M001',
             name: '鈴木太郎',
+            email: 'suzuki@dandori.co.jp',
             role: 'final_approver',
           },
         ],
-        requiredApprovals: 1,
+        mode: 'serial',
       },
     ],
   };

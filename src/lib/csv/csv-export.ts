@@ -195,7 +195,8 @@ export const exportPayrollToCSV = (
       record.totalDeductions,
       record.netSalary,
       getStatusLabel(record.status),
-      record.paymentDate || '',
+      // PayrollCalculation には paymentDate がないため calculatedAt を使用
+      record.calculatedAt ? new Date(record.calculatedAt).toLocaleDateString('ja-JP') : '',
     ]);
 
     const csvString = generateCSVString(headers, rows);

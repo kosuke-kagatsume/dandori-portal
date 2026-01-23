@@ -98,7 +98,7 @@ export const demoBasicInfoForm: BasicInfoForm = {
     postalCode: '',
     prefecture: '',
     city: '',
-    street: '',
+    streetAddress: '',
     building: '',
   },
 
@@ -108,7 +108,7 @@ export const demoBasicInfoForm: BasicInfoForm = {
     postalCode: '',
     prefecture: '',
     city: '',
-    street: '',
+    streetAddress: '',
     building: '',
   },
 

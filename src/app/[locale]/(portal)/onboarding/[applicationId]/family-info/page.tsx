@@ -59,9 +59,9 @@ export default function FamilyInfoFormPage() {
 
   const onSubmit = async (data: FamilyInfoFormInput) => {
     try {
-      updateForm(data);
+      updateForm(data as unknown as Parameters<typeof updateForm>[0]);
       await submitForm();
-      router.push(`/${locale}/onboarding/${applicationId}`);
+      (router.push as (path: string) => void)(`/${locale}/onboarding/${applicationId}`);
     } catch (error) {
       console.error('Failed to submit form:', error);
     }
@@ -172,7 +172,7 @@ export default function FamilyInfoFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.spouse?.nameKanji && (
-                      <p className="mt-1 text-xs text-red-600">{errors.spouse.nameKanji.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{String(errors.spouse?.nameKanji?.message || '')}</p>
                     )}
                   </div>
                   <div>
@@ -187,7 +187,7 @@ export default function FamilyInfoFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.spouse?.nameKana && (
-                      <p className="mt-1 text-xs text-red-600">{errors.spouse.nameKana.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{String(errors.spouse?.nameKana?.message || '')}</p>
                     )}
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export default function FamilyInfoFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.spouse?.birthDate && (
-                      <p className="mt-1 text-xs text-red-600">{errors.spouse.birthDate.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{String(errors.spouse?.birthDate?.message || '')}</p>
                     )}
                   </div>
                   <div>
@@ -218,7 +218,7 @@ export default function FamilyInfoFormPage() {
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                     {errors.spouse?.occupation && (
-                      <p className="mt-1 text-xs text-red-600">{errors.spouse.occupation.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{String(errors.spouse?.occupation?.message || '')}</p>
                     )}
                   </div>
                 </div>
@@ -235,7 +235,7 @@ export default function FamilyInfoFormPage() {
                     />
                     <p className="mt-1 text-xs text-gray-500">円</p>
                     {errors.spouse?.annualIncome && (
-                      <p className="mt-1 text-xs text-red-600">{errors.spouse.annualIncome.message}</p>
+                      <p className="mt-1 text-xs text-red-600">{String(errors.spouse?.annualIncome?.message || '')}</p>
                     )}
                   </div>
                   <div className="flex items-start gap-2">
@@ -338,7 +338,7 @@ export default function FamilyInfoFormPage() {
                           />
                           {errors.familyMembers?.[index]?.nameKanji && (
                             <p className="mt-1 text-xs text-red-600">
-                              {errors.familyMembers[index]?.nameKanji?.message}
+                              {String(errors.familyMembers?.[index]?.nameKanji?.message || '')}
                             </p>
                           )}
                         </div>
@@ -355,7 +355,7 @@ export default function FamilyInfoFormPage() {
                           />
                           {errors.familyMembers?.[index]?.nameKana && (
                             <p className="mt-1 text-xs text-red-600">
-                              {errors.familyMembers[index]?.nameKana?.message}
+                              {String(errors.familyMembers?.[index]?.nameKana?.message || '')}
                             </p>
                           )}
                         </div>
@@ -374,7 +374,7 @@ export default function FamilyInfoFormPage() {
                           />
                           {errors.familyMembers?.[index]?.relationship && (
                             <p className="mt-1 text-xs text-red-600">
-                              {errors.familyMembers[index]?.relationship?.message}
+                              {String(errors.familyMembers?.[index]?.relationship?.message || '')}
                             </p>
                           )}
                         </div>
@@ -390,7 +390,7 @@ export default function FamilyInfoFormPage() {
                           />
                           {errors.familyMembers?.[index]?.birthDate && (
                             <p className="mt-1 text-xs text-red-600">
-                              {errors.familyMembers[index]?.birthDate?.message}
+                              {String(errors.familyMembers?.[index]?.birthDate?.message || '')}
                             </p>
                           )}
                         </div>
@@ -407,7 +407,7 @@ export default function FamilyInfoFormPage() {
                           />
                           {errors.familyMembers?.[index]?.occupation && (
                             <p className="mt-1 text-xs text-red-600">
-                              {errors.familyMembers[index]?.occupation?.message}
+                              {String(errors.familyMembers?.[index]?.occupation?.message || '')}
                             </p>
                           )}
                         </div>
@@ -426,7 +426,7 @@ export default function FamilyInfoFormPage() {
                           <p className="mt-1 text-xs text-gray-500">円</p>
                           {errors.familyMembers?.[index]?.annualIncome && (
                             <p className="mt-1 text-xs text-red-600">
-                              {errors.familyMembers[index]?.annualIncome?.message}
+                              {String(errors.familyMembers?.[index]?.annualIncome?.message || '')}
                             </p>
                           )}
                         </div>
@@ -475,7 +475,7 @@ export default function FamilyInfoFormPage() {
           <div className="flex justify-end gap-4">
             <button
               type="button"
-              onClick={() => router.push(`/${locale}/onboarding`)}
+              onClick={() => (router.push as (path: string) => void)(`/${locale}/onboarding`)}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               キャンセル

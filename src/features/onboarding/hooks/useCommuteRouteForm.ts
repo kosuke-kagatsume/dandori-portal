@@ -49,7 +49,8 @@ export function useCommuteRouteForm() {
   useEffect(() => {
     if (isDirty && commuteRouteForm) {
       const timer = setTimeout(() => {
-        updateCommuteRouteForm(formValues as Partial<CommuteRouteFormInput>);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CommuteRouteFormInput と CommuteRouteForm 型の互換性のため
+        updateCommuteRouteForm(formValues as any);
       }, 1000); // Debounce 1 second
 
       return () => clearTimeout(timer);
@@ -60,7 +61,8 @@ export function useCommuteRouteForm() {
   // Reset form when commuteRouteForm changes (e.g., after submission)
   useEffect(() => {
     if (commuteRouteForm) {
-      reset(commuteRouteForm as CommuteRouteFormInput);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CommuteRouteForm と CommuteRouteFormInput 型の互換性のため
+      reset(commuteRouteForm as any);
     }
   }, [commuteRouteForm, reset]);
 

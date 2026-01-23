@@ -49,7 +49,8 @@ export function useBasicInfoForm() {
   useEffect(() => {
     if (isDirty && basicInfoForm) {
       const timer = setTimeout(() => {
-        updateBasicInfoForm(formValues as Partial<BasicInfoFormInput>);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BasicInfoFormInput と BasicInfoForm 型の互換性のため
+        updateBasicInfoForm(formValues as any);
       }, 1000); // Debounce 1 second
 
       return () => clearTimeout(timer);
@@ -60,7 +61,8 @@ export function useBasicInfoForm() {
   // Reset form when basicInfoForm changes (e.g., after submission)
   useEffect(() => {
     if (basicInfoForm) {
-      reset(basicInfoForm as BasicInfoFormInput);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BasicInfoForm と BasicInfoFormInput 型の互換性のため
+      reset(basicInfoForm as any);
     }
   }, [basicInfoForm, reset]);
 

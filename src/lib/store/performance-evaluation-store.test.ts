@@ -668,17 +668,12 @@ describe('PerformanceEvaluationStore', () => {
     it('賞与評価を作成できる', () => {
       const newBonus: Omit<BonusEvaluation, 'id' | 'createdAt'> = {
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer',
         performanceRating: 'S',
         performanceScore: 95,
         bonusMultiplier: 0.5,
         comments: '目標を大きく上回る成果',
-        evaluatedBy: 'mgr-001',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
         status: 'draft',
       };
 
@@ -694,33 +689,23 @@ describe('PerformanceEvaluationStore', () => {
     it('異なる賞与タイプの評価を作成できる', () => {
       const summerBonus: Omit<BonusEvaluation, 'id' | 'createdAt'> = {
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer',
         performanceRating: 'A',
         performanceScore: 85,
         bonusMultiplier: 0.3,
         comments: '良好な成果',
-        evaluatedBy: 'mgr-001',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
         status: 'draft',
       };
 
       const winterBonus: Omit<BonusEvaluation, 'id' | 'createdAt'> = {
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'winter',
         performanceRating: 'S',
         performanceScore: 92,
         bonusMultiplier: 0.5,
         comments: '優れた成果',
-        evaluatedBy: 'mgr-001',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
         status: 'draft',
       };
 
@@ -736,17 +721,12 @@ describe('PerformanceEvaluationStore', () => {
     it('賞与評価を更新できる', () => {
       const newBonus: Omit<BonusEvaluation, 'id' | 'createdAt'> = {
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer',
         performanceRating: 'A',
         performanceScore: 85,
         bonusMultiplier: 0.3,
         comments: '良好な成果',
-        evaluatedBy: 'mgr-001',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
         status: 'draft',
       };
 
@@ -770,17 +750,12 @@ describe('PerformanceEvaluationStore', () => {
     it('IDで賞与評価を取得できる', () => {
       const newBonus: Omit<BonusEvaluation, 'id' | 'createdAt'> = {
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer',
         performanceRating: 'S',
         performanceScore: 95,
         bonusMultiplier: 0.5,
         comments: '目標を大きく上回る成果',
-        evaluatedBy: 'mgr-001',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
         status: 'draft',
       };
 
@@ -796,33 +771,23 @@ describe('PerformanceEvaluationStore', () => {
     it('従業員IDで賞与評価を取得できる', () => {
       const summerBonus: Omit<BonusEvaluation, 'id' | 'createdAt'> = {
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer',
         performanceRating: 'A',
         performanceScore: 85,
         bonusMultiplier: 0.3,
         comments: '良好な成果',
-        evaluatedBy: 'mgr-001',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
         status: 'draft',
       };
 
       const winterBonus: Omit<BonusEvaluation, 'id' | 'createdAt'> = {
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'winter',
         performanceRating: 'S',
         performanceScore: 92,
         bonusMultiplier: 0.5,
         comments: '優れた成果',
-        evaluatedBy: 'mgr-001',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
         status: 'draft',
       };
 
@@ -841,17 +806,12 @@ describe('PerformanceEvaluationStore', () => {
     it('賞与評価を承認できる', () => {
       const newBonus: Omit<BonusEvaluation, 'id' | 'createdAt'> = {
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer',
         performanceRating: 'S',
         performanceScore: 95,
         bonusMultiplier: 0.5,
         comments: '目標を大きく上回る成果',
-        evaluatedBy: 'mgr-001',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
         status: 'draft',
       };
 

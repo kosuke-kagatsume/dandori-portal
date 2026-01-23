@@ -87,7 +87,7 @@ export default function BasicInfoFormPage() {
   const { register: _register, handleSubmit, errors, formState, watch, updateForm, submitForm } =
     useBasicInfoForm();
   // Cast register to FieldValues for FormFields component compatibility
-  const register = _register as UseFormRegister<FieldValues>;
+  const register = _register as unknown as UseFormRegister<FieldValues>;
 
   // 条件付きフォームで使用予定
   const _hasPensionBook = watch('socialInsurance.hasPensionBook' as FormPath);
@@ -98,9 +98,9 @@ export default function BasicInfoFormPage() {
 
   const onSubmit = async (data: BasicInfoFormInput) => {
     try {
-      updateForm(data);
+      updateForm(data as unknown as Parameters<typeof updateForm>[0]);
       await submitForm();
-      router.push(`/${locale}/onboarding/${applicationId}`);
+      (router.push as (path: string) => void)(`/${locale}/onboarding/${applicationId}`);
     } catch (error) {
       console.error('[BasicInfoForm] Failed to submit form:', error);
       // バリデーションエラーの詳細をログに出力
@@ -463,7 +463,7 @@ export default function BasicInfoFormPage() {
           <div className="flex justify-end gap-4">
             <button
               type="button"
-              onClick={() => router.push(`/${locale}/onboarding`)}
+              onClick={() => (router.push as (path: string) => void)(`/${locale}/onboarding`)}
               className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               キャンセル
