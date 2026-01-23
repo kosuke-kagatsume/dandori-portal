@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const notifications = await prisma.certification_notifications.findMany({
       where,
       include: {
-        certification: {
+        certifications: {
           select: {
             id: true,
             name: true,
@@ -73,7 +73,11 @@ export async function POST(request: NextRequest) {
     // 設定がなければデフォルト値で作成
     if (!settings) {
       settings = await prisma.certification_notification_settings.create({
-        data: { tenantId: tenantId || 'tenant-1' },
+        data: {
+          id: crypto.randomUUID(),
+          tenantId: tenantId || 'tenant-1',
+          updatedAt: new Date(),
+        },
       });
     }
 
@@ -84,6 +88,7 @@ export async function POST(request: NextRequest) {
     // 通知作成
     const notification = await prisma.certification_notifications.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: tenantId || 'tenant-1',
         certificationId,
         userId,
@@ -93,8 +98,8 @@ export async function POST(request: NextRequest) {
         inAppSent: settings.enableInAppNotification,
         emailSent: settings.enableEmailNotification,
         pushSent: settings.enablePushNotification,
-        escalatedToManager,
-        escalatedToHr,
+        escalatedToManager: escalateToManager,
+        escalatedToHr: escalateToHr,
         managerNotifiedAt: escalateToManager ? new Date() : null,
         hrNotifiedAt: escalateToHr ? new Date() : null,
       },
@@ -126,7 +131,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updateData: Record<string, unknown> = {};
+    const updateData: { readAt?: Date; acknowledgedAt?: Date } = {};
 
     if (action === 'read') {
       updateData.readAt = new Date();

@@ -50,15 +50,20 @@ export async function POST(request: NextRequest) {
     // ユーザーを招待状態で作成
     const user = await prisma.users.create({
       data: {
+        id: crypto.randomUUID(),
         email,
         name,
         role: role || 'employee',
         tenantId: tenantId || null,
         status: 'inactive', // 招待受諾まで無効
-        inviteToken,
-        inviteExpiry,
+        updatedAt: new Date(),
+        // 招待トークンは別途管理する必要があります
       },
     });
+
+    // 招待情報を一時保存（メタデータとして扱う）
+    console.log('Invite token for user:', user.id, inviteToken);
+    console.log('Invite expiry:', inviteExpiry);
 
     // 招待メール送信 (ここでは招待URLを生成のみ)
     const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com'}/auth/accept-invite?token=${inviteToken}`;

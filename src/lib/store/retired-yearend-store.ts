@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { User, WithholdingSlipData } from '@/types';
+import type { User } from '@/types';
+import type { WithholdingSlipData } from '@/types/pdf';
 import { generateWithholdingSlipPDF } from '@/lib/pdf/payroll-pdf';
 import { toast } from 'sonner';
 

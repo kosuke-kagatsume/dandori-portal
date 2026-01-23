@@ -123,6 +123,7 @@ export async function PUT(request: NextRequest) {
         foundedDate: foundedDate ? new Date(foundedDate) : null,
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         name,
         nameKana,
@@ -138,6 +139,7 @@ export async function PUT(request: NextRequest) {
         taxOfficeCode,
         fiscalYearEnd,
         foundedDate: foundedDate ? new Date(foundedDate) : null,
+        updatedAt: new Date(),
       },
     });
 

@@ -211,6 +211,7 @@ export async function POST(request: NextRequest) {
       // 支払い記録を作成
       const payment = await tx.payments.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: invoice.tenantId,
           invoiceId,
           amount,
@@ -218,6 +219,7 @@ export async function POST(request: NextRequest) {
           paymentMethod,
           status: 'completed',
           notes,
+          updatedAt: new Date(),
         },
         include: {
           invoices: {
@@ -246,6 +248,7 @@ export async function POST(request: NextRequest) {
       // アクティビティログを記録
       await tx.activity_feeds.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: invoice.tenantId,
           activityType: 'payment_received',
           title: '支払い受領',

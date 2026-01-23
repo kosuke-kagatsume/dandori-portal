@@ -59,12 +59,14 @@ export async function PUT(
         completedBy: status === 'completed' ? completedBy : (status === 'pending' ? null : undefined),
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         legalUpdateId: params.id,
         status: status || 'pending',
         notes,
         completedAt,
         completedBy: status === 'completed' ? completedBy : null,
+        updatedAt: new Date(),
       },
     });
 
@@ -108,7 +110,7 @@ export async function GET(
         },
       },
       include: {
-        legalUpdate: {
+        legal_updates: {
           select: {
             id: true,
             title: true,
@@ -141,7 +143,7 @@ export async function GET(
         notes: tenantStatus.notes,
         completedAt: tenantStatus.completedAt,
         completedBy: tenantStatus.completedBy,
-        legalUpdate: tenantStatus.legalUpdate,
+        legalUpdate: tenantStatus.legal_updates,
       },
     });
   } catch (error) {

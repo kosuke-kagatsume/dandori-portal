@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
         // 新しい通知を作成
         await prismaClient.dw_notifications.create({
           data: {
+            id: crypto.randomUUID(),
             type: 'payment_overdue',
             title: `支払い期限超過（${daysOverdue}日）`,
             description: `${invoice.tenants?.name || '不明'}の請求書（${invoice.invoiceNumber}）が${daysOverdue}日超過しています`,
@@ -156,6 +157,7 @@ export async function POST(request: NextRequest) {
         if (!existingNotification) {
           await prismaClient.dw_notifications.create({
             data: {
+              id: crypto.randomUUID(),
               type: 'payment_reminder',
               title: `支払い期限まもなく（${daysUntilDue}日）`,
               description: `${invoice.tenants?.name || '不明'}の請求書（${invoice.invoiceNumber}）の支払い期限が${daysUntilDue}日後です`,

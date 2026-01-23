@@ -32,7 +32,7 @@ export function AttendanceTab({ settings: _settings, updateSettings: _updateSett
     setIsSaving(true);
     try {
       await saveAttendanceSettings();
-      saveSettings();
+      _saveSettings();
     } catch (error) {
       console.error('保存エラー:', error);
     } finally {

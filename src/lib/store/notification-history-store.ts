@@ -132,6 +132,9 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   tenant_created: 'テナント作成',
   tenant_suspended: 'テナント停止',
   system_alert: 'システムアラート',
+  invoice_sent: '請求書発行',
+  payment_reminder: '支払期限リマインダー',
+  receipt_sent: '領収書発行',
 };
 
 const initialState = {

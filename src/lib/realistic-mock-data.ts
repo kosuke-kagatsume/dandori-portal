@@ -63,7 +63,7 @@ export const employees = [
 // 今月の勤怠データを生成（リアルなパターンを含む） - キャッシュ対応
 export function generateRealisticAttendanceData(): DetailedAttendanceRecord[] {
   // キャッシュから取得を試行
-  const cached = performanceCache.get(CACHE_KEYS.ATTENDANCE_DATA);
+  const cached = performanceCache.get(CACHE_KEYS.ATTENDANCE_DATA) as DetailedAttendanceRecord[] | null;
   if (cached) {
     return cached;
   }
@@ -260,7 +260,7 @@ function createWorkdayRecord(
 // 休暇申請データを生成 - キャッシュ対応
 export function generateRealisticLeaveRequests(): LeaveRequest[] {
   // キャッシュから取得を試行
-  const cached = performanceCache.get(CACHE_KEYS.LEAVE_REQUESTS);
+  const cached = performanceCache.get(CACHE_KEYS.LEAVE_REQUESTS) as LeaveRequest[] | null;
   if (cached) {
     return cached;
   }

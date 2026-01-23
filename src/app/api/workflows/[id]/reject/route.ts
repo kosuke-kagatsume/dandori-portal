@@ -88,6 +88,8 @@ export async function POST(
         completedAt: new Date(),
         timeline_entries: {
           create: {
+            id: crypto.randomUUID(),
+            tenantId: workflow.tenantId,
             action: 'rejected',
             actorId: approverId,
             actorName: approverName,

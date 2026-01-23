@@ -89,7 +89,7 @@ export async function downloadFile(
     }
 
     // BufferをBlobに変換
-    const blob = new Blob([result.data]);
+    const blob = new Blob([result.data as BlobPart]);
     return { data: blob, error: null };
   } catch (err) {
     console.error('Download file error:', err);

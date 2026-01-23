@@ -58,10 +58,13 @@ export function useScheduledChangesNotifications() {
       }
 
       addNotification({
+        id: notificationId,
         title,
         message,
         type: 'warning',
-        isImportant: true,
+        timestamp: new Date().toISOString(),
+        read: false,
+        important: true,
         actionUrl: '/scheduled-changes',
       });
 
@@ -88,10 +91,13 @@ export function useScheduledChangesNotifications() {
         : `${changeTypeLabels[change.type]}予約が${daysUntil}日後に有効になります`;
 
       addNotification({
+        id: notificationId,
         title,
         message,
         type: 'info',
-        isImportant: false,
+        timestamp: new Date().toISOString(),
+        read: false,
+        important: false,
         actionUrl: '/scheduled-changes',
       });
 

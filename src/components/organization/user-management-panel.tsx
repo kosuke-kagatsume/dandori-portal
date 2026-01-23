@@ -62,7 +62,9 @@ const roleLabels: Record<UserRole, string> = {
   employee: '一般社員',
   manager: 'マネージャー',
   hr: '人事',
-  admin: 'システム管理者'
+  admin: 'システム管理者',
+  executive: '役員',
+  applicant: '応募者',
 };
 
 const statusLabels = {
@@ -80,6 +82,12 @@ const getRoleColor = (role: UserRole) => {
     case 'manager':
       return 'bg-green-100 text-green-800 border-green-200';
     case 'employee':
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+    case 'executive':
+      return 'bg-purple-100 text-purple-800 border-purple-200';
+    case 'applicant':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    default:
       return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };

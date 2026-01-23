@@ -63,10 +63,12 @@ export async function POST(request: NextRequest) {
 
     const employmentType = await prisma.employment_types.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         name,
         sortOrder: sortOrder || 0,
         isActive: isActive ?? true,
+        updatedAt: new Date(),
       },
     });
 

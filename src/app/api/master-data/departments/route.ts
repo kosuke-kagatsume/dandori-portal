@@ -64,11 +64,13 @@ export async function POST(request: NextRequest) {
 
     const department = await prisma.departments.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         name,
         parentId: parentId || null,
         sortOrder: sortOrder || 0,
         isActive: isActive ?? true,
+        updatedAt: new Date(),
       },
     });
 

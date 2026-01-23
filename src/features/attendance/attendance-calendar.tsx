@@ -26,7 +26,7 @@ import { ja } from 'date-fns/locale';
 import { MountGate } from '@/components/common/MountGate';
 import { toast } from 'sonner';
 
-interface AttendanceRecord {
+export interface AttendanceRecord {
   date: Date;
   status: 'present' | 'absent' | 'remote' | 'holiday' | 'weekend';
   checkIn?: string;

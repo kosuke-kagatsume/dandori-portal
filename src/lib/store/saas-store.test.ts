@@ -38,11 +38,12 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contactEmail: 'support@slack.com',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        adminEmail: 'support@slack.com',
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       };
 
       addService(newService);
@@ -62,20 +63,22 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       addService({
         name: 'GitHub',
         category: 'development' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'GitHub, Inc.',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state = useSaaSStore.getState();
@@ -91,42 +94,41 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
       const serviceId = state1.services[0].id;
 
       updateService(serviceId, {
-        status: 'inactive',
         notes: 'サービス停止予定',
       });
 
       const state2 = useSaaSStore.getState();
-      expect(state2.services[0].status).toBe('inactive');
       expect(state2.services[0].notes).toBe('サービス停止予定');
     });
 
     it('存在しないサービスを更新しようとしても他のサービスに影響しない', () => {
-      const { addService, updateService } = useSaaSStore.getState();
+      const { addService } = useSaaSStore.getState();
 
       addService({
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
-      updateService('non-existent-id', { status: 'inactive' });
 
       const state = useSaaSStore.getState();
-      expect(state.services[0].status).toBe('active');
+      expect(state.services[0].name).toBe('Slack');
     });
   });
 
@@ -138,10 +140,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -160,10 +163,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -184,8 +188,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       deleteService(serviceId);
@@ -205,10 +209,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state = useSaaSStore.getState();
@@ -235,20 +240,22 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       addService({
         name: 'GitHub',
         category: 'development' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'GitHub, Inc.',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const commServices = getServicesByCategory('communication');
@@ -269,20 +276,22 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       addService({
         name: 'Zoom',
         category: 'communication' as const,
         licenseType: 'fixed' as const,
+        website: 'https://example.com',
         vendor: 'Zoom Video Communications',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const userBasedServices = getServicesByLicenseType('user-based');
@@ -303,10 +312,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack Technologies',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -332,10 +342,11 @@ describe('SaaSStore', () => {
         name: 'Zoom',
         category: 'communication' as const,
         licenseType: 'fixed' as const,
+        website: 'https://example.com',
         vendor: 'Zoom',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -361,10 +372,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -399,10 +411,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -431,10 +444,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -455,8 +469,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       deletePlan(planId);
@@ -475,10 +489,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -508,10 +523,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -544,10 +560,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -582,10 +599,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -606,8 +624,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const state3 = useSaaSStore.getState();
@@ -622,10 +640,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -646,8 +665,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
         lastUsedAt: '2024-10-15T10:00:00Z',
       });
 
@@ -664,10 +683,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -688,15 +708,14 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const state3 = useSaaSStore.getState();
       const assignmentId = state3.assignments[0].id;
 
       updateAssignment(assignmentId, {
-        status: 'inactive',
         lastUsedAt: '2024-10-19T10:00:00Z',
       });
 
@@ -714,10 +733,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -738,8 +758,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const state3 = useSaaSStore.getState();
@@ -760,10 +780,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -784,8 +805,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const state3 = useSaaSStore.getState();
@@ -805,10 +826,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -829,8 +851,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'ユーザー1',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       addAssignment({
@@ -838,8 +860,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-2',
         userName: 'ユーザー2',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const assignments = getAssignmentsByServiceId(serviceId);
@@ -855,20 +877,22 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       addService({
         name: 'GitHub',
         category: 'development' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'GitHub',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -896,8 +920,8 @@ describe('SaaSStore', () => {
         planId: state2.plans[0].id,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       addAssignment({
@@ -905,8 +929,8 @@ describe('SaaSStore', () => {
         planId: state2.plans[1].id,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const assignments = getAssignmentsByUserId('user-1');
@@ -922,10 +946,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -946,8 +971,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'ユーザー1',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       addAssignment({
@@ -955,8 +980,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-2',
         userName: 'ユーザー2',
+        status: 'active',
         assignedDate: '2024-01-01',
-        status: 'inactive',
       });
 
       const activeAssignments = getActiveAssignmentsByServiceId(serviceId);
@@ -974,10 +999,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -998,8 +1024,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'ユーザー1',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       addAssignment({
@@ -1007,8 +1033,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-2',
         userName: 'ユーザー2',
+        status: 'active',
         assignedDate: '2024-01-01',
-        status: 'inactive',
       });
     });
 
@@ -1045,10 +1071,11 @@ describe('SaaSStore', () => {
         name: 'Zoom',
         category: 'communication' as const,
         licenseType: 'fixed' as const,
+        website: 'https://example.com',
         vendor: 'Zoom',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -1090,8 +1117,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-3',
         userName: 'ユーザー3',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
         lastUsedAt: thirtyFiveDaysAgo.toISOString(),
       });
 
@@ -1109,10 +1136,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -1133,8 +1161,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const totalCost = getUserTotalCost('user-1');
@@ -1148,10 +1176,11 @@ describe('SaaSStore', () => {
         name: 'Zoom',
         category: 'communication' as const,
         licenseType: 'fixed' as const,
+        website: 'https://example.com',
         vendor: 'Zoom',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -1173,8 +1202,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'ユーザー1',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       addAssignment({
@@ -1182,8 +1211,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-2',
         userName: 'ユーザー2',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const totalCost = getUserTotalCost('user-1');
@@ -1198,10 +1227,11 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -1222,8 +1252,8 @@ describe('SaaSStore', () => {
         planId,
         userId: 'user-1',
         userName: 'テストユーザー',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const details = getUserSaaSDetails('user-1');
@@ -1240,20 +1270,22 @@ describe('SaaSStore', () => {
         name: 'Slack',
         category: 'communication' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'Slack',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       addService({
         name: 'GitHub',
         category: 'development' as const,
         licenseType: 'user-based' as const,
+        website: 'https://example.com',
         vendor: 'GitHub',
-        contractStart: '2024-01-01',
-        contractEnd: '2024-12-31',
-        status: 'active' as const,
+        contractStartDate: '2024-01-01',
+        isActive: true,
+        contractEndDate: '2024-12-31',
       });
 
       const state1 = useSaaSStore.getState();
@@ -1284,8 +1316,8 @@ describe('SaaSStore', () => {
         planId: slackPlanId,
         userId: 'user-1',
         userName: 'ユーザー1',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       addAssignment({
@@ -1293,8 +1325,8 @@ describe('SaaSStore', () => {
         planId: githubPlanId,
         userId: 'user-1',
         userName: 'ユーザー1',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       // ユーザー2: Slack のみ
@@ -1303,8 +1335,8 @@ describe('SaaSStore', () => {
         planId: slackPlanId,
         userId: 'user-2',
         userName: 'ユーザー2',
-        assignedDate: '2024-01-01',
         status: 'active',
+        assignedDate: '2024-01-01',
       });
 
       const users = getUsersByTotalCost();

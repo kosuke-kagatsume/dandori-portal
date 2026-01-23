@@ -102,8 +102,8 @@ export function AddTransferDialog({ open, onOpenChange }: AddTransferDialogProps
       toUnitName: toUnit.name,
       fromPosition: formData.fromPosition,
       toPosition: formData.toPosition,
-      fromRole: selectedUser.role,
-      toRole: selectedUser.role, // 必要に応じて変更可能
+      fromRole: selectedUser.role as 'admin' | 'hr' | 'employee' | 'manager',
+      toRole: selectedUser.role as 'admin' | 'hr' | 'employee' | 'manager', // 必要に応じて変更可能
       effectiveDate: formData.effectiveDate,
       reason: formData.reason || undefined,
       notes: formData.notes || undefined,

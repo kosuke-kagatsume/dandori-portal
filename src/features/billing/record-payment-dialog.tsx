@@ -43,7 +43,7 @@ export function RecordPaymentDialog({ invoice, open, onClose }: RecordPaymentDia
       }
 
       // 支払い記録（支払い方法も含む）
-      markAsPaid(invoice.id, paidDate, paymentMethod);
+      markAsPaid(invoice.id, paidDate.toISOString(), paymentMethod);
 
       toast.success(`請求書「${invoice.invoiceNumber}」を支払済みにしました`);
       onClose();
@@ -118,7 +118,7 @@ export function RecordPaymentDialog({ invoice, open, onClose }: RecordPaymentDia
           {/* 支払い方法 */}
           <div>
             <Label htmlFor="paymentMethod">支払い方法 *</Label>
-            <Select value={paymentMethod} onValueChange={(value: unknown) => setPaymentMethod(value)}>
+            <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as typeof paymentMethod)}>
               <SelectTrigger className="mt-2">
                 <div className="flex items-center gap-2">
                   <Icon className="h-4 w-4" />

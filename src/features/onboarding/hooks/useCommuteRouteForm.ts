@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import {
@@ -9,6 +9,9 @@ import {
 
 // Re-export type for external use
 export type { CommuteRouteFormInput };
+
+// Type-safe resolver for Zod schema
+const resolver = zodResolver(commuteRouteFormInputSchema) as Resolver<CommuteRouteFormInput>;
 
 /**
  * useCommuteRouteForm Hook
@@ -26,8 +29,8 @@ export function useCommuteRouteForm() {
 
   // Initialize React Hook Form with Zod validation
   const form = useForm<CommuteRouteFormInput>({
-    resolver: zodResolver(commuteRouteFormInputSchema),
-    defaultValues: commuteRouteForm || {},
+    resolver,
+    defaultValues: (commuteRouteForm || {}) as CommuteRouteFormInput,
     mode: 'onBlur', // Validate on blur for better UX
   });
 
@@ -46,17 +49,18 @@ export function useCommuteRouteForm() {
   useEffect(() => {
     if (isDirty && commuteRouteForm) {
       const timer = setTimeout(() => {
-        updateCommuteRouteForm(formValues);
+        updateCommuteRouteForm(formValues as Partial<CommuteRouteFormInput>);
       }, 1000); // Debounce 1 second
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [formValues, isDirty, commuteRouteForm, updateCommuteRouteForm]);
 
   // Reset form when commuteRouteForm changes (e.g., after submission)
   useEffect(() => {
     if (commuteRouteForm) {
-      reset(commuteRouteForm);
+      reset(commuteRouteForm as CommuteRouteFormInput);
     }
   }, [commuteRouteForm, reset]);
 

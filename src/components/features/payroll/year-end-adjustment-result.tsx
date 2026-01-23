@@ -249,7 +249,7 @@ export function YearEndAdjustmentResultDisplay({ result }: YearEndAdjustmentResu
               {result.status === 'draft' && '下書き'}
               {result.status === 'submitted' && '申告済み'}
               {result.status === 'approved' && '承認済み'}
-              {result.status === 'finalized' && '確定'}
+              {result.status === 'completed' && '確定'}
             </Badge>
           </div>
         </CardContent>

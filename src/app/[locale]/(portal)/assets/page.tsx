@@ -14,10 +14,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { type VehicleFromAPI } from '@/hooks/use-vehicles-api';
-// import { type PCAssetFromAPI } from '@/hooks/use-pc-assets-api'; // 型定義参照用
+import { type PCAssetFromAPI } from '@/hooks/use-pc-assets-api';
 // import { type MaintenanceRecordFromAPI } from '@/hooks/use-maintenance-api'; // 型定義参照用
 import {
-  // type GeneralAssetFromAPI,
+  type GeneralAssetFromAPI,
   // type RepairRecordFromAPI,
   ASSET_CATEGORIES,
   REPAIR_TYPES,

@@ -53,13 +53,13 @@ export class RealtimeBroadcast {
     if (!this.listeners.has(type)) {
       this.listeners.set(type, new Set());
     }
-    this.listeners.get(type)!.add(callback);
+    this.listeners.get(type)!.add(callback as (data: unknown) => void);
 
     // アンサブスクライブ関数を返す
     return () => {
       const callbacks = this.listeners.get(type);
       if (callbacks) {
-        callbacks.delete(callback);
+        callbacks.delete(callback as (data: unknown) => void);
       }
     };
   }

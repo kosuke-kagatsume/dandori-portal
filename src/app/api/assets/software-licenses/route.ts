@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     const licenses = await prisma.software_licenses.findMany({
       where,
       include: {
-        pcAsset: {
+        pc_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -71,15 +71,17 @@ export async function POST(request: NextRequest) {
 
     const license = await prisma.software_licenses.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         pcAssetId,
         softwareName,
         licenseKey,
         expirationDate: expirationDate ? new Date(expirationDate) : null,
         monthlyCost: monthlyCost ? parseInt(monthlyCost, 10) : null,
+        updatedAt: new Date(),
       },
       include: {
-        pcAsset: {
+        pc_assets: {
           select: {
             id: true,
             assetNumber: true,

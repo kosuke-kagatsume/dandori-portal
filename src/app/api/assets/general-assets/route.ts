@@ -29,7 +29,7 @@ const demoGeneralAssets = [
     notes: '本社3階設置',
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2024-01-15'),
-    repairRecords: [],
+    repair_records: [],
   },
   {
     id: 'asset-002',
@@ -47,7 +47,7 @@ const demoGeneralAssets = [
     notes: '12人用会議テーブル',
     createdAt: new Date('2022-06-15'),
     updatedAt: new Date('2022-06-15'),
-    repairRecords: [],
+    repair_records: [],
   },
 ];
 

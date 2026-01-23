@@ -27,10 +27,10 @@ export async function GET(request: NextRequest) {
         certifications: {
           orderBy: { issueDate: 'desc' },
         },
-        skills: {
+        employee_skills: {
           orderBy: { level: 'desc' },
         },
-        experiences: {
+        work_experiences: {
           orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
         },
         achievements: {
@@ -43,13 +43,15 @@ export async function GET(request: NextRequest) {
     if (!profile) {
       profile = await prisma.employee_profiles.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId,
           userId,
+          updatedAt: new Date(),
         },
         include: {
           certifications: true,
-          skills: true,
-          experiences: true,
+          employee_skills: true,
+          work_experiences: true,
           achievements: true,
         },
       });
@@ -111,8 +113,8 @@ export async function PUT(request: NextRequest) {
         },
         include: {
           certifications: true,
-          skills: true,
-          experiences: true,
+          employee_skills: true,
+          work_experiences: true,
           achievements: true,
         },
       });
@@ -120,14 +122,16 @@ export async function PUT(request: NextRequest) {
       // 作成
       profile = await prisma.employee_profiles.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: tenantId || 'tenant-1',
           userId,
           ...data,
+          updatedAt: new Date(),
         },
         include: {
           certifications: true,
-          skills: true,
-          experiences: true,
+          employee_skills: true,
+          work_experiences: true,
           achievements: true,
         },
       });

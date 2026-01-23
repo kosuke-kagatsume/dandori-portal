@@ -73,9 +73,9 @@ export function NotificationManagementTab() {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (n) =>
-          n.tenantName.toLowerCase().includes(term) ||
-          n.recipientEmail.toLowerCase().includes(term) ||
-          n.subject.toLowerCase().includes(term) ||
+          n.tenantName?.toLowerCase().includes(term) ||
+          n.recipientEmail?.toLowerCase().includes(term) ||
+          n.subject?.toLowerCase().includes(term) ||
           (n.invoiceNumber && n.invoiceNumber.toLowerCase().includes(term))
       );
     }
@@ -261,7 +261,7 @@ export function NotificationManagementTab() {
                       <TableCell className="font-mono text-sm">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-3 w-3 text-muted-foreground" />
-                          {new Date(notification.sentAt).toLocaleString('ja-JP', {
+                          {new Date(notification.sentAt || Date.now()).toLocaleString('ja-JP', {
                             year: 'numeric',
                             month: '2-digit',
                             day: '2-digit',
@@ -296,7 +296,7 @@ export function NotificationManagementTab() {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(notification.status)}</TableCell>
+                      <TableCell>{getStatusBadge(notification.status || 'pending')}</TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="outline"

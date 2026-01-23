@@ -273,6 +273,7 @@ async function main() {
     if (!existingService) {
       existingService = await prisma.saas_services.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId,
           name: service.name,
           category: service.category,
@@ -289,6 +290,7 @@ async function main() {
           supportUrl: service.supportUrl,
           securityRating: service.securityRating,
           isActive: service.isActive,
+          updatedAt: new Date(),
         },
       });
       console.log(`✅ サービス作成: ${service.name}`);
@@ -305,6 +307,7 @@ async function main() {
     if (!existingPlan) {
       existingPlan = await prisma.saas_license_plans.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId,
           serviceId: existingService.id,
           planName: service.planName,
@@ -313,6 +316,7 @@ async function main() {
           fixedPrice: service.fixedPrice || null,
           currency: 'JPY',
           isActive: true,
+          updatedAt: new Date(),
         },
       });
       console.log(`   └─ プラン作成: ${service.planName}`);
@@ -348,6 +352,7 @@ async function main() {
 
       await prisma.saas_license_assignments.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId,
           serviceId,
           planId,
@@ -358,6 +363,7 @@ async function main() {
           departmentName: member.department,
           assignedDate: new Date('2024-04-01'),
           status: 'active',
+          updatedAt: new Date(),
         },
       });
 
@@ -373,7 +379,7 @@ async function main() {
   console.log(`総メンバー数: ${demoMembers.length}名`);
   console.log(`総割り当て数: ${totalAssignments}件`);
   console.log('\nサービス別割り当て数:');
-  for (const [serviceName, count] of serviceCounts.entries()) {
+  for (const [serviceName, count] of Array.from(serviceCounts.entries())) {
     console.log(`  - ${serviceName}: ${count}名`);
   }
 

@@ -2,7 +2,7 @@
  * PC資産管理ストア
  */
 
-import { create } from 'zustand';
+import { create, StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { assetAudit } from '@/lib/audit/audit-logger';
 import type { PCAsset, SoftwareLicense, DeadlineWarning } from '@/types/asset';
@@ -147,8 +147,7 @@ const initialState = {
 let idCounter = 0;
 
 const createPCStore = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const storeCreator = (set: (fn: (state: PCStoreState) => Partial<PCStoreState>) => void, get: () => PCStoreState & Record<string, unknown>) => ({
+  const storeCreator: StateCreator<PCState> = (set, get) => ({
     ...initialState,
 
     // PC CRUD
@@ -160,7 +159,7 @@ const createPCStore = () => {
         createdAt: now,
         updatedAt: now,
       };
-      set((state: PCState) => ({
+      set((state) => ({
         pcs: [...state.pcs, newPC],
       }));
 
@@ -173,7 +172,7 @@ const createPCStore = () => {
       // 割り当て変更の監査ログ用に現在の状態を取得
       const currentPC = get().pcs.find((pc: PCAsset) => pc.id === id);
 
-      set((state: PCState) => ({
+      set((state) => ({
         pcs: state.pcs.map((pc) =>
           pc.id === id
             ? { ...pc, ...updates, updatedAt: new Date().toISOString() }
@@ -194,7 +193,7 @@ const createPCStore = () => {
       // 削除前に情報を取得して監査ログ用に保存
       const pcToDelete = get().pcs.find((pc: PCAsset) => pc.id === id);
 
-      set((state: PCState) => ({
+      set((state) => ({
         pcs: state.pcs.filter((pc) => pc.id !== id),
       }));
 
@@ -216,7 +215,7 @@ const createPCStore = () => {
         id: `lic-${Date.now()}-${idCounter++}`,
       };
 
-      set((state: PCState) => ({
+      set((state) => ({
         pcs: state.pcs.map((pc) =>
           pc.id === pcId
             ? {
@@ -234,7 +233,7 @@ const createPCStore = () => {
       licenseId: string,
       updates: Partial<SoftwareLicense>
     ) => {
-      set((state: PCState) => ({
+      set((state) => ({
         pcs: state.pcs.map((pc) =>
           pc.id === pcId
             ? {
@@ -250,7 +249,7 @@ const createPCStore = () => {
     },
 
     deleteLicense: (pcId: string, licenseId: string) => {
-      set((state: PCState) => ({
+      set((state) => ({
         pcs: state.pcs.map((pc) =>
           pc.id === pcId
             ? {

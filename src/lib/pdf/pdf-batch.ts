@@ -94,8 +94,8 @@ export async function batchGeneratePayrollPDFs(
     );
 
     // 結果を集計
-    chunkResults.forEach((result) => {
-      // actualIndex available if needed: i + chunkIndex
+    chunkResults.forEach((result, chunkIndex) => {
+      const actualIndex = i + chunkIndex;
       const isSuccess = result.status === 'fulfilled' && !result.value.error;
 
       if (isSuccess) {
@@ -169,8 +169,8 @@ export async function batchGenerateBonusPDFs(
       })
     );
 
-    chunkResults.forEach((result) => {
-      // actualIndex available if needed: i + chunkIndex
+    chunkResults.forEach((result, chunkIndex) => {
+      const actualIndex = i + chunkIndex;
       const isSuccess = result.status === 'fulfilled' && !result.value.error;
 
       if (isSuccess) {
@@ -243,8 +243,8 @@ export async function batchGenerateWithholdingSlipPDFs(
       })
     );
 
-    chunkResults.forEach((result) => {
-      // actualIndex available if needed: i + chunkIndex
+    chunkResults.forEach((result, chunkIndex) => {
+      const actualIndex = i + chunkIndex;
       const isSuccess = result.status === 'fulfilled' && !result.value.error;
 
       if (isSuccess) {

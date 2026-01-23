@@ -106,11 +106,11 @@ function OptimizedDataTableComponent<TData>({
       {/* テーブル */}
       <div className="rounded-md border">
         <Table>
-          <TableHeaderMemo headerGroups={table.getHeaderGroups()} />
+          <TableHeaderMemo headerGroups={table.getHeaderGroups() as HeaderGroup<unknown>[]} />
           <TableBody>
             {rows?.length ? (
               rows.map((row) => (
-                <TableRowMemo key={row.id} row={row} columns={columns} />
+                <TableRowMemo key={row.id} row={row as Row<unknown>} columns={columns as ColumnDef<unknown, unknown>[]} />
               ))
             ) : (
               <TableRow>

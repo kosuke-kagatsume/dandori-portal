@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const mileages = await prisma.monthly_mileages.findMany({
       where,
       include: {
-        vehicle: {
+        vehicles: {
           select: {
             id: true,
             vehicleNumber: true,
@@ -85,15 +85,17 @@ export async function POST(request: NextRequest) {
         recordedByName,
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         vehicleId,
         month,
         distance: parseInt(distance, 10),
         recordedBy,
         recordedByName,
+        updatedAt: new Date(),
       },
       include: {
-        vehicle: {
+        vehicles: {
           select: {
             id: true,
             vehicleNumber: true,

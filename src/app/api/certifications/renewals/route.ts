@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
     const renewals = await prisma.certification_renewals.findMany({
       where,
       include: {
-        certification: {
+        certifications: {
           include: {
-            profile: true,
+            employee_profiles: true,
           },
         },
       },
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     });
 
     // ユーザー情報を一括取得
-    const userIds = [...new Set(renewals.map(r => r.userId))];
+    const userIds = Array.from(new Set(renewals.map(r => r.userId)));
     const users = await prisma.users.findMany({
       where: { id: { in: userIds } },
       select: {
@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
 
     const renewal = await prisma.certification_renewals.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: tenantId || 'tenant-1',
         certificationId,
         userId,
@@ -119,6 +120,7 @@ export async function POST(request: NextRequest) {
         newDocumentUrl,
         newDocumentName,
         notes,
+        updatedAt: new Date(),
       },
     });
 
@@ -156,7 +158,7 @@ export async function PATCH(request: NextRequest) {
     // 申請を取得
     const renewal = await prisma.certification_renewals.findUnique({
       where: { id },
-      include: { certification: true },
+      include: { certifications: true },
     });
 
     if (!renewal) {
@@ -181,7 +183,7 @@ export async function PATCH(request: NextRequest) {
       // 承認処理（トランザクション）
       updatedRenewal = await prisma.$transaction(async (tx) => {
         // 1. 更新申請を承認
-        const approved = await tx.certificationRenewal.update({
+        const approved = await tx.certification_renewals.update({
           where: { id },
           data: {
             status: 'approved',
@@ -197,14 +199,14 @@ export async function PATCH(request: NextRequest) {
         });
 
         // 2. 元の資格情報を更新
-        await tx.certification.update({
+        await tx.certifications.update({
           where: { id: renewal.certificationId },
           data: {
             issueDate: renewal.newIssueDate,
             expiryDate: renewal.newExpiryDate,
-            credentialId: renewal.newCredentialId || renewal.certification.credentialId,
-            documentUrl: renewal.newDocumentUrl || renewal.certification.documentUrl,
-            documentName: renewal.newDocumentName || renewal.certification.documentName,
+            credentialId: renewal.newCredentialId || renewal.certifications?.credentialId,
+            documentUrl: renewal.newDocumentUrl || renewal.certifications?.documentUrl,
+            documentName: renewal.newDocumentName || renewal.certifications?.documentName,
             status: 'active', // 更新されたのでactiveに
             updatedAt: new Date(),
           },

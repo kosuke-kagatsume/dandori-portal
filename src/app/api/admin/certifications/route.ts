@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       prisma.certification_notifications.findMany({
         where: { tenantId },
         include: {
-          certification: {
+          certifications: {
             select: { name: true, organization: true },
           },
         },
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
           expiryDate: { gte: now, lte: in30Days },
         },
         include: {
-          profile: true,
+          employee_profiles: true,
         },
         orderBy: { expiryDate: 'asc' },
         take: 10,
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         expiryDate: { lt: now, not: null },
       },
       include: {
-        profile: true,
+        employee_profiles: true,
       },
       orderBy: { expiryDate: 'desc' },
       take: 10,
@@ -118,9 +118,9 @@ export async function GET(request: NextRequest) {
         status: { in: ['pending', 'under_review'] },
       },
       include: {
-        certification: {
+        certifications: {
           include: {
-            profile: true,
+            employee_profiles: true,
           },
         },
       },
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     pendingRenewals.forEach(r => allUserIds.add(r.userId));
 
     const users = await prisma.users.findMany({
-      where: { id: { in: [...allUserIds] } },
+      where: { id: { in: Array.from(allUserIds) } },
       select: {
         id: true,
         name: true,

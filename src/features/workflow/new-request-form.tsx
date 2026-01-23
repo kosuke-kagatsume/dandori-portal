@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useForm, UseFormReturn, useFieldArray } from 'react-hook-form';
+import { useForm, UseFormReturn, useFieldArray, FieldValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { WorkflowType, WorkflowRequest, ApproverRole } from '@/lib/workflow-store';
@@ -121,7 +121,7 @@ type BusinessTripFormData = z.infer<typeof businessTripSchema>;
 type RemoteWorkFormData = z.infer<typeof remoteWorkSchema>;
 
 // フォームコンポーネントのprops型
-interface FormComponentProps<T = Record<string, unknown>> {
+interface FormComponentProps<T extends FieldValues = FieldValues> {
   form: UseFormReturn<T>;
   onFlowUpdate: (type: WorkflowType, details: Record<string, unknown>) => void;
 }
@@ -222,7 +222,8 @@ export function NewRequestForm({
   };
 
   // 承認フローの自動設定
-  const setupApprovalFlow = (type: WorkflowType, details: Record<string, unknown>) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const setupApprovalFlow = (type: WorkflowType, details: Record<string, any>) => {
     const flow: Array<{ role: ApproverRole; name: string; id: string; required: boolean }> = [];
 
     // 直属上司は必須
@@ -328,7 +329,7 @@ export function NewRequestForm({
       const request: Partial<WorkflowRequest> = {
         type: requestType!,
         title: getRequestTitle(requestType!, data),
-        description: data.reason || data.purpose || '',
+        description: (data.reason as string) || (data.purpose as string) || '',
         requesterId: userId,
         requesterName: currentUserName,
         department: '営業部',
@@ -373,7 +374,8 @@ export function NewRequestForm({
     }
   };
 
-  const getRequestTitle = (type: WorkflowType, data: Record<string, unknown>): string => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getRequestTitle = (type: WorkflowType, data: Record<string, any>): string => {
     switch (type) {
       case 'leave_request':
         return `${data.leaveType === 'paid_leave' ? '有給' : ''}休暇申請（${format(data.startDate, 'MM/dd')}〜${format(data.endDate, 'MM/dd')}）`;
@@ -396,7 +398,8 @@ export function NewRequestForm({
     }
   };
 
-  const getPriority = (type: WorkflowType, data: Record<string, unknown>): 'low' | 'normal' | 'high' | 'urgent' => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getPriority = (type: WorkflowType, data: Record<string, any>): 'low' | 'normal' | 'high' | 'urgent' => {
     switch (type) {
       case 'leave_request':
         const daysUntilLeave = differenceInDays(data.startDate, new Date());
@@ -417,29 +420,31 @@ export function NewRequestForm({
   const renderFormContent = () => {
     if (!requestType) return null;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const typedForm = form as UseFormReturn<any>;
     switch (requestType) {
       case 'leave_request':
-        return <LeaveRequestForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <LeaveRequestForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'expense_claim':
-        return <ExpenseClaimForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <ExpenseClaimForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'overtime_request':
-        return <OvertimeRequestForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <OvertimeRequestForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'business_trip':
-        return <BusinessTripForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <BusinessTripForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'remote_work':
-        return <RemoteWorkForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <RemoteWorkForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'purchase_request':
-        return <PurchaseRequestForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <PurchaseRequestForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'document_approval':
-        return <DocumentApprovalForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <DocumentApprovalForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'bank_account_change':
-        return <BankAccountChangeForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <BankAccountChangeForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'family_info_change':
-        return <FamilyInfoChangeForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <FamilyInfoChangeForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       case 'commute_route_change':
-        return <CommuteRouteChangeForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <CommuteRouteChangeForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
       default:
-        return <DefaultRequestForm form={form} onFlowUpdate={setupApprovalFlow} />;
+        return <DefaultRequestForm form={typedForm} onFlowUpdate={setupApprovalFlow} />;
     }
   };
 
@@ -671,7 +676,7 @@ function LeaveRequestForm({ form, onFlowUpdate }: FormComponentProps<LeaveReques
       <CardContent className="space-y-6">
         <div className="space-y-3">
           <Label className="text-sm font-medium">休暇種別</Label>
-          <RadioGroup defaultValue="paid_leave" onValueChange={(value) => form.setValue('leaveType', value)} className="grid grid-cols-3 gap-4">
+          <RadioGroup defaultValue="paid_leave" onValueChange={(value) => form.setValue('leaveType', value as 'paid_leave' | 'sick_leave' | 'special_leave' | 'compensatory' | 'half_day')} className="grid grid-cols-3 gap-4">
             <div className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               <RadioGroupItem value="paid_leave" id="paid_leave" />
               <Label htmlFor="paid_leave" className="cursor-pointer">有給休暇</Label>
@@ -809,7 +814,7 @@ function ExpenseClaimForm({ form, onFlowUpdate }: FormComponentProps<ExpenseClai
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label>経費種別</Label>
-          <Select onValueChange={(value) => form.setValue('expenseType', value)}>
+          <Select onValueChange={(value) => form.setValue('expenseType', value as 'transportation' | 'accommodation' | 'entertainment' | 'supplies' | 'other')}>
             <SelectTrigger>
               <SelectValue placeholder="選択してください" />
             </SelectTrigger>
@@ -1123,7 +1128,7 @@ function BusinessTripForm({ form, onFlowUpdate }: FormComponentProps<BusinessTri
           <div className="space-y-2">
             <Label>交通手段</Label>
             <Select onValueChange={(value) => {
-              form.setValue('transportation', value);
+              form.setValue('transportation', value as 'train' | 'airplane' | 'car' | 'other');
               onFlowUpdate('business_trip', { transportation: value, estimatedCost });
             }}>
               <SelectTrigger>
@@ -1344,7 +1349,7 @@ function DocumentApprovalForm({ form, onFlowUpdate }: FormComponentProps) {
 }
 
 // デフォルトフォーム
-function DefaultRequestForm({ form }: { form: UseFormReturn }) {
+function DefaultRequestForm({ form }: { form: UseFormReturn; onFlowUpdate?: (type: WorkflowType, details: Record<string, unknown>) => void }) {
   return (
     <Card>
       <CardHeader>
@@ -1429,7 +1434,7 @@ function RemoteWorkForm({ form, onFlowUpdate }: FormComponentProps<RemoteWorkFor
 
         <div className="space-y-2">
           <Label>勤務場所</Label>
-          <RadioGroup defaultValue="home" onValueChange={(value) => form.setValue('workLocation', value)}>
+          <RadioGroup defaultValue="home" onValueChange={(value) => form.setValue('workLocation', value as 'home' | 'satellite_office' | 'other')}>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="home" id="home" />
               <Label htmlFor="home">自宅</Label>

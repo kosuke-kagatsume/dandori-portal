@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   successResponse,
@@ -155,6 +155,7 @@ export async function POST(request: NextRequest) {
     // 勤怠レコード作成
     const attendance = await prisma.attendance.create({
       data: {
+        id: crypto.randomUUID(),
         userId,
         tenantId,
         date: new Date(date),
@@ -170,6 +171,7 @@ export async function POST(request: NextRequest) {
         memo,
         approvalStatus,
         approvalReason,
+        updatedAt: new Date(),
       },
       include: {
         user: {

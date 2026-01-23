@@ -56,7 +56,7 @@ export default function TenantDetailPage() {
     billingEmail: '',
     phone: '',
     address: '',
-    plan: 'basic' as const,
+    plan: 'basic' as 'basic' | 'standard' | 'premium' | 'enterprise',
     maxUsers: 10,
     contractStartDate: '',
     contractEndDate: '',
@@ -131,14 +131,14 @@ export default function TenantDetailPage() {
     setEditForm({
       name: tenant.name,
       subdomain: tenant.subdomain || '',
-      contactEmail: tenant.contactEmail,
-      billingEmail: tenant.billingEmail || '',
-      phone: tenant.phone || '',
-      address: tenant.address || '',
-      plan: tenant.plan,
-      maxUsers: tenant.maxUsers,
-      contractStartDate: tenant.contractStartDate,
-      contractEndDate: tenant.contractEndDate || '',
+      contactEmail: tenant.contactEmail ?? '',
+      billingEmail: tenant.billingEmail ?? '',
+      phone: tenant.phone ?? '',
+      address: tenant.address ?? '',
+      plan: tenant.plan ?? 'basic',
+      maxUsers: tenant.maxUsers ?? 10,
+      contractStartDate: tenant.contractStartDate ?? '',
+      contractEndDate: tenant.contractEndDate ?? '',
     });
     setIsEditing(true);
   };
@@ -436,7 +436,7 @@ export default function TenantDetailPage() {
                     />
                   ) : (
                     <p className="text-sm font-medium">
-                      {new Date(tenant.contractStartDate).toLocaleDateString('ja-JP')}
+                      {tenant.contractStartDate ? new Date(tenant.contractStartDate).toLocaleDateString('ja-JP') : '-'}
                     </p>
                   )}
                 </div>
@@ -526,10 +526,10 @@ export default function TenantDetailPage() {
                             })}
                           </TableCell>
                           <TableCell className="font-mono text-sm">
-                            {new Date(invoice.issueDate).toLocaleDateString('ja-JP')}
+                            {invoice.issueDate ? new Date(invoice.issueDate as string).toLocaleDateString('ja-JP') : '-'}
                           </TableCell>
                           <TableCell className="font-mono text-sm">
-                            {new Date(invoice.dueDate).toLocaleDateString('ja-JP')}
+                            {invoice.dueDate ? new Date(invoice.dueDate as string).toLocaleDateString('ja-JP') : '-'}
                           </TableCell>
                           <TableCell>
                             {invoice.status === 'paid' ? (
@@ -655,7 +655,7 @@ export default function TenantDetailPage() {
                       notifications.map((notification) => (
                         <TableRow key={notification.id}>
                           <TableCell className="font-mono text-sm">
-                            {new Date(notification.sentAt).toLocaleString('ja-JP')}
+                            {notification.sentAt ? new Date(notification.sentAt).toLocaleString('ja-JP') : '-'}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
@@ -701,7 +701,7 @@ export default function TenantDetailPage() {
           onOpenChange={setCreateInvoiceDialogOpen}
           tenantId={tenant.id}
           tenantName={tenant.name}
-          billingEmail={tenant.billingEmail}
+          billingEmail={tenant.billingEmail ?? ''}
         />
       )}
     </div>

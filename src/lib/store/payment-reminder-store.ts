@@ -29,10 +29,10 @@ export interface ReminderHistory {
   invoiceNumber: string;
   tenantId: string;
   tenantName: string;
-  dueDate: Date;
+  dueDate: string; // ISO 8601形式
   reminderType: 'before_due' | 'on_due' | 'overdue';
   daysFromDue: number; // 3日前なら-3、当日なら0、期限超過1日なら1
-  sentAt: Date;
+  sentAt: string; // ISO 8601形式
   notificationId?: string; // 生成された通知のID
 }
 
@@ -48,7 +48,7 @@ interface PaymentReminderStore {
   getHistoryByTenant: (tenantId: string) => ReminderHistory[];
 
   // 自動検知
-  checkAndGenerateReminders: () => void;
+  checkAndGenerateReminders: () => Promise<void>;
 
   // 統計
   getStats: () => {
@@ -95,7 +95,7 @@ export const usePaymentReminderStore = create<PaymentReminderStore>()(
         const newHistory: ReminderHistory = {
           ...historyData,
           id,
-          sentAt: new Date(),
+          sentAt: new Date().toISOString(),
         };
 
         set((state) => ({
@@ -114,7 +114,7 @@ export const usePaymentReminderStore = create<PaymentReminderStore>()(
       },
 
       // 自動リマインダー検知と生成
-      checkAndGenerateReminders: () => {
+      checkAndGenerateReminders: async () => {
         const { settings, history, addHistory } = get();
 
         if (!settings.enabled) {
@@ -129,7 +129,7 @@ export const usePaymentReminderStore = create<PaymentReminderStore>()(
         // 未払い請求書を取得
         const unpaidInvoices = invoiceStore.getAllInvoices().filter((inv) => inv.status !== 'paid');
 
-        unpaidInvoices.forEach((invoice) => {
+        for (const invoice of unpaidInvoices) {
           const dueDate = new Date(invoice.dueDate);
           dueDate.setHours(0, 0, 0, 0);
 
@@ -147,17 +147,17 @@ export const usePaymentReminderStore = create<PaymentReminderStore>()(
 
             if (!alreadySent) {
               // 通知生成
-              const notificationId = notificationStore.addNotification({
+              const notification = await notificationStore.addNotification({
                 type: 'payment_reminder',
-                tenantId: invoice.tenantId,
-                tenantName: invoice.tenantName,
-                recipientEmail: invoice.billingEmail || 'billing@example.com',
-                subject:
+                title:
                   diffDays === 0
                     ? `【支払期限当日】請求書 ${invoice.invoiceNumber} のお支払いをお願いします`
                     : `【支払期限${diffDays}日前】請求書 ${invoice.invoiceNumber} のお支払いをお願いします`,
-                status: 'sent',
-                invoiceNumber: invoice.invoiceNumber,
+                priority: 'normal',
+                tenantId: invoice.tenantId,
+                tenantName: invoice.tenantName,
+                invoiceId: invoice.id,
+                amount: invoice.total,
               });
 
               // 履歴に追加
@@ -169,7 +169,7 @@ export const usePaymentReminderStore = create<PaymentReminderStore>()(
                 dueDate: invoice.dueDate,
                 reminderType: diffDays === 0 ? 'on_due' : 'before_due',
                 daysFromDue: -diffDays,
-                notificationId,
+                notificationId: notification?.id,
               });
             }
           }
@@ -189,14 +189,14 @@ export const usePaymentReminderStore = create<PaymentReminderStore>()(
 
               if (!alreadySent) {
                 // 通知生成
-                const notificationId = notificationStore.addNotification({
+                const notification = await notificationStore.addNotification({
                   type: 'payment_overdue',
+                  title: `【支払期限超過${overdueDays}日】請求書 ${invoice.invoiceNumber} の至急のお支払いをお願いします`,
+                  priority: 'high',
                   tenantId: invoice.tenantId,
                   tenantName: invoice.tenantName,
-                  recipientEmail: invoice.billingEmail || 'billing@example.com',
-                  subject: `【支払期限超過${overdueDays}日】請求書 ${invoice.invoiceNumber} の至急のお支払いをお願いします`,
-                  status: 'sent',
-                  invoiceNumber: invoice.invoiceNumber,
+                  invoiceId: invoice.id,
+                  amount: invoice.total,
                 });
 
                 // 履歴に追加
@@ -208,12 +208,12 @@ export const usePaymentReminderStore = create<PaymentReminderStore>()(
                   dueDate: invoice.dueDate,
                   reminderType: 'overdue',
                   daysFromDue: overdueDays,
-                  notificationId,
+                  notificationId: notification?.id,
                 });
               }
             }
           }
-        });
+        }
       },
 
       // 統計取得

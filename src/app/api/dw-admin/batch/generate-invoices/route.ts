@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
         // 請求書作成
         const invoice = await prismaClient.invoices.create({
           data: {
+            id: crypto.randomUUID(),
             tenantId: tenant.id,
             invoiceNumber,
             billingMonth: new Date(`${targetMonth}-01`),
@@ -114,19 +115,16 @@ export async function POST(request: NextRequest) {
             total,
             status: 'draft',
             dueDate,
-            billingEmail: tenant.tenant_settings?.billingEmail,
-            items: {
-              basePrice,
-              userCount,
-              pricePerUser,
-              taxRate,
-            },
+            billingEmail: tenant.tenant_settings?.billingEmail || '',
+            memo: JSON.stringify({ basePrice, userCount, pricePerUser, taxRate }),
+            updatedAt: new Date(),
           },
         });
 
         // 通知作成
         await prismaClient.dw_notifications.create({
           data: {
+            id: crypto.randomUUID(),
             type: 'invoice_created',
             title: `請求書が作成されました`,
             description: `${tenant.name}の${formatMonth(targetMonth)}分請求書（${invoiceNumber}）が作成されました`,
@@ -140,6 +138,7 @@ export async function POST(request: NextRequest) {
         // アクティビティ記録
         await prismaClient.activity_feeds.create({
           data: {
+            id: crypto.randomUUID(),
             tenantId: tenant.id,
             activityType: 'invoice_generated',
             title: '請求書自動生成',

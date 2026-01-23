@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
     // 休暇申請作成
     const leaveRequest = await prisma.leave_requests.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         userId,
         userName,
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
         days,
         reason,
         status,
+        updatedAt: new Date(),
       },
     });
 

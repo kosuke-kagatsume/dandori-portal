@@ -3,7 +3,12 @@
  * CSV/Excel形式での請求書一覧出力機能
  */
 
-import type { InvoiceData } from '@/lib/billing/invoice-generator';
+import type { InvoiceData as BaseInvoiceData } from '@/lib/billing/invoice-generator';
+
+// 拡張請求書データ型（issueDate を含む）
+type InvoiceData = BaseInvoiceData & {
+  issueDate?: Date | string | null;
+};
 
 // ===== ヘルパー関数 =====
 
@@ -115,7 +120,7 @@ export const exportInvoicesToCSV = (
         year: 'numeric',
         month: 'long',
       }),
-      new Date(invoice.issueDate).toLocaleDateString('ja-JP'),
+      new Date(invoice.issueDate ?? invoice.billingMonth).toLocaleDateString('ja-JP'),
       new Date(invoice.dueDate).toLocaleDateString('ja-JP'),
       invoice.subtotal,
       invoice.tax,
@@ -194,7 +199,7 @@ export const exportInvoiceDetailsToCSV = (
                 month: 'long',
               })
             : '',
-          index === 0 ? new Date(invoice.issueDate).toLocaleDateString('ja-JP') : '',
+          index === 0 ? new Date(invoice.issueDate ?? invoice.billingMonth).toLocaleDateString('ja-JP') : '',
           item.description,
           item.quantity,
           item.unitPrice,

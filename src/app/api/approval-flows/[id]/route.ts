@@ -14,15 +14,15 @@ export async function GET(
     const flow = await prisma.approval_flow_definitions.findUnique({
       where: { id },
       include: {
-        steps: {
+        approval_flow_steps: {
           orderBy: { stepNumber: 'asc' },
           include: {
-            approvers: {
+            approval_flow_approvers: {
               orderBy: { order: 'asc' },
             },
           },
         },
-        conditions: true,
+        approval_flow_conditions: true,
       },
     });
 
@@ -42,12 +42,12 @@ export async function GET(
       documentType: flow.documentType,
       useOrganizationHierarchy: flow.useOrganizationHierarchy,
       organizationLevels: flow.organizationLevels,
-      steps: flow.steps.map((step) => ({
+      steps: flow.approval_flow_steps.map((step) => ({
         id: step.id,
         stepNumber: step.stepNumber,
         name: step.name,
         mode: step.executionMode as 'serial' | 'parallel',
-        approvers: step.approvers.map((approver) => ({
+        approvers: step.approval_flow_approvers.map((approver) => ({
           id: approver.id,
           type: approver.approverType,
           userId: approver.approverId,
@@ -60,7 +60,7 @@ export async function GET(
         allowDelegate: step.allowDelegate,
         allowSkip: step.allowSkip,
       })),
-      conditions: flow.conditions.map((condition) => ({
+      conditions: flow.approval_flow_conditions.map((condition) => ({
         id: condition.id,
         field: condition.field,
         operator: condition.operator,
@@ -149,15 +149,15 @@ export async function PUT(
     // トランザクションで更新
     const flow = await prisma.$transaction(async (tx) => {
       // 既存のステップと条件を削除
-      await tx.approvalFlowStep.deleteMany({
+      await tx.approval_flow_steps.deleteMany({
         where: { flowId: id },
       });
-      await tx.approvalFlowCondition.deleteMany({
+      await tx.approval_flow_conditions.deleteMany({
         where: { flowId: id },
       });
 
       // フローを更新し、新しいステップと条件を作成
-      return tx.approvalFlowDefinition.update({
+      return tx.approval_flow_definitions.update({
         where: { id },
         data: {
           name,
@@ -168,8 +168,9 @@ export async function PUT(
           isActive: isActive ?? true,
           isDefault: isDefault ?? false,
           priority: priority ?? 1,
-          steps: {
+          approval_flow_steps: {
             create: steps?.map((step: any) => ({
+              id: crypto.randomUUID(),
               stepNumber: step.stepNumber,
               name: step.name,
               executionMode: step.mode || 'serial',
@@ -177,36 +178,41 @@ export async function PUT(
               timeoutHours: step.timeoutHours || null,
               allowDelegate: step.allowDelegate ?? true,
               allowSkip: step.allowSkip ?? false,
-              approvers: {
+              updatedAt: new Date(),
+              approval_flow_approvers: {
                 create: step.approvers?.map((approver: any, index: number) => ({
+                  id: crypto.randomUUID(),
                   approverType: approver.type || 'role',
                   approverId: approver.userId || null,
                   approverRole: approver.role || null,
                   positionLevel: approver.positionLevel || null,
                   order: approver.order || index + 1,
+                  updatedAt: new Date(),
                 })) || [],
               },
             })) || [],
           },
-          conditions: {
+          approval_flow_conditions: {
             create: conditions?.map((condition: any) => ({
+              id: crypto.randomUUID(),
               field: condition.field,
               operator: condition.operator,
               value: condition.value,
               description: condition.description || null,
+              updatedAt: new Date(),
             })) || [],
           },
         },
         include: {
-          steps: {
+          approval_flow_steps: {
             orderBy: { stepNumber: 'asc' },
             include: {
-              approvers: {
+              approval_flow_approvers: {
                 orderBy: { order: 'asc' },
               },
             },
           },
-          conditions: true,
+          approval_flow_conditions: true,
         },
       });
     });

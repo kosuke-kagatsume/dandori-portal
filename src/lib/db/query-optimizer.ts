@@ -23,7 +23,7 @@ export async function batchFindByIds<T>(
   }
 
   // 重複を除去
-  const uniqueIds = [...new Set(ids)];
+  const uniqueIds = Array.from(new Set(ids));
 
   // バッチサイズを制限
   const batchedIds = uniqueIds.slice(0, MAX_BATCH_SIZE);
@@ -158,7 +158,7 @@ export class QueryBatcher<T> {
 
   // 即座にバッチを実行
   async loadMany(ids: string[]): Promise<Map<string, T>> {
-    const uniqueIds = [...new Set(ids)];
+    const uniqueIds = Array.from(new Set(ids));
     return this.fetchBatch(uniqueIds);
   }
 }

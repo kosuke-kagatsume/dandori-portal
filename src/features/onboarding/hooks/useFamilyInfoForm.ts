@@ -52,6 +52,7 @@ export function useFamilyInfoForm() {
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [formValues, isDirty, familyInfoForm, updateFamilyInfoForm]);
 
   // Reset form when familyInfoForm changes (e.g., after submission)

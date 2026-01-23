@@ -102,7 +102,7 @@ export function Header() {
     const pathWithoutLocale = pathname.replace(/^\/(ja|en)/, '');
     // 新しい言語でパスを構築
     const newPath = `/${newLocale}${pathWithoutLocale}`;
-    router.push(newPath);
+    router.push(newPath as never);
   };
 
   return (

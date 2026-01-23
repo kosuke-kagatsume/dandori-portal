@@ -39,12 +39,12 @@ export async function GET(request: NextRequest) {
     const certifications = await prisma.certifications.findMany({
       where,
       include: {
-        profile: true,
-        notifications: {
+        employee_profiles: true,
+        certification_notifications: {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
-        renewals: {
+        certification_renewals: {
           where: { status: 'pending' },
           take: 1,
         },
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     });
 
     // userIdリストを収集してユーザー情報を一括取得
-    const userIds = [...new Set(certifications.map(c => c.userId))];
+    const userIds = Array.from(new Set(certifications.map(c => c.userId)));
     const users = await prisma.users.findMany({
       where: { id: { in: userIds } },
       select: {
@@ -77,8 +77,8 @@ export async function GET(request: NextRequest) {
         ...cert,
         daysUntilExpiry,
         isExpired: daysUntilExpiry !== null && daysUntilExpiry < 0,
-        hasOpenRenewal: cert.renewals.length > 0,
-        lastNotification: cert.notifications[0] || null,
+        hasOpenRenewal: cert.certification_renewals.length > 0,
+        lastNotification: cert.certification_notifications[0] || null,
         user: userMap.get(cert.userId) || null,
       };
     });

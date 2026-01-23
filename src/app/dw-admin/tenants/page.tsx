@@ -54,7 +54,7 @@ export default function AdminTenantsPage() {
   // フィルター処理
   const filteredTenants = tenants.filter((tenant) => {
     const matchesSearch = tenant.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || tenant.settings.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || tenant.settings?.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -198,19 +198,19 @@ export default function AdminTenantsPage() {
                     <h3 className="font-bold">{tenant.name}</h3>
                     <Badge
                       variant={
-                        tenant.settings.status === 'active'
+                        tenant.settings?.status === 'active'
                           ? 'default'
-                          : tenant.settings.status === 'trial'
+                          : tenant.settings?.status === 'trial'
                           ? 'secondary'
                           : 'destructive'
                       }
                       className="mt-1"
                     >
-                      {tenant.settings.status === 'active'
+                      {tenant.settings?.status === 'active'
                         ? '有効'
-                        : tenant.settings.status === 'trial'
+                        : tenant.settings?.status === 'trial'
                         ? '試用中'
-                        : tenant.settings.status === 'suspended'
+                        : tenant.settings?.status === 'suspended'
                         ? '停止中'
                         : '解約済み'}
                     </Badge>
@@ -225,9 +225,9 @@ export default function AdminTenantsPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">月次収益</span>
-                  <span className="font-medium">¥{tenant.monthlyRevenue.toLocaleString()}</span>
+                  <span className="font-medium">¥{(tenant.monthlyRevenue ?? 0).toLocaleString()}</span>
                 </div>
-                {tenant.unpaidInvoices > 0 && (
+                {(tenant.unpaidInvoices ?? 0) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">未払い請求書</span>
                     <Badge variant="destructive" className="text-xs">
@@ -266,28 +266,28 @@ export default function AdminTenantsPage() {
                   <TableCell>
                     <Badge
                       variant={
-                        tenant.settings.status === 'active'
+                        tenant.settings?.status === 'active'
                           ? 'default'
-                          : tenant.settings.status === 'trial'
+                          : tenant.settings?.status === 'trial'
                           ? 'secondary'
                           : 'destructive'
                       }
                     >
-                      {tenant.settings.status === 'active'
+                      {tenant.settings?.status === 'active'
                         ? '有効'
-                        : tenant.settings.status === 'trial'
+                        : tenant.settings?.status === 'trial'
                         ? '試用中'
-                        : tenant.settings.status === 'suspended'
+                        : tenant.settings?.status === 'suspended'
                         ? '停止中'
                         : '解約済み'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">{tenant.activeUsers}名</TableCell>
                   <TableCell className="text-right">
-                    ¥{tenant.monthlyRevenue.toLocaleString()}
+                    ¥{(tenant.monthlyRevenue ?? 0).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    {tenant.unpaidInvoices > 0 ? (
+                    {(tenant.unpaidInvoices ?? 0) > 0 ? (
                       <Badge variant="destructive" className="text-xs">
                         {tenant.unpaidInvoices}件
                       </Badge>
@@ -296,7 +296,7 @@ export default function AdminTenantsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right text-sm text-muted-foreground">
-                    {tenant.settings.contractStartDate
+                    {tenant.settings?.contractStartDate
                       ? `${new Date(tenant.settings.contractStartDate).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })}`
                       : 'トライアル'}
                   </TableCell>

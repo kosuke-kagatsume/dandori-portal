@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
         ...(approvalReason !== undefined && { approvalReason }),
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         userId,
         date: new Date(date),
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
         memo,
         approvalStatus,
         approvalReason,
+        updatedAt: new Date(),
       },
       include: {
         user: {

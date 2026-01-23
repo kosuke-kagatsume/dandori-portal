@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTenantId, successResponse } from '@/lib/api/api-helpers';
+import { getTenantId } from '@/lib/api/api-helpers';
 
 // デモ用健康診断データ
 const demoHealthCheckups = [
@@ -202,7 +202,9 @@ export async function GET(request: NextRequest) {
         requiresReexam: demoHealthCheckups.filter(c => c.requiresReexam).length,
         requiresTreatment: demoHealthCheckups.filter(c => c.requiresTreatment).length,
       };
-      return successResponse(demoHealthCheckups, {
+      return NextResponse.json({
+        success: true,
+        data: demoHealthCheckups,
         count: demoHealthCheckups.length,
         pagination: { page: 1, limit: 50, total: demoHealthCheckups.length, totalPages: 1 },
         stats,
@@ -239,7 +241,7 @@ export async function GET(request: NextRequest) {
       prisma.health_checkups.findMany({
         where,
         include: {
-          findings: true,
+          health_findings: true,
         },
         orderBy: { checkupDate: 'desc' },
         take: limit,
@@ -334,6 +336,7 @@ export async function POST(request: NextRequest) {
 
     const checkup = await prisma.health_checkups.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         userId,
         userName,
@@ -371,19 +374,23 @@ export async function POST(request: NextRequest) {
         followUpNotes,
         doctorOpinion,
         workRestriction,
-        findings: findings
+        updatedAt: new Date(),
+        health_findings: findings
           ? {
               create: findings.map((f: { category: string; finding: string; severity: string; recommendation?: string }) => ({
+                id: crypto.randomUUID(),
+                tenantId,
                 category: f.category,
                 finding: f.finding,
                 severity: f.severity,
                 recommendation: f.recommendation,
+                updatedAt: new Date(),
               })),
             }
           : undefined,
       },
       include: {
-        findings: true,
+        health_findings: true,
       },
     });
 

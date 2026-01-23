@@ -56,9 +56,9 @@ describe('UIStore', () => {
 
       expect(useUIStore.getState().density).toBe('compact');
 
-      setDensity('comfortable');
+      setDensity('standard');
 
-      expect(useUIStore.getState().density).toBe('comfortable');
+      expect(useUIStore.getState().density).toBe('standard');
     });
   });
 
@@ -100,13 +100,13 @@ describe('UIStore', () => {
 
       expect(useUIStore.getState().defaultViewMode).toBe('table');
 
-      setViewMode('grid');
+      setViewMode('card');
 
-      expect(useUIStore.getState().defaultViewMode).toBe('grid');
+      expect(useUIStore.getState().defaultViewMode).toBe('card');
 
-      setViewMode('list');
+      setViewMode('table');
 
-      expect(useUIStore.getState().defaultViewMode).toBe('list');
+      expect(useUIStore.getState().defaultViewMode).toBe('table');
     });
   });
 
@@ -188,7 +188,7 @@ describe('UIStore', () => {
       setDensity('standard');
       expect(getDensityClass()).toBe('density-standard');
 
-      setDensity('comfortable');
+      setDensity('standard');
       expect(getDensityClass()).toBe('density-comfortable');
     });
   });

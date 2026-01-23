@@ -48,17 +48,21 @@ export default function InvoiceDetailPage() {
   }
 
   const handleSend = () => {
-    updateInvoice(invoice.id, { status: 'sent', sentDate: new Date() });
+    updateInvoice(invoice.id, { status: 'sent', sentDate: new Date().toISOString() });
     addNotification({
       type: 'invoice_sent',
+      title: `請求書発行: ${invoice.tenantName}`,
+      priority: 'normal',
       tenantId: invoice.tenantId,
       tenantName: invoice.tenantName,
-      recipientEmail: invoice.billingEmail,
+      invoiceId: invoice.id,
+      amount: invoice.total,
+      recipientEmail: invoice.billingEmail ?? '',
       subject: `【請求書発行】${new Date(invoice.billingMonth).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}分`,
       body: `請求書を発行しました`,
       metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: invoice.total },
       status: 'sent',
-      sentAt: new Date(),
+      sentAt: new Date().toISOString(),
     });
     toast.success('請求書を送信しました');
   };
@@ -66,19 +70,23 @@ export default function InvoiceDetailPage() {
   const handlePayment = () => {
     updateInvoice(invoice.id, {
       status: 'paid',
-      paidDate: new Date(paymentForm.paidDate),
+      paidDate: new Date(paymentForm.paidDate).toISOString(),
       paymentMethod: paymentForm.paymentMethod,
     });
     addNotification({
       type: 'payment_received',
+      title: `入金確認: ${invoice.tenantName}`,
+      priority: 'normal',
       tenantId: invoice.tenantId,
       tenantName: invoice.tenantName,
-      recipientEmail: invoice.billingEmail,
+      invoiceId: invoice.id,
+      amount: invoice.total,
+      recipientEmail: invoice.billingEmail ?? '',
       subject: `【入金確認】${new Date(invoice.billingMonth).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}分`,
       body: `ご入金を確認しました`,
       metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: invoice.total, paidDate: paymentForm.paidDate },
       status: 'sent',
-      sentAt: new Date(),
+      sentAt: new Date().toISOString(),
     });
     setPaymentDialogOpen(false);
     toast.success('支払い処理を完了しました');
@@ -197,7 +205,7 @@ export default function InvoiceDetailPage() {
           <CardContent className="space-y-4">
             <div>
               <div className="text-sm text-muted-foreground">発行日</div>
-              <div className="font-medium">{new Date(invoice.issueDate).toLocaleDateString('ja-JP')}</div>
+              <div className="font-medium">{new Date(invoice.issueDate as string).toLocaleDateString('ja-JP')}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">支払期限</div>
@@ -242,7 +250,7 @@ export default function InvoiceDetailPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoice.items.map((item, index) => (
+              {(invoice.items ?? []).map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>{item.description}</TableCell>
                   <TableCell className="text-right">{item.quantity}</TableCell>

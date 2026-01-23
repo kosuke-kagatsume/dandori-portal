@@ -43,12 +43,13 @@ describe('WorkflowStore - Approval Flow', () => {
   });
 
   describe('Approve Request', () => {
-    it('should approve a request successfully', () => {
+    it('should approve a request successfully', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
       // Create a test request
-      act(() => {
-        const requestId = result.current.createRequest({
+      let requestId: string;
+      await act(async () => {
+        requestId = await result.current.createRequest({
           type: 'leave_request',
           title: 'Test Leave',
           description: 'Test',
@@ -93,12 +94,13 @@ describe('WorkflowStore - Approval Flow', () => {
       expect(approvedRequest.approvalSteps[0].comments).toBe('Approved');
     });
 
-    it('should move to next step in multi-step approval', () => {
+    it('should move to next step in multi-step approval', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
       // Create request with 2 approval steps
-      act(() => {
-        const requestId = result.current.createRequest({
+      let requestId: string;
+      await act(async () => {
+        requestId = await result.current.createRequest({
           type: 'expense_claim',
           title: 'Test Expense',
           description: 'Test',
@@ -148,11 +150,12 @@ describe('WorkflowStore - Approval Flow', () => {
       expect(updatedRequest.currentStep).toBe(1);
     });
 
-    it('should complete approval when all steps approved', () => {
+    it('should complete approval when all steps approved', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
-      act(() => {
-        const requestId = result.current.createRequest({
+      let requestId: string;
+      await act(async () => {
+        requestId = await result.current.createRequest({
           type: 'leave_request',
           title: 'Test Leave',
           description: 'Test',
@@ -204,11 +207,12 @@ describe('WorkflowStore - Approval Flow', () => {
       expect(finalRequest.completedAt).toBeDefined();
     });
 
-    it('should add timeline entry on approval', () => {
+    it('should add timeline entry on approval', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
-      act(() => {
-        const requestId = result.current.createRequest({
+      let requestId: string;
+      await act(async () => {
+        requestId = await result.current.createRequest({
           type: 'leave_request',
           title: 'Test',
           description: 'Test',
@@ -250,11 +254,12 @@ describe('WorkflowStore - Approval Flow', () => {
   });
 
   describe('Reject Request', () => {
-    it('should reject a request with reason', () => {
+    it('should reject a request with reason', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
-      act(() => {
-        const requestId = result.current.createRequest({
+      let requestId: string;
+      await act(async () => {
+        requestId = await result.current.createRequest({
           type: 'expense_claim',
           title: 'Test Expense',
           description: 'Test',
@@ -295,11 +300,12 @@ describe('WorkflowStore - Approval Flow', () => {
       expect(rejectedRequest.completedAt).toBeDefined();
     });
 
-    it('should add rejection to timeline', () => {
+    it('should add rejection to timeline', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
-      act(() => {
-        const requestId = result.current.createRequest({
+      let requestId: string;
+      await act(async () => {
+        requestId = await result.current.createRequest({
           type: 'leave_request',
           title: 'Test',
           description: 'Test',
@@ -341,14 +347,14 @@ describe('WorkflowStore - Approval Flow', () => {
   });
 
   describe('Bulk Operations', () => {
-    it('should bulk approve multiple requests', () => {
+    it('should bulk approve multiple requests', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
       // Create multiple requests
       const requestIds: string[] = [];
-      act(() => {
+      await act(async () => {
         for (let i = 0; i < 3; i++) {
-          const id = result.current.createRequest({
+          const id = await result.current.createRequest({
             type: 'leave_request',
             title: `Test ${i}`,
             description: 'Test',
@@ -389,13 +395,13 @@ describe('WorkflowStore - Approval Flow', () => {
       });
     });
 
-    it('should bulk reject multiple requests', () => {
+    it('should bulk reject multiple requests', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
       const requestIds: string[] = [];
-      act(() => {
+      await act(async () => {
         for (let i = 0; i < 2; i++) {
-          const id = result.current.createRequest({
+          const id = await result.current.createRequest({
             type: 'expense_claim',
             title: `Expense ${i}`,
             description: 'Test',
@@ -436,11 +442,11 @@ describe('WorkflowStore - Approval Flow', () => {
   });
 
   describe('Get Pending Approvals', () => {
-    it('should return pending approvals for user', () => {
+    it('should return pending approvals for user', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
-      act(() => {
-        const id = result.current.createRequest({
+      await act(async () => {
+        const id = await result.current.createRequest({
           type: 'leave_request',
           title: 'Test',
           description: 'Test',
@@ -472,11 +478,11 @@ describe('WorkflowStore - Approval Flow', () => {
       expect(pending[0].title).toBe('Test');
     });
 
-    it('should not return completed requests', () => {
+    it('should not return completed requests', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
-      act(() => {
-        const id = result.current.createRequest({
+      await act(async () => {
+        const id = await result.current.createRequest({
           type: 'leave_request',
           title: 'Test',
           description: 'Test',
@@ -510,11 +516,11 @@ describe('WorkflowStore - Approval Flow', () => {
   });
 
   describe('Get My Requests', () => {
-    it('should return requests created by user', () => {
+    it('should return requests created by user', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
-      act(() => {
-        result.current.createRequest({
+      await act(async () => {
+        await result.current.createRequest({
           type: 'leave_request',
           title: 'My Request',
           description: 'Test',
@@ -536,11 +542,11 @@ describe('WorkflowStore - Approval Flow', () => {
       expect(myRequests[0].title).toBe('My Request');
     });
 
-    it('should not return other users requests', () => {
+    it('should not return other users requests', async () => {
       const { result } = renderHook(() => useWorkflowStore());
 
-      act(() => {
-        result.current.createRequest({
+      await act(async () => {
+        await result.current.createRequest({
           type: 'expense_claim',
           title: 'Other Request',
           description: 'Test',

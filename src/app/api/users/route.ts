@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   successResponse,
@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
     // ユーザー作成
     const user = await prisma.users.create({
       data: {
+        id: crypto.randomUUID(),
         email,
         name,
         phone,
@@ -134,6 +135,7 @@ export async function POST(request: NextRequest) {
         position,
         department,
         avatar,
+        updatedAt: new Date(),
       },
       include: {
         org_units: {

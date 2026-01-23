@@ -408,7 +408,7 @@ export function checkAutoApprovalRules(
   requestData: { days?: number; leaveType?: string; isWeekend?: boolean }
 ): boolean {
   // 例: 1日以下の有給は自動承認
-  if (requestType === 'leave' && requestData.days <= 1 && requestData.leaveType === 'annual') {
+  if (requestType === 'leave' && (requestData.days ?? 0) <= 1 && requestData.leaveType === 'annual') {
     return true;
   }
   

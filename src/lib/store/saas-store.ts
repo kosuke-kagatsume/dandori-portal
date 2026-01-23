@@ -197,7 +197,7 @@ const createSaaSStore = () => {
       // 監査ログ記録
       const service = get().getServiceById(assignmentData.serviceId);
       const serviceName = service?.name || assignmentData.serviceId;
-      saasAudit.assignLicense(serviceName, assignmentData.userName);
+      saasAudit.assignLicense(serviceName, assignmentData.userName || assignmentData.userId || '不明');
     },
 
     updateAssignment: (id: string, updates: Partial<LicenseAssignment>) => {
@@ -222,7 +222,7 @@ const createSaaSStore = () => {
       if (assignmentToDelete) {
         const service = get().getServiceById(assignmentToDelete.serviceId);
         const serviceName = service?.name || assignmentToDelete.serviceId;
-        saasAudit.revokeLicense(serviceName, assignmentToDelete.userName);
+        saasAudit.revokeLicense(serviceName, assignmentToDelete.userName || assignmentToDelete.userId || '不明');
       }
     },
 
@@ -385,6 +385,7 @@ const createSaaSStore = () => {
       // 全ユーザーのコストを集計
       state.assignments.forEach((assignment) => {
         if (assignment.status !== 'active') return;
+        if (!assignment.userId) return; // userIdがない場合はスキップ
 
         const userId = assignment.userId;
         const existing = userCostMap.get(userId);
@@ -412,7 +413,7 @@ const createSaaSStore = () => {
           existing.serviceCount += 1;
         } else {
           userCostMap.set(userId, {
-            userName: assignment.userName,
+            userName: assignment.userName || userId,
             totalCost: costForThisService,
             serviceCount: 1,
           });

@@ -139,7 +139,7 @@ export async function deleteCacheByPattern(pattern: string): Promise<void> {
     // メモリキャッシュから削除
     const regex = new RegExp(pattern.replace(/\*/g, '.*'));
     let count = 0;
-    for (const key of memoryCache.keys()) {
+    for (const key of Array.from(memoryCache.keys())) {
       if (regex.test(key)) {
         memoryCache.delete(key);
         count++;

@@ -1,32 +1,37 @@
 "use client";
 
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { openDB, IDBPDatabase } from 'idb';
 
 // オフラインデータベーススキーマ
-interface OfflineDB extends DBSchema {
+// Note: Using simplified schema that avoids complex DBSchema index types
+interface DraftValue {
+  id: string;
+  type: 'workflow' | 'attendance' | 'leave' | 'expense';
+  data: Record<string, unknown>;
+  createdAt: number;
+  updatedAt: number;
+  synced: boolean;
+}
+
+interface PendingActionValue {
+  id: string;
+  action: string;
+  endpoint: string;
+  data: Record<string, unknown>;
+  createdAt: number;
+  retryCount: number;
+  maxRetries: number;
+  synced: boolean;
+}
+
+interface OfflineDB {
   drafts: {
     key: string;
-    value: {
-      id: string;
-      type: 'workflow' | 'attendance' | 'leave' | 'expense';
-      data: Record<string, unknown>;
-      createdAt: number;
-      updatedAt: number;
-      synced: boolean;
-    };
+    value: DraftValue;
   };
   pendingActions: {
     key: string;
-    value: {
-      id: string;
-      action: string;
-      endpoint: string;
-      data: Record<string, unknown>;
-      createdAt: number;
-      retryCount: number;
-      maxRetries: number;
-      synced: boolean;
-    };
+    value: PendingActionValue;
   };
 }
 

@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
         updatedAt: true,
         // 詳細リクエスト時のみ関連データを含める
         ...(includeDetails && {
-          plans: {
+          saas_license_plans: {
             select: {
               id: true,
               planName: true,
@@ -238,7 +238,7 @@ export async function GET(request: NextRequest) {
               isActive: true,
             },
           },
-          assignments: {
+          saas_license_assignments: {
             where: { status: 'active' },
             select: {
               id: true,
@@ -249,7 +249,7 @@ export async function GET(request: NextRequest) {
               status: true,
             },
           },
-          monthlyCosts: {
+          saas_monthly_costs: {
             orderBy: { period: 'desc' as const },
             take: 12,
             select: {
@@ -315,6 +315,7 @@ export async function POST(request: NextRequest) {
 
     const service = await prisma.saas_services.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         name,
         category,
@@ -332,6 +333,7 @@ export async function POST(request: NextRequest) {
         contractEndDate: contractEndDate ? new Date(contractEndDate) : null,
         autoRenew,
         isActive,
+        updatedAt: new Date(),
       },
     });
 

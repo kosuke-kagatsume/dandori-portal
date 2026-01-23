@@ -2,6 +2,16 @@
  * CSV export utilities for SaaS management
  */
 
+import type { LicenseAssignment, SaaSService, LicensePlan } from '@/types/saas';
+
+// SaaS詳細情報の型定義
+export interface UserSaaSDetail {
+  assignment: LicenseAssignment;
+  service: SaaSService;
+  plan: LicensePlan;
+  monthlyCost: number;
+}
+
 /**
  * Convert data to CSV format
  */
@@ -61,33 +71,21 @@ export function exportUserSaaSToCSV(
   userName: string,
   userEmail: string,
   userDepartment: string,
-  saasDetails: Array<{
-    assignment: {
-      status: string;
-      assignedAt: string;
-      lastUsedAt?: string;
-    };
-    service: {
-      name: string;
-      category: string;
-    };
-    plan: {
-      planName: string;
-    };
-    monthlyCost: number;
-  }>
+  saasDetails: UserSaaSDetail[]
 ): void {
   const data: UserSaaSExportData[] = saasDetails.map((detail) => ({
     ユーザー名: userName,
     メールアドレス: userEmail,
     部門: userDepartment || '-',
     サービス名: detail.service.name,
-    カテゴリ: detail.service.category,
+    カテゴリ: String(detail.service.category),
     プラン名: detail.plan.planName,
     ステータス: detail.assignment.status === 'active' ? 'アクティブ' : '非アクティブ',
     月額コスト: detail.monthlyCost,
     年額コスト: detail.monthlyCost * 12,
-    割り当て日: new Date(detail.assignment.assignedAt).toLocaleDateString('ja-JP'),
+    割り当て日: detail.assignment.assignedAt
+      ? new Date(detail.assignment.assignedAt).toLocaleDateString('ja-JP')
+      : '-',
     最終利用日: detail.assignment.lastUsedAt
       ? new Date(detail.assignment.lastUsedAt).toLocaleDateString('ja-JP')
       : '-',
@@ -107,7 +105,7 @@ export function exportUserSaaSToCSV(
     '最終利用日',
   ];
 
-  const csv = convertToCSV(data, headers);
+  const csv = convertToCSV(data as unknown as Record<string, unknown>[], headers);
   const timestamp = new Date().toISOString().slice(0, 10);
   downloadCSV(csv, `SaaS利用状況_${userName}_${timestamp}.csv`);
 }
@@ -155,7 +153,7 @@ export function exportAllUsersSaaSToCSV(
     '利用サービス数',
   ];
 
-  const csv = convertToCSV(data, headers);
+  const csv = convertToCSV(data as unknown as Record<string, unknown>[], headers);
   const timestamp = new Date().toISOString().slice(0, 10);
   downloadCSV(csv, `SaaS利用状況_全ユーザー_${timestamp}.csv`);
 }
@@ -243,7 +241,7 @@ export function exportDetailedAllUsersSaaSToCSV(
     '最終利用日',
   ];
 
-  const csv = convertToCSV(data, headers);
+  const csv = convertToCSV(data as unknown as Record<string, unknown>[], headers);
   const timestamp = new Date().toISOString().slice(0, 10);
   downloadCSV(csv, `SaaS利用状況_詳細_${timestamp}.csv`);
 }

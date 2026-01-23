@@ -338,7 +338,7 @@ export const generateBasePDF = async (config: PDFConfig): Promise<jsPDF> => {
   const doc = new jsPDF();
   await setupJapaneseFont(doc);
 
-  let y = PDF_LAYOUT.MARGIN.TOP;
+  let y: number = PDF_LAYOUT.MARGIN.TOP;
 
   // 1. ヘッダー
   y = drawHeader(doc, config, y);

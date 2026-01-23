@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
 
     const legalUpdate = await prisma.legal_updates.create({
       data: {
+        id: crypto.randomUUID(),
         title,
         description,
         category,
@@ -126,6 +127,7 @@ export async function POST(request: NextRequest) {
         referenceUrl,
         attachments,
         createdBy,
+        updatedAt: new Date(),
       },
     });
 

@@ -19,7 +19,11 @@ export async function GET(request: NextRequest) {
     // 設定がなければデフォルト値で作成
     if (!settings) {
       settings = await prisma.certification_notification_settings.create({
-        data: { tenantId },
+        data: {
+          id: crypto.randomUUID(),
+          tenantId,
+          updatedAt: new Date(),
+        },
       });
     }
 
@@ -61,6 +65,7 @@ export async function PUT(request: NextRequest) {
         updatedAt: new Date(),
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId: finalTenantId,
         notificationDays: notificationDays || [90, 60, 30, 14, 7],
         enableEmailNotification: enableEmailNotification ?? true,
@@ -70,6 +75,7 @@ export async function PUT(request: NextRequest) {
         escalateToHrDays: escalateToHrDays ?? 14,
         autoUpdateStatus: autoUpdateStatus ?? true,
         warningThresholdDays: warningThresholdDays ?? 30,
+        updatedAt: new Date(),
       },
     });
 

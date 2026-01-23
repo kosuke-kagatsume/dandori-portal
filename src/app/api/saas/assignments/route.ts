@@ -186,10 +186,13 @@ export async function POST(request: NextRequest) {
       userEmail,
       userDepartment,
       assignedDate,
-      expiryDate,
-      isActive = true,
+      expiryDate: _expiryDate,
+      isActive: _isActive = true,
       notes,
     } = body;
+    // expiryDate と isActive は将来の機能拡張用
+    void _expiryDate;
+    void _isActive;
 
     if (!serviceId || !userId || !userName) {
       return NextResponse.json(

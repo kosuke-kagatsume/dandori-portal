@@ -43,7 +43,7 @@ beforeEach(() => {
 })
 
 describe('exportAttendanceToCSV', () => {
-  const mockRecords: AttendanceRecord[] = [
+  const mockRecords = [
     {
       userId: 'user-1',
       userName: 'テストユーザー1',
@@ -71,12 +71,12 @@ describe('exportAttendanceToCSV', () => {
       totalBreakMinutes: 60,
       workMinutes: 510,
       overtimeMinutes: 30,
-      workLocation: 'remote',
+      workLocation: 'home',
       status: 'present',
       approvalStatus: 'pending',
       memo: '',
     },
-  ]
+  ] as AttendanceRecord[]
 
   it('正常にCSVファイルをダウンロードする', () => {
     const result = exportAttendanceToCSV(mockRecords)
@@ -109,13 +109,15 @@ describe('exportAttendanceToCSV', () => {
 })
 
 describe('exportPayrollToCSV', () => {
-  const mockRecords: PayrollRecord[] = [
+  const mockRecords = [
     {
       employeeId: 'emp-1',
       employeeName: '山田太郎',
       department: '営業部',
       period: '2024-01',
       basicSalary: 300000,
+      allowances: {},
+      deductions: {},
       totalAllowances: 50000,
       totalDeductions: 70000,
       netSalary: 280000,
@@ -128,13 +130,15 @@ describe('exportPayrollToCSV', () => {
       department: '開発部',
       period: '2024-01',
       basicSalary: 350000,
+      allowances: {},
+      deductions: {},
       totalAllowances: 60000,
       totalDeductions: 80000,
       netSalary: 330000,
       status: 'paid',
       paymentDate: '2024-01-25',
     },
-  ]
+  ] as PayrollRecord[]
 
   it('正常にCSVファイルをダウンロードする', () => {
     const result = exportPayrollToCSV(mockRecords)
@@ -154,7 +158,7 @@ describe('exportPayrollToCSV', () => {
 })
 
 describe('exportBonusToCSV', () => {
-  const mockRecords: BonusRecord[] = [
+  const mockRecords = [
     {
       employeeId: 'emp-1',
       employeeName: '山田太郎',
@@ -164,12 +168,13 @@ describe('exportBonusToCSV', () => {
       basicBonus: 500000,
       performanceBonus: 100000,
       performanceRating: 'A',
+      deductions: {},
       totalDeductions: 120000,
       netBonus: 480000,
       status: 'paid',
       paymentDate: '2024-07-10',
     },
-  ]
+  ] as BonusRecord[]
 
   it('正常にCSVファイルをダウンロードする', () => {
     const result = exportBonusToCSV(mockRecords)

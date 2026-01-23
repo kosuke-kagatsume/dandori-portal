@@ -3,7 +3,8 @@
  * 勤怠・給与・賞与・人事評価データのCSV出力機能
  */
 
-import type { AttendanceRecord, PayrollRecord, BonusRecord, CSVExportResult } from '@/types/csv';
+import type { AttendanceRecord, CSVExportResult } from '@/types/csv';
+import type { PayrollCalculation, BonusCalculation } from '@/lib/payroll/types';
 import type { PerformanceEvaluation } from '@/lib/payroll/performance-evaluation-types';
 import type { LeaveRequest } from '@/lib/store/leave-management-store';
 import type { User } from '@/types';
@@ -157,7 +158,7 @@ export const exportAttendanceToCSV = (
  * 給与データをCSV出力
  */
 export const exportPayrollToCSV = (
-  records: PayrollRecord[],
+  records: PayrollCalculation[],
   filename?: string
 ): CSVExportResult => {
   try {
@@ -222,7 +223,7 @@ export const exportPayrollToCSV = (
  * 賞与データをCSV出力
  */
 export const exportBonusToCSV = (
-  records: BonusRecord[],
+  records: BonusCalculation[],
   filename?: string
 ): CSVExportResult => {
   try {
@@ -261,7 +262,7 @@ export const exportBonusToCSV = (
       record.totalDeductions,
       record.netBonus,
       getStatusLabel(record.status),
-      record.paymentDate || '',
+      record.paidAt || '',
     ]);
 
     const csvString = generateCSVString(headers, rows);
@@ -666,7 +667,7 @@ export const exportPCAssetsToCSV = (
       getAssetStatusLabel(pc.status),
       pc.warrantyExpiration,
       pc.purchaseDate || '',
-      pc.purchasePrice || '',
+      pc.purchaseCost ?? '',
       pc.leaseInfo?.contractStart || '',
       pc.leaseInfo?.contractEnd || '',
       pc.leaseInfo?.monthlyCost || '',
@@ -808,7 +809,7 @@ export const exportLicenseAssignmentsToCSV = (
       assignment.usageCount || 0,
       assignment.revokedDate || '',
       assignment.notes || '',
-    ]);
+    ] as (string | number)[]);
 
     const csvString = generateCSVString(headers, rows);
     const defaultFilename = `license_assignments_${getCurrentDate()}.csv`;
@@ -961,7 +962,7 @@ export const exportHealthCheckupsToCSV = (
       checkup.bloodPressureSystolic || '',
       checkup.bloodPressureDiastolic || '',
       getFollowUpStatusLabel(checkup.followUpStatus),
-      checkup.findings?.map((f) => `${f.category}:${f.finding}`).join('; ') || '',
+      checkup.findings?.map((f) => typeof f === 'string' ? f : `${f.category}:${f.finding}`).join('; ') || '',
     ]);
 
     const csvString = generateCSVString(headers, rows);
@@ -1021,6 +1022,7 @@ export const exportFindingsListToCSV = (
       if (checkup.findings && checkup.findings.length > 0) {
         // 所見がある場合は所見ごとに行を作成
         checkup.findings.forEach((finding) => {
+          const findingObj = typeof finding === 'string' ? { category: '', finding: finding, severity: '' } : finding;
           rows.push([
             checkup.userId,
             checkup.userName,
@@ -1030,9 +1032,9 @@ export const exportFindingsListToCSV = (
             checkup.requiresReexam ? '要' : '不要',
             checkup.requiresTreatment ? '要' : '不要',
             checkup.requiresGuidance ? '要' : '不要',
-            finding.category,
-            finding.finding,
-            finding.severity === 'critical' ? '重度' : finding.severity === 'warning' ? '注意' : '軽度',
+            findingObj.category,
+            findingObj.finding,
+            findingObj.severity === 'critical' ? '重度' : findingObj.severity === 'warning' ? '注意' : '軽度',
             getFollowUpStatusLabel(checkup.followUpStatus),
           ]);
         });

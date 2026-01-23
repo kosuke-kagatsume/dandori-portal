@@ -280,6 +280,7 @@ export async function POST(request: NextRequest) {
     // 請求書作成
     const invoice = await prisma.invoices.create({
       data: {
+        id: crypto.randomUUID(),
         tenants: {
           connect: { id: tenantId },
         },
@@ -292,6 +293,7 @@ export async function POST(request: NextRequest) {
         billingEmail: billingEmail || tenant.tenant_settings?.billingEmail || '',
         memo,
         status: 'draft',
+        updatedAt: new Date(),
       },
       include: {
         tenants: {

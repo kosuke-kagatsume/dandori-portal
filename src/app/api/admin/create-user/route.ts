@@ -55,12 +55,14 @@ export async function POST(request: NextRequest) {
     // ユーザーを作成
     const user = await prisma.users.create({
       data: {
+        id: crypto.randomUUID(),
         email,
         name,
         passwordHash,
         role: role || 'admin',
         tenantId: tenantId || null,
         status: 'active',
+        updatedAt: new Date(),
       },
     });
 

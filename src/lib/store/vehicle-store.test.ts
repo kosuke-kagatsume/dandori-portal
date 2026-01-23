@@ -612,7 +612,7 @@ describe('VehicleStore', () => {
       });
 
       const state3 = useVehicleStore.getState();
-      expect(state3.vendors[0].workCount).toBe(initialWorkCount + 1);
+      expect(state3.vendors[0].workCount).toBe((initialWorkCount ?? 0) + 1);
     });
 
     it('タイヤ交換のメンテナンス記録を追加できる', () => {

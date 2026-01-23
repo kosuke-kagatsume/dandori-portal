@@ -25,6 +25,21 @@ import {
 } from '@/lib/store/notification-history-store';
 import { toast } from 'sonner';
 
+// 通知メタデータの型定義
+interface NotificationMetadata {
+  invoiceId?: string;
+  invoiceNumber?: string;
+  amount?: number;
+  paidDate?: string;
+  dueDate?: string;
+}
+
+// メタデータを安全に取得するヘルパー
+function getMetadata(metadata: Record<string, unknown> | undefined): NotificationMetadata {
+  if (!metadata) return {};
+  return metadata as NotificationMetadata;
+}
+
 export default function NotificationDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -106,7 +121,7 @@ export default function NotificationDetailPage() {
             </p>
           </div>
         </div>
-        {getStatusBadge(notification.status)}
+        {getStatusBadge(notification.status ?? 'pending')}
       </div>
 
       {/* アクション */}
@@ -127,11 +142,11 @@ export default function NotificationDetailPage() {
                 <span className="font-medium">送信完了</span>
               </div>
             )}
-            {notification.metadata?.invoiceId && (
+            {getMetadata(notification.metadata)?.invoiceId && (
               <Button
                 variant="outline"
                 onClick={() =>
-                  router.push(`/dw-admin/invoices/${notification.metadata.invoiceId}`)
+                  router.push(`/dw-admin/invoices/${getMetadata(notification.metadata)?.invoiceId}`)
                 }
               >
                 <FileText className="mr-2 h-4 w-4" />
@@ -208,40 +223,47 @@ export default function NotificationDetailPage() {
               <CardTitle>追加情報</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {notification.metadata.invoiceNumber && (
-                <div>
-                  <div className="text-sm text-muted-foreground">請求書番号</div>
-                  <div className="font-medium">
-                    <code className="bg-muted px-2 py-1 rounded text-xs">
-                      {notification.metadata.invoiceNumber}
-                    </code>
-                  </div>
-                </div>
-              )}
-              {notification.metadata.amount !== undefined && (
-                <div>
-                  <div className="text-sm text-muted-foreground">金額</div>
-                  <div className="font-medium text-green-600">
-                    ¥{notification.metadata.amount.toLocaleString()}
-                  </div>
-                </div>
-              )}
-              {notification.metadata.paidDate && (
-                <div>
-                  <div className="text-sm text-muted-foreground">支払日</div>
-                  <div className="font-medium">
-                    {new Date(notification.metadata.paidDate).toLocaleDateString('ja-JP')}
-                  </div>
-                </div>
-              )}
-              {notification.metadata.dueDate && (
-                <div>
-                  <div className="text-sm text-muted-foreground">支払期限</div>
-                  <div className="font-medium">
-                    {new Date(notification.metadata.dueDate).toLocaleDateString('ja-JP')}
-                  </div>
-                </div>
-              )}
+              {(() => {
+                const meta = getMetadata(notification.metadata);
+                return (
+                  <>
+                    {meta.invoiceNumber && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">請求書番号</div>
+                        <div className="font-medium">
+                          <code className="bg-muted px-2 py-1 rounded text-xs">
+                            {meta.invoiceNumber}
+                          </code>
+                        </div>
+                      </div>
+                    )}
+                    {meta.amount !== undefined && meta.amount !== null && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">金額</div>
+                        <div className="font-medium text-green-600">
+                          ¥{meta.amount.toLocaleString()}
+                        </div>
+                      </div>
+                    )}
+                    {meta.paidDate && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">支払日</div>
+                        <div className="font-medium">
+                          {new Date(meta.paidDate).toLocaleDateString('ja-JP')}
+                        </div>
+                      </div>
+                    )}
+                    {meta.dueDate && (
+                      <div>
+                        <div className="text-sm text-muted-foreground">支払期限</div>
+                        <div className="font-medium">
+                          {new Date(meta.dueDate).toLocaleDateString('ja-JP')}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
         )}

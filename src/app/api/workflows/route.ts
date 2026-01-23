@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   successResponse,
@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
     // ワークフロー作成（承認ステップとタイムラインも同時作成）
     const workflow = await prisma.workflow_requests.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         requesterId,
         requesterName,
@@ -165,8 +166,10 @@ export async function POST(request: NextRequest) {
         dueDate: dueDate ? new Date(dueDate) : null,
         status: 'pending',
         currentStep: 0,
+        updatedAt: new Date(),
         approval_steps: {
           create: approval_steps?.map((step: { approverRole: string; approverId: string; approverName: string; executionMode?: string; timeoutHours?: number }, index: number) => ({
+            id: crypto.randomUUID(),
             tenantId,
             order: index,
             approverRole: step.approverRole,
@@ -175,10 +178,12 @@ export async function POST(request: NextRequest) {
             status: 'pending',
             executionMode: step.executionMode || 'sequential',
             timeoutHours: step.timeoutHours,
+            updatedAt: new Date(),
           })) || [],
         },
         timeline_entries: {
           create: {
+            id: crypto.randomUUID(),
             tenantId,
             action: 'created',
             actorId: requesterId,

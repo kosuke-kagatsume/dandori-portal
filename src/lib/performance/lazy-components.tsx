@@ -4,8 +4,11 @@
  * Next.js 14のdynamic importを活用したコード分割
  */
 
-import dynamic from 'next/dynamic';
+import dynamic, { DynamicOptionsLoadingProps } from 'next/dynamic';
 import { ComponentType } from 'react';
+
+// Next.js dynamic import の型定義
+type DynamicImportLoader<P> = () => Promise<{ default: ComponentType<P> }>;
 
 /**
  * ローディング用のフォールバックコンポーネント
@@ -35,11 +38,12 @@ export const SkeletonFallback = () => (
  * @param ssr - サーバーサイドレンダリングを有効にするか
  */
 export function lazyLoad<P = Record<string, unknown>>(
-  importFunc: () => Promise<{ default: ComponentType<P> }>,
-  fallback: ComponentType = LoadingFallback,
+  importFunc: DynamicImportLoader<P>,
+  fallback: ComponentType<DynamicOptionsLoadingProps> = LoadingFallback,
   ssr = false
 ) {
-  return dynamic(importFunc, {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Next.js dynamic の型制限のため必要
+  return dynamic(importFunc as DynamicImportLoader<Record<string, unknown>>, {
     loading: fallback,
     ssr,
   });
@@ -48,11 +52,12 @@ export function lazyLoad<P = Record<string, unknown>>(
 /**
  * 重いチャートコンポーネントの遅延読み込み
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- recharts の複雑な型定義のため
 export const LazyCharts = {
-  BarChart: lazyLoad(() => import('recharts').then(mod => ({ default: mod.BarChart }))),
-  LineChart: lazyLoad(() => import('recharts').then(mod => ({ default: mod.LineChart }))),
-  PieChart: lazyLoad(() => import('recharts').then(mod => ({ default: mod.PieChart }))),
-  AreaChart: lazyLoad(() => import('recharts').then(mod => ({ default: mod.AreaChart }))),
+  BarChart: lazyLoad(() => import('recharts').then(mod => ({ default: mod.BarChart as ComponentType<Record<string, unknown>> }))),
+  LineChart: lazyLoad(() => import('recharts').then(mod => ({ default: mod.LineChart as ComponentType<Record<string, unknown>> }))),
+  PieChart: lazyLoad(() => import('recharts').then(mod => ({ default: mod.PieChart as ComponentType<Record<string, unknown>> }))),
+  AreaChart: lazyLoad(() => import('recharts').then(mod => ({ default: mod.AreaChart as ComponentType<Record<string, unknown>> }))),
 };
 
 /**
@@ -72,16 +77,18 @@ export function lazyModal<P = Record<string, unknown>>(
  * カレンダーコンポーネントの遅延読み込み
  */
 export const LazyCalendar = lazyLoad(
-  () => import('@/components/ui/calendar').then(mod => ({ default: mod.Calendar })),
+  () => import('@/components/ui/calendar').then(mod => ({ default: mod.Calendar as ComponentType<Record<string, unknown>> })),
   SkeletonFallback,
   false
 );
 
 /**
  * テーブルコンポーネントの遅延読み込み
+ * Note: useReactTable はフックのため、コンポーネントとしてではなくラッパーが必要
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- react-table のフック型定義のため
 export const LazyDataTable = lazyLoad(
-  () => import('@tanstack/react-table').then(mod => ({ default: mod.useReactTable })),
+  () => import('@tanstack/react-table').then(mod => ({ default: mod.useReactTable as unknown as ComponentType<Record<string, unknown>> })),
   SkeletonFallback,
   false
 );

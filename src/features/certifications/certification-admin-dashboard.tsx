@@ -27,11 +27,57 @@ import { useCertificationDashboard } from '@/hooks/use-certification-notificatio
 import { format } from 'date-fns';
 import { CertificationReviewDialog } from './certification-review-dialog';
 
+// 期限接近資格の型定義
+interface ExpiringCertification {
+  id: string;
+  userId: string;
+  name: string;
+  organization: string;
+  expiryDate: string;
+  daysUntilExpiry: number;
+  user?: {
+    name: string;
+    department: string;
+  };
+}
+
+// 期限切れ資格の型定義
+interface ExpiredCertification {
+  id: string;
+  userId: string;
+  name: string;
+  organization: string;
+  expiryDate: string;
+  daysSinceExpiry: number;
+  user?: {
+    name: string;
+    department: string;
+  };
+}
+
+// 更新待ち資格の型定義
+interface PendingRenewal {
+  id: string;
+  userId: string;
+  name: string;
+  organization: string;
+  renewalApplicationDate: string;
+  renewalStatus: string;
+  user?: {
+    name: string;
+    department: string;
+  };
+  certification?: {
+    name: string;
+    organization: string;
+  };
+}
+
 export function CertificationAdminDashboard() {
   const { dashboard, loading, refetch } = useCertificationDashboard();
   // reviewRenewal, submitting from useCertificationRenewals() - 将来使用予定
   // currentUser from useUserStore() - 将来使用予定
-  const [selectedRenewal, setSelectedRenewal] = useState<Record<string, unknown> | null>(null);
+  const [selectedRenewal, setSelectedRenewal] = useState<PendingRenewal | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
   if (loading) {
@@ -57,7 +103,7 @@ export function CertificationAdminDashboard() {
     alert('通知送信機能は準備中です');
   };
 
-  const handleOpenReview = (renewal: Record<string, unknown>) => {
+  const handleOpenReview = (renewal: PendingRenewal) => {
     setSelectedRenewal(renewal);
     setReviewDialogOpen(true);
   };
@@ -174,7 +220,7 @@ export function CertificationAdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      dashboard?.expiringCertifications.map((cert: Record<string, unknown>) => (
+                      dashboard?.expiringCertifications.map((cert: ExpiringCertification) => (
                         <TableRow key={cert.id}>
                           <TableCell>
                             <div>
@@ -255,7 +301,7 @@ export function CertificationAdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      dashboard?.expiredCertifications.map((cert: Record<string, unknown>) => (
+                      dashboard?.expiredCertifications.map((cert: ExpiredCertification) => (
                         <TableRow key={cert.id}>
                           <TableCell>
                             <div>
@@ -326,7 +372,7 @@ export function CertificationAdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      dashboard?.pendingRenewals.map((renewal: Record<string, unknown>) => (
+                      dashboard?.pendingRenewals.map((renewal: PendingRenewal) => (
                         <TableRow key={renewal.id}>
                           <TableCell>
                             <div>
@@ -338,22 +384,22 @@ export function CertificationAdminDashboard() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <p>{renewal.certification.name}</p>
+                              <p>{renewal.certification?.name ?? renewal.name}</p>
                               <p className="text-xs text-muted-foreground">
-                                {renewal.certification.organization}
+                                {renewal.certification?.organization ?? renewal.organization}
                               </p>
                             </div>
                           </TableCell>
                           <TableCell>
-                            {format(new Date(renewal.createdAt), 'yyyy/MM/dd')}
+                            {format(new Date(renewal.renewalApplicationDate), 'yyyy/MM/dd')}
                           </TableCell>
                           <TableCell>
                             <Badge
                               variant={
-                                renewal.status === 'pending' ? 'secondary' : 'outline'
+                                renewal.renewalStatus === 'pending' ? 'secondary' : 'outline'
                               }
                             >
-                              {renewal.status === 'pending' ? '未処理' : '審査中'}
+                              {renewal.renewalStatus === 'pending' ? '未処理' : '審査中'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -382,7 +428,27 @@ export function CertificationAdminDashboard() {
         <CertificationReviewDialog
           open={reviewDialogOpen}
           onOpenChange={setReviewDialogOpen}
-          renewal={selectedRenewal}
+          renewal={{
+            id: selectedRenewal.id,
+            certificationId: selectedRenewal.id,
+            userId: selectedRenewal.userId,
+            newIssueDate: selectedRenewal.renewalApplicationDate,
+            status: selectedRenewal.renewalStatus,
+            documentVerified: false,
+            dateVerified: false,
+            organizationVerified: false,
+            certification: {
+              id: selectedRenewal.id,
+              name: selectedRenewal.certification?.name ?? selectedRenewal.name,
+              organization: selectedRenewal.certification?.organization ?? selectedRenewal.organization,
+              issueDate: selectedRenewal.renewalApplicationDate,
+            },
+            user: selectedRenewal.user ? {
+              id: selectedRenewal.userId,
+              name: selectedRenewal.user.name,
+              department: selectedRenewal.user.department,
+            } : undefined,
+          }}
           onSuccess={() => {
             setSelectedRenewal(null);
             refetch();

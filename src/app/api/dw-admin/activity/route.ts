@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
     // アクティビティ作成
     const activity = await prisma.activity_feeds.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         activityType,
         title,

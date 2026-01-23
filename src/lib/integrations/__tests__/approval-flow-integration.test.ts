@@ -4,8 +4,39 @@
  */
 
 import { generateApprovalStepsFromFlow, workflowTypeToDocumentType } from '../approval-flow-integration';
-import type { ResolvedApprovalRoute } from '@/types/approval-flow';
-import type { OrganizationMember } from '@/types/organization';
+
+// テスト用のローカル型定義（レガシースキーマ互換）
+interface TestApprover {
+  userId: string;
+  name: string;
+  role: string;
+}
+
+interface TestApprovalStep {
+  id: string;
+  order: number;
+  status: string;
+  approvers: TestApprover[];
+  requiredApprovals: number;
+}
+
+interface ResolvedApprovalRoute {
+  flowId: string;
+  flowName: string;
+  flowType: string;
+  steps: TestApprovalStep[];
+}
+
+interface OrganizationMember {
+  id: string;
+  name: string;
+  position: string;
+  department: string;
+  level: number;
+  managerId: string | undefined;
+  email: string;
+  isActive: boolean;
+}
 
 describe('承認フロー統合テスト', () => {
   // デモ組織メンバーデータ - テスト用に保持

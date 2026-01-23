@@ -62,7 +62,7 @@ export function YearEndTab({ settings: _settings, updateSettings: _updateSetting
     setIsSaving(true);
     try {
       await saveYearEndSettings();
-      saveSettings();
+      _saveSettings();
     } catch (error) {
       console.error('保存エラー:', error);
     } finally {

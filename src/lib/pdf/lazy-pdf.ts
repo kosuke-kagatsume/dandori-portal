@@ -4,7 +4,8 @@
  */
 
 import type { PayrollData, BonusData } from '@/types/pdf';
-import type { LeaveRequest, PerformanceEvaluation } from '@/types';
+import type { LeaveRequest } from '@/lib/store/leave-management-store';
+import type { PerformanceEvaluation } from '@/lib/payroll/performance-evaluation-types';
 
 export async function generatePayrollPDFLazy(data: PayrollData) {
   const { generatePayrollPDF } = await import('./payroll-pdf');

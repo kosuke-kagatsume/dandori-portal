@@ -88,6 +88,7 @@ async function main() {
         id: DEMO_TENANT_ID,
         name: 'デモ会社',
         subdomain: 'demo',
+        updatedAt: new Date(),
       }
     });
     console.log('[新規] デモテナントを作成しました');
@@ -134,6 +135,7 @@ async function main() {
             position: user.position,
             tenantId: DEMO_TENANT_ID,
             status: 'active',
+            updatedAt: new Date(),
           }
         });
         console.log(`[新規] ${user.name} (${user.email}) - ${user.role}`);

@@ -65,14 +65,17 @@ export async function POST(request: NextRequest) {
     if (!profile) {
       profile = await prisma.employee_profiles.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: tenantId || 'tenant-1',
           userId,
+          updatedAt: new Date(),
         },
       });
     }
 
     const skill = await prisma.employee_skills.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: tenantId || profile.tenantId,
         profileId: profile.id,
         userId,
@@ -81,6 +84,7 @@ export async function POST(request: NextRequest) {
         level: level || 50,
         selfAssessment,
         notes,
+        updatedAt: new Date(),
       },
     });
 

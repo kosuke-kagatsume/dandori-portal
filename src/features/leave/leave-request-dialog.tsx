@@ -45,13 +45,15 @@ import { LeaveHistoryDialog } from './leave-history-dialog';
 type LeaveUnit = 'full_day' | 'half_day_am' | 'half_day_pm' | 'hourly';
 
 // 承認フロープレビューコンポーネント
-const ApprovalFlowPreview = ({ formData, leaveDays, leaveUnit, currentUserId, leaveTypeName }: {
+const ApprovalFlowPreview = ({ formData, leaveDays, leaveUnit, currentUserId, leaveTypeName, onBack: _onBack }: {
   formData: LeaveRequestData;
   leaveDays: number;
   leaveUnit: LeaveUnit;
   currentUserId: string;
   leaveTypeName: string;
+  onBack?: () => void;
 }) => {
+  void _onBack; // 将来の戻るボタン機能用
   const urgency = leaveDays >= 5 ? 'high' : 'normal';
 
   const previewFlow = createApprovalFlow(

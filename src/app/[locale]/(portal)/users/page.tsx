@@ -90,7 +90,7 @@ export default function UsersPage() {
   const tenantId = currentUser?.tenantId || '';
 
   // 経営者は閲覧のみ（編集・招待・退職処理不可）
-  const isExecutive = currentUser?.role === 'executive';
+  const isExecutive = currentUser?.roles?.includes('executive');
 
   // APIからユーザーを取得
   const fetchUsers = useCallback(async () => {

@@ -10,7 +10,7 @@ export async function GET(
     const license = await prisma.software_licenses.findUnique({
       where: { id: params.id },
       include: {
-        pcAsset: {
+        pc_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -69,7 +69,7 @@ export async function PUT(
         monthlyCost: monthlyCost !== undefined ? (monthlyCost ? parseInt(monthlyCost, 10) : null) : undefined,
       },
       include: {
-        pcAsset: {
+        pc_assets: {
           select: {
             id: true,
             assetNumber: true,

@@ -116,6 +116,7 @@ export async function PUT(request: NextRequest) {
         weeklyHolidays,
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         workStartTime: workStartTime ?? '09:00',
         workEndTime: workEndTime ?? '18:00',
@@ -132,6 +133,7 @@ export async function PUT(request: NextRequest) {
         allowEarlyCheckIn: allowEarlyCheckIn ?? true,
         earlyCheckInMinutes: earlyCheckInMinutes ?? 30,
         weeklyHolidays: weeklyHolidays ?? ['saturday', 'sunday'],
+        updatedAt: new Date(),
       },
     });
 

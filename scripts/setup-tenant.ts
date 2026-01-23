@@ -59,11 +59,13 @@ async function main() {
     console.log('📦 Step 1: テナントを作成中...');
     const tenant = await prisma.tenants.create({
       data: {
+        id: crypto.randomUUID(),
         name: TENANT_CONFIG.name,
         subdomain: TENANT_CONFIG.subdomain,
         timezone: TENANT_CONFIG.timezone,
         closingDay: TENANT_CONFIG.closingDay,
         weekStartDay: TENANT_CONFIG.weekStartDay,
+        updatedAt: new Date(),
       },
     });
     console.log(`   ✅ テナント作成完了: ${tenant.name} (ID: ${tenant.id})\n`);
@@ -74,11 +76,13 @@ async function main() {
     // 会社（ルート組織）
     const rootUnit = await prisma.org_units.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: tenant.id,
         name: ORG_STRUCTURE.company.name,
         type: 'company',
         level: 0,
         parentId: null,
+        updatedAt: new Date(),
       },
     });
     console.log(`   ✅ 会社作成: ${rootUnit.name}`);
@@ -88,11 +92,13 @@ async function main() {
     for (const dept of ORG_STRUCTURE.departments) {
       const unit = await prisma.org_units.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: tenant.id,
           name: dept.name,
           type: 'department',
           level: 1,
           parentId: rootUnit.id,
+          updatedAt: new Date(),
         },
       });
       departments[dept.name] = unit.id;
@@ -108,6 +114,7 @@ async function main() {
 
     const adminUser = await prisma.users.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: tenant.id,
         email: ADMIN_USER.email,
         name: ADMIN_USER.name,
@@ -120,6 +127,7 @@ async function main() {
         roles: ['admin', 'hr'], // 管理者 + 人事権限
         role: 'admin',
         status: 'active',
+        updatedAt: new Date(),
       },
     });
     console.log(`   ✅ 管理者作成: ${adminUser.name} (${adminUser.email})\n`);
@@ -128,8 +136,10 @@ async function main() {
     console.log('⚙️ Step 4: テナント設定を作成中...');
     await prisma.tenant_settings.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: tenant.id,
         status: 'active',
+        updatedAt: new Date(),
       },
     });
     console.log('   ✅ テナント設定作成完了');
@@ -138,12 +148,14 @@ async function main() {
     console.log('⏰ Step 5: 勤怠設定を作成中...');
     await prisma.attendance_settings.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: tenant.id,
         workStartTime: '09:00',
         workEndTime: '18:00',
         breakStartTime: '12:00',
         breakEndTime: '13:00',
         breakDurationMinutes: 60,
+        updatedAt: new Date(),
       },
     });
     console.log('   ✅ 勤怠設定作成完了\n');

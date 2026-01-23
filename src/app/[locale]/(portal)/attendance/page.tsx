@@ -176,11 +176,11 @@ export default function AttendancePage() {
   // ユーザー権限の確認
   const { currentUser, currentDemoUser, isDemoMode } = useUserStore();
   const currentUserRoles = isDemoMode
-    ? (currentDemoUser?.roles || ['employee'])
+    ? (currentDemoUser?.role ? [currentDemoUser.role] : ['employee'])
     : (currentUser?.roles || ['employee']);
 
   // チーム勤怠タブを表示できる権限（人事/マネージャー/経営者/システム管理者）
-  const canViewTeamAttendance = currentUserRoles.some(role =>
+  const canViewTeamAttendance = currentUserRoles.some((role: string) =>
     ['hr', 'manager', 'executive', 'admin', 'system_admin'].includes(role)
   );
 

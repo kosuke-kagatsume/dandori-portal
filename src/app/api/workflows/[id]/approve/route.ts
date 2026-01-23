@@ -96,6 +96,8 @@ export async function POST(
         completedAt,
         timeline_entries: {
           create: {
+            id: crypto.randomUUID(),
+            tenantId: workflow.tenantId,
             action: hasNextStep ? 'approved' : 'completed',
             actorId: approverId,
             actorName: approverName,

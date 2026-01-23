@@ -60,7 +60,7 @@ export function hasMenuAccess(
   userRole: UserRole,
   menuKey: MenuKey
 ): boolean {
-  const allowedRoles = MENU_PERMISSIONS[menuKey];
+  const allowedRoles = MENU_PERMISSIONS[menuKey] as readonly string[];
   return allowedRoles.includes(userRole);
 }
 
@@ -69,7 +69,7 @@ export function hasMenuAccess(
  */
 export function getAccessibleMenus(userRole: UserRole): MenuKey[] {
   return Object.entries(MENU_PERMISSIONS)
-    .filter(([, roles]) => roles.includes(userRole))
+    .filter(([, roles]) => (roles as readonly string[]).includes(userRole))
     .map(([key]) => key as MenuKey);
 }
 

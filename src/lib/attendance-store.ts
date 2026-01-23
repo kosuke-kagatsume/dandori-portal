@@ -161,7 +161,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
         const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 30);
 
         // 位置情報を取得（非同期だがエラーは無視）
-        let locationData;
+        let locationData: LocationData | undefined;
         try {
           const locationResult = await getCurrentLocation();
           if (locationResult.success && locationResult.location) {
@@ -248,7 +248,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
         const isEarlyLeave = now.getHours() < 17;
 
         // 位置情報を取得（非同期だがエラーは無視）
-        let locationData;
+        let locationData: LocationData | undefined;
         try {
           const locationResult = await getCurrentLocation();
           if (locationResult.success && locationResult.location) {

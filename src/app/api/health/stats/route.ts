@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       prisma.health_checkup_summaries.findMany({
         where: {
           tenantId,
-          year,
+          fiscalYear: year,
         },
         orderBy: {
           month: 'asc',
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       prisma.stress_check_summaries.findFirst({
         where: {
           tenantId,
-          year,
+          fiscalYear: year,
         },
       }),
 
@@ -64,22 +64,12 @@ export async function GET(request: NextRequest) {
       prisma.health_checkups.findMany({
         where: {
           tenantId,
-          scheduledDate: {
+          checkupDate: {
             gte: now,
-          },
-          status: 'scheduled',
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              department: true,
-            },
           },
         },
         orderBy: {
-          scheduledDate: 'asc',
+          checkupDate: 'asc',
         },
         take: 10,
       }),
@@ -88,7 +78,7 @@ export async function GET(request: NextRequest) {
       prisma.stress_checks.count({
         where: {
           tenantId,
-          result: 'high_stress',
+          isHighStress: true,
           checkDate: {
             gte: new Date(year, 0, 1),
             lte: new Date(year, 11, 31),
@@ -111,20 +101,20 @@ export async function GET(request: NextRequest) {
       const summary = healthCheckupSummary.find((s) => s.month === i + 1);
       return {
         month: i + 1,
-        scheduledCount: summary?.scheduledCount || 0,
+        scheduledCount: summary?.pendingCount || 0, // pendingCountを使用
         completedCount: summary?.completedCount || 0,
         pendingCount: summary?.pendingCount || 0,
-        abnormalCount: summary?.abnormalCount || 0,
+        abnormalCount: (summary?.resultCCount || 0) + (summary?.resultDCount || 0) + (summary?.resultECount || 0),
       };
     });
 
     // ストレスチェック統計
     const stressCheckStats = stressCheckSummary
       ? {
-          totalParticipants: stressCheckSummary.totalParticipants,
+          totalParticipants: stressCheckSummary.totalEmployees,
           completedCount: stressCheckSummary.completedCount,
           highStressCount: stressCheckSummary.highStressCount,
-          participationRate: stressCheckSummary.participationRate,
+          participationRate: stressCheckSummary.completionRate,
           highStressRate: stressCheckSummary.highStressRate,
         }
       : {
@@ -173,9 +163,9 @@ export async function GET(request: NextRequest) {
           upcomingCheckups: upcomingCheckups.map((c) => ({
             id: c.id,
             userId: c.userId,
-            userName: c.user.name,
-            department: c.user.department,
-            scheduledDate: c.scheduledDate,
+            userName: c.userName,
+            department: null,
+            scheduledDate: c.checkupDate,
           })),
         },
         stressCheck: stressCheckStats,

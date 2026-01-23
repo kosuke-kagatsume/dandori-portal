@@ -9,7 +9,7 @@ export async function GET() {
   try {
     const tenants = await prisma.tenants.findMany({
       include: {
-        settings: true,
+        tenant_settings: true,
         _count: {
           select: {
             users: true,
@@ -120,20 +120,23 @@ export async function POST(request: NextRequest) {
     // テナント作成（トランザクション）
     const tenant = await prisma.$transaction(async (tx) => {
       // テナントを作成
-      const newTenant = await tx.tenant.create({
+      const newTenant = await tx.tenants.create({
         data: {
+          id: crypto.randomUUID(),
           name,
           subdomain,
           logo,
           timezone,
           closingDay,
           weekStartDay,
+          updatedAt: new Date(),
         },
       });
 
       // テナント設定を作成
-      await tx.tenantSettings.create({
+      await tx.tenant_settings.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: newTenant.id,
           billingEmail,
           trialEndDate: trialEndDate ? new Date(trialEndDate) : null,
@@ -142,14 +145,15 @@ export async function POST(request: NextRequest) {
             : null,
           contractEndDate: contractEndDate ? new Date(contractEndDate) : null,
           status,
+          updatedAt: new Date(),
         },
       });
 
       // 作成したテナントを取得（設定込み）
-      return tx.tenant.findUnique({
+      return tx.tenants.findUnique({
         where: { id: newTenant.id },
         include: {
-          settings: true,
+          tenant_settings: true,
         },
       });
     });

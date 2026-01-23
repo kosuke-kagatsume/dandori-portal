@@ -35,7 +35,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
   const _tenantId = currentUser?.tenantId || ''; // API呼び出しで使用予定
 
   // 経営者は閲覧のみ（編集不可）
-  const isExecutive = currentUser?.role === 'executive';
+  const isExecutive = currentUser?.roles?.includes('executive');
 
   // API経由でユーザーデータを取得
   useEffect(() => {
@@ -384,10 +384,10 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                     <p className="text-sm mt-1">{user.department}</p>
                   </div>
                 )}
-                {user.role && (
+                {user.position && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">役職</p>
-                    <p className="text-sm mt-1">{user.role}</p>
+                    <p className="text-sm mt-1">{user.position}</p>
                   </div>
                 )}
                 {user.hireDate && (
@@ -502,7 +502,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                                 {detail.assignment.status === 'active' ? 'アクティブ' : '非アクティブ'}
                               </Badge>
                               <Badge variant="outline">
-                                {categoryLabels[detail.service.category]}
+                                {categoryLabels[detail.service.category as keyof typeof categoryLabels] || detail.service.category}
                               </Badge>
                             </div>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-muted-foreground">
@@ -513,7 +513,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                               <div>
                                 <p className="font-medium">割り当て日</p>
                                 <p>
-                                  {new Date(detail.assignment.assignedAt).toLocaleDateString('ja-JP')}
+                                  {new Date(detail.assignment.assignedAt as string).toLocaleDateString('ja-JP')}
                                 </p>
                               </div>
                               {detail.assignment.lastUsedAt && (

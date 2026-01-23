@@ -176,12 +176,15 @@ export async function POST(request: NextRequest) {
     const {
       name,
       subdomain,
-      plan = 'standard',
+      plan: _plan = 'standard',
       status = 'trial',
       billingEmail,
-      monthlyPrice,
+      monthlyPrice: _monthlyPrice,
       trialEndDate,
     } = body;
+    // plan と monthlyPrice は将来の機能拡張用（現在は tenant_settings で管理）
+    void _plan;
+    void _monthlyPrice;
 
     // バリデーション
     if (!name) {
@@ -208,19 +211,21 @@ export async function POST(request: NextRequest) {
     const tenant = await prisma.$transaction(async (tx) => {
       const newTenant = await tx.tenants.create({
         data: {
+          id: crypto.randomUUID(),
           name,
           subdomain,
+          updatedAt: new Date(),
         },
       });
 
       await tx.tenant_settings.create({
         data: {
+          id: crypto.randomUUID(),
           tenantId: newTenant.id,
           status,
-          plan,
           billingEmail,
-          monthlyPrice,
           trialEndDate: trialEndDate ? new Date(trialEndDate) : undefined,
+          updatedAt: new Date(),
         },
       });
 

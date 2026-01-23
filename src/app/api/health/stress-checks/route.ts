@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTenantId, successResponse } from '@/lib/api/api-helpers';
+import { getTenantId } from '@/lib/api/api-helpers';
 
 // デモ用ストレスチェックデータ
 const demoStressChecks = [
@@ -210,7 +210,9 @@ export async function GET(request: NextRequest) {
         },
       };
 
-      return successResponse(demoStressChecks, {
+      return NextResponse.json({
+        success: true,
+        data: demoStressChecks,
         pagination: { total: demoStressChecks.length, limit: 50, offset: 0, hasMore: false },
         stats,
       });
@@ -354,6 +356,7 @@ export async function POST(request: NextRequest) {
         })
       : await prisma.stress_checks.create({
           data: {
+            id: crypto.randomUUID(),
             tenantId,
             userId,
             userName,
@@ -367,6 +370,7 @@ export async function POST(request: NextRequest) {
             totalScore,
             isHighStress,
             highStressReason,
+            updatedAt: new Date(),
           },
         });
 

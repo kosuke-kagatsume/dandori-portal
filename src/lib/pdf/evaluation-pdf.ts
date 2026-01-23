@@ -156,9 +156,9 @@ export const generateEvaluationPDF = async (evaluation: PerformanceEvaluation): 
 
     // 強み
     if (evaluation.strengths) {
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('✓ 強み', 20, yPos);
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       yPos += 5;
       const strengthLines = doc.splitTextToSize(evaluation.strengths, 170);
       doc.text(strengthLines, 20, yPos);
@@ -173,9 +173,9 @@ export const generateEvaluationPDF = async (evaluation: PerformanceEvaluation): 
 
     // 改善点
     if (evaluation.improvements) {
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('△ 改善点', 20, yPos);
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       yPos += 5;
       const improvementLines = doc.splitTextToSize(evaluation.improvements, 170);
       doc.text(improvementLines, 20, yPos);
@@ -190,9 +190,9 @@ export const generateEvaluationPDF = async (evaluation: PerformanceEvaluation): 
 
     // 次期目標
     if (evaluation.goals) {
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('→ 次期目標', 20, yPos);
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       yPos += 5;
       const goalLines = doc.splitTextToSize(evaluation.goals, 170);
       doc.text(goalLines, 20, yPos);
@@ -207,9 +207,9 @@ export const generateEvaluationPDF = async (evaluation: PerformanceEvaluation): 
 
     // 評価者総合コメント
     if (evaluation.evaluatorComments) {
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text('評価者総合コメント', 20, yPos);
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       yPos += 5;
       const commentLines = doc.splitTextToSize(evaluation.evaluatorComments, 170);
       doc.text(commentLines, 20, yPos);

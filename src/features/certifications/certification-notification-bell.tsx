@@ -44,7 +44,7 @@ export function CertificationNotificationBell() {
     }
   };
 
-  const handleNotificationClick = async (notification: unknown) => {
+  const handleNotificationClick = async (notification: { id: string; readAt?: string }) => {
     if (!notification.readAt) {
       await markAsRead(notification.id);
     }

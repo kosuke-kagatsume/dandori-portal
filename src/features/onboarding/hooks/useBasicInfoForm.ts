@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import {
@@ -9,6 +9,9 @@ import {
 
 // Re-export type for external use
 export type { BasicInfoFormInput };
+
+// Type-safe resolver for Zod schema
+const resolver = zodResolver(basicInfoFormInputSchema) as Resolver<BasicInfoFormInput>;
 
 /**
  * useBasicInfoForm Hook
@@ -26,8 +29,8 @@ export function useBasicInfoForm() {
 
   // Initialize React Hook Form with Zod validation
   const form = useForm<BasicInfoFormInput>({
-    resolver: zodResolver(basicInfoFormInputSchema),
-    defaultValues: basicInfoForm || {},
+    resolver,
+    defaultValues: (basicInfoForm || {}) as BasicInfoFormInput,
     mode: 'onBlur', // Validate on blur for better UX
   });
 
@@ -46,17 +49,18 @@ export function useBasicInfoForm() {
   useEffect(() => {
     if (isDirty && basicInfoForm) {
       const timer = setTimeout(() => {
-        updateBasicInfoForm(formValues);
+        updateBasicInfoForm(formValues as Partial<BasicInfoFormInput>);
       }, 1000); // Debounce 1 second
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [formValues, isDirty, basicInfoForm, updateBasicInfoForm]);
 
   // Reset form when basicInfoForm changes (e.g., after submission)
   useEffect(() => {
     if (basicInfoForm) {
-      reset(basicInfoForm);
+      reset(basicInfoForm as BasicInfoFormInput);
     }
   }, [basicInfoForm, reset]);
 

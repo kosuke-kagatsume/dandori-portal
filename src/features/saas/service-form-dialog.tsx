@@ -120,7 +120,7 @@ export function ServiceFormDialog({ open, onClose, service }: ServiceFormDialogP
         website: service.website,
         logo: service.logo || '',
         description: service.description || '',
-        category: service.category,
+        category: service.category as 'hr' | 'security' | 'communication' | 'productivity' | 'development' | 'design' | 'finance' | 'marketing' | 'sales' | 'storage' | 'other',
         licenseType: service.licenseType,
         ssoEnabled: service.ssoEnabled,
         mfaEnabled: service.mfaEnabled,

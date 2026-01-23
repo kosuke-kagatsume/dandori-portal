@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
     // 休暇残数作成
     const balance = await prisma.leave_balances.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         userId,
         year: parseInt(String(year), 10),
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
         compensatoryLeaveTotal,
         compensatoryLeaveUsed: 0,
         compensatoryLeaveRemaining: compensatoryLeaveTotal,
+        updatedAt: new Date(),
       },
     });
 

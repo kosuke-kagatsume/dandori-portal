@@ -66,7 +66,10 @@ async function main() {
       update: {
         subdomain: tenant.subdomain,
       },
-      create: tenant,
+      create: {
+        ...tenant,
+        updatedAt: new Date(),
+      },
     });
 
     console.log(`✅ ${result.name} (${result.subdomain})`);

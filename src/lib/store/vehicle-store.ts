@@ -2,7 +2,7 @@
  * 車両管理ストア
  */
 
-import { create } from 'zustand';
+import { create, StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { assetAudit } from '@/lib/audit/audit-logger';
 import type {
@@ -413,8 +413,7 @@ const initialState = {
 let idCounter = 0;
 
 const createVehicleStore = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const storeCreator = (set: (fn: (state: VehicleState) => Partial<VehicleState>) => void, get: () => VehicleState & Record<string, unknown>) => ({
+  const storeCreator: StateCreator<VehicleState> = (set, get) => ({
     ...initialState,
 
     // 車両CRUD
@@ -426,7 +425,7 @@ const createVehicleStore = () => {
         createdAt: now,
         updatedAt: now,
       };
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: [...state.vehicles, newVehicle],
       }));
 
@@ -439,7 +438,7 @@ const createVehicleStore = () => {
       // 割り当て変更の監査ログ用に現在の状態を取得
       const currentVehicle = get().vehicles.find((v: Vehicle) => v.id === id);
 
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: state.vehicles.map((v) =>
           v.id === id
             ? { ...v, ...updates, updatedAt: new Date().toISOString() }
@@ -460,7 +459,7 @@ const createVehicleStore = () => {
       // 削除前に情報を取得して監査ログ用に保存
       const vehicleToDelete = get().vehicles.find((v: Vehicle) => v.id === id);
 
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: state.vehicles.filter((v) => v.id !== id),
       }));
 
@@ -487,7 +486,7 @@ const createVehicleStore = () => {
         recordedAt: now,
       };
 
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: state.vehicles.map((v) =>
           v.id === vehicleId
             ? {
@@ -505,7 +504,7 @@ const createVehicleStore = () => {
       mileageId: string,
       updates: Partial<MonthlyMileage>
     ) => {
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: state.vehicles.map((v) =>
           v.id === vehicleId
             ? {
@@ -521,7 +520,7 @@ const createVehicleStore = () => {
     },
 
     deleteMonthlyMileage: (vehicleId: string, mileageId: string) => {
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: state.vehicles.map((v) =>
           v.id === vehicleId
             ? {
@@ -547,7 +546,7 @@ const createVehicleStore = () => {
         updatedAt: now,
       };
 
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: state.vehicles.map((v) =>
           v.id === vehicleId
             ? {
@@ -560,7 +559,7 @@ const createVehicleStore = () => {
       }));
 
       // 業者の作業実績件数を更新
-      set((state: VehicleState) => ({
+      set((state) => ({
         vendors: state.vendors.map((vendor) =>
           vendor.id === record.vendorId
             ? {
@@ -579,7 +578,7 @@ const createVehicleStore = () => {
       updates: Partial<MaintenanceRecord>
     ) => {
       const now = new Date().toISOString();
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: state.vehicles.map((v) =>
           v.id === vehicleId
             ? {
@@ -595,7 +594,7 @@ const createVehicleStore = () => {
     },
 
     deleteMaintenanceRecord: (vehicleId: string, recordId: string) => {
-      set((state: VehicleState) => ({
+      set((state) => ({
         vehicles: state.vehicles.map((v) =>
           v.id === vehicleId
             ? {
@@ -622,13 +621,13 @@ const createVehicleStore = () => {
         createdAt: now,
         updatedAt: now,
       };
-      set((state: VehicleState) => ({
+      set((state) => ({
         vendors: [...state.vendors, newVendor],
       }));
     },
 
     updateVendor: (id: string, updates: Partial<Vendor>) => {
-      set((state: VehicleState) => ({
+      set((state) => ({
         vendors: state.vendors.map((v) =>
           v.id === id
             ? { ...v, ...updates, updatedAt: new Date().toISOString() }
@@ -638,7 +637,7 @@ const createVehicleStore = () => {
     },
 
     deleteVendor: (id: string) => {
-      set((state: VehicleState) => ({
+      set((state) => ({
         vendors: state.vendors.filter((v) => v.id !== id),
       }));
     },

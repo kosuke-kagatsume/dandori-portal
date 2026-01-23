@@ -240,7 +240,7 @@ export default function OnboardingAdminDetailPage() {
         <div className="text-center">
           <p className="text-lg text-gray-600">申請が見つかりませんでした</p>
           <Link
-            href={`/${locale}/onboarding-admin`}
+            href={`/${_locale}/onboarding-admin`}
             className="mt-4 inline-block text-blue-600 hover:text-blue-700"
           >
             一覧に戻る
@@ -363,7 +363,7 @@ export default function OnboardingAdminDetailPage() {
         {/* Header */}
         <div className="mb-6">
           <Link
-            href={`/${locale}/onboarding-admin`}
+            href={`/${_locale}/onboarding-admin`}
             className="mb-4 inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
           >
             <ArrowLeftIcon className="h-4 w-4" />

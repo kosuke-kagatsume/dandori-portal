@@ -125,7 +125,7 @@ export async function GET(
     const checkup = await prisma.health_checkups.findFirst({
       where: { id, tenantId },
       include: {
-        findings: true,
+        health_findings: true,
       },
     });
 
@@ -211,13 +211,13 @@ export async function PUT(
     const checkup = await prisma.$transaction(async (tx) => {
       // 既存の所見を削除
       if (findings) {
-        await tx.healthFinding.deleteMany({
+        await tx.health_findings.deleteMany({
           where: { checkupId: id },
         });
       }
 
       // 健康診断を更新
-      return tx.healthCheckup.update({
+      return tx.health_checkups.update({
         where: { id },
         data: {
           checkupDate: checkupDate ? new Date(checkupDate) : undefined,
@@ -253,19 +253,22 @@ export async function PUT(
           followUpNotes,
           doctorOpinion,
           workRestriction,
-          findings: findings
+          health_findings: findings
             ? {
                 create: findings.map((f: { category: string; finding: string; severity: string; recommendation?: string }) => ({
+                  id: crypto.randomUUID(),
+                  tenantId,
                   category: f.category,
                   finding: f.finding,
                   severity: f.severity,
                   recommendation: f.recommendation,
+                  updatedAt: new Date(),
                 })),
               }
             : undefined,
         },
         include: {
-          findings: true,
+          health_findings: true,
         },
       });
     });

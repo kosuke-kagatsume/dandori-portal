@@ -69,6 +69,8 @@ export function OrganizationChart({
         return 'bg-green-100 text-green-800 border-green-200';
       case 'employee':
         return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -82,6 +84,8 @@ export function OrganizationChart({
         return 'マネージャー';
       case 'employee':
         return '社員';
+      default:
+        return String(role);
     }
   };
 

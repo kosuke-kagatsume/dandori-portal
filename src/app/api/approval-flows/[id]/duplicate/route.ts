@@ -13,15 +13,15 @@ export async function POST(
     const originalFlow = await prisma.approval_flow_definitions.findUnique({
       where: { id },
       include: {
-        steps: {
+        approval_flow_steps: {
           orderBy: { stepNumber: 'asc' },
           include: {
-            approvers: {
+            approval_flow_approvers: {
               orderBy: { order: 'asc' },
             },
           },
         },
-        conditions: true,
+        approval_flow_conditions: true,
       },
     });
 
@@ -35,6 +35,7 @@ export async function POST(
     // 新しいフローを作成（デフォルトはfalseに設定）
     const newFlow = await prisma.approval_flow_definitions.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: originalFlow.tenantId,
         name: `${originalFlow.name} (コピー)`,
         description: originalFlow.description,
@@ -46,8 +47,10 @@ export async function POST(
         isDefault: false, // コピーはデフォルトにしない
         priority: originalFlow.priority,
         createdBy: originalFlow.createdBy,
-        steps: {
-          create: originalFlow.steps.map((step) => ({
+        updatedAt: new Date(),
+        approval_flow_steps: {
+          create: originalFlow.approval_flow_steps.map((step) => ({
+            id: crypto.randomUUID(),
             stepNumber: step.stepNumber,
             name: step.name,
             executionMode: step.executionMode,
@@ -55,36 +58,41 @@ export async function POST(
             timeoutHours: step.timeoutHours,
             allowDelegate: step.allowDelegate,
             allowSkip: step.allowSkip,
-            approvers: {
-              create: step.approvers.map((approver) => ({
+            updatedAt: new Date(),
+            approval_flow_approvers: {
+              create: step.approval_flow_approvers.map((approver) => ({
+                id: crypto.randomUUID(),
                 approverType: approver.approverType,
                 approverId: approver.approverId,
                 approverRole: approver.approverRole,
                 positionLevel: approver.positionLevel,
                 order: approver.order,
+                updatedAt: new Date(),
               })),
             },
           })),
         },
-        conditions: {
-          create: originalFlow.conditions.map((condition) => ({
+        approval_flow_conditions: {
+          create: originalFlow.approval_flow_conditions.map((condition) => ({
+            id: crypto.randomUUID(),
             field: condition.field,
             operator: condition.operator,
             value: condition.value,
             description: condition.description,
+            updatedAt: new Date(),
           })),
         },
       },
       include: {
-        steps: {
+        approval_flow_steps: {
           orderBy: { stepNumber: 'asc' },
           include: {
-            approvers: {
+            approval_flow_approvers: {
               orderBy: { order: 'asc' },
             },
           },
         },
-        conditions: true,
+        approval_flow_conditions: true,
       },
     });
 

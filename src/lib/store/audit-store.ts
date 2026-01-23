@@ -164,6 +164,7 @@ export const useAuditStore = create<AuditStore>()(
           delete: 0,
           approve: 0,
           reject: 0,
+          return: 0,
           export: 0,
           import: 0,
           access: 0,

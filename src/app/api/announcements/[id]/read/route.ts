@@ -43,6 +43,7 @@ export async function POST(
         readAt: new Date(),
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         announcementId,
         userId,

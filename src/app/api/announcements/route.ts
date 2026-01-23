@@ -101,6 +101,7 @@ export async function POST(request: NextRequest) {
 
     const announcement = await prisma.announcements.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         title: body.title,
         content: body.content,
@@ -119,6 +120,7 @@ export async function POST(request: NextRequest) {
         actionDeadline: body.actionDeadline ? new Date(body.actionDeadline) : null,
         createdBy: body.createdBy,
         createdByName: body.createdByName || null,
+        updatedAt: new Date(),
       },
     });
 

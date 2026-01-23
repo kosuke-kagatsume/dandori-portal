@@ -2,12 +2,16 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { UseFormRegister, FieldValues, FieldErrors, Path } from 'react-hook-form';
 import {
   SectionHeader,
   FormSection,
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useCommuteRouteForm, type CommuteRouteFormInput } from '@/features/onboarding/hooks/useCommuteRouteForm';
+
+// Type helpers for form field paths
+type FormPath = Path<CommuteRouteFormInput>;
 
 /**
  * Commute Route Form Page
@@ -25,11 +29,14 @@ export default function CommuteRouteFormPage() {
   const locale = params?.locale as string;
   const applicationId = params?.applicationId as string;
 
-  const { register, handleSubmit, errors, watch, updateForm, submitForm } = useCommuteRouteForm();
+  const { register: _register, handleSubmit, errors: _errors, watch, updateForm, submitForm } = useCommuteRouteForm();
+  // Cast register to FieldValues for FormFields component compatibility
+  const register = _register as UseFormRegister<FieldValues>;
+  const errors = _errors as FieldErrors<FieldValues>;
 
   // Watch dynamic field values for conditional rendering
-  const commuteStatus = watch('commuteStatus') as 'commute' | 'remote' | 'no-office';
-  const transportMethod = watch('transportMethod') as 'public' | 'private' | '';
+  const commuteStatus = watch('commuteStatus' as FormPath) as 'commute' | 'remote' | 'no-office';
+  const transportMethod = watch('transportMethod' as FormPath) as 'public' | 'private' | '';
 
   const onSubmit = async (data: CommuteRouteFormInput) => {
     try {

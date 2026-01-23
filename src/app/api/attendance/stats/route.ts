@@ -172,6 +172,7 @@ export async function GET(request: NextRequest) {
         },
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         date: todayStart,
         totalEmployees,
@@ -181,6 +182,7 @@ export async function GET(request: NextRequest) {
         earlyLeaveCount: earlyLeaves.length,
         absentCount: totalEmployees - presentCount,
         totalOvertimeMinutes,
+        updatedAt: new Date(),
       },
       update: {
         totalEmployees,
@@ -211,7 +213,7 @@ export async function GET(request: NextRequest) {
         statusBreakdown,
         lateArrivals: lateArrivals.map((a) => ({
           userId: a.userId,
-          userName: a.user.name,
+          userName: a.user?.name,
           checkIn: a.checkIn,
         })),
       },

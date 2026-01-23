@@ -432,7 +432,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         }
       },
       
-      updateRequest: (id, updates) => {
+      updateRequest: async (id, updates) => {
         set((state) => ({
           requests: state.requests.map((req) =>
             req.id === id
@@ -535,7 +535,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         }
       },
       
-      approveRequest: (requestId, stepId, comments, requireComment = false) => {
+      approveRequest: async (requestId, stepId, comments, requireComment = false) => {
         // コメント必須チェック
         if (requireComment && !comments) {
           throw new Error('この承認にはコメントが必要です');
@@ -652,7 +652,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
         }
       },
       
-      rejectRequest: (requestId, stepId, reason) => {
+      rejectRequest: async (requestId, stepId, reason) => {
         const now = new Date().toISOString();
         set((state) => {
           const request = state.requests.find(r => r.id === requestId);

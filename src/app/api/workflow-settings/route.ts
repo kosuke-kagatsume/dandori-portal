@@ -88,6 +88,7 @@ export async function PUT(request: NextRequest) {
         enableProxyApproval,
       },
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         defaultApprovalDeadlineDays: defaultApprovalDeadlineDays ?? 3,
         enableAutoEscalation: enableAutoEscalation ?? false,
@@ -97,6 +98,7 @@ export async function PUT(request: NextRequest) {
         requireCommentOnReject: requireCommentOnReject ?? true,
         allowParallelApproval: allowParallelApproval ?? false,
         enableProxyApproval: enableProxyApproval ?? false,
+        updatedAt: new Date(),
       },
     });
 

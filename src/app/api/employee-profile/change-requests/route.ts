@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     });
 
     // ユーザー情報を取得
-    const userIds = [...new Set(changeRequests.map(r => r.userId))];
+    const userIds = Array.from(new Set(changeRequests.map(r => r.userId)));
     const users = await prisma.users.findMany({
       where: { id: { in: userIds } },
       select: { id: true, name: true, email: true, department: true },
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
 
     const changeRequest = await prisma.employee_change_requests.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId: tenantId || 'tenant-1',
         userId,
         requestType,
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
         reason,
         attachments,
         status: 'pending',
+        updatedAt: new Date(),
       },
     });
 
@@ -163,6 +165,7 @@ export async function PATCH(request: NextRequest) {
           if (profile) {
             await prisma.certifications.create({
               data: {
+                id: crypto.randomUUID(),
                 tenantId: changeRequest.tenantId,
                 profileId: profile.id,
                 userId: changeRequest.userId,
@@ -171,6 +174,7 @@ export async function PATCH(request: NextRequest) {
                 issueDate: new Date(certData.issueDate),
                 expiryDate: certData.expiryDate ? new Date(certData.expiryDate) : null,
                 status: 'active',
+                updatedAt: new Date(),
               },
             });
           }

@@ -205,9 +205,9 @@ class APIClient {
    * Build request headers
    */
   private getHeaders(customHeaders?: HeadersInit): HeadersInit {
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...customHeaders,
+      ...(customHeaders as Record<string, string> | undefined),
     };
 
     if (this.token) {

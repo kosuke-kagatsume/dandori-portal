@@ -10,7 +10,7 @@ export async function GET(
     const record = await prisma.maintenance_records.findUnique({
       where: { id: params.id },
       include: {
-        vehicle: {
+        vehicles: {
           select: {
             id: true,
             vehicleNumber: true,
@@ -19,7 +19,7 @@ export async function GET(
             model: true,
           },
         },
-        vendor: {
+        vendors: {
           select: {
             id: true,
             name: true,
@@ -93,14 +93,14 @@ export async function PUT(
         notes,
       },
       include: {
-        vehicle: {
+        vehicles: {
           select: {
             id: true,
             vehicleNumber: true,
             licensePlate: true,
           },
         },
-        vendor: {
+        vendors: {
           select: {
             id: true,
             name: true,

@@ -10,14 +10,14 @@ export async function GET(
     const service = await prisma.saas_services.findUnique({
       where: { id: params.id },
       include: {
-        plans: true,
-        assignments: {
+        saas_license_plans: true,
+        saas_license_assignments: {
           include: {
-            plan: true,
+            saas_license_plans: true,
           },
           orderBy: { assignedDate: 'desc' },
         },
-        monthlyCosts: {
+        saas_monthly_costs: {
           orderBy: { period: 'desc' },
         },
       },
@@ -57,25 +57,20 @@ export async function PUT(
     const {
       name,
       category,
-      provider,
+      vendor,
       description,
       website,
+      logo,
       licenseType,
-      billingCycle,
-      basePrice,
-      currency,
+      securityRating,
       ssoEnabled,
-      mfaRequired,
-      dataResidency,
-      complianceCerts,
+      mfaEnabled,
       contractStartDate,
       contractEndDate,
-      autoRenewal,
-      noticePeriodDays,
+      autoRenew,
       adminEmail,
-      supportContact,
-      status,
-      notes,
+      supportUrl,
+      isActive,
     } = body;
 
     const service = await prisma.saas_services.update({
@@ -83,25 +78,20 @@ export async function PUT(
       data: {
         name,
         category,
-        provider,
+        vendor,
         description,
         website,
+        logo,
         licenseType,
-        billingCycle,
-        basePrice,
-        currency,
+        securityRating,
         ssoEnabled,
-        mfaRequired,
-        dataResidency,
-        complianceCerts,
-        contractStartDate: contractStartDate ? new Date(contractStartDate) : null,
-        contractEndDate: contractEndDate ? new Date(contractEndDate) : null,
-        autoRenewal,
-        noticePeriodDays,
+        mfaEnabled,
+        contractStartDate: contractStartDate ? new Date(contractStartDate) : undefined,
+        contractEndDate: contractEndDate ? new Date(contractEndDate) : undefined,
+        autoRenew,
         adminEmail,
-        supportContact,
-        status,
-        notes,
+        supportUrl,
+        isActive,
       },
     });
 

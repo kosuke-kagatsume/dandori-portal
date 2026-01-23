@@ -16,7 +16,7 @@ export async function GET(
         tenantId,
       },
       include: {
-        repairRecords: {
+        repair_records: {
           orderBy: { date: 'desc' },
         },
       },

@@ -153,7 +153,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       );
 
       if (matchedCommand) {
-        router.push(matchedCommand.href);
+        router.push(matchedCommand.href as never);
         setShortcutBuffer('');
         return;
       }
@@ -180,7 +180,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     onOpenChange(false);
 
     if ('href' in command) {
-      router.push(command.href);
+      router.push(command.href as never);
     } else if ('action' in command) {
       command.action();
     }

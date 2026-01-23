@@ -383,7 +383,7 @@ async function main() {
       console.log(`スキップ: ${data.name}（既に存在）`);
       continue;
     }
-    await prisma.vendors.create({ data });
+    await prisma.vendors.create({ data: { id: crypto.randomUUID(), ...data, updatedAt: new Date() } });
     console.log(`作成: ${data.name}`);
   }
 
@@ -397,7 +397,7 @@ async function main() {
       console.log(`スキップ: ${data.vehicleNumber}（既に存在）`);
       continue;
     }
-    await prisma.vehicles.create({ data });
+    await prisma.vehicles.create({ data: { id: crypto.randomUUID(), ...data, updatedAt: new Date() } });
     console.log(`作成: ${data.vehicleNumber} - ${data.make} ${data.model}`);
   }
 
@@ -411,7 +411,7 @@ async function main() {
       console.log(`スキップ: ${data.assetNumber}（既に存在）`);
       continue;
     }
-    await prisma.pc_assets.create({ data });
+    await prisma.pc_assets.create({ data: { id: crypto.randomUUID(), ...data, updatedAt: new Date() } });
     console.log(`作成: ${data.assetNumber} - ${data.manufacturer} ${data.model}`);
   }
 
@@ -427,7 +427,7 @@ async function main() {
       console.log(`スキップ: ${data.name}（既に存在）`);
       continue;
     }
-    const created = await prisma.saas_services.create({ data });
+    const created = await prisma.saas_services.create({ data: { id: crypto.randomUUID(), ...data, updatedAt: new Date() } });
     serviceIds[data.name] = created.id;
     console.log(`作成: ${data.name}`);
   }
@@ -453,7 +453,7 @@ async function main() {
 
     const { serviceName, ...rest } = planData;
     const created = await prisma.saas_license_plans.create({
-      data: { ...rest, serviceId },
+      data: { id: crypto.randomUUID(), ...rest, serviceId, updatedAt: new Date() },
     });
     planIds[serviceName] = created.id;
     console.log(`作成: ${serviceName} - ${planData.planName}`);
@@ -474,7 +474,7 @@ async function main() {
       });
       if (!existingM365) {
         await prisma.saas_license_assignments.create({
-          data: { ...assignment, serviceId: m365Id, planId: m365PlanId },
+          data: { id: crypto.randomUUID(), ...assignment, serviceId: m365Id, planId: m365PlanId, updatedAt: new Date() },
         });
         console.log(`作成: M365 → ${assignment.userName}`);
       }
@@ -485,7 +485,7 @@ async function main() {
       });
       if (!existingSlack) {
         await prisma.saas_license_assignments.create({
-          data: { ...assignment, serviceId: slackId, planId: slackPlanId },
+          data: { id: crypto.randomUUID(), ...assignment, serviceId: slackId, planId: slackPlanId, updatedAt: new Date() },
         });
         console.log(`作成: Slack → ${assignment.userName}`);
       }

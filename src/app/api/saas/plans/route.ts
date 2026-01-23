@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        service: {
+        saas_services: {
           select: {
             id: true,
             name: true,
@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
 
     const plan = await prisma.saas_license_plans.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         serviceId,
         planName,
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
         maxUsers: maxUsers ? Number(maxUsers) : null,
         features,
         isActive,
+        updatedAt: new Date(),
       },
     });
 

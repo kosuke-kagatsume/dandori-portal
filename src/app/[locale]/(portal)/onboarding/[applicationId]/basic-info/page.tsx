@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { UseFormRegister, FieldValues, Path } from 'react-hook-form';
 import { useBasicInfoForm, type BasicInfoFormInput } from '@/features/onboarding/hooks/useBasicInfoForm';
 import {
   InputField,
@@ -11,6 +12,9 @@ import {
   FormSection,
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+
+// Type helper for form field paths
+type FormPath = Path<BasicInfoFormInput>;
 
 const PREFECTURES = [
   '北海道',
@@ -80,16 +84,17 @@ export default function BasicInfoFormPage() {
   const locale = params?.locale as string;
   const applicationId = params?.applicationId as string;
 
-  const { register, handleSubmit, errors, formState, watch, updateForm, submitForm } =
+  const { register: _register, handleSubmit, errors, formState, watch, updateForm, submitForm } =
     useBasicInfoForm();
+  // Cast register to FieldValues for FormFields component compatibility
+  const register = _register as UseFormRegister<FieldValues>;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _hasPensionBook = watch('socialInsurance.hasPensionBook'); // 条件付きフォームで使用予定
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _hasEmploymentInsurance = watch(
-    'socialInsurance.hasEmploymentInsurance'
-  ); // 条件付きフォームで使用予定
-  const sameAsCurrent = watch('residentAddress.sameAsCurrent');
+  // 条件付きフォームで使用予定
+  const _hasPensionBook = watch('socialInsurance.hasPensionBook' as FormPath);
+  const _hasEmploymentInsurance = watch('socialInsurance.hasEmploymentInsurance' as FormPath);
+  const sameAsCurrent = watch('residentAddress.sameAsCurrent' as FormPath);
+  void _hasPensionBook;
+  void _hasEmploymentInsurance;
 
   const onSubmit = async (data: BasicInfoFormInput) => {
     try {

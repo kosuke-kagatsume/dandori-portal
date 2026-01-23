@@ -88,7 +88,7 @@ export default function LeavePage() {
 
   // ユーザーの権限を確認
   const currentUserRoles = isDemoMode
-    ? (currentDemoUser?.roles || ['employee'])
+    ? (currentDemoUser?.role ? [currentDemoUser.role] : ['employee'])
     : (currentUser?.roles || ['employee']);
   const isHR = currentUserRoles.includes('hr') || currentUserRoles.includes('admin');
 
@@ -178,7 +178,7 @@ export default function LeavePage() {
       createLeaveRequest({
         userId: currentUserId,
         userName: currentUserName,
-        type: data.type || 'paid',
+        type: (data.type || 'paid') as LeaveType,
         startDate: data.startDate,
         endDate: data.endDate,
         days: data.days,
@@ -225,7 +225,7 @@ export default function LeavePage() {
 
     try {
       updateLeaveRequest(editingRequest.id, {
-        type: data.type || editingRequest.type,
+        type: (data.type || editingRequest.type) as LeaveType,
         startDate: data.startDate,
         endDate: data.endDate,
         days: data.days,

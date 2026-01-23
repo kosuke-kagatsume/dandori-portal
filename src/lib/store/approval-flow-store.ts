@@ -279,21 +279,22 @@ const evaluateCondition = (
   if (value === undefined) return false;
 
   const numValue = typeof value === 'number' ? value : parseFloat(String(value));
-  if (isNaN(numValue)) return false;
+  const conditionValue = typeof condition.value === 'number' ? condition.value : parseFloat(String(condition.value));
+  if (isNaN(numValue) || isNaN(conditionValue)) return false;
 
   switch (condition.operator) {
     case 'gte':
-      return numValue >= condition.value;
+      return numValue >= conditionValue;
     case 'lte':
-      return numValue <= condition.value;
+      return numValue <= conditionValue;
     case 'gt':
-      return numValue > condition.value;
+      return numValue > conditionValue;
     case 'lt':
-      return numValue < condition.value;
+      return numValue < conditionValue;
     case 'eq':
-      return numValue === condition.value;
+      return numValue === conditionValue;
     case 'ne':
-      return numValue !== condition.value;
+      return numValue !== conditionValue;
     default:
       return false;
   }
@@ -564,10 +565,8 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
                 });
               }
             } else {
-              // @ts-expect-error - managerId is dynamically added
-              let currentMember: OrganizationMember & { managerId?: string } = requester;
+              let currentMember: OrganizationMember & { managerId?: string } = requester as OrganizationMember & { managerId?: string };
               for (let i = 1; i <= levels; i++) {
-                // @ts-expect-error - managerId is dynamically added
                 const manager = organizationMembers.find((m) => m.id === currentMember.managerId);
 
                 if (manager) {
@@ -589,8 +588,7 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
                     allowDelegate: true,
                     allowSkip: false,
                   });
-                  // @ts-expect-error - managerId is dynamically added
-                  currentMember = manager;
+                  currentMember = manager as OrganizationMember & { managerId?: string };
                 } else {
                   break;
                 }

@@ -27,7 +27,8 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InvoiceDetailModal } from '@/features/billing/invoice-detail-modal';
-import type { InvoiceData } from '@/lib/billing/invoice-generator';
+import type { InvoiceData as StoreInvoiceData } from '@/lib/store/invoice-store';
+import type { InvoiceData as GeneratorInvoiceData } from '@/lib/billing/invoice-generator';
 import { downloadInvoicePDF } from '@/lib/pdf/invoice-pdf';
 import {
   Table,
@@ -44,7 +45,36 @@ export function BillingTab() {
   const { getInvoicesByTenant, initializeInvoices } = useInvoiceStore();
 
   // 請求書詳細モーダル
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<StoreInvoiceData | null>(null);
+
+  // Store型からGenerator型への変換ヘルパー
+  const convertToGeneratorInvoice = (invoice: StoreInvoiceData): GeneratorInvoiceData => {
+    // statusの変換（overdue/cancelledはsent扱いにする）
+    const convertStatus = (status: string): 'draft' | 'sent' | 'paid' => {
+      if (status === 'paid') return 'paid';
+      if (status === 'draft') return 'draft';
+      return 'sent'; // overdue, cancelled, sentはすべてsent扱い
+    };
+
+    return {
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      tenantId: invoice.tenantId,
+      tenantName: invoice.tenantName,
+      billingMonth: new Date(invoice.billingMonth),
+      subtotal: invoice.subtotal,
+      tax: invoice.tax,
+      total: invoice.total,
+      status: convertStatus(invoice.status),
+      dueDate: new Date(invoice.dueDate),
+      paidDate: invoice.paidDate ? new Date(invoice.paidDate) : undefined,
+      sentDate: invoice.sentDate ? new Date(invoice.sentDate) : undefined,
+      paymentMethod: invoice.paymentMethod as 'bank_transfer' | 'credit_card' | 'invoice' | 'other' | undefined,
+      billingEmail: invoice.billingEmail ?? '',
+      memo: invoice.memo,
+      items: invoice.items ?? [],
+    };
+  };
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // 初期化
@@ -85,9 +115,13 @@ export function BillingTab() {
     setProrationResult(proration);
   };
 
-  const handleDownloadPDF = async (invoice: InvoiceData) => {
+  const handleDownloadPDF = async (invoice: StoreInvoiceData | GeneratorInvoiceData) => {
     try {
-      await downloadInvoicePDF(invoice);
+      // 型によって変換するかどうかを判断
+      const generatorInvoice = 'createdAt' in invoice
+        ? convertToGeneratorInvoice(invoice as StoreInvoiceData)
+        : invoice as GeneratorInvoiceData;
+      await downloadInvoicePDF(generatorInvoice);
       toast.success('請求書PDFをダウンロードしました');
     } catch (error) {
       console.error('PDF出力エラー:', error);
@@ -417,10 +451,10 @@ export function BillingTab() {
 
       {/* 請求書詳細モーダル（閲覧専用） */}
       <InvoiceDetailModal
-        invoice={selectedInvoice}
+        invoice={selectedInvoice ? convertToGeneratorInvoice(selectedInvoice) : null}
         open={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
-        onDownloadPDF={handleDownloadPDF}
+        onDownloadPDF={(invoice) => handleDownloadPDF(invoice)}
         readOnly={true}
       />
     </>

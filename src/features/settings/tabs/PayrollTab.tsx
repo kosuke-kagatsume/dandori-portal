@@ -32,7 +32,7 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
     setIsSaving(true);
     try {
       await savePayrollSettings();
-      saveSettings();
+      _saveSettings();
     } catch (error) {
       console.error('保存エラー:', error);
     } finally {

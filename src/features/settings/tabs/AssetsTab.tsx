@@ -14,7 +14,7 @@ export function AssetsTab({ settings: _settings, updateSettings: _updateSettings
       </CardHeader>
       <CardContent>
         <p className="text-muted-foreground">このタブは現在開発中です</p>
-        <Button onClick={saveSettings} className="mt-4">保存</Button>
+        <Button onClick={_saveSettings} className="mt-4">保存</Button>
       </CardContent>
     </Card>
   );

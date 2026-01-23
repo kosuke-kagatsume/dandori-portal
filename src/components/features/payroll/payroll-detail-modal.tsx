@@ -3,12 +3,15 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import type { PayrollCalculation } from '@/lib/store/payroll-store';
+import type { PayrollCalculation, BonusCalculation } from '@/lib/payroll/types';
+
+// 給与明細モーダルは給与計算と賞与計算の両方を表示可能
+type CalculationType = PayrollCalculation | BonusCalculation;
 
 interface PayrollDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  calculation: PayrollCalculation | null;
+  calculation: CalculationType | null;
 }
 
 const formatCurrency = (amount: number): string => {

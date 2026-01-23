@@ -57,6 +57,7 @@ import {
   downloadTemplate,
   type CSVImportResult,
   type CSVImportError,
+  type CSVImportOptions,
 } from '@/lib/csv/csv-import';
 
 type ImportType = 'employee' | 'attendance' | 'leave-usage' | 'leave-grant' | 'transfer-reservation';
@@ -69,7 +70,8 @@ interface ImportConfig {
   maxRows: number;
   templateGenerator: () => string;
   templateFilename: string;
-  importFunction: (csvText: string) => CSVImportResult;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  importFunction: (csvText: string, options?: CSVImportOptions) => CSVImportResult<any>;
 }
 
 const importConfigs: ImportConfig[] = [

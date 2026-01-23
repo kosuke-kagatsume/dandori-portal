@@ -75,7 +75,9 @@ const roleLabels: Record<UserRole, string> = {
   employee: '一般社員',
   manager: 'マネージャー',
   hr: '人事',
-  admin: 'システム管理者'
+  admin: 'システム管理者',
+  executive: '役員',
+  applicant: '応募者',
 };
 
 export function PermissionManagementPanel({

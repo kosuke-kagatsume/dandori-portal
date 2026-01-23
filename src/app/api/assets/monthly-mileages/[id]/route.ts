@@ -10,7 +10,7 @@ export async function GET(
     const mileage = await prisma.monthly_mileages.findUnique({
       where: { id: params.id },
       include: {
-        vehicle: {
+        vehicles: {
           select: {
             id: true,
             vehicleNumber: true,
@@ -67,7 +67,7 @@ export async function PUT(
         recordedByName,
       },
       include: {
-        vehicle: {
+        vehicles: {
           select: {
             id: true,
             vehicleNumber: true,

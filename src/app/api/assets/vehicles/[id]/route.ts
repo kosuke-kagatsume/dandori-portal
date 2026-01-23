@@ -10,13 +10,13 @@ export async function GET(
     const vehicle = await prisma.vehicles.findUnique({
       where: { id: params.id },
       include: {
-        monthlyMileages: {
-          orderBy: { yearMonth: 'desc' },
+        monthly_mileages: {
+          orderBy: { month: 'desc' },
         },
-        maintenanceRecords: {
+        maintenance_records: {
           orderBy: { date: 'desc' },
           include: {
-            vendor: true,
+            vendors: true,
           },
         },
       },
@@ -92,11 +92,11 @@ export async function PUT(
         leaseCompany,
         leaseStartDate: leaseStartDate ? new Date(leaseStartDate) : null,
         leaseEndDate: leaseEndDate ? new Date(leaseEndDate) : null,
-        monthlyLeaseCost,
+        leaseMonthlyCost: monthlyLeaseCost,
         purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
-        purchasePrice,
+        purchaseCost: purchasePrice,
         inspectionDate: inspectionDate ? new Date(inspectionDate) : null,
-        insuranceExpiry: insuranceExpiry ? new Date(insuranceExpiry) : null,
+        insuranceDate: insuranceExpiry ? new Date(insuranceExpiry) : null,
         status,
         notes,
       },

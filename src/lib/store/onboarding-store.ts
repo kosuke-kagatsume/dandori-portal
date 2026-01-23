@@ -156,8 +156,9 @@ const initialState: OnboardingState = {
 
 /**
  * Calculate form completion percentage
+ * @deprecated 将来のフォーム進捗表示機能で使用予定
  */
-function calculateFormProgress(form: OnboardingFormData | null, totalFields: number): number {
+export function calculateFormProgress(form: OnboardingFormData | null, totalFields: number): number {
   if (!form) return 0;
 
   let completedFields = 0;
@@ -698,27 +699,39 @@ export const useOnboardingStore = create<OnboardingStore>()(
         const forms = [
           {
             formType: 'basic_info' as const,
-            name: '入社案内',
+            formName: '入社案内',
             status: getFormStatus(basicInfoForm),
-            progress: calculateFormProgress(basicInfoForm, 39),
+            estimatedTime: '約15分',
+            requiredDocuments: ['身分証明書'],
+            submittedAt: basicInfoForm?.submittedAt,
+            approvedAt: basicInfoForm?.approvedAt,
           },
           {
             formType: 'family_info' as const,
-            name: '家族情報',
+            formName: '家族情報',
             status: getFormStatus(familyInfoForm),
-            progress: calculateFormProgress(familyInfoForm, 10),
+            estimatedTime: '約10分',
+            requiredDocuments: [],
+            submittedAt: familyInfoForm?.submittedAt,
+            approvedAt: familyInfoForm?.approvedAt,
           },
           {
             formType: 'bank_account' as const,
-            name: '給与振込口座',
+            formName: '給与振込口座',
             status: getFormStatus(bankAccountForm),
-            progress: calculateFormProgress(bankAccountForm, 11),
+            estimatedTime: '約5分',
+            requiredDocuments: ['通帳またはキャッシュカード'],
+            submittedAt: bankAccountForm?.submittedAt,
+            approvedAt: bankAccountForm?.approvedAt,
           },
           {
             formType: 'commute_route' as const,
-            name: '通勤経路',
+            formName: '通勤経路',
             status: getFormStatus(commuteRouteForm),
-            progress: calculateFormProgress(commuteRouteForm, 27),
+            estimatedTime: '約10分',
+            requiredDocuments: [],
+            submittedAt: commuteRouteForm?.submittedAt,
+            approvedAt: commuteRouteForm?.approvedAt,
           },
         ];
 
@@ -726,17 +739,17 @@ export const useOnboardingStore = create<OnboardingStore>()(
           (f) => f.status === 'submitted' || f.status === 'approved'
         ).length;
 
-        const totalProgress =
-          forms.reduce((sum, f) => sum + f.progress, 0) / forms.length;
+        // Calculate progress based on completed/submitted forms
+        const totalProgress = Math.round((completedForms / 4) * 100);
 
         let nextAction: string | undefined;
         const draftForm = forms.find((f) => f.status === 'draft');
         const returnedForm = forms.find((f) => f.status === 'returned');
 
         if (returnedForm) {
-          nextAction = `${returnedForm.name}を修正してください`;
+          nextAction = `${returnedForm.formName}を修正してください`;
         } else if (draftForm) {
-          nextAction = `${draftForm.name}を入力してください`;
+          nextAction = `${draftForm.formName}を入力してください`;
         } else if (completedForms === 4) {
           nextAction = 'すべて完了しました';
         }

@@ -70,7 +70,7 @@ export function measureWebVitals(
   if (typeof window === 'undefined') return;
 
   // web-vitalsライブラリを動的インポート
-  import('web-vitals').then(({ onCLS, onFID, onFCP, onLCP, onTTFB }) => {
+  import('web-vitals').then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
     onCLS((metric) => {
       onMetric({
         name: 'CLS',
@@ -80,7 +80,8 @@ export function measureWebVitals(
       });
     });
 
-    onFID((metric) => {
+    // INP replaced FID in web-vitals v3+
+    onINP((metric: { value: number }) => {
       onMetric({
         name: 'FID',
         value: metric.value,

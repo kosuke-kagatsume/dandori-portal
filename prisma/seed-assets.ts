@@ -162,36 +162,42 @@ async function seedAssets() {
       where: { vehicleId_month: { vehicleId: vehicleIds[0], month: '2024-10' } },
       update: {},
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         vehicleId: vehicleIds[0],
         month: '2024-10',
         distance: 1500,
         recordedBy: 'user-001',
         recordedByName: '山田太郎',
+        updatedAt: new Date(),
       },
     }),
     prisma.monthly_mileages.upsert({
       where: { vehicleId_month: { vehicleId: vehicleIds[0], month: '2024-09' } },
       update: {},
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         vehicleId: vehicleIds[0],
         month: '2024-09',
         distance: 1200,
         recordedBy: 'user-001',
         recordedByName: '山田太郎',
+        updatedAt: new Date(),
       },
     }),
     prisma.monthly_mileages.upsert({
       where: { vehicleId_month: { vehicleId: vehicleIds[1], month: '2024-10' } },
       update: {},
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         vehicleId: vehicleIds[1],
         month: '2024-10',
         distance: 800,
         recordedBy: 'user-002',
         recordedByName: '鈴木花子',
+        updatedAt: new Date(),
       },
     }),
   ]);
@@ -206,6 +212,7 @@ async function seedAssets() {
   const maintenanceRecords = await Promise.all([
     prisma.maintenance_records.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         vehicleId: vehicleIds[0],
         type: 'oil_change',
@@ -219,11 +226,12 @@ async function seedAssets() {
         performedBy: 'user-admin',
         performedByName: '管理者',
         notes: '問題なく完了',
-    updatedAt: new Date(),
+        updatedAt: new Date(),
       },
     }),
     prisma.maintenance_records.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         vehicleId: vehicleIds[0],
         type: 'tire_change',
@@ -236,11 +244,12 @@ async function seedAssets() {
         performedBy: 'user-admin',
         performedByName: '管理者',
         notes: 'スタッドレスタイヤ装着',
-    updatedAt: new Date(),
+        updatedAt: new Date(),
       },
     }),
     prisma.maintenance_records.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         vehicleId: vehicleIds[1],
         type: 'inspection',
@@ -253,11 +262,12 @@ async function seedAssets() {
         performedBy: 'user-admin',
         performedByName: '管理者',
         notes: 'ブレーキパッド残量50%',
-    updatedAt: new Date(),
+        updatedAt: new Date(),
       },
     }),
     prisma.maintenance_records.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         vehicleId: vehicleIds[2],
         type: 'other',
@@ -267,6 +277,7 @@ async function seedAssets() {
         description: 'ワイパーブレード交換',
         performedBy: 'user-admin',
         performedByName: '管理者',
+        updatedAt: new Date(),
       },
     }),
   ]);
@@ -279,6 +290,7 @@ async function seedAssets() {
       where: { tenantId_assetNumber: { tenantId, assetNumber: 'PC-001' } },
       update: {},
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         assetNumber: 'PC-001',
         manufacturer: 'Apple',
@@ -297,13 +309,14 @@ async function seedAssets() {
         warrantyExpiration: new Date('2026-10-31'),
         status: 'active',
         notes: '開発用',
-    updatedAt: new Date(),
+        updatedAt: new Date(),
       },
     }),
     prisma.pc_assets.upsert({
       where: { tenantId_assetNumber: { tenantId, assetNumber: 'PC-002' } },
       update: {},
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         assetNumber: 'PC-002',
         manufacturer: 'Dell',
@@ -323,13 +336,14 @@ async function seedAssets() {
         assignedDate: new Date('2023-04-10'),
         status: 'active',
         notes: '営業・プレゼン用',
-    updatedAt: new Date(),
+        updatedAt: new Date(),
       },
     }),
     prisma.pc_assets.upsert({
       where: { tenantId_assetNumber: { tenantId, assetNumber: 'PC-003' } },
       update: {},
       create: {
+        id: crypto.randomUUID(),
         tenantId,
         assetNumber: 'PC-003',
         manufacturer: 'Lenovo',
@@ -345,7 +359,7 @@ async function seedAssets() {
         warrantyExpiration: new Date('2027-01-14'),
         status: 'active',
         notes: '予備機',
-    updatedAt: new Date(),
+        updatedAt: new Date(),
       },
     }),
   ]);
@@ -360,40 +374,48 @@ async function seedAssets() {
   const licenses = await Promise.all([
     prisma.software_licenses.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         pcAssetId: pcAssetIds[0],
         softwareName: 'Microsoft 365 Business',
         licenseKey: 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX',
         expirationDate: new Date('2025-10-31'),
         monthlyCost: 1500,
+        updatedAt: new Date(),
       },
     }),
     prisma.software_licenses.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         pcAssetId: pcAssetIds[0],
         softwareName: 'Adobe Creative Cloud',
         expirationDate: new Date('2025-06-30'),
         monthlyCost: 6480,
+        updatedAt: new Date(),
       },
     }),
     prisma.software_licenses.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         pcAssetId: pcAssetIds[1],
         softwareName: 'Microsoft 365 Business',
         licenseKey: 'YYYYY-YYYYY-YYYYY-YYYYY-YYYYY',
         expirationDate: new Date('2025-10-31'),
         monthlyCost: 1500,
+        updatedAt: new Date(),
       },
     }),
     prisma.software_licenses.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         pcAssetId: pcAssetIds[1],
         softwareName: 'Salesforce',
         expirationDate: new Date('2025-03-31'),
         monthlyCost: 3000,
+        updatedAt: new Date(),
       },
     }),
   ]);

@@ -3,7 +3,21 @@
  */
 
 import { useOrganizationStore } from './organization-store';
-import type { OrganizationNode, OrganizationMember, TransferHistory } from '@/types';
+import type { OrganizationNode, OrganizationMember } from '@/types';
+
+// テスト用のTransferHistory型定義
+interface TransferHistory {
+  id: string;
+  userId?: string;
+  userName: string;
+  fromUnitId: string;
+  fromUnitName: string;
+  toUnitId: string;
+  toUnitName: string;
+  effectiveDate: string;
+  reason: string;
+  createdAt: string;
+}
 
 describe('OrganizationStore', () => {
   beforeEach(() => {
@@ -31,7 +45,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [],
@@ -42,12 +56,9 @@ describe('OrganizationStore', () => {
 
       const newMember: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業部長',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'manager',
         avatar: '',
         status: 'active',
@@ -69,7 +80,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [],
@@ -80,12 +91,9 @@ describe('OrganizationStore', () => {
 
       const member1: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業部長',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'manager',
         avatar: '',
         status: 'active',
@@ -95,12 +103,9 @@ describe('OrganizationStore', () => {
 
       const member2: OrganizationMember = {
         id: 'member-2',
-        userId: 'user-002',
         name: '佐藤花子',
         email: 'sato@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -122,7 +127,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [
           {
@@ -144,12 +149,9 @@ describe('OrganizationStore', () => {
 
       const newMember: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業部長',
-        department: '営業部',
-        nodeId: 'node-2',
         role: 'manager',
         avatar: '',
         status: 'active',
@@ -170,12 +172,9 @@ describe('OrganizationStore', () => {
     it('メンバー情報を更新できる', () => {
       const member: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -187,7 +186,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [member],
@@ -215,12 +214,9 @@ describe('OrganizationStore', () => {
     it('存在しないメンバーを更新しようとしても他のメンバーに影響しない', () => {
       const member: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -232,7 +228,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [member],
@@ -255,12 +251,9 @@ describe('OrganizationStore', () => {
     it('headMemberも更新される', () => {
       const member: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業部長',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'manager',
         avatar: '',
         status: 'active',
@@ -272,7 +265,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [member],
@@ -298,12 +291,9 @@ describe('OrganizationStore', () => {
     it('メンバーを削除できる', () => {
       const member: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -315,7 +305,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [member],
@@ -338,12 +328,9 @@ describe('OrganizationStore', () => {
     it('複数のメンバーから特定のメンバーだけを削除できる', () => {
       const member1: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -353,12 +340,9 @@ describe('OrganizationStore', () => {
 
       const member2: OrganizationMember = {
         id: 'member-2',
-        userId: 'user-002',
         name: '佐藤花子',
         email: 'sato@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -370,7 +354,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [member1, member2],
@@ -394,12 +378,9 @@ describe('OrganizationStore', () => {
     it('selectedMemberが削除対象の場合はnullになる', () => {
       const member: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -411,7 +392,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [member],
@@ -435,12 +416,9 @@ describe('OrganizationStore', () => {
     it('メンバーを別のノードに移動できる', () => {
       const member: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -452,7 +430,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [
           {
@@ -505,7 +483,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [],
@@ -535,7 +513,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [],
@@ -576,7 +554,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [
           {
@@ -613,7 +591,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [
           {
@@ -655,7 +633,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [childNode],
         members: [],
@@ -678,12 +656,9 @@ describe('OrganizationStore', () => {
     it('IDでメンバーを取得できる', () => {
       const member: OrganizationMember = {
         id: 'member-1',
-        userId: 'user-001',
         name: '田中太郎',
         email: 'tanaka@example.com',
         position: '営業担当',
-        department: '営業部',
-        nodeId: 'node-1',
         role: 'employee',
         avatar: '',
         status: 'active',
@@ -710,7 +685,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [
           {
@@ -746,12 +721,9 @@ describe('OrganizationStore', () => {
       const members: OrganizationMember[] = [
         {
           id: 'member-1',
-          userId: 'user-001',
           name: '田中太郎',
           email: 'tanaka@example.com',
           position: '営業部長',
-          department: '営業部',
-          nodeId: 'node-1',
           role: 'manager',
           avatar: '',
           status: 'active',
@@ -760,12 +732,9 @@ describe('OrganizationStore', () => {
         },
         {
           id: 'member-2',
-          userId: 'user-002',
           name: '佐藤花子',
           email: 'sato@example.com',
           position: '開発部長',
-          department: '開発部',
-          nodeId: 'node-2',
           role: 'hr',
           avatar: '',
           status: 'active',
@@ -774,12 +743,9 @@ describe('OrganizationStore', () => {
         },
         {
           id: 'member-3',
-          userId: 'user-003',
           name: '鈴木一郎',
           email: 'suzuki@example.com',
           position: '営業担当',
-          department: '営業部',
-          nodeId: 'node-1',
           role: 'employee',
           avatar: '',
           status: 'inactive',
@@ -829,7 +795,6 @@ describe('OrganizationStore', () => {
     it('異動履歴を追加できる', () => {
       const transfer: TransferHistory = {
         id: 'transfer-1',
-        userId: 'user-001',
         userName: '田中太郎',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
@@ -850,7 +815,6 @@ describe('OrganizationStore', () => {
     it('複数の異動履歴を追加できる', () => {
       const transfer1: TransferHistory = {
         id: 'transfer-1',
-        userId: 'user-001',
         userName: '田中太郎',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
@@ -863,7 +827,6 @@ describe('OrganizationStore', () => {
 
       const transfer2: TransferHistory = {
         id: 'transfer-2',
-        userId: 'user-002',
         userName: '佐藤花子',
         fromUnitId: 'node-2',
         fromUnitName: '開発部',
@@ -886,7 +849,6 @@ describe('OrganizationStore', () => {
     it('ユーザーIDで異動履歴を取得できる', () => {
       const transfer1: TransferHistory = {
         id: 'transfer-1',
-        userId: 'user-001',
         userName: '田中太郎',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
@@ -899,7 +861,6 @@ describe('OrganizationStore', () => {
 
       const transfer2: TransferHistory = {
         id: 'transfer-2',
-        userId: 'user-001',
         userName: '田中太郎',
         fromUnitId: 'node-2',
         fromUnitName: '開発部',
@@ -922,7 +883,6 @@ describe('OrganizationStore', () => {
     it('日付の新しい順にソートされる', () => {
       const transfer1: TransferHistory = {
         id: 'transfer-1',
-        userId: 'user-001',
         userName: '田中太郎',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
@@ -935,7 +895,6 @@ describe('OrganizationStore', () => {
 
       const transfer2: TransferHistory = {
         id: 'transfer-2',
-        userId: 'user-001',
         userName: '田中太郎',
         fromUnitId: 'node-2',
         fromUnitName: '開発部',
@@ -960,7 +919,6 @@ describe('OrganizationStore', () => {
     it('組織IDで異動履歴を取得できる', () => {
       const transfer1: TransferHistory = {
         id: 'transfer-1',
-        userId: 'user-001',
         userName: '田中太郎',
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
@@ -973,7 +931,6 @@ describe('OrganizationStore', () => {
 
       const transfer2: TransferHistory = {
         id: 'transfer-2',
-        userId: 'user-002',
         userName: '佐藤花子',
         fromUnitId: 'node-2',
         fromUnitName: '開発部',
@@ -999,7 +956,6 @@ describe('OrganizationStore', () => {
     it('最近の異動履歴を取得できる', () => {
       const transfers: TransferHistory[] = Array.from({ length: 15 }, (_, i) => ({
         id: `transfer-${i + 1}`,
-        userId: `user-${i + 1}`,
         userName: `ユーザー${i + 1}`,
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
@@ -1019,7 +975,6 @@ describe('OrganizationStore', () => {
     it('デフォルトで10件取得する', () => {
       const transfers: TransferHistory[] = Array.from({ length: 15 }, (_, i) => ({
         id: `transfer-${i + 1}`,
-        userId: `user-${i + 1}`,
         userName: `ユーザー${i + 1}`,
         fromUnitId: 'node-1',
         fromUnitName: '営業部',
@@ -1043,7 +998,7 @@ describe('OrganizationStore', () => {
         id: 'node-1',
         name: '本社',
         type: 'company',
-        parentId: null,
+        parentId: undefined,
         level: 0,
         children: [],
         members: [],

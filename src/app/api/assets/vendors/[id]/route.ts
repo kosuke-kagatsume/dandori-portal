@@ -10,10 +10,10 @@ export async function GET(
     const vendor = await prisma.vendors.findUnique({
       where: { id: params.id },
       include: {
-        maintenanceRecords: {
+        maintenance_records: {
           orderBy: { date: 'desc' },
           include: {
-            vehicle: {
+            vehicles: {
               select: {
                 id: true,
                 vehicleNumber: true,

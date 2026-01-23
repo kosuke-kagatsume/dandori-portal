@@ -1,6 +1,11 @@
 import { User } from '@/types';
 import { getCachedUsers, getCachedAttendanceData, getCachedLeaveData } from './mock-data-cache';
 
+// Mock data types (differ from store types)
+// These types are exported for use in other modules
+export type MockAttendanceData = ReturnType<typeof _generateAttendanceDataInternal>[number];
+export type MockLeaveData = ReturnType<typeof _generateLeaveDataInternal>[number];
+
 // 日本人の姓名データ
 const lastNames = ['佐藤', '鈴木', '高橋', '田中', '渡辺', '伊藤', '山本', '中村', '小林', '加藤', '吉田', '山田', '佐々木', '山口', '松本', '井上', '木村', '林', '斎藤', '清水'];
 const firstNamesMale = ['太郎', '一郎', '健太', '大輔', '翔太', '拓也', '雄太', '健二', '達也', '隆', '誠', '浩', '修', '和也', '直樹'];
@@ -250,8 +255,9 @@ function _generateAttendanceDataInternal() {
 }
 
 // 勤怠データを生成（キャッシュ付き）
-export function generateAttendanceData() {
-  return getCachedAttendanceData(_generateAttendanceDataInternal);
+export function generateAttendanceData(): MockAttendanceData[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 内部モック型とキャッシュ型の互換性のため
+  return getCachedAttendanceData(_generateAttendanceDataInternal as () => MockAttendanceData[]) as unknown as MockAttendanceData[];
 }
 
 // 内部：休暇データを生成（50人分の集計）
@@ -283,8 +289,9 @@ function _generateLeaveDataInternal() {
 }
 
 // 休暇データを生成（キャッシュ付き）
-export function generateLeaveData() {
-  return getCachedLeaveData(_generateLeaveDataInternal);
+export function generateLeaveData(): MockLeaveData[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 内部モック型とキャッシュ型の互換性のため
+  return getCachedLeaveData(_generateLeaveDataInternal as () => MockLeaveData[]) as unknown as MockLeaveData[];
 }
 
 // ダッシュボードの統計データ
@@ -295,7 +302,7 @@ export function getDashboardStats() {
 
   return {
     totalEmployees: 50,
-    todayAttendance: attendance.filter(a => a.status !== '休暇').length,
+    todayAttendance: attendance.filter((a) => a.status !== '休暇').length,
     pendingApprovals: Math.floor(Math.random() * 10) + 5,
     monthlyUtilization: 87.5,
     activeProjects: 12,

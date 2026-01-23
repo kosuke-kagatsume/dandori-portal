@@ -196,7 +196,11 @@ async function main() {
       }
 
       await prisma.legal_updates.create({
-        data,
+        data: {
+          id: crypto.randomUUID(),
+          ...data,
+          updatedAt: new Date(),
+        },
       });
       console.log(`作成: ${data.title}`);
       created++;

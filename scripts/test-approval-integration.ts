@@ -4,7 +4,6 @@
  */
 
 import { generateApprovalStepsFromFlow, workflowTypeToDocumentType } from '../src/lib/integrations/approval-flow-integration';
-import type { ResolvedApprovalRoute } from '../src/types/approval-flow';
 
 console.log('=== 承認フロー統合テスト（手動実行） ===\n');
 
@@ -28,36 +27,35 @@ console.log('  ステップ1: 田中花子（直属の上司、1階層上）');
 console.log('  ステップ2: 鈴木太郎（2階層上）');
 console.log('');
 
-const testCase1: ResolvedApprovalRoute = {
-  flowId: 'FLOW-001',
-  flowName: '標準休暇承認フロー（組織連動）',
-  flowType: 'organization_based',
+const testCase1 = {
   steps: [
     {
-      id: 'STEP-001',
-      order: 1,
-      status: 'pending',
+      name: 'ステップ1: 直属上司承認',
+      mode: 'serial',
       approvers: [
         {
-          userId: 'M002',
+          id: 'M002',
           name: '田中花子',
+          email: 'tanaka@example.com',
           role: 'direct_manager',
         },
       ],
-      requiredApprovals: 1,
+      timeoutHours: 24,
+      allowDelegate: true,
     },
     {
-      id: 'STEP-002',
-      order: 2,
-      status: 'pending',
+      name: 'ステップ2: 上位承認',
+      mode: 'serial',
       approvers: [
         {
-          userId: 'M001',
+          id: 'M001',
           name: '鈴木太郎',
+          email: 'suzuki@example.com',
           role: 'upper_manager',
         },
       ],
-      requiredApprovals: 1,
+      timeoutHours: 48,
+      allowDelegate: false,
     },
   ],
 };
@@ -96,23 +94,21 @@ console.log('期待される承認ルート:');
 console.log('  ステップ1: 鈴木太郎（直属の上司、1階層上）');
 console.log('');
 
-const testCase2: ResolvedApprovalRoute = {
-  flowId: 'FLOW-002',
-  flowName: '標準経費承認フロー（組織連動）',
-  flowType: 'organization_based',
+const testCase2 = {
   steps: [
     {
-      id: 'STEP-001',
-      order: 1,
-      status: 'pending',
+      name: 'ステップ1: 直属上司承認',
+      mode: 'serial',
       approvers: [
         {
-          userId: 'M001',
+          id: 'M001',
           name: '鈴木太郎',
+          email: 'suzuki@example.com',
           role: 'direct_manager',
         },
       ],
-      requiredApprovals: 1,
+      timeoutHours: 24,
+      allowDelegate: true,
     },
   ],
 };
@@ -150,36 +146,35 @@ console.log('  ステップ1: 田中花子（1次承認者）');
 console.log('  ステップ2: 鈴木太郎（最終承認者）');
 console.log('');
 
-const testCase3: ResolvedApprovalRoute = {
-  flowId: 'FLOW-003',
-  flowName: '高額経費承認フロー（カスタム）',
-  flowType: 'custom',
+const testCase3 = {
   steps: [
     {
-      id: 'STEP-001',
-      order: 1,
-      status: 'pending',
+      name: 'ステップ1: 1次承認',
+      mode: 'serial',
       approvers: [
         {
-          userId: 'M002',
+          id: 'M002',
           name: '田中花子',
+          email: 'tanaka@example.com',
           role: 'approver',
         },
       ],
-      requiredApprovals: 1,
+      timeoutHours: 24,
+      allowDelegate: true,
     },
     {
-      id: 'STEP-002',
-      order: 2,
-      status: 'pending',
+      name: 'ステップ2: 最終承認',
+      mode: 'serial',
       approvers: [
         {
-          userId: 'M001',
+          id: 'M001',
           name: '鈴木太郎',
+          email: 'suzuki@example.com',
           role: 'final_approver',
         },
       ],
-      requiredApprovals: 1,
+      timeoutHours: 48,
+      allowDelegate: false,
     },
   ],
 };
@@ -221,7 +216,7 @@ const typeTests = [
 
 let typeTestsPass = true;
 typeTests.forEach(test => {
-  const result = workflowTypeToDocumentType(test.input as any);
+  const result = workflowTypeToDocumentType(test.input as Parameters<typeof workflowTypeToDocumentType>[0]);
   const pass = result === test.expected;
   if (!pass) typeTestsPass = false;
   console.log(`  ${test.input} → ${result ?? 'undefined'} ${pass ? '✅' : '❌'}`);

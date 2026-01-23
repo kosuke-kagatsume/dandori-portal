@@ -392,7 +392,7 @@ export const useLeaveManagementStore = create<LeaveManagementStore>()(
         if (state && state.balances) {
           // オブジェクトをMapに変換
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          state.balances = new Map(Object.entries(state.balances as Record<string, unknown>)) as Map<string, LeaveBalance>;
+          state.balances = new Map(Object.entries(state.balances as unknown as Record<string, LeaveBalance>));
         }
       },
     }

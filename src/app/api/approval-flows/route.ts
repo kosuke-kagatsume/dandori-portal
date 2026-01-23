@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Prismaのクエリ結果の型が複雑なため、anyを許容
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   successResponse,
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         updatedAt: true,
         // 詳細リクエスト時のみ関連データを含める
         ...(includeDetails && {
-          steps: {
+          approval_flow_steps: {
             orderBy: { stepNumber: 'asc' as const },
             select: {
               id: true,
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
               timeoutHours: true,
               allowDelegate: true,
               allowSkip: true,
-              approvers: {
+              approval_flow_approvers: {
                 orderBy: { order: 'asc' as const },
                 select: {
                   id: true,
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
               },
             },
           },
-          conditions: {
+          approval_flow_conditions: {
             select: {
               id: true,
               field: true,
@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
         ...(!includeDetails && {
           _count: {
             select: {
-              steps: true,
-              conditions: true,
+              approval_flow_steps: true,
+              approval_flow_conditions: true,
             },
           },
         }),
@@ -125,15 +125,15 @@ export async function GET(request: NextRequest) {
       };
 
       // 詳細データがある場合のみマッピング
-      if (includeDetails && flow.steps) {
+      if (includeDetails && flow.approval_flow_steps) {
         return {
           ...baseData,
-          steps: flow.steps.map((step: any) => ({
+          steps: flow.approval_flow_steps.map((step: any) => ({
             id: step.id,
             stepNumber: step.stepNumber,
             name: step.name,
             mode: step.executionMode as 'serial' | 'parallel',
-            approvers: step.approvers.map((approver: any) => ({
+            approvers: step.approval_flow_approvers.map((approver: any) => ({
               id: approver.id,
               type: approver.approverType,
               userId: approver.approverId,
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
             allowDelegate: step.allowDelegate,
             allowSkip: step.allowSkip,
           })),
-          conditions: flow.conditions?.map((condition: any) => ({
+          conditions: flow.approval_flow_conditions?.map((condition: any) => ({
             id: condition.id,
             field: condition.field,
             operator: condition.operator as 'gte' | 'lte' | 'gt' | 'lt' | 'eq' | 'ne',
@@ -159,8 +159,8 @@ export async function GET(request: NextRequest) {
       // 一覧用：カウントのみ
       return {
         ...baseData,
-        stepCount: flow._count?.steps || 0,
-        conditionCount: flow._count?.conditions || 0,
+        stepCount: flow._count?.approval_flow_steps || 0,
+        conditionCount: flow._count?.approval_flow_conditions || 0,
       };
     });
 
@@ -234,6 +234,7 @@ export async function POST(request: NextRequest) {
     // フロー作成（ステップと条件も同時作成）
     const flow = await prisma.approval_flow_definitions.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         name,
         description,
@@ -245,8 +246,10 @@ export async function POST(request: NextRequest) {
         isDefault,
         priority,
         createdBy,
-        steps: {
+        updatedAt: new Date(),
+        approval_flow_steps: {
           create: steps?.map((step: any) => ({
+            id: crypto.randomUUID(),
             stepNumber: step.stepNumber,
             name: step.name,
             executionMode: step.mode || 'serial',
@@ -254,36 +257,41 @@ export async function POST(request: NextRequest) {
             timeoutHours: step.timeoutHours || null,
             allowDelegate: step.allowDelegate ?? true,
             allowSkip: step.allowSkip ?? false,
-            approvers: {
+            updatedAt: new Date(),
+            approval_flow_approvers: {
               create: step.approvers?.map((approver: any, index: number) => ({
+                id: crypto.randomUUID(),
                 approverType: approver.type || 'role',
                 approverId: approver.userId || null,
                 approverRole: approver.role || null,
                 positionLevel: approver.positionLevel || null,
                 order: approver.order || index + 1,
+                updatedAt: new Date(),
               })) || [],
             },
           })) || [],
         },
-        conditions: {
+        approval_flow_conditions: {
           create: conditions?.map((condition: any) => ({
+            id: crypto.randomUUID(),
             field: condition.field,
             operator: condition.operator,
             value: condition.value,
             description: condition.description || null,
+            updatedAt: new Date(),
           })) || [],
         },
       },
       include: {
-        steps: {
+        approval_flow_steps: {
           orderBy: { stepNumber: 'asc' },
           include: {
-            approvers: {
+            approval_flow_approvers: {
               orderBy: { order: 'asc' },
             },
           },
         },
-        conditions: true,
+        approval_flow_conditions: true,
       },
     });
 

@@ -26,7 +26,9 @@ interface FormCardProps {
  * - Action button
  */
 export function FormCard({ form, applicationId, locale }: FormCardProps) {
-  const { formType, name, status, progress } = form;
+  const { formType, formName: name, status } = form;
+  // Calculate progress based on status
+  const progress = status === 'approved' || status === 'submitted' ? 100 : status === 'draft' ? 50 : 0;
 
   // Get status icon and color
   const getStatusDisplay = () => {
@@ -129,7 +131,7 @@ export function FormCard({ form, applicationId, locale }: FormCardProps) {
 
       {/* Action button */}
       <Link
-        href={getFormUrl()}
+        href={getFormUrl() as never}
         className={`inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors ${
           isEditable
             ? 'bg-blue-600 text-white hover:bg-blue-700'

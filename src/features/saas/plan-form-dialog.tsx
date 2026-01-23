@@ -90,10 +90,10 @@ export function PlanFormDialog({ open, onClose, serviceId, plan }: PlanFormDialo
     if (plan && open) {
       reset({
         planName: plan.planName,
-        billingCycle: plan.billingCycle,
+        billingCycle: plan.billingCycle as 'monthly' | 'yearly',
         pricePerUser: plan.pricePerUser?.toString() || '',
         fixedPrice: plan.fixedPrice?.toString() || '',
-        currency: plan.currency,
+        currency: plan.currency as 'JPY' | 'USD',
         maxUsers: plan.maxUsers?.toString() || '',
         isActive: plan.isActive,
       });

@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
       last6Months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
 
-    const categories = [...new Set(Object.keys(categoryTotals))];
+    const categories = Array.from(new Set(Object.keys(categoryTotals)));
     const saasMonthlyTrend = last6Months.map((month) => {
       const data: Record<string, number | string> = { month };
       categories.forEach((cat) => {

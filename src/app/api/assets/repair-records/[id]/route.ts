@@ -16,7 +16,7 @@ export async function GET(
         tenantId,
       },
       include: {
-        pcAsset: {
+        pc_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -24,7 +24,7 @@ export async function GET(
             model: true,
           },
         },
-        generalAsset: {
+        general_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -99,7 +99,7 @@ export async function PUT(
         notes: body.notes || null,
       },
       include: {
-        pcAsset: {
+        pc_assets: {
           select: {
             id: true,
             assetNumber: true,
@@ -107,7 +107,7 @@ export async function PUT(
             model: true,
           },
         },
-        generalAsset: {
+        general_assets: {
           select: {
             id: true,
             assetNumber: true,

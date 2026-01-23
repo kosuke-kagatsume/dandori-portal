@@ -119,7 +119,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
             const navItem = (
               <Link
                 key={item.key}
-                href={item.href}
+                href={item.href as never}
                 prefetch={true}
                 onClick={() => onNavigate?.()}
                 className={cn(

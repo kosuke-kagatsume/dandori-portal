@@ -3,7 +3,8 @@
  */
 
 import { usePayrollStore } from './payroll-store';
-import type { EmployeeSalaryMaster, PayrollCalculation, BonusCalculation } from './payroll-store';
+import type { EmployeeSalaryMaster, PayrollCalculation, BonusCalculation } from '@/lib/payroll/types';
+import type { BonusEvaluation } from '@/lib/payroll/performance-evaluation-types';
 
 describe('PayrollStore', () => {
   beforeEach(() => {
@@ -22,7 +23,7 @@ describe('PayrollStore', () => {
 
   describe('updateSalaryMaster', () => {
     it('給与マスタを更新できる', async () => {
-      const salaryMaster: Omit<EmployeeSalaryMaster, 'id' | 'createdAt' | 'updatedAt'> = {
+      const salaryMaster = {
         employeeId: 'emp-001',
         employeeName: '田中太郎',
         department: '営業部',
@@ -49,9 +50,7 @@ describe('PayrollStore', () => {
         salaryMasters: [{
           ...salaryMaster,
           id: 'master-1',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }],
+        }] as EmployeeSalaryMaster[],
       });
 
       const state1 = usePayrollStore.getState();
@@ -96,7 +95,6 @@ describe('PayrollStore', () => {
         pensionRate: 0.0915,
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 22000,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -143,7 +141,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 40000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -185,7 +182,6 @@ describe('PayrollStore', () => {
         pensionRate: 0.0915,
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -226,7 +222,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -263,7 +258,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -306,7 +300,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -343,7 +336,6 @@ describe('PayrollStore', () => {
         unionFee: 3000,
         savingsAmount: 20000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -384,7 +376,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -635,7 +626,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -673,7 +663,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -709,7 +698,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -745,7 +733,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -782,7 +769,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -818,7 +804,6 @@ describe('PayrollStore', () => {
         employmentInsuranceRate: 0.006,
         residentTaxAmount: 30000,
         dependents: 1,
-        createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
@@ -961,19 +946,14 @@ describe('PayrollStore', () => {
       const evaluation = {
         id: 'eval-1',
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer' as const,
         performanceRating: 'S' as const,
         performanceScore: 95,
         bonusMultiplier: 0.5,
         comments: '目標を大きく上回る成果',
-        evaluatedBy: 'manager-1',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
+        status: 'draft' as const,
+      } as BonusEvaluation;
 
       usePayrollStore.getState().saveBonusEvaluation(evaluation);
 
@@ -987,38 +967,28 @@ describe('PayrollStore', () => {
       const evaluation1 = {
         id: 'eval-1',
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer' as const,
         performanceRating: 'A' as const,
         performanceScore: 85,
         bonusMultiplier: 0.3,
         comments: '良好な成果',
-        evaluatedBy: 'manager-1',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
+        status: 'draft' as const,
+      } as BonusEvaluation;
 
       usePayrollStore.getState().saveBonusEvaluation(evaluation1);
 
       const evaluation2 = {
         id: 'eval-2',
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer' as const,
         performanceRating: 'S' as const,
         performanceScore: 95,
         bonusMultiplier: 0.5,
         comments: '目標を大きく上回る成果',
-        evaluatedBy: 'manager-1',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
+        status: 'draft' as const,
+      } as BonusEvaluation;
 
       usePayrollStore.getState().saveBonusEvaluation(evaluation2);
 
@@ -1034,19 +1004,14 @@ describe('PayrollStore', () => {
       const evaluation = {
         id: 'eval-1',
         employeeId: 'emp-001',
-        employeeName: '田中太郎',
-        department: '営業部',
         fiscalYear: 2024,
         bonusType: 'summer' as const,
         performanceRating: 'S' as const,
         performanceScore: 95,
         bonusMultiplier: 0.5,
         comments: '目標を大きく上回る成果',
-        evaluatedBy: 'manager-1',
-        evaluatedByName: '山田部長',
-        evaluatedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-      };
+        status: 'draft' as const,
+      } as BonusEvaluation;
 
       usePayrollStore.setState({ bonusEvaluations: [evaluation] });
 

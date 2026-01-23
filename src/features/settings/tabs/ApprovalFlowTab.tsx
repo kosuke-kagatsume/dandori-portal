@@ -276,7 +276,7 @@ export function ApprovalFlowTab({ settings: _settings, updateSettings: _updateSe
 
       {/* 保存ボタン */}
       <div className="flex justify-end">
-        <Button onClick={saveSettings} size="lg">
+        <Button onClick={_saveSettings} size="lg">
           承認フロー設定を保存
         </Button>
       </div>

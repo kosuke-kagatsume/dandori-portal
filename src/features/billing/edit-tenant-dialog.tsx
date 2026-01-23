@@ -66,7 +66,7 @@ export function EditTenantDialog({ open, onClose, tenant }: EditTenantDialogProp
     if (tenant && open) {
       // トライアル期限から日数を計算
       let trialDays = '0';
-      if (tenant.settings.trialEndDate && tenant.settings.contractStartDate) {
+      if (tenant.settings?.trialEndDate && tenant.settings?.contractStartDate) {
         const start = new Date(tenant.settings.contractStartDate);
         const end = new Date(tenant.settings.trialEndDate);
         const diffDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
@@ -77,14 +77,14 @@ export function EditTenantDialog({ open, onClose, tenant }: EditTenantDialogProp
         companyName: tenant.name,
         subdomain: tenant.subdomain || '',
         billingEmail: tenant.billingEmail || '',
-        contactEmail: tenant.contactEmail,
+        contactEmail: tenant.contactEmail || '',
         phone: tenant.phone || '',
         address: tenant.address || '',
-        contractStartDate: tenant.contractStartDate,
+        contractStartDate: tenant.contractStartDate || '',
         contractEndDate: tenant.contractEndDate || '',
         trialDays,
-        userCount: tenant.maxUsers.toString(),
-        plan: tenant.plan,
+        userCount: (tenant.maxUsers ?? 10).toString(),
+        plan: (tenant.plan === 'premium' ? 'enterprise' : tenant.plan) as 'basic' | 'standard' | 'enterprise',
       });
       // サブドメインの初期状態を設定
       if (tenant.subdomain) {
@@ -167,8 +167,8 @@ export function EditTenantDialog({ open, onClose, tenant }: EditTenantDialogProp
         name: formData.companyName,
         subdomain: formData.subdomain || null,
         plan,
+        userCount: parseInt(formData.userCount),
         activeUsers: parseInt(formData.userCount),
-        totalUsers: parseInt(formData.userCount),
         maxUsers: parseInt(formData.userCount),
         monthlyRevenue: total,
         contactEmail: formData.contactEmail,
@@ -178,13 +178,12 @@ export function EditTenantDialog({ open, onClose, tenant }: EditTenantDialogProp
         contractStartDate: formData.contractStartDate,
         contractEndDate: formData.contractEndDate || null,
         settings: {
-          ...tenant.settings,
-          trialEndDate,
-          contractStartDate: new Date(formData.contractStartDate),
-          contractEndDate: formData.contractEndDate ? new Date(formData.contractEndDate) : null,
+          trialEndDate: trialEndDate?.toISOString() ?? null,
+          contractStartDate: formData.contractStartDate || null,
+          contractEndDate: formData.contractEndDate || null,
           billingEmail: formData.billingEmail,
+          customPricing: tenant.settings?.customPricing ?? false,
           status: trialDays > 0 ? 'trial' : 'active',
-          updatedAt: new Date(),
         },
       });
 

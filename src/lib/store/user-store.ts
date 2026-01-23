@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, DemoUser, UserRole } from '@/types';
 import { demoUsers } from '@/lib/demo-users';
-import { APIError } from '@/lib/api/client';
+import { APIError, apiClient } from '@/lib/api/client';
 import {
   saveTokenData,
   clearTokenData,

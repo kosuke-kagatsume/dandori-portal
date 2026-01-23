@@ -96,6 +96,7 @@ async function main() {
         // 新規作成
         await prisma.users.create({
           data: {
+            id: crypto.randomUUID(),
             email: emp.email,
             name: emp.name,
             passwordHash: passwordHash,
@@ -104,6 +105,7 @@ async function main() {
             position: emp.position,
             tenantId: DANDORI_WORK_TENANT_ID,
             status: 'active',
+            updatedAt: new Date(),
           }
         });
         console.log(`[新規] ${emp.name} (${emp.email}) - ${roleMapping[emp.role]}`);

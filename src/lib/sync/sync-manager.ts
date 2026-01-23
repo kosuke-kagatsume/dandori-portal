@@ -250,7 +250,7 @@ export class SyncManager {
 
     try {
       // キューのアイテムを順番に処理
-      for (const [id, item] of this.syncQueue) {
+      for (const [id, item] of Array.from(this.syncQueue.entries())) {
         try {
           await this.syncItem(item);
 

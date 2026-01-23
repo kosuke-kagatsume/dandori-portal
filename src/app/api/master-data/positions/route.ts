@@ -64,11 +64,13 @@ export async function POST(request: NextRequest) {
 
     const position = await prisma.positions.create({
       data: {
+        id: crypto.randomUUID(),
         tenantId,
         name,
         level: level || 1,
         sortOrder: sortOrder || 0,
         isActive: isActive ?? true,
+        updatedAt: new Date(),
       },
     });
 

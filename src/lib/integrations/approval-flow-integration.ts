@@ -5,7 +5,7 @@
  */
 
 import type { DocumentType } from '@/types/approval-flow';
-import type { WorkflowType } from '@/types';
+import type { WorkflowType } from '@/lib/workflow-store';
 
 /**
  * ワークフロータイプを承認フローのドキュメントタイプに変換
@@ -106,7 +106,7 @@ export function generateApprovalStepsFromFlow(resolvedRoute: ResolvedApprovalRou
     order: index + 1,
     name: step.name,
     approvers: step.approvers.map((approver) => ({
-      userId: approver.userId || approver.id, // userId優先、なければidを使用
+      userId: approver.userId || approver.id || '', // userId優先、なければidを使用
       name: approver.name,
       email: approver.email,
       role: approver.role,

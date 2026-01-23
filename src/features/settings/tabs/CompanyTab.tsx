@@ -30,7 +30,7 @@ export function CompanyTab({ settings: _settings, updateSettings: _updateSetting
     setIsSaving(true);
     try {
       await saveCompanySettings();
-      saveSettings(); // 親コンポーネントのコールバックも呼ぶ
+      _saveSettings(); // 親コンポーネントのコールバックも呼ぶ
     } catch (error) {
       console.error('保存エラー:', error);
     } finally {

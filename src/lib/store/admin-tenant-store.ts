@@ -110,6 +110,10 @@ interface AdminTenantState {
 
   // 初期化
   initializeTenants: () => Promise<void>;
+
+  // UI用ローカル操作
+  addTenant: (tenant: TenantWithStats) => void;
+  isSubdomainAvailable: (subdomain: string, excludeId?: string) => boolean;
 }
 
 const initialState = {
@@ -298,5 +302,20 @@ export const useAdminTenantStore = create<AdminTenantState>((set, get) => ({
     if (get().tenants.length === 0) {
       await get().fetchTenants();
     }
+  },
+
+  addTenant: (tenant: TenantWithStats) => {
+    set((state) => ({
+      tenants: [tenant, ...state.tenants],
+      summary: {
+        ...state.summary,
+        total: state.summary.total + 1,
+      },
+    }));
+  },
+
+  isSubdomainAvailable: (subdomain: string, excludeId?: string) => {
+    const tenants = get().tenants;
+    return !tenants.some((t) => t.subdomain === subdomain && t.id !== excludeId);
   },
 }));

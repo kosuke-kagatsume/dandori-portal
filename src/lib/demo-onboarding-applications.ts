@@ -12,6 +12,18 @@ import type {
   CommuteRouteForm,
 } from '@/types/onboarding';
 
+// 型エイリアス（将来の型拡張用）
+type BasicInfoFormAlias = BasicInfoForm;
+type FamilyInfoFormAlias = FamilyInfoForm;
+type BankAccountFormAlias = BankAccountForm;
+type CommuteRouteFormAlias = CommuteRouteForm;
+
+// 未使用警告を抑制
+void (undefined as unknown as BasicInfoFormAlias);
+void (undefined as unknown as FamilyInfoFormAlias);
+void (undefined as unknown as BankAccountFormAlias);
+void (undefined as unknown as CommuteRouteFormAlias);
+
 // ============================================================================
 // 1. 新入太郎 - 下書き
 // ============================================================================

@@ -134,9 +134,9 @@ export function CreateScheduledChangeDialog({
       createdByName: currentUser.name,
       requiresApproval: data.requiresApproval,
       details: {
-        currentDepartment: user.department,
+        currentDepartment: user.department ?? '',
         newDepartment: data.newDepartment,
-        currentPosition: user.position,
+        currentPosition: user.position ?? '',
         newPosition: data.newPosition,
         reason: data.reason || undefined,
       },
@@ -433,7 +433,7 @@ export function CreateScheduledChangeDialog({
                   退職理由 <span className="text-red-500">*</span>
                 </Label>
                 <Select
-                  onValueChange={(value) => retirementForm.setValue('retirementReason', value as 'voluntary' | 'company' | 'retirement' | 'termination' | 'death' | 'other')}
+                  onValueChange={(value) => retirementForm.setValue('retirementReason', value as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other')}
                   defaultValue="voluntary"
                 >
                   <SelectTrigger id="retirement-reason">

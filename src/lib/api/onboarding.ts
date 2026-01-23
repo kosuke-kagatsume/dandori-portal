@@ -17,7 +17,7 @@ import type {
   FamilyInfoForm,
   BankAccountForm,
   CommuteRouteForm,
-} from '@/types';
+} from '@/types/onboarding';
 
 // ============================================================================
 // Request/Response Types

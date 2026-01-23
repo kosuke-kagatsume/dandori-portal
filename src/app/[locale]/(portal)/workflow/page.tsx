@@ -267,9 +267,9 @@ export default function WorkflowPage() {
     setSelectedRequest(null);
   };
 
-  const handleNewRequestSubmit = (data: Partial<WorkflowRequest>) => {
-    const requestId = createRequest(data as Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>);
-    submitRequest(requestId);
+  const handleNewRequestSubmit = async (data: Partial<WorkflowRequest>) => {
+    const requestId = await createRequest(data as Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>);
+    submitRequest(requestId as string);
     // toast.successは削除（NewRequestForm内で処理されるため）
     setShowNewRequestDialog(false);
     setSelectedRequestType(null);
@@ -1329,7 +1329,7 @@ function getWorkflowTypeLabel(type: WorkflowType): string {
 }
 
 function getStatusLabel(status: WorkflowRequest['status']): string {
-  const labels = {
+  const labels: Record<string, string> = {
     draft: '下書き',
     pending: '申請中',
     in_review: '確認中',
@@ -1344,7 +1344,7 @@ function getStatusLabel(status: WorkflowRequest['status']): string {
 }
 
 function getStatusColor(status: WorkflowRequest['status']): string {
-  const colors = {
+  const colors: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-800',
     pending: 'bg-blue-100 text-blue-800',
     in_review: 'bg-yellow-100 text-yellow-800',

@@ -3,7 +3,7 @@
  * API連携版 - PostgreSQL永続化
  */
 
-import { create } from 'zustand';
+import { create, StateCreator } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 const DATA_VERSION = 2;
@@ -233,8 +233,7 @@ const initialState = {
 };
 
 const createCompanySettingsStore = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const storeCreator = (set: (fn: (state: CompanySettingsState) => Partial<CompanySettingsState>) => void, get: () => CompanySettingsState & Record<string, unknown>) => ({
+  const storeCreator: StateCreator<CompanySettingsState> = (set, get) => ({
     ...initialState,
 
     // 同期アクション（UI用）

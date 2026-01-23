@@ -3,7 +3,9 @@
  * 初回生成後はキャッシュから返すことでパフォーマンスを向上
  */
 
-import { User, AttendanceRecord, LeaveRequest } from '@/types';
+import type { User } from '@/types';
+import type { AttendanceRecord } from '@/types/csv';
+import type { LeaveRequest } from '@/lib/store/leave-management-store';
 
 // グローバルキャッシュ
 let usersCache: User[] | null = null;

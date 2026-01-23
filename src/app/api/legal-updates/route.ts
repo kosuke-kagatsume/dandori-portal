@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
             publishedAt: true,
             isPublished: true,
             createdAt: true,
-            tenantStatuses: {
+            tenant_legal_statuses: {
               where: { tenantId },
               select: {
                 status: true,
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
         let filteredUpdates = legalUpdates;
         if (status && status !== 'all') {
           filteredUpdates = legalUpdates.filter((update) => {
-            const tenantStatus = update.tenantStatuses[0];
+            const tenantStatus = update.tenant_legal_statuses[0];
             if (status === 'pending') {
               return !tenantStatus || tenantStatus.status === 'pending';
             }
@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
 
         // レスポンス形式に整形
         const data = filteredUpdates.map((update) => {
-          const tenantStatus = update.tenantStatuses[0];
+          const tenantStatus = update.tenant_legal_statuses[0];
           return {
             id: update.id,
             title: update.title,

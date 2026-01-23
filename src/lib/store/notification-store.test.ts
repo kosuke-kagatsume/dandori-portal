@@ -28,7 +28,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification);
@@ -48,7 +48,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       const notification2: Notification = {
@@ -58,7 +58,7 @@ describe('NotificationStore', () => {
         type: 'success',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification1);
@@ -79,7 +79,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: true,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification);
@@ -101,7 +101,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification);
@@ -121,7 +121,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       const notification2: Notification = {
@@ -131,7 +131,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification1);
@@ -157,7 +157,7 @@ describe('NotificationStore', () => {
           type: 'info',
           read: false,
           important: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
         {
           id: '2',
@@ -166,7 +166,7 @@ describe('NotificationStore', () => {
           type: 'info',
           read: false,
           important: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
       ];
 
@@ -195,7 +195,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification);
@@ -216,7 +216,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: true,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification);
@@ -242,7 +242,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification);
@@ -268,7 +268,7 @@ describe('NotificationStore', () => {
         type: 'info',
         read: false,
         important: false,
-        timestamp: new Date(),
+        timestamp: new Date().toISOString(),
       };
 
       addNotification(notification);
@@ -329,7 +329,7 @@ describe('NotificationStore', () => {
           type: 'warning',
           read: false,
           important: true,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
         {
           id: '2',
@@ -338,7 +338,7 @@ describe('NotificationStore', () => {
           type: 'info',
           read: true,
           important: true,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
         {
           id: '3',
@@ -347,7 +347,7 @@ describe('NotificationStore', () => {
           type: 'success',
           read: false,
           important: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
         {
           id: '4',
@@ -356,7 +356,7 @@ describe('NotificationStore', () => {
           type: 'info',
           read: true,
           important: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
       ];
 
@@ -405,7 +405,7 @@ describe('NotificationStore', () => {
           type: 'warning',
           read: false,
           important: true,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
         {
           id: '2',
@@ -414,7 +414,7 @@ describe('NotificationStore', () => {
           type: 'info',
           read: false,
           important: false,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
         {
           id: '3',
@@ -423,7 +423,7 @@ describe('NotificationStore', () => {
           type: 'success',
           read: true,
           important: true,
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
       ];
 
