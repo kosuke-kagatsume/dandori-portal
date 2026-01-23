@@ -1,6 +1,35 @@
 {
   "extends": ["next/core-web-vitals", "next/typescript"],
   "rules": {
+    // ============================================
+    // TypeScript型安全性：再発防止ルール
+    // ============================================
+
+    // @ts-nocheck, @ts-ignore を禁止（型チェック無効化の防止）
+    "@typescript-eslint/ban-ts-comment": [
+      "error",
+      {
+        "ts-expect-error": "allow-with-description",
+        "ts-ignore": true,
+        "ts-nocheck": true,
+        "ts-check": false,
+        "minimumDescriptionLength": 10
+      }
+    ],
+
+    // any型の使用を禁止（型安全性の確保）
+    "@typescript-eslint/no-explicit-any": "error",
+
+    // 未使用変数の検出（_プレフィックスは許可）
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+
+    // ============================================
     // Hydration対策：特殊文字の禁止
     "no-restricted-syntax": [
       "error",
