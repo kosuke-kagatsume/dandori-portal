@@ -263,8 +263,13 @@ export default function AttendancePage() {
   };
 
 
-  // デモデータの自動生成
+  // デモデータの自動生成（デモモードのみ）
   useEffect(() => {
+    // デモモードでない場合はスキップ（本番APIへの不要なリクエストを防止）
+    if (!isDemoMode && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+      return;
+    }
+
     if (allHistoryRecords.length === 0) {
       console.log('[Demo] 勤怠履歴が空のため、デモデータを生成します...');
 
@@ -378,7 +383,7 @@ export default function AttendancePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -404,8 +409,8 @@ export default function AttendancePage() {
           <Card className="w-full max-w-2xl">
             <CardContent className="p-6">
               <div className="animate-pulse space-y-4">
-                <div className="h-8 bg-gray-200 rounded"></div>
-                <div className="h-16 bg-gray-200 rounded"></div>
+                <div className="h-8 bg-gray-200 rounded" />
+                <div className="h-16 bg-gray-200 rounded" />
               </div>
             </CardContent>
           </Card>
