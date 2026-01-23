@@ -17,10 +17,18 @@ export function logAudit(input: AuditLogInput): void {
   try {
     const userStore = useUserStore.getState();
     const auditStore = useAuditStore.getState();
-    const currentUser = userStore.currentDemoUser;
 
-    if (!currentUser) {
-      console.warn('監査ログ: ユーザー情報が取得できません');
+    // 本番モード: currentUser、デモモード: currentDemoUser を使用
+    const user = userStore.currentUser;
+    const demoUser = userStore.currentDemoUser;
+
+    // ユーザー情報を取得（本番ユーザー優先、なければデモユーザー）
+    const userId = user?.id || demoUser?.id;
+    const userName = user?.name || demoUser?.name;
+    const userRole = user?.roles?.[0] || demoUser?.role;
+
+    if (!userId || !userName) {
+      // ログイン前や認証処理中は警告を出さない（静かに終了）
       return;
     }
 
@@ -36,9 +44,9 @@ export function logAudit(input: AuditLogInput): void {
 
     auditStore.addLog({
       ...input,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: roleMap[currentUser.role] || 'employee',
+      userId,
+      userName,
+      userRole: roleMap[userRole || 'employee'] || 'employee',
       ipAddress: 'localhost', // デモ用
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown',
     });

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { User, DemoUser, UserRole } from '@/types';
+import type { User, DemoUser, UserRole, Tenant } from '@/types';
 import { demoUsers } from '@/lib/demo-users';
 import { APIError, apiClient } from '@/lib/api/client';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/lib/auth/token-manager';
 import { userAudit, authAudit } from '@/lib/audit/audit-logger';
 import { IS_DEMO_BUILD } from '@/config/demo';
+import { useTenantStore } from './tenant-store';
 
 // REST API helper functions
 const API_BASE = '/api/users';
@@ -221,7 +222,7 @@ const createUserStore = () => {
             throw new Error(result.error || 'ログインに失敗しました');
           }
 
-          const { user: apiUser, accessToken, refreshToken: apiRefreshToken, expiresIn } = result.data;
+          const { user: apiUser, tenant: apiTenant, accessToken, refreshToken: apiRefreshToken, expiresIn } = result.data;
 
           // APIユーザー情報からアプリ用Userに変換
           const userRole = (apiUser.role as UserRole) || 'employee';
@@ -251,6 +252,29 @@ const createUserStore = () => {
             isLoading: false,
             _hasHydrated: true,
           });
+
+          // テナント情報を更新（ログインユーザーの所属テナントを設定）
+          if (apiTenant) {
+            // closingDayの値を適切な型に変換
+            const validClosingDays = ['末', '20', '15', '任意'] as const;
+            const closingDay = validClosingDays.includes(apiTenant.closingDay as typeof validClosingDays[number])
+              ? (apiTenant.closingDay as typeof validClosingDays[number])
+              : '末';
+
+            const tenant: Tenant = {
+              id: apiTenant.id,
+              name: apiTenant.name,
+              timezone: apiTenant.timezone || 'Asia/Tokyo',
+              closingDay,
+              weekStartDay: apiTenant.weekStartDay ?? 1,
+            };
+            const tenantStore = useTenantStore.getState();
+            tenantStore.setCurrentTenant(tenant);
+            // テナントリストにも追加（まだない場合）
+            if (!tenantStore.tenants.find(t => t.id === tenant.id)) {
+              tenantStore.addTenant(tenant);
+            }
+          }
 
           // トークンデータを保存（Cookie含む）
           saveTokenData(accessToken, apiRefreshToken, expiresIn || 3600);

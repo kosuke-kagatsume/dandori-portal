@@ -93,10 +93,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 本番モード: Prismaでユーザーを検索
+    // 本番モード: Prismaでユーザーを検索（テナント情報も取得）
     console.log('Searching for user with email:', email);
     const user = await prisma.users.findFirst({
       where: { email },
+      include: {
+        tenants: {
+          select: {
+            id: true,
+            name: true,
+            timezone: true,
+            closingDay: true,
+            weekStartDay: true,
+          },
+        },
+      },
     });
 
     console.log('User found:', user ? 'YES' : 'NO');
@@ -177,6 +188,13 @@ export async function POST(request: NextRequest) {
           position: user.position,
           tenantId: user.tenantId,
         },
+        tenant: user.tenants ? {
+          id: user.tenants.id,
+          name: user.tenants.name,
+          timezone: user.tenants.timezone,
+          closingDay: user.tenants.closingDay,
+          weekStartDay: user.tenants.weekStartDay,
+        } : null,
         accessToken,
         refreshToken,
         expiresIn: TOKEN_EXPIRY,
