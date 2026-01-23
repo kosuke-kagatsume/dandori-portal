@@ -240,6 +240,7 @@ export const usePaymentReminderStore = create<PaymentReminderStore>()(
     }),
     {
       name: 'payment-reminder-storage',
+      skipHydration: true,
       version: 1,
     }
   )

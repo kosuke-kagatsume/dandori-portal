@@ -496,6 +496,7 @@ export const useAttendanceAlertStore = create<AlertStore>()(
     }),
     {
       name: 'attendance-alert-store',
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
     }
   )

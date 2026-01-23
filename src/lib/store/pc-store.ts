@@ -350,6 +350,7 @@ const createPCStore = () => {
   return create<PCState>()(
     persist(storeCreator, {
       name: 'pc-store',
+      skipHydration: true,
       version: DATA_VERSION,
       onRehydrateStorage: () => (state) => {
         if (state && state.pcs.length === 0) {

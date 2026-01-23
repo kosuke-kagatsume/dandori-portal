@@ -194,6 +194,7 @@ export const useAuditStore = create<AuditStore>()(
     }),
     {
       name: 'audit-store',
+      skipHydration: true,
     }
   )
 );

@@ -484,6 +484,7 @@ export const useShiftStore = create<ShiftStore>()(
     }),
     {
       name: 'shift-store',
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
     }
   )

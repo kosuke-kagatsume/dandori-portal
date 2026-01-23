@@ -758,6 +758,7 @@ const createUserStore = () => {
   return create<UserState>()(
     persist(storeCreator, {
       name: 'user-storage',
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => {
         // 本番ビルドの場合はisDemoModeとcurrentDemoUserを永続化しない

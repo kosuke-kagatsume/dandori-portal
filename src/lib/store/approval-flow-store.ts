@@ -664,6 +664,7 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
     }),
     {
       name: 'approval-flow-storage',
+      skipHydration: true,
     }
   )
 );

@@ -217,6 +217,7 @@ export const useLegalUpdatesStore = create<LegalUpdatesState>()(
     }),
     {
       name: 'legal-updates-storage',
+      skipHydration: true,
     }
   )
 );

@@ -387,6 +387,7 @@ export const useOrganizationStore = create<OrganizationStore>()(
     }),
     {
       name: 'organization-storage',
+      skipHydration: true,
       partialize: (state) => ({
         organizationTree: state.organizationTree,
         allMembers: state.allMembers,

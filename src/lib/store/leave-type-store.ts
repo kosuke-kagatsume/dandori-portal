@@ -372,6 +372,7 @@ export const useLeaveTypeStore = create<LeaveTypeStore>()(
     }),
     {
       name: 'leave-type-store',
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
     }
   )

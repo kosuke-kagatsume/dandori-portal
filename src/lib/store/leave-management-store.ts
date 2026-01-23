@@ -382,6 +382,7 @@ export const useLeaveManagementStore = create<LeaveManagementStore>()(
     }),
     {
       name: 'leave-management-store',
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         requests: state.requests,

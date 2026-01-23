@@ -341,6 +341,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
     }),
     {
       name: 'attendance-store',
+      skipHydration: true,
       // 今日の日付が変わったらリセット
       partialize: (state) => {
         const today = new Date().toDateString();

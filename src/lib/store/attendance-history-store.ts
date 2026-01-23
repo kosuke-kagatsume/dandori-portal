@@ -499,6 +499,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
     }),
     {
       name: 'attendance-history-store',
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
     }
   )

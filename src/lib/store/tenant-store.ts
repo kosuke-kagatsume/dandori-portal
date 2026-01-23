@@ -88,6 +88,7 @@ export const useTenantStore = create<TenantState>()(
     }),
     {
       name: 'tenant-storage',
+      skipHydration: true,
       partialize: (state) => ({
         currentTenant: state.currentTenant,
         tenants: state.tenants,

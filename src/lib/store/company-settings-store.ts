@@ -618,6 +618,7 @@ const createCompanySettingsStore = () => {
   return create<CompanySettingsState>()(
     persist(storeCreator, {
       name: 'company-settings-store',
+      skipHydration: true,
       version: DATA_VERSION,
       partialize: (state) => ({
         companyInfo: state.companyInfo,

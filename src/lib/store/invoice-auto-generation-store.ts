@@ -254,6 +254,7 @@ export const useInvoiceAutoGenerationStore = create<InvoiceAutoGenerationStore>(
     }),
     {
       name: 'invoice-auto-generation-storage',
+      skipHydration: true,
       version: 1,
     }
   )

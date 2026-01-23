@@ -677,6 +677,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
     }),
     {
       name: 'announcements-storage',
+      skipHydration: true,
     }
   )
 );

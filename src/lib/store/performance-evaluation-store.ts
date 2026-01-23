@@ -351,6 +351,7 @@ export const usePerformanceEvaluationStore = create<PerformanceEvaluationStore>(
     }),
     {
       name: 'performance-evaluation-store',
+      skipHydration: true,
     }
   )
 );

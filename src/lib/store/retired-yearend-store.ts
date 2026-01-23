@@ -265,6 +265,7 @@ const createRetiredYearEndStore = () => {
   return create<RetiredYearEndState>()(
     persist(storeCreator, {
       name: 'retired-yearend-storage',
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         sendHistories: state.sendHistories,

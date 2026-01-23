@@ -282,6 +282,7 @@ export const useScheduledChangesStore = create<ScheduledChangesState>()(
     }),
     {
       name: 'scheduled-changes-storage',
+      skipHydration: true,
     }
   )
 );

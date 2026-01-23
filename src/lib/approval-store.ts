@@ -214,6 +214,7 @@ export const useApprovalStore = create<ApprovalStore>()(
     }),
     {
       name: 'approval-store',
+      skipHydration: true,
     }
   )
 );

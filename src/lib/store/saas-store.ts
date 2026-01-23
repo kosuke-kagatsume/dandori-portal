@@ -441,6 +441,7 @@ const createSaaSStore = () => {
   return create<SaaSState>()(
     persist(storeCreator, {
       name: 'saas-storage',
+      skipHydration: true,
       version: DATA_VERSION,
       storage: createJSONStorage(() => localStorage),
     })

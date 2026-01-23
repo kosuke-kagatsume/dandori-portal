@@ -814,6 +814,7 @@ const createVehicleStore = () => {
   return create<VehicleState>()(
     persist(storeCreator, {
       name: 'vehicle-store',
+      skipHydration: true,
       version: DATA_VERSION,
       // 初回ロード時に初期データを設定
       onRehydrateStorage: () => (state) => {

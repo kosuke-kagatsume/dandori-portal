@@ -989,6 +989,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
     }),
     {
       name: 'onboarding-storage',
+      skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         // Only persist necessary data (exclude auto-save interval)

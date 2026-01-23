@@ -521,6 +521,7 @@ const createPayrollStore = () => {
   return create<PayrollState>()(
     persist(storeCreator, {
       name: 'payroll-store',
+      skipHydration: true,
       version: DATA_VERSION,
       migrate: (persisted, version) => {
         console.log('[PayrollStore] Migration check:', { version, dataVersion: DATA_VERSION });

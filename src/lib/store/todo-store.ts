@@ -259,6 +259,7 @@ export const useTodoStore = create<TodoStore>()(
     }),
     {
       name: 'todo-storage',
+      skipHydration: true,
     }
   )
 );
