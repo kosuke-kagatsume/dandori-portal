@@ -43,7 +43,8 @@ interface TimeRecord {
 }
 
 export function AdvancedCheckIn() {
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // SSR/CSRハイドレーション対応: 初期値はnull、マウント後に設定
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [showMemoDialog, setShowMemoDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [memo, setMemo] = useState('');
@@ -73,14 +74,15 @@ export function AdvancedCheckIn() {
     return () => clearInterval(dateCheckTimer);
   }, [checkAndResetForNewDay]);
 
-  // 1秒ごとに時刻を更新
+  // 1秒ごとに時刻を更新（マウント後に初期化）
   useEffect(() => {
+    setCurrentTime(new Date()); // 初回設定
     const timer = setInterval(() => {
       setCurrentTime(new Date());
       // 勤務時間を計算
       if (todayStatus.checkIn && !todayStatus.checkOut) {
         const checkInTime = new Date(`2024-01-01 ${todayStatus.checkIn}`);
-        const now = new Date(`2024-01-01 ${currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`);
+        const now = new Date(`2024-01-01 ${(currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`);
         const diff = (now.getTime() - checkInTime.getTime()) / 1000 / 60 / 60; // hours
         setWorkingHours(Math.max(0, diff - todayStatus.totalBreakTime / 60));
       }
@@ -96,7 +98,7 @@ export function AdvancedCheckIn() {
   const confirmCheckIn = async () => {
     await checkIn(workLocation);
     setShowLocationDialog(false);
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`出勤打刻完了: ${time}`, {
       description: `勤務場所: ${getLocationLabel(workLocation)}`
     });
@@ -104,13 +106,13 @@ export function AdvancedCheckIn() {
 
   const handleBreakStart = async () => {
     await startBreak();
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`休憩開始: ${time}`);
   };
 
   const handleBreakEnd = async () => {
     await endBreak();
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`休憩終了: ${time}`);
   };
 
@@ -121,7 +123,7 @@ export function AdvancedCheckIn() {
   const confirmCheckOut = async () => {
     await checkOut(memo);
     setShowMemoDialog(false);
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`退勤打刻完了: ${time}`, {
       description: '今日もお疲れ様でした！'
     });
@@ -148,13 +150,13 @@ export function AdvancedCheckIn() {
     return <Icon className="h-4 w-4" />;
   };
 
-  const timeString = currentTime.toLocaleTimeString('ja-JP', {
+  const timeString = (currentTime || new Date()).toLocaleTimeString('ja-JP', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
   });
 
-  const dateString = currentTime.toLocaleDateString('ja-JP', {
+  const dateString = (currentTime || new Date()).toLocaleDateString('ja-JP', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -267,8 +269,7 @@ export function AdvancedCheckIn() {
             )}
 
             {todayStatus.status === 'working' && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                   <Button
                     onClick={handleBreakStart}
                     size="lg"
@@ -288,7 +289,6 @@ export function AdvancedCheckIn() {
                     退勤する
                   </Button>
                 </div>
-              </>
             )}
 
             {todayStatus.status === 'onBreak' && (

@@ -42,9 +42,14 @@ interface AttendanceCalendarProps {
 }
 
 export function AttendanceCalendar({ records }: AttendanceCalendarProps) {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Initialize date on client side to avoid SSR/CSR hydration mismatch
+  useEffect(() => {
+    setDate(new Date());
+  }, []);
 
   // カレンダーのセルサイズを強制的に固定
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useShiftStore, ShiftAssignment } from '@/lib/store/shift-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { Button } from '@/components/ui/button';
@@ -69,14 +69,20 @@ export function ShiftManagement() {
     getMonthlyShiftSummary,
   } = useShiftStore();
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Initialize date on client side to avoid SSR/CSR hydration mismatch
+  useEffect(() => {
+    setCurrentDate(new Date());
+  }, []);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('calendar');
 
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth() + 1;
+  const dateToUse = currentDate || new Date();
+  const currentYear = dateToUse.getFullYear();
+  const currentMonth = dateToUse.getMonth() + 1;
 
   // 有効な勤務パターン
   const workPatterns = useMemo(() => getActiveWorkPatterns(), [getActiveWorkPatterns]);
@@ -95,13 +101,14 @@ export function ShiftManagement() {
 
   // 月の日付配列を生成
   const monthDays = useMemo(() => {
-    const start = startOfMonth(currentDate);
-    const end = endOfMonth(currentDate);
+    const date = currentDate || new Date();
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
 
   // カレンダーの開始位置調整用（日曜始まり）
-  const startDayOfWeek = getDay(startOfMonth(currentDate));
+  const startDayOfWeek = getDay(startOfMonth(currentDate || new Date()));
 
   // 月間サマリー
   const monthlySummary = useMemo(
@@ -120,12 +127,12 @@ export function ShiftManagement() {
 
   // 前月に移動
   const goToPreviousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1));
+    setCurrentDate(subMonths(currentDate || new Date(), 1));
   };
 
   // 翌月に移動
   const goToNextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1));
+    setCurrentDate(addMonths(currentDate || new Date(), 1));
   };
 
   // シフト割り当てダイアログを開く
@@ -186,7 +193,7 @@ export function ShiftManagement() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-xl font-bold">
-            {format(currentDate, 'yyyy年M月', { locale: ja })}
+            {format(currentDate || new Date(), 'yyyy年M月', { locale: ja })}
           </h2>
           <Button variant="outline" size="icon" onClick={goToNextMonth}>
             <ChevronRight className="h-4 w-4" />

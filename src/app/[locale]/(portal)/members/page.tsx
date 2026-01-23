@@ -74,7 +74,12 @@ export default function MembersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20; // カードビューのページサイズ
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Initialize date on client side to avoid SSR/CSR hydration mismatch
+  useEffect(() => {
+    setLastUpdated(new Date());
+  }, []);
 
   // tenantId を取得
   const currentUser = useUserStore(state => state.currentUser);
@@ -497,7 +502,7 @@ export default function MembersPage() {
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            最終更新: {lastUpdated.toLocaleTimeString('ja-JP')}
+            最終更新: {lastUpdated ? lastUpdated.toLocaleTimeString('ja-JP') : '--:--:--'}
           </span>
           <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'card' | 'table')}>
             <TabsList>

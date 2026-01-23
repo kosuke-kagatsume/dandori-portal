@@ -50,7 +50,8 @@ export function Header() {
   // currentTenant from useTenantStore() - 将来使用予定 (import removed)
   const { currentUser, setCurrentUser } = useUserStore();
   const { unreadCount } = useNotificationStore();
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  // SSR/CSRハイドレーション対応: 初期値はnull、マウント後に設定
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // デフォルトユーザーと通知を設定
   useEffect(() => {
@@ -72,8 +73,11 @@ export function Header() {
     }
   }, [currentUser, setCurrentUser]);
 
-  // Auto-refresh timestamp
+  // Auto-refresh timestamp（マウント後に初期化）
   useEffect(() => {
+    // 初回マウント時に現在時刻を設定
+    setLastUpdated(new Date());
+
     const interval = setInterval(() => {
       setLastUpdated(new Date());
     }, 60000); // Update every minute
@@ -147,10 +151,10 @@ export function Header() {
           <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
             {/* Last Updated - Hidden on mobile and tablet */}
             <div className="hidden lg:flex items-center text-xs text-muted-foreground">
-              最終更新: {lastUpdated.toLocaleTimeString('ja-JP', {
+              最終更新: {lastUpdated ? lastUpdated.toLocaleTimeString('ja-JP', {
                 hour: '2-digit',
                 minute: '2-digit'
-              })}
+              }) : '--:--'}
             </div>
 
             <Separator orientation="vertical" className="h-6 hidden lg:block" />

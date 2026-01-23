@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,16 +70,22 @@ const WORK_PATTERNS = [
 ];
 
 export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttendanceListProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  // Initialize date on client side to avoid SSR/CSR hydration mismatch
+  useEffect(() => {
+    setCurrentDate(new Date());
+  }, []);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
 
   // Generate days for the current month
   const monthDays = useMemo(() => {
-    const start = startOfMonth(currentDate);
-    const end = endOfMonth(currentDate);
+    const date = currentDate || new Date();
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
 
@@ -91,11 +97,17 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
 
   // Navigate months
   const goToPreviousMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setCurrentDate(prev => {
+      const date = prev || new Date();
+      return new Date(date.getFullYear(), date.getMonth() - 1, 1);
+    });
   };
 
   const goToNextMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setCurrentDate(prev => {
+      const date = prev || new Date();
+      return new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    });
   };
 
   // Handle day click
@@ -167,7 +179,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
   };
 
   // Calculate padding days for the first row
-  const firstDayOfMonth = getDay(startOfMonth(currentDate));
+  const firstDayOfMonth = getDay(startOfMonth(currentDate || new Date()));
 
   return (
     <>
@@ -183,7 +195,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="min-w-[140px] text-center font-medium">
-                {format(currentDate, 'yyyy年 M月', { locale: ja })}
+                {format(currentDate || new Date(), 'yyyy年 M月', { locale: ja })}
               </span>
               <Button variant="outline" size="icon" onClick={goToNextMonth}>
                 <ChevronRight className="h-4 w-4" />

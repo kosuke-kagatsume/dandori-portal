@@ -33,7 +33,8 @@ import { Label } from '@/components/ui/label';
 type WorkLocation = 'office' | 'home' | 'client' | 'other';
 
 export function SimplePunchCard() {
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // SSR/CSRハイドレーション対応: 初期値はnull、マウント後に設定
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [showMemoDialog, setShowMemoDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [memo, setMemo] = useState('');
@@ -74,8 +75,9 @@ export function SimplePunchCard() {
     }
   }, [currentUserId, checkAndResetForUserChange]);
 
-  // Update clock every second
+  // Update clock every second（マウント後に初期化）
   useEffect(() => {
+    setCurrentTime(new Date()); // 初回設定
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -103,7 +105,7 @@ export function SimplePunchCard() {
     }
     await checkIn(workLocation);
     setShowLocationDialog(false);
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`出勤打刻完了: ${time}`, {
       description: requireLocation ? `勤務場所: ${getLocationLabel(workLocation)}` : undefined,
     });
@@ -111,13 +113,13 @@ export function SimplePunchCard() {
 
   const handleBreakStart = async () => {
     await startBreak();
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`休憩開始: ${time}`);
   };
 
   const handleBreakEnd = async () => {
     await endBreak();
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`休憩終了: ${time}`);
   };
 
@@ -129,7 +131,7 @@ export function SimplePunchCard() {
     await checkOut(memo);
     setShowMemoDialog(false);
     setMemo('');
-    const time = currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`退勤打刻完了: ${time}`);
   };
 
@@ -143,13 +145,13 @@ export function SimplePunchCard() {
     return labels[location];
   };
 
-  const timeString = currentTime.toLocaleTimeString('ja-JP', {
+  const timeString = (currentTime || new Date()).toLocaleTimeString('ja-JP', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
   });
 
-  const dateString = currentTime.toLocaleDateString('ja-JP', {
+  const dateString = (currentTime || new Date()).toLocaleDateString('ja-JP', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -162,7 +164,7 @@ export function SimplePunchCard() {
     const checkInTime = new Date(`2024-01-01 ${todayStatus.checkIn}`);
     const endTime = todayStatus.checkOut
       ? new Date(`2024-01-01 ${todayStatus.checkOut}`)
-      : new Date(`2024-01-01 ${currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`);
+      : new Date(`2024-01-01 ${(currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`);
     const diff = (endTime.getTime() - checkInTime.getTime()) / 1000 / 60 / 60;
     return Math.max(0, diff - todayStatus.totalBreakTime / 60);
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -122,8 +122,13 @@ interface TeamAttendanceSummary {
 }
 
 export function TeamAttendance() {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Initialize date on client side to avoid SSR/CSR hydration mismatch
+  useEffect(() => {
+    setCurrentDate(new Date());
+  }, []);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [closingFilter, setClosingFilter] = useState<string>('all');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -166,8 +171,9 @@ export function TeamAttendance() {
 
   // 月間集計データを生成
   const teamSummaryData: TeamAttendanceSummary[] = useMemo(() => {
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
+    const dateToUse = currentDate || new Date();
+    const monthStart = startOfMonth(dateToUse);
+    const monthEnd = endOfMonth(dateToUse);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     const workDays = daysInMonth.filter(d => !isWeekend(d)).length;
 
@@ -283,11 +289,17 @@ export function TeamAttendance() {
 
   // 月移動
   const goToPreviousMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    setCurrentDate(prev => {
+      const date = prev || new Date();
+      return new Date(date.getFullYear(), date.getMonth() - 1, 1);
+    });
   };
 
   const goToNextMonth = () => {
-    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    setCurrentDate(prev => {
+      const date = prev || new Date();
+      return new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    });
   };
 
   return (
@@ -306,7 +318,7 @@ export function TeamAttendance() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="min-w-[120px] text-center font-medium">
-              {format(currentDate, 'yyyy年M月', { locale: ja })}
+              {format(currentDate || new Date(), 'yyyy年M月', { locale: ja })}
             </span>
             <Button variant="outline" size="icon" onClick={goToNextMonth}>
               <ChevronRight className="h-4 w-4" />
