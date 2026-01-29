@@ -2291,3 +2291,85 @@ model paid_leave_grant_table {
   @@unique([tenantId, yearsOfService])
   @@index([tenantId])
 }
+
+// ============================================
+// 権限管理システム（RBAC v2）
+// ============================================
+
+// ロール定義
+model roles {
+  id               String                    @id
+  tenantId         String
+  code             String                    // employee, manager, executive, hr, admin, applicant, or custom
+  name             String                    // 表示名
+  description      String?
+  isSystem         Boolean                   @default(false) // システム定義（削除不可）
+  isActive         Boolean                   @default(true)
+  sortOrder        Int                       @default(0)
+  color            String?                   // バッジ表示色
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime
+  role_permissions role_permissions[]
+  user_permission_overrides user_permission_overrides[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+// 権限マスタ
+model permissions {
+  id          String                    @id
+  resource    String                    // dashboard, attendance, payroll, etc.
+  action      String                    // create, read, update, delete, approve, manage
+  scope       String                    // self, team, department, company
+  code        String                    @unique // {resource}:{action}:{scope}
+  name        String                    // 表示名
+  description String?
+  category    String                    // menu, feature
+  menuKey     String?                   // メニュー表示権限の場合のメニューキー
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime
+  role_permissions role_permissions[]
+  user_permission_overrides user_permission_overrides[]
+
+  @@index([resource])
+  @@index([category])
+  @@index([code])
+}
+
+// ロール×権限マッピング
+model role_permissions {
+  id           String      @id
+  roleId       String
+  permissionId String
+  createdAt    DateTime    @default(now())
+  roles        roles       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissions  permissions @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// ユーザー個別オーバーライド
+model user_permission_overrides {
+  id           String      @id
+  tenantId     String
+  userId       String
+  permissionId String
+  roleId       String?     // 特定ロールに紐づくオーバーライド（任意）
+  overrideType String      // grant, revoke
+  reason       String?
+  grantedBy    String      // オーバーライドを設定したユーザーID
+  expiresAt    DateTime?   // 有効期限
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime
+  permissions  permissions @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  roles        roles?      @relation(fields: [roleId], references: [id])
+
+  @@unique([tenantId, userId, permissionId])
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([permissionId])
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,8 +49,34 @@ import { cn } from '@/lib/utils';
 import type { OrganizationMember, UserRole } from '@/types';
 import { permissionDefinitions, roleDefinitions } from '@/lib/demo-organization';
 
+interface ApiRole {
+  id: string;
+  tenantId: string;
+  code: string;
+  name: string;
+  description: string | null;
+  isSystem: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  color: string | null;
+  _count?: { role_permissions: number };
+}
+
+interface ApiPermission {
+  id: string;
+  resource: string;
+  action: string;
+  scope: string;
+  code: string;
+  name: string;
+  description: string | null;
+  category: string;
+  menuKey: string | null;
+}
+
 interface PermissionManagementPanelProps {
   members: OrganizationMember[];
+  tenantId?: string;
   onMemberPermissionUpdate?: (memberId: string, permissions: string[]) => void;
   onRoleUpdate?: (roleId: string, permissions: string[]) => void;
 }
@@ -82,6 +108,7 @@ const roleLabels: Record<UserRole, string> = {
 
 export function PermissionManagementPanel({
   members,
+  tenantId,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onMemberPermissionUpdate: _onMemberPermissionUpdate, // 将来的に権限更新で使用予定
   onRoleUpdate
@@ -91,6 +118,82 @@ export function PermissionManagementPanel({
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
   const [editingRole, setEditingRole] = useState<typeof roleDefinitions[0] | null>(null);
   const [editingMember, setEditingMember] = useState<OrganizationMember | null>(null);
+
+  // API連携用のステート
+  const [apiRoles, setApiRoles] = useState<ApiRole[]>([]);
+  const [apiPermissions, setApiPermissions] = useState<ApiPermission[]>([]);
+  const [apiRolePermissions, setApiRolePermissions] = useState<Record<string, string[]>>({});
+  const [useApi, setUseApi] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // API からロールと権限マスタを取得
+  const fetchApiData = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const [rolesRes, permsRes] = await Promise.all([
+        fetch(`/api/permissions/roles?tenantId=${tenantId}`),
+        fetch('/api/permissions/master'),
+      ]);
+      if (rolesRes.ok && permsRes.ok) {
+        const rolesData = await rolesRes.json();
+        const permsData = await permsRes.json();
+        if (rolesData.success && permsData.success) {
+          setApiRoles(rolesData.data);
+          setApiPermissions(permsData.data);
+          setUseApi(true);
+
+          // 各ロールの権限を取得
+          const rpMap: Record<string, string[]> = {};
+          for (const role of rolesData.data) {
+            const rpRes = await fetch(`/api/permissions/roles/${role.id}/permissions?tenantId=${tenantId}`);
+            if (rpRes.ok) {
+              const rpData = await rpRes.json();
+              if (rpData.success) {
+                rpMap[role.code] = rpData.data.map((p: ApiPermission) => p.code);
+              }
+            }
+          }
+          setApiRolePermissions(rpMap);
+        }
+      }
+    } catch {
+      // APIエラー時はデモデータにフォールバック
+      setUseApi(false);
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    fetchApiData();
+  }, [fetchApiData]);
+
+  // API経由でロール権限を保存
+  const saveRolePermissions = async (roleCode: string, permissionCodes: string[]) => {
+    if (!useApi || !tenantId) return;
+    const role = apiRoles.find(r => r.code === roleCode);
+    if (!role) return;
+
+    setIsSaving(true);
+    try {
+      // 権限コードからIDに変換
+      const permissionIds = permissionCodes
+        .map(code => apiPermissions.find(p => p.code === code)?.id)
+        .filter((id): id is string => !!id);
+
+      const res = await fetch(`/api/permissions/roles/${role.id}/permissions?tenantId=${tenantId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissionIds }),
+      });
+
+      if (res.ok) {
+        setApiRolePermissions(prev => ({ ...prev, [roleCode]: permissionCodes }));
+      }
+    } catch {
+      // 保存エラー
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // 権限カテゴリの変換
   const permissionCategories = useMemo(() => {
@@ -109,8 +212,11 @@ export function PermissionManagementPanel({
     });
   }, [members, searchQuery, selectedRole]);
 
-  // ロールの権限取得
+  // ロールの権限取得（API優先、フォールバック対応）
   const getRolePermissions = (role: UserRole) => {
+    if (useApi && apiRolePermissions[role]) {
+      return apiRolePermissions[role];
+    }
     const roleDefinition = roleDefinitions.find(r => r.code === role);
     return roleDefinition ? roleDefinition.permissions : [];
   };
@@ -125,6 +231,11 @@ export function PermissionManagementPanel({
   };
 
   const handleRolePermissionUpdate = (roleCode: string, permissions: string[]) => {
+    // API経由で保存
+    if (useApi) {
+      saveRolePermissions(roleCode, permissions);
+    }
+    // 旧コールバックも呼び出し
     if (onRoleUpdate) {
       const role = roleDefinitions.find(r => r.code === roleCode);
       if (role) {
@@ -429,8 +540,8 @@ export function PermissionManagementPanel({
               <Button variant="outline" onClick={() => setEditingRole(null)}>
                 キャンセル
               </Button>
-              <Button onClick={() => setEditingRole(null)}>
-                保存
+              <Button onClick={() => setEditingRole(null)} disabled={isSaving}>
+                {isSaving ? '保存中...' : '保存'}
               </Button>
             </div>
           </DialogContent>

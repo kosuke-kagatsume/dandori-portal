@@ -31,6 +31,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { useUIStore, useUserStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { hasMenuAccess, type MenuKey, type UserRole } from '@/lib/rbac';
+import { usePermissionStore } from '@/lib/store/permission-store';
 import type { User } from '@/types';
 
 const getNavigation = (locale: string, currentUser: User | null) => {
@@ -77,9 +78,15 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const currentUser = useUserStore(state => state.currentUser);
 
   const navigation = getNavigation(currentLocale, currentUser);
+  const permissionStore = usePermissionStore();
 
-  // RBAC-based filtering: show menu if user has at least one role with access
+  // RBAC-based filtering: DB権限があればcanMenu、なければ旧hasMenuAccessにフォールバック
   const filteredNavigation = navigation.filter(item => {
+    // DB権限が解決済みの場合はそちらを使用
+    if (permissionStore.resolved && !permissionStore.isDemoMode) {
+      return permissionStore.canMenu(item.menuKey);
+    }
+    // フォールバック: 旧ハードコード権限
     const userRoles = currentUser?.roles || [];
     return userRoles.some(role =>
       hasMenuAccess(role as UserRole, item.menuKey)
