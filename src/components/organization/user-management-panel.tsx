@@ -68,9 +68,11 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 const statusLabels = {
-  active: '在職中',
-  inactive: '休職中',
-  leave: '退職済み'
+  active: '在籍中',
+  inactive: '入社予定',
+  suspended: '休職中',
+  leave: '退職済み',
+  retired: '退職済み',
 };
 
 const getRoleColor = (role: UserRole) => {

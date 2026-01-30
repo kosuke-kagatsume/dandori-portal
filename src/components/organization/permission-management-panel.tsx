@@ -75,7 +75,7 @@ interface ApiPermission {
 }
 
 interface PermissionManagementPanelProps {
-  members: OrganizationMember[];
+  members?: OrganizationMember[];
   tenantId?: string;
   onMemberPermissionUpdate?: (memberId: string, permissions: string[]) => void;
   onRoleUpdate?: (roleId: string, permissions: string[]) => void;
@@ -107,7 +107,7 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 export function PermissionManagementPanel({
-  members,
+  members = [],
   tenantId,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onMemberPermissionUpdate: _onMemberPermissionUpdate, // 将来的に権限更新で使用予定

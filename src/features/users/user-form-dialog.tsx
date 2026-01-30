@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -104,6 +104,26 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
   });
 
   const hireDate = watch('hireDate');
+  const watchDepartment = watch('department');
+  const watchPosition = watch('position');
+  const watchStatus = watch('status');
+  const watchRoles = watch('roles');
+
+  // ユーザーが変わったらフォームをリセット（入社日が今日に上書きされるバグ修正）
+  useEffect(() => {
+    if (open) {
+      reset({
+        name: user?.name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        department: user?.department || '',
+        position: user?.position || '',
+        hireDate: user?.hireDate ? new Date(user.hireDate) : new Date(),
+        status: user?.status || 'active',
+        roles: user?.roles || ['employee'],
+      });
+    }
+  }, [user, open, reset]);
 
   const handleFormSubmit = async (data: UserFormData) => {
     setIsSubmitting(true);
@@ -125,7 +145,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <DialogHeader>
             <DialogTitle>
-              {user ? 'ユーザー編集' : 'ユーザー作成'}
+              {user ? `${user.name} - 編集` : 'ユーザー作成'}
             </DialogTitle>
             <DialogDescription>
               {user ? 'ユーザー情報を編集します' : '新しいユーザーを作成します'}
@@ -182,9 +202,9 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
                 部署 *
               </Label>
               <div className="col-span-3">
-                <Select 
+                <Select
                   onValueChange={(value) => setValue('department', value)}
-                  defaultValue={user?.department}
+                  value={watchDepartment}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="部署を選択" />
@@ -208,9 +228,9 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
                 役職 *
               </Label>
               <div className="col-span-3">
-                <Select 
+                <Select
                   onValueChange={(value) => setValue('position', value)}
-                  defaultValue={user?.position}
+                  value={watchPosition}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="役職を選択" />
@@ -271,15 +291,15 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
               <div className="col-span-3">
                 <Select
                   onValueChange={(value) => setValue('status', value as 'active' | 'inactive' | 'suspended' | 'retired')}
-                  defaultValue={user?.status || 'active'}
+                  value={watchStatus}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="ステータスを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">有効</SelectItem>
-                    <SelectItem value="inactive">無効</SelectItem>
-                    <SelectItem value="suspended">一時停止</SelectItem>
+                    <SelectItem value="active">在籍中</SelectItem>
+                    <SelectItem value="inactive">入社予定</SelectItem>
+                    <SelectItem value="suspended">休職中</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -292,7 +312,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
               <div className="col-span-3">
                 <Select
                   onValueChange={(value) => setValue('roles', [value])}
-                  defaultValue={user?.roles?.[0] || 'employee'}
+                  value={watchRoles?.[0] || 'employee'}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="役職権限を選択" />

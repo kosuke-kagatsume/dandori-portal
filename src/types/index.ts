@@ -5,6 +5,8 @@ export const UserSchema = z.object({
   id: z.string(),
   tenantId: z.string().optional(),
   name: z.string(),
+  nameKana: z.string().optional(), // 氏名（フリガナ）
+  employeeNumber: z.string().optional(), // 従業員番号
   email: z.string().email(),
   phone: z.string().optional(),
   hireDate: z.string(),
@@ -17,6 +19,91 @@ export const UserSchema = z.object({
   avatar: z.string().optional(),
   position: z.string().optional(),
   department: z.string().optional(),
+  // 勤怠関連
+  paidLeaveStartDate: z.string().optional(), // 有給起算日
+  punchMethod: z.enum(['web', 'ic_card', 'mobile', 'face']).optional(), // 打刻方法
+  employmentType: z.string().optional(), // 雇用形態
+  // 休職履歴
+  leaveOfAbsenceHistory: z.array(z.object({
+    id: z.string(),
+    startDate: z.string(),
+    endDate: z.string().optional(),
+    reason: z.string(),
+    notes: z.string().optional(),
+  })).optional(),
+  // 資格情報
+  qualifications: z.array(z.object({
+    id: z.string(),
+    name: z.string(), // 資格・免許名
+    issuer: z.string().optional(), // 発行機関
+    acquiredDate: z.string().optional(), // 取得日
+    expiryDate: z.string().optional(), // 有効期限
+    certificateNumber: z.string().optional(), // 証書番号
+  })).optional(),
+  skills: z.array(z.object({
+    id: z.string(),
+    name: z.string(), // スキル名
+    level: z.enum(['beginner', 'intermediate', 'advanced', 'expert']).optional(),
+    yearsOfExperience: z.number().optional(),
+  })).optional(),
+  careerHistory: z.array(z.object({
+    id: z.string(),
+    companyName: z.string(), // 会社名
+    position: z.string().optional(), // 役職
+    department: z.string().optional(), // 部署
+    startDate: z.string(), // 開始日
+    endDate: z.string().optional(), // 終了日
+    description: z.string().optional(), // 業務内容
+  })).optional(),
+  achievements: z.array(z.object({
+    id: z.string(),
+    title: z.string(), // 実績タイトル
+    date: z.string().optional(), // 日付
+    description: z.string().optional(), // 説明
+  })).optional(),
+  // 給与関連
+  payrollInfo: z.object({
+    // 一般情報
+    basicSalary: z.number().optional(), // 基本給
+    workType: z.enum(['monthly', 'daily', 'hourly']).optional(), // 給与形態
+    residentTaxCity: z.string().optional(), // 住民税 徴収先市区町村
+    residentTaxMethod: z.enum(['special', 'normal']).optional(), // 特別徴収/普通徴収
+    incomeTaxType: z.enum(['kouA', 'kouB', 'otsu']).optional(), // 所得税 甲欄/乙欄
+    dependentCount: z.number().optional(), // 扶養人数
+    dependents: z.array(z.object({
+      id: z.string(),
+      name: z.string(),
+      relationship: z.string(), // 続柄
+      birthDate: z.string().optional(),
+      isDisabled: z.boolean().optional(),
+      isElderlyParent: z.boolean().optional(),
+    })).optional(),
+    myNumber: z.string().optional(), // マイナンバー（暗号化保存予定）
+    // 給与情報
+    allowances: z.array(z.object({
+      id: z.string(),
+      name: z.string(), // 手当名
+      amount: z.number(), // 金額
+      isTaxable: z.boolean().optional(), // 課税対象
+    })).optional(),
+    commuteMethod: z.enum(['train', 'bus', 'car', 'bicycle', 'walk', 'other']).optional(),
+    commuteAllowance: z.number().optional(), // 通勤手当
+    commuteRoute: z.string().optional(), // 通勤経路
+    healthInsuranceGrade: z.string().optional(), // 健康保険等級
+    pensionGrade: z.string().optional(), // 厚生年金等級
+    employmentInsuranceNumber: z.string().optional(), // 雇用保険番号
+    residentTaxMonthlyAmount: z.number().optional(), // 住民税月額
+    // 支払情報
+    bankAccounts: z.array(z.object({
+      id: z.string(),
+      usage: z.enum(['salary', 'bonus', 'both']), // 給与/賞与/両方
+      bankName: z.string(),
+      branchName: z.string(),
+      accountType: z.enum(['ordinary', 'current', 'savings']), // 普通/当座/貯蓄
+      accountNumber: z.string(),
+      accountHolder: z.string(),
+    })).optional(),
+  }).optional(),
 });
 
 export const TenantSchema = z.object({

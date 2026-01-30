@@ -23,8 +23,6 @@ import {
   Database,
   ChevronRight,
   CreditCard,
-  CalendarDays,
-  AlertTriangle,
   FileUp,
   Megaphone,
 } from 'lucide-react';
@@ -39,20 +37,19 @@ import {
   CompanyTab,
   PayrollTab,
   YearEndTab,
-  AttendanceTab,
   WorkflowTab,
   BillingTab,
   AppearanceTab,
   RegionalTab,
 } from '@/features/settings/tabs';
 import { MasterDataPanel } from '@/components/settings/master-data-panel';
-import { LeaveTypeMasterPanel } from '@/features/leave/leave-type-master-panel';
-import { AlertMasterPanel } from '@/features/attendance/alert-master-panel';
+import { AttendanceMasterPanel } from '@/features/attendance/attendance-master-panel';
 import { DataManagementPanel } from '@/features/data-management/data-management-panel';
 import { AnnouncementTypeMasterPanel } from '@/features/announcements/announcement-type-master-panel';
 import { DashboardSettingsPanel } from '@/features/dashboard/dashboard-settings-panel';
+import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, Lock } from 'lucide-react';
 
 type SettingCategory = {
   id: string;
@@ -104,23 +101,9 @@ const settingCategories: SettingCategory[] = [
   },
   {
     id: 'attendance',
-    title: '勤怠',
-    description: '勤務時間、休日、有給設定',
+    title: '勤怠マスタ',
+    description: '就業ルール、休暇・休日、打刻丸め、アラート・36協定',
     icon: Clock,
-  },
-  {
-    id: 'leave',
-    title: '休暇種別',
-    description: '休暇種別マスタ、有給自動付与',
-    icon: CalendarDays,
-    badge: '人事',
-    requiresRole: ['hr', 'admin'],
-  },
-  {
-    id: 'alert',
-    title: 'アラート設定',
-    description: '勤怠アラート、36協定設定',
-    icon: AlertTriangle,
     badge: '人事',
     requiresRole: ['hr', 'admin'],
   },
@@ -167,6 +150,14 @@ const settingCategories: SettingCategory[] = [
     title: 'システム',
     description: 'データ管理、監査ログ',
     icon: ShieldCheck,
+    badge: '管理者',
+    requiresRole: ['admin'],
+  },
+  {
+    id: 'permissions',
+    title: '権限管理',
+    description: 'ロール・メニュー権限設定',
+    icon: Lock,
     badge: '管理者',
     requiresRole: ['admin'],
   },
@@ -289,11 +280,7 @@ export default function SettingsPage() {
       case 'year-end':
         return <YearEndTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'attendance':
-        return <AttendanceTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
-      case 'leave':
-        return <LeaveTypeMasterPanel />;
-      case 'alert':
-        return <AlertMasterPanel />;
+        return <AttendanceMasterPanel settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'workflow':
         return <WorkflowTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'master-data':
@@ -306,6 +293,8 @@ export default function SettingsPage() {
         return <BillingTab />;
       case 'system':
         return <SystemTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
+      case 'permissions':
+        return <PermissionManagementPanel />;
       default:
         return null;
     }

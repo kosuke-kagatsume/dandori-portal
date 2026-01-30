@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -36,6 +36,8 @@ import { cn } from '@/lib/utils';
 
 const inviteSchema = z.object({
   name: z.string().min(1, '氏名を入力してください'),
+  nameKana: z.string().optional(),
+  employeeNumber: z.string().optional(),
   email: z.string().email('有効なメールアドレスを入力してください'),
   role: z.string().min(1, '役職権限を選択してください'),
   department: z.string().min(1, '部署を選択してください'),
@@ -77,7 +79,21 @@ export function InviteUserDialog({
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   // マスタデータから選択肢を取得
-  const { getActiveDepartments, getActivePositions, getActiveEmploymentTypes } = useMasterDataStore();
+  const { getActiveDepartments, getActivePositions, getActiveEmploymentTypes, fetchAll, departments: allDepartments, setTenantId } = useMasterDataStore();
+
+  // ダイアログが開かれたらマスタデータをフェッチ
+  useEffect(() => {
+    if (open) {
+      if (tenantId) {
+        setTenantId(tenantId);
+      }
+      // データが空の場合のみフェッチ
+      if (allDepartments.length === 0) {
+        fetchAll();
+      }
+    }
+  }, [open, tenantId, setTenantId, fetchAll, allDepartments.length]);
+
   const departments = getActiveDepartments();
   const positions = getActivePositions();
   const employmentTypes = getActiveEmploymentTypes();
@@ -93,6 +109,8 @@ export function InviteUserDialog({
     resolver: zodResolver(inviteSchema),
     defaultValues: {
       name: '',
+      nameKana: '',
+      employeeNumber: '',
       email: '',
       role: 'employee',
       department: '',
@@ -116,6 +134,8 @@ export function InviteUserDialog({
         body: JSON.stringify({
           email: data.email,
           name: data.name,
+          nameKana: data.nameKana,
+          employeeNumber: data.employeeNumber,
           role: data.role,
           department: data.department,
           position: data.position,
@@ -219,6 +239,34 @@ export function InviteUserDialog({
                   {errors.name && (
                     <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>
                   )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="nameKana" className="text-right">
+                  フリガナ
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="nameKana"
+                    placeholder="ヤマダタロウ"
+                    {...register('nameKana')}
+                    disabled={inviteStatus === 'sending'}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="employeeNumber" className="text-right">
+                  社員番号
+                </Label>
+                <div className="col-span-3">
+                  <Input
+                    id="employeeNumber"
+                    placeholder="EMP-001"
+                    {...register('employeeNumber')}
+                    disabled={inviteStatus === 'sending'}
+                  />
                 </div>
               </div>
 

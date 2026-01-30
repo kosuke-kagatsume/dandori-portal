@@ -7,13 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Mail, Phone, Calendar, Building, Shield, CreditCard, Download, Clock, TrendingUp, Edit, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Calendar, Building, Shield, CreditCard, Download, Edit, Loader2 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { useSaaSStore } from '@/lib/store/saas-store';
 import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
-import { usePayrollStore } from '@/lib/store/payroll-store';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
+import { UserAttendanceTab } from '@/features/users/user-attendance-tab';
+import { UserQualificationTab } from '@/features/users/user-qualification-tab';
+import { UserPayrollTab } from '@/features/users/user-payroll-tab';
 import { categoryLabels } from '@/types/saas';
 import { exportUserSaaSToCSV } from '@/lib/utils/csv-export';
 import { toast } from 'sonner';
@@ -24,7 +25,6 @@ export default function UserDetailPage({ params }: { params: { id: string; local
   const { users, setUsers } = useUserStore();
   const { getUserSaaSDetails, getUserTotalCost } = useSaaSStore();
   const { records: attendanceRecords } = useAttendanceHistoryStore();
-  const { calculations: payrollCalculations } = usePayrollStore();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -34,8 +34,9 @@ export default function UserDetailPage({ params }: { params: { id: string; local
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _tenantId = currentUser?.tenantId || ''; // API呼び出しで使用予定
 
-  // 経営者は閲覧のみ（編集不可）
-  const isExecutive = currentUser?.roles?.includes('executive');
+  // 人事(hr)のみ編集可能
+  const isHR = currentUser?.roles?.includes('hr');
+  const isReadOnly = !isHR;
 
   // API経由でユーザーデータを取得
   useEffect(() => {
@@ -124,30 +125,6 @@ export default function UserDetailPage({ params }: { params: { id: string; local
     };
   }, [userAttendanceRecords]);
 
-  // 給与データを取得（直近12ヶ月）
-  const userPayrollCalculations = useMemo(() => {
-    if (!user) return [];
-
-    return payrollCalculations
-      .filter((calc) => calc.employeeId === user.id)
-      .sort((a, b) => b.period.localeCompare(a.period))
-      .slice(0, 12);
-  }, [user, payrollCalculations]);
-
-  // 給与統計を計算
-  const payrollStats = useMemo(() => {
-    const totalSalaries = userPayrollCalculations.reduce((sum, calc) => sum + calc.netSalary, 0);
-    const avgSalary = userPayrollCalculations.length > 0 ? totalSalaries / userPayrollCalculations.length : 0;
-    const latestSalary = userPayrollCalculations[0]?.netSalary || 0;
-
-    return {
-      avgMonthlySalary: Math.floor(avgSalary),
-      totalAnnualSalary: Math.floor(totalSalaries),
-      latestSalary: Math.floor(latestSalary),
-      recordCount: userPayrollCalculations.length,
-    };
-  }, [userPayrollCalculations]);
-
   // ローディング中
   if (loading) {
     return (
@@ -179,10 +156,10 @@ export default function UserDetailPage({ params }: { params: { id: string; local
   }
 
   const statusLabels = {
-    active: '有効',
-    inactive: '無効',
-    suspended: '停止',
-    retired: '退職',
+    active: '在籍中',
+    inactive: '入社予定',
+    suspended: '休職中',
+    retired: '退職済み',
   };
 
   const statusColors = {
@@ -265,13 +242,6 @@ export default function UserDetailPage({ params }: { params: { id: string; local
           <h1 className="text-3xl font-bold tracking-tight">ユーザー詳細</h1>
           <p className="text-muted-foreground">ユーザー情報とSaaS利用状況</p>
         </div>
-        {/* 経営者は編集不可 */}
-        {!isExecutive && (
-          <Button variant="outline" onClick={() => setEditDialogOpen(true)}>
-            <Edit className="mr-2 h-4 w-4" />
-            編集
-          </Button>
-        )}
       </div>
 
       {/* プロフィールカード */}
@@ -315,6 +285,12 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                       <span>入社日: {new Date(user.hireDate).toLocaleDateString('ja-JP')}</span>
                     </div>
                   )}
+                  {user.status === 'retired' && user.retiredDate && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span className="text-destructive">退職日: {new Date(user.retiredDate).toLocaleDateString('ja-JP')}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               {user.roles && user.roles.length > 0 && (
@@ -335,20 +311,43 @@ export default function UserDetailPage({ params }: { params: { id: string; local
       </Card>
 
       {/* タブコンテンツ */}
+      {(() => {
+        // 権限ベースのタブ表示制御
+        const canViewPayroll = currentUser?.roles?.some(r => ['hr', 'admin'].includes(r));
+        const visibleTabs = [
+          { value: 'basic', label: '基本情報' },
+          { value: 'saas', label: 'SaaS利用' },
+          { value: 'attendance', label: '勤怠' },
+          { value: 'qualification', label: '資格情報' },
+          ...(canViewPayroll ? [{ value: 'payroll', label: '給与' }] : []),
+        ];
+        const gridColsMap: Record<number, string> = { 3: 'grid-cols-3', 4: 'grid-cols-4', 5: 'grid-cols-5' };
+        const gridCols = gridColsMap[visibleTabs.length] || `grid-cols-${visibleTabs.length}`;
+
+        return (
       <Tabs defaultValue="basic" className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="basic">基本情報</TabsTrigger>
-          <TabsTrigger value="saas">SaaS利用</TabsTrigger>
-          <TabsTrigger value="attendance">勤怠</TabsTrigger>
-          <TabsTrigger value="payroll">給与</TabsTrigger>
+        <TabsList className={`grid w-full ${gridCols}`}>
+          {visibleTabs.map(tab => (
+            <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>
+          ))}
         </TabsList>
 
         {/* 基本情報タブ */}
         <TabsContent value="basic" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>基本情報</CardTitle>
-              <CardDescription>ユーザーの詳細情報</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>基本情報</CardTitle>
+                  <CardDescription>ユーザーの詳細情報</CardDescription>
+                </div>
+                {!isReadOnly && (
+                  <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(true)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    編集
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -364,10 +363,22 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                     </Badge>
                   </p>
                 </div>
+                {user.employeeNumber && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">社員番号</p>
+                    <p className="text-sm mt-1">{user.employeeNumber}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">氏名</p>
                   <p className="text-sm mt-1">{user.name}</p>
                 </div>
+                {user.nameKana && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">フリガナ</p>
+                    <p className="text-sm mt-1">{user.nameKana}</p>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">メールアドレス</p>
                   <p className="text-sm mt-1">{user.email}</p>
@@ -425,7 +436,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                   ¥{totalCost.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  個人負担分の月額
+                  個人利用分
                 </p>
               </CardContent>
             </Card>
@@ -551,288 +562,37 @@ export default function UserDetailPage({ params }: { params: { id: string; local
 
         {/* 勤怠タブ */}
         <TabsContent value="attendance" className="space-y-4">
-          {/* 統計カード */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">出勤日数</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{attendanceStats.totalDays}日</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  直近6ヶ月
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">総労働時間</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{attendanceStats.totalWorkHours}時間</div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  1日平均: {attendanceStats.avgWorkHoursPerDay}時間
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">残業時間</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
-                  {attendanceStats.totalOvertimeHours}時間
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  直近6ヶ月累計
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 勤怠履歴 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>勤怠履歴</CardTitle>
-              <CardDescription>直近6ヶ月の出退勤記録</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {userAttendanceRecords.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p className="text-lg font-medium">勤怠記録がありません</p>
-                  <p className="text-sm">勤怠データが記録されていません</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>日付</TableHead>
-                      <TableHead>出勤時刻</TableHead>
-                      <TableHead>退勤時刻</TableHead>
-                      <TableHead>勤務時間</TableHead>
-                      <TableHead>残業</TableHead>
-                      <TableHead>勤務場所</TableHead>
-                      <TableHead>ステータス</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {userAttendanceRecords.map((record) => {
-                      const statusLabels = {
-                        present: '出勤',
-                        absent: '欠勤',
-                        holiday: '休日',
-                        leave: '休暇',
-                        late: '遅刻',
-                        early: '早退',
-                      };
-
-                      const statusColors = {
-                        present: 'default',
-                        absent: 'destructive',
-                        holiday: 'secondary',
-                        leave: 'outline',
-                        late: 'secondary',
-                        early: 'secondary',
-                      } as const;
-
-                      const locationLabels = {
-                        office: 'オフィス',
-                        home: '在宅',
-                        client: '客先',
-                        other: 'その他',
-                      };
-
-                      return (
-                        <TableRow key={record.id}>
-                          <TableCell className="font-medium">
-                            {new Date(record.date).toLocaleDateString('ja-JP', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit',
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            {record.checkIn
-                              ? new Date(record.checkIn).toLocaleTimeString('ja-JP', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.checkOut
-                              ? new Date(record.checkOut).toLocaleTimeString('ja-JP', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.workMinutes > 0
-                              ? `${Math.floor(record.workMinutes / 60)}:${String(
-                                  record.workMinutes % 60
-                                ).padStart(2, '0')}`
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {record.overtimeMinutes > 0 ? (
-                              <span className="text-orange-600 font-medium">
-                                {Math.floor(record.overtimeMinutes / 60)}:
-                                {String(record.overtimeMinutes % 60).padStart(2, '0')}
-                              </span>
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{locationLabels[record.workLocation]}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={statusColors[record.status]}>
-                              {statusLabels[record.status]}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          <UserAttendanceTab
+            user={user}
+            attendanceRecords={userAttendanceRecords}
+            attendanceStats={attendanceStats}
+            transferHistory={[]}
+            isReadOnly={isReadOnly}
+            onEdit={() => setEditDialogOpen(true)}
+          />
         </TabsContent>
 
-        {/* 給与タブ */}
-        <TabsContent value="payroll" className="space-y-4">
-          {/* 統計カード */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">平均月額</CardTitle>
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-primary">
-                  ¥{payrollStats.avgMonthlySalary.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {payrollStats.recordCount}ヶ月の平均
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">年間総額</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ¥{payrollStats.totalAnnualSalary.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  直近{payrollStats.recordCount}ヶ月の累計
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">最新月</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  ¥{payrollStats.latestSalary.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {userPayrollCalculations[0]?.period || '-'}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 給与明細一覧 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>給与明細一覧</CardTitle>
-              <CardDescription>直近12ヶ月の給与計算結果</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {userPayrollCalculations.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p className="text-lg font-medium">給与データがありません</p>
-                  <p className="text-sm">給与計算が実行されていません</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>期間</TableHead>
-                      <TableHead>支給額</TableHead>
-                      <TableHead>控除額</TableHead>
-                      <TableHead>差引支給額</TableHead>
-                      <TableHead>労働時間</TableHead>
-                      <TableHead>残業時間</TableHead>
-                      <TableHead>ステータス</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {userPayrollCalculations.map((calc) => {
-                      const statusLabels = {
-                        draft: '下書き',
-                        approved: '承認済',
-                        paid: '支払済',
-                      };
-
-                      const statusColors = {
-                        draft: 'outline',
-                        approved: 'secondary',
-                        paid: 'default',
-                      } as const;
-
-                      return (
-                        <TableRow key={calc.id}>
-                          <TableCell className="font-medium">{calc.period}</TableCell>
-                          <TableCell className="text-green-600 font-medium">
-                            ¥{calc.grossSalary.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-red-600">
-                            ¥{calc.totalDeductions.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-lg font-bold text-primary">
-                            ¥{calc.netSalary.toLocaleString()}
-                          </TableCell>
-                          <TableCell>{calc.totalWorkHours.toFixed(1)}h</TableCell>
-                          <TableCell>
-                            {calc.overtimeHours > 0 ? (
-                              <span className="text-orange-600 font-medium">
-                                {calc.overtimeHours.toFixed(1)}h
-                              </span>
-                            ) : (
-                              '-'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={statusColors[calc.status]}>
-                              {statusLabels[calc.status]}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+        {/* 資格情報タブ */}
+        <TabsContent value="qualification" className="space-y-4">
+          <UserQualificationTab
+            user={user}
+            isReadOnly={isReadOnly}
+            isHR={!!isHR}
+          />
         </TabsContent>
+
+        {/* 給与タブ（HR・管理者のみ） */}
+        {canViewPayroll && <TabsContent value="payroll" className="space-y-4">
+          <UserPayrollTab
+            user={user}
+            isReadOnly={isReadOnly}
+            isHR={!!isHR}
+            onEdit={() => setEditDialogOpen(true)}
+          />
+        </TabsContent>}
       </Tabs>
+        );
+      })()}
 
       {/* 編集ダイアログ */}
       <UserFormDialog

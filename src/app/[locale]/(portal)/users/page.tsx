@@ -89,8 +89,9 @@ export default function UsersPage() {
   const currentUser = useUserStore(state => state.currentUser);
   const tenantId = currentUser?.tenantId || '';
 
-  // 経営者は閲覧のみ（編集・招待・退職処理不可）
-  const isExecutive = currentUser?.roles?.includes('executive');
+  // 人事(hr)のみ編集可能。経営者・システム管理者は閲覧のみ
+  const isHR = currentUser?.roles?.includes('hr');
+  const isReadOnly = !isHR;
 
   // APIからユーザーを取得
   const fetchUsers = useCallback(async () => {
@@ -322,10 +323,10 @@ export default function UsersPage() {
     } as const;
 
     const labels = {
-      active: '有効',
-      inactive: '無効',
-      suspended: '停止',
-      retired: '退職',
+      active: '在籍中',
+      inactive: '入社予定',
+      suspended: '休職中',
+      retired: '退職済み',
     } as const;
 
     return (
@@ -458,8 +459,8 @@ export default function UsersPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 詳細表示
               </DropdownMenuItem>
-              {/* 経営者は編集・退職処理不可 */}
-              {!isExecutive && (
+              {/* 人事以外は編集・退職処理不可 */}
+              {!isReadOnly && (
                 <>
                   <DropdownMenuItem
                     onClick={() => {
@@ -494,7 +495,7 @@ export default function UsersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -522,14 +523,14 @@ export default function UsersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">すべて</SelectItem>
-              <SelectItem value="active">有効のみ</SelectItem>
-              <SelectItem value="retired">退職者のみ</SelectItem>
-              <SelectItem value="inactive">無効のみ</SelectItem>
-              <SelectItem value="suspended">停止のみ</SelectItem>
+              <SelectItem value="active">在籍中</SelectItem>
+              <SelectItem value="retired">退職済み</SelectItem>
+              <SelectItem value="inactive">入社予定</SelectItem>
+              <SelectItem value="suspended">休職中</SelectItem>
             </SelectContent>
           </Select>
-          {/* 経営者はエクスポート・インポート・招待不可 */}
-          {!isExecutive && (
+          {/* 人事以外は編集系操作不可 */}
+          {!isReadOnly && (
             <>
               <Button variant="outline" size="sm" onClick={handleExportCSV} className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />
@@ -582,7 +583,7 @@ export default function UsersPage() {
               <UserPlus className="h-4 w-4 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">有効ユーザー</p>
+              <p className="text-sm font-medium text-muted-foreground">在籍中</p>
               <p className="text-2xl font-bold">
                 {users.filter(u => u.status === 'active').length}
               </p>
