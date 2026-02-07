@@ -67,17 +67,20 @@ export function CsvImportDialog({ open, onOpenChange }: CsvImportDialogProps) {
     }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!parsedData || parsedData.length === 0) return;
+
+    setIsProcessing(true);
 
     try {
       let successCount = 0;
       let failCount = 0;
 
-      parsedData.forEach((change) => {
+      // 順次インポート（API呼び出しのため）
+      for (const change of parsedData) {
         try {
           // 新しいIDを生成してインポート（既存IDと重複しないように）
-          scheduleChange({
+          const result = await scheduleChange({
             type: change.type,
             userId: change.userId,
             userName: change.userName,
@@ -87,12 +90,16 @@ export function CsvImportDialog({ open, onOpenChange }: CsvImportDialogProps) {
             requiresApproval: change.requiresApproval,
             details: change.details,
           });
-          successCount++;
+          if (result) {
+            successCount++;
+          } else {
+            failCount++;
+          }
         } catch (error) {
           console.error('Failed to import change:', error);
           failCount++;
         }
-      });
+      }
 
       if (successCount > 0) {
         toast.success(`${successCount}件の予約をインポートしました`);
@@ -106,6 +113,8 @@ export function CsvImportDialog({ open, onOpenChange }: CsvImportDialogProps) {
     } catch (error) {
       toast.error('インポート中にエラーが発生しました');
       console.error('Import error:', error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useUserStore } from '@/lib/store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -121,6 +122,9 @@ interface ApiResponse {
 }
 
 export default function LegalUpdatesPage() {
+  // ユーザー情報取得
+  const { currentUser } = useUserStore();
+
   // データ状態
   const [updates, setUpdates] = useState<LegalUpdate[]>([]);
   const [stats, setStats] = useState({
@@ -245,6 +249,26 @@ export default function LegalUpdatesPage() {
     });
   };
 
+  // 施行日までの日数を計算
+  const getDaysUntilEffective = (dateString: string) => {
+    const effectiveDate = new Date(dateString);
+    const now = new Date();
+    const diffTime = effectiveDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // 施行日の緊急度を判定
+  const getDeadlineUrgency = (dateString: string, status: TenantStatus) => {
+    if (status === 'completed') return null;
+    const daysRemaining = getDaysUntilEffective(dateString);
+    if (daysRemaining < 0) return { level: 'overdue', label: '施行済み', color: 'bg-red-100 text-red-800 border-red-300' };
+    if (daysRemaining <= 7) return { level: 'critical', label: `残り${daysRemaining}日`, color: 'bg-red-100 text-red-800 border-red-300' };
+    if (daysRemaining <= 30) return { level: 'warning', label: `残り${daysRemaining}日`, color: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
+    if (daysRemaining <= 90) return { level: 'info', label: `残り${daysRemaining}日`, color: 'bg-blue-100 text-blue-800 border-blue-300' };
+    return null;
+  };
+
   // ステータス更新
   const handleUpdateStatus = async () => {
     if (!selectedUpdate) return;
@@ -257,7 +281,7 @@ export default function LegalUpdatesPage() {
         body: JSON.stringify({
           status: editingStatus,
           notes: editingNotes,
-          completedBy: editingStatus === 'completed' ? 'デモユーザー' : null,
+          completedBy: editingStatus === 'completed' ? (currentUser?.name || 'ユーザー') : null,
         }),
       });
 
@@ -276,7 +300,7 @@ export default function LegalUpdatesPage() {
                   status: editingStatus,
                   notes: editingNotes,
                   completedAt: editingStatus === 'completed' ? new Date().toISOString() : null,
-                  completedBy: editingStatus === 'completed' ? 'デモユーザー' : null,
+                  completedBy: editingStatus === 'completed' ? (currentUser?.name || 'ユーザー') : null,
                 },
               }
             : null
@@ -503,7 +527,14 @@ export default function LegalUpdatesPage() {
             filteredUpdates.map((update) => (
               <Card
                 key={update.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer"
+                className={`hover:shadow-lg transition-shadow cursor-pointer ${
+                  getDeadlineUrgency(update.effectiveDate, update.tenantStatus.status)?.level === 'critical' ||
+                  getDeadlineUrgency(update.effectiveDate, update.tenantStatus.status)?.level === 'overdue'
+                    ? 'border-red-300 bg-red-50/30 dark:bg-red-950/20'
+                    : getDeadlineUrgency(update.effectiveDate, update.tenantStatus.status)?.level === 'warning'
+                    ? 'border-yellow-300 bg-yellow-50/30 dark:bg-yellow-950/20'
+                    : ''
+                }`}
                 onClick={() => openDetailModal(update)}
               >
                 <CardHeader>
@@ -520,6 +551,20 @@ export default function LegalUpdatesPage() {
                         <Badge className={priorityColors[update.priority]}>
                           優先度: {priorityLabels[update.priority]}
                         </Badge>
+                        {/* 期限警告バッジ */}
+                        {(() => {
+                          const urgency = getDeadlineUrgency(update.effectiveDate, update.tenantStatus.status);
+                          return urgency ? (
+                            <Badge variant="outline" className={`gap-1 ${urgency.color}`}>
+                              {urgency.level === 'overdue' || urgency.level === 'critical' ? (
+                                <AlertCircle className="h-3 w-3" />
+                              ) : (
+                                <Clock className="h-3 w-3" />
+                              )}
+                              {urgency.label}
+                            </Badge>
+                          ) : null;
+                        })()}
                       </div>
                       <CardTitle className="text-xl">{update.title}</CardTitle>
                     </div>

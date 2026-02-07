@@ -38,8 +38,8 @@ export const nonNegativeNumberSchema = z.number().min(0, '0以上の値を入力
 /**
  * 所有形態
  */
-export const ownershipTypeSchema = z.enum(['owned', 'leased'], {
-  errorMap: () => ({ message: '所有形態は owned または leased を指定してください' }),
+export const ownershipTypeSchema = z.enum(['owned', 'leased', 'rental'], {
+  errorMap: () => ({ message: '所有形態は owned, leased, または rental を指定してください' }),
 });
 
 /**

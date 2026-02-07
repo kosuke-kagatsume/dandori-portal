@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,17 +19,32 @@ import {
   Clock,
   Download,
   Upload,
+  Loader2,
+  Search,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   useScheduledChangesStore,
   changeTypeLabels,
   changeStatusLabels,
   changeTypeColors,
+  approvalStatusLabels,
   type ScheduledChange,
   type ScheduledChangeType,
   type HireDetails,
   type TransferDetails,
   type RetirementDetails,
+  type ApprovalStatus,
 } from '@/lib/store/scheduled-changes-store';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -52,14 +67,24 @@ import { exportScheduledChangesToCSV } from '@/lib/csv/scheduled-changes-csv';
 export default function ScheduledChangesPage() {
   const {
     changes,
-    // getPendingChanges, // フィルタリングはstatsで代用
+    isLoading,
+    error,
+    _hasHydrated,
+    fetchChanges,
     cancelScheduledChange,
     applyScheduledChange,
     deleteScheduledChange,
     getStats,
   } = useScheduledChangesStore();
 
+  // ページマウント時にAPIからデータを取得
+  useEffect(() => {
+    fetchChanges();
+  }, [fetchChanges]);
+
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'applied' | 'cancelled'>('all');
+  const [typeFilter, setTypeFilter] = useState<ScheduledChangeType | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -80,11 +105,41 @@ export default function ScheduledChangesPage() {
       filtered = filtered.filter((change) => change.status === activeTab);
     }
 
+    // タイプでフィルタ
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((change) => change.type === typeFilter);
+    }
+
+    // 検索フィルタ
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((change) => {
+        // ユーザー名で検索
+        if (change.userName?.toLowerCase().includes(query)) return true;
+        // 作成者名で検索
+        if (change.createdByName.toLowerCase().includes(query)) return true;
+        // 入社の場合は氏名・部門・役職で検索
+        if (change.type === 'hire') {
+          const details = change.details as HireDetails;
+          if (details.name.toLowerCase().includes(query)) return true;
+          if (details.department.toLowerCase().includes(query)) return true;
+          if (details.position.toLowerCase().includes(query)) return true;
+        }
+        // 異動の場合は部門で検索
+        if (change.type === 'transfer') {
+          const details = change.details as TransferDetails;
+          if (details.currentDepartment.toLowerCase().includes(query)) return true;
+          if (details.newDepartment.toLowerCase().includes(query)) return true;
+        }
+        return false;
+      });
+    }
+
     // 有効日でソート（昇順）
     filtered.sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate));
 
     return filtered;
-  }, [changes, activeTab]);
+  }, [changes, activeTab, typeFilter, searchQuery]);
 
   // タイプ別のアイコンを取得
   const getTypeIcon = (type: ScheduledChangeType) => {
@@ -145,23 +200,35 @@ export default function ScheduledChangesPage() {
   };
 
   // 予約をキャンセル
-  const handleCancel = (change: ScheduledChange) => {
-    cancelScheduledChange(change.id);
-    toast.success('予約をキャンセルしました');
+  const handleCancel = async (change: ScheduledChange) => {
+    const success = await cancelScheduledChange(change.id);
+    if (success) {
+      toast.success('予約をキャンセルしました');
+    } else {
+      toast.error('予約のキャンセルに失敗しました');
+    }
   };
 
   // 予約を即座に適用
-  const handleApply = (change: ScheduledChange) => {
-    applyScheduledChange(change.id);
+  const handleApply = async (change: ScheduledChange) => {
+    const success = await applyScheduledChange(change.id);
     setApplyDialogOpen(false);
-    toast.success('予約を適用しました');
+    if (success) {
+      toast.success('予約を適用しました');
+    } else {
+      toast.error('予約の適用に失敗しました');
+    }
   };
 
   // 予約を削除
-  const handleDelete = (change: ScheduledChange) => {
-    deleteScheduledChange(change.id);
+  const handleDelete = async (change: ScheduledChange) => {
+    const success = await deleteScheduledChange(change.id);
     setDeleteDialogOpen(false);
-    toast.success('予約を削除しました');
+    if (success) {
+      toast.success('予約を削除しました');
+    } else {
+      toast.error('予約の削除に失敗しました');
+    }
   };
 
   // チェックボックス選択の切り替え
@@ -187,24 +254,48 @@ export default function ScheduledChangesPage() {
   };
 
   // 一括適用
-  const handleBulkApply = () => {
-    selectedIds.forEach(id => applyScheduledChange(id));
+  const handleBulkApply = async () => {
+    const count = selectedIds.size;
+    const results = await Promise.all(
+      Array.from(selectedIds).map(id => applyScheduledChange(id))
+    );
+    const successCount = results.filter(Boolean).length;
     setSelectedIds(new Set());
-    toast.success(`${selectedIds.size}件の予約を適用しました`);
+    if (successCount === count) {
+      toast.success(`${count}件の予約を適用しました`);
+    } else {
+      toast.warning(`${successCount}/${count}件の予約を適用しました`);
+    }
   };
 
   // 一括キャンセル
-  const handleBulkCancel = () => {
-    selectedIds.forEach(id => cancelScheduledChange(id));
+  const handleBulkCancel = async () => {
+    const count = selectedIds.size;
+    const results = await Promise.all(
+      Array.from(selectedIds).map(id => cancelScheduledChange(id))
+    );
+    const successCount = results.filter(Boolean).length;
     setSelectedIds(new Set());
-    toast.success(`${selectedIds.size}件の予約をキャンセルしました`);
+    if (successCount === count) {
+      toast.success(`${count}件の予約をキャンセルしました`);
+    } else {
+      toast.warning(`${successCount}/${count}件の予約をキャンセルしました`);
+    }
   };
 
   // 一括削除
-  const handleBulkDelete = () => {
-    selectedIds.forEach(id => deleteScheduledChange(id));
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    const results = await Promise.all(
+      Array.from(selectedIds).map(id => deleteScheduledChange(id))
+    );
+    const successCount = results.filter(Boolean).length;
     setSelectedIds(new Set());
-    toast.success(`${selectedIds.size}件の予約を削除しました`);
+    if (successCount === count) {
+      toast.success(`${count}件の予約を削除しました`);
+    } else {
+      toast.warning(`${successCount}/${count}件の予約を削除しました`);
+    }
   };
 
   // CSV出力
@@ -306,6 +397,51 @@ export default function ScheduledChangesPage() {
         </Card>
       </div>
 
+      {/* 検索・フィルターエリア */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            {/* 検索ボックス */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="名前、部門、作成者で検索..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            {/* タイプフィルター */}
+            <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as ScheduledChangeType | 'all')}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="予約タイプ" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべてのタイプ</SelectItem>
+                <SelectItem value="hire">
+                  <span className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4 text-green-600" />
+                    入社
+                  </span>
+                </SelectItem>
+                <SelectItem value="transfer">
+                  <span className="flex items-center gap-2">
+                    <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+                    異動
+                  </span>
+                </SelectItem>
+                <SelectItem value="retirement">
+                  <span className="flex items-center gap-2">
+                    <UserX className="h-4 w-4 text-red-600" />
+                    退職
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* タブとテーブル */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'pending' | 'applied' | 'cancelled')} className="space-y-4 w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
@@ -395,7 +531,20 @@ export default function ScheduledChangesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {filteredChanges.length === 0 ? (
+              {isLoading && !_hasHydrated ? (
+                <div className="text-center py-12">
+                  <Loader2 className="h-12 w-12 mx-auto text-muted-foreground mb-4 animate-spin" />
+                  <p className="text-muted-foreground">読み込み中...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <XCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+                  <p className="text-red-500">{error}</p>
+                  <Button variant="outline" className="mt-4" onClick={() => fetchChanges()}>
+                    再読み込み
+                  </Button>
+                </div>
+              ) : filteredChanges.length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">予約がありません</p>
@@ -428,7 +577,7 @@ export default function ScheduledChangesPage() {
                           {getTypeIcon(change.type)}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <Badge variant="outline">{changeTypeLabels[change.type]}</Badge>
                             <Badge
                               variant={
@@ -441,10 +590,33 @@ export default function ScheduledChangesPage() {
                             >
                               {changeStatusLabels[change.status]}
                             </Badge>
+                            {/* 承認ステータス表示 */}
+                            {change.requiresApproval && change.approvalStatus && (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  change.approvalStatus === 'approved'
+                                    ? 'bg-green-50 text-green-700 border-green-200'
+                                    : change.approvalStatus === 'rejected'
+                                    ? 'bg-red-50 text-red-700 border-red-200'
+                                    : change.approvalStatus === 'pending_approval'
+                                    ? 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                    : ''
+                                }
+                              >
+                                {change.approvalStatus === 'approved' && <ShieldCheck className="h-3 w-3 mr-1" />}
+                                {change.approvalStatus === 'rejected' && <ShieldX className="h-3 w-3 mr-1" />}
+                                {change.approvalStatus === 'pending_approval' && <ShieldAlert className="h-3 w-3 mr-1" />}
+                                {approvalStatusLabels[change.approvalStatus as ApprovalStatus]}
+                              </Badge>
+                            )}
                           </div>
                           {renderDetails(change)}
                           <p className="text-xs text-muted-foreground mt-1">
                             作成者: {change.createdByName}
+                            {change.approvedByName && (
+                              <span className="ml-2">/ 承認者: {change.approvedByName}</span>
+                            )}
                           </p>
                         </div>
                       </div>

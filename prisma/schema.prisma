@@ -2373,3 +2373,58 @@ model user_permission_overrides {
   @@index([tenantId, userId])
   @@index([permissionId])
 }
+
+// ============================================================================
+// 予約管理（入社・異動・退職）
+// ============================================================================
+
+// 予約変更
+model scheduled_changes {
+  id               String    @id
+  tenantId         String
+  type             String    // hire, transfer, retirement
+  userId           String?   // 入社の場合はnull、異動・退職の場合は対象ユーザーID
+  userName         String?   // 表示用のユーザー名
+  effectiveDate    DateTime  @db.Date // 適用予定日
+  status           String    @default("pending") // pending, applied, cancelled
+  createdBy        String    // HR担当者のID
+  createdByName    String    // HR担当者の名前
+
+  // 入社予約の詳細（typeがhireの場合）
+  hireName         String?   // 新規入社者の氏名
+  hireEmail        String?   // 新規入社者のメールアドレス
+  hireDepartment   String?   // 配属部門
+  hirePosition     String?   // 役職
+  hireRole         String?   // 権限ロール（employee, manager, hr, admin）
+  hireEmployeeNumber String? // 社員番号
+
+  // 異動予約の詳細（typeがtransferの場合）
+  currentDepartment String?  // 現在の部門
+  newDepartment    String?   // 異動先部門
+  currentPosition  String?   // 現在の役職
+  newPosition      String?   // 新役職
+  transferReason   String?   // 異動理由
+
+  // 退職予約の詳細（typeがretirementの場合）
+  retirementReason String?   // voluntary, company, contract_end, retirement_age, other
+  retirementNotes  String?   // 退職に関する備考
+
+  // 承認フロー関連
+  requiresApproval Boolean   @default(false) // 承認が必要かどうか
+  approvalStatus   String?   // not_required, pending_approval, approved, rejected
+  workflowId       String?   // ワークフローID（承認フローが開始された場合）
+  approvedBy       String?   // 承認者のID
+  approvedByName   String?   // 承認者の名前
+  approvedAt       DateTime? // 承認日時
+  rejectionReason  String?   // 却下理由
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime
+
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@index([tenantId, effectiveDate])
+  @@index([tenantId, userId])
+  @@index([tenantId, approvalStatus])
+}

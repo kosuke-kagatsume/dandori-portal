@@ -29,7 +29,7 @@ import { useInvoiceAutoGenerationStore } from '@/lib/store/invoice-auto-generati
 import { useLegalUpdatesStore } from '@/lib/store/legal-updates-store';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import { usePaymentReminderStore } from '@/lib/store/payment-reminder-store';
-import { useScheduledChangesStore } from '@/lib/store/scheduled-changes-store';
+// scheduled-changes-store はAPIベースに移行したため、ハイドレーション不要
 import { useTodoStore } from '@/lib/store/todo-store';
 
 // Zustand persist ストアの型定義
@@ -81,7 +81,7 @@ const STORES_TO_HYDRATE: Array<{
   { name: 'legal-updates-store', store: useLegalUpdatesStore as unknown as PersistStore },
   { name: 'onboarding-store', store: useOnboardingStore as unknown as PersistStore },
   { name: 'payment-reminder-store', store: usePaymentReminderStore as unknown as PersistStore },
-  { name: 'scheduled-changes-store', store: useScheduledChangesStore as unknown as PersistStore },
+  // scheduled-changes-store はAPIベースに移行したため、ハイドレーション対象外
   { name: 'todo-store', store: useTodoStore as unknown as PersistStore },
 ];
 

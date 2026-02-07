@@ -50,10 +50,13 @@ import { GeneralAssetFormDialog } from '@/features/assets/general-asset-form-dia
 export default function AssetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'maintenance' | 'retired'>('all');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_selectedVehicle, setSelectedVehicle] = useState<VehicleFromAPI | null>(null); // 詳細モーダルで使用予定
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_detailModalOpen, setDetailModalOpen] = useState(false); // 詳細モーダルで使用予定
+  // 詳細/編集モーダル用の状態
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleFromAPI | null>(null);
+  const [selectedPCAsset, setSelectedPCAsset] = useState<PCAssetFromAPI | null>(null);
+  const [selectedGeneralAsset, setSelectedGeneralAsset] = useState<GeneralAssetFromAPI | null>(null);
+  const [vehicleDetailOpen, setVehicleDetailOpen] = useState(false);
+  const [pcDetailOpen, setPcDetailOpen] = useState(false);
+  const [generalAssetDetailOpen, setGeneralAssetDetailOpen] = useState(false);
   const [maintenanceTypeFilter, setMaintenanceTypeFilter] = useState<string>('all');
   const [maintenanceVendorFilter, setMaintenanceVendorFilter] = useState<string>('all');
 
@@ -121,15 +124,13 @@ export default function AssetsPage() {
     return new Map(vendors.map((v) => [v.id, v]));
   }, [vendors]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _pcAssetMap = useMemo(() => {
+  const pcAssetMap = useMemo(() => {
     return new Map(pcAssets.map((p) => [p.id, p]));
-  }, [pcAssets]); // O(1)検索用（将来的に使用予定）
+  }, [pcAssets]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _generalAssetMap = useMemo(() => {
+  const generalAssetMap = useMemo(() => {
     return new Map(generalAssets.map((a) => [a.id, a]));
-  }, [generalAssets]); // O(1)検索用（将来的に使用予定）
+  }, [generalAssets]);
 
   // 車両別費用集計を計算する関数
   const calculateVehicleCosts = (startMonth: string, endMonth: string) => {
@@ -228,9 +229,6 @@ export default function AssetsPage() {
       monthlyLeaseCost,
       thisMonthRepairCost,
       thisMonthMaintenanceCost,
-      // 警告用
-      criticalWarningsCount: 0, // 後で計算
-      warningsCount: 0, // 後で計算
       // その他
       activeVehicles,
       leasedVehicles,
@@ -245,6 +243,14 @@ export default function AssetsPage() {
     () => getAllDeadlineWarnings(vehicles, pcAssets, generalAssets),
     [vehicles, pcAssets, generalAssets]
   );
+
+  // 警告件数を別途計算（allWarningsの後で計算）
+  const warningStats = useMemo(() => ({
+    criticalCount: allWarnings.filter(w => w.level === 'critical').length,
+    warningCount: allWarnings.filter(w => w.level === 'warning').length,
+    infoCount: allWarnings.filter(w => w.level === 'info').length,
+    total: allWarnings.length,
+  }), [allWarnings]);
 
   // フィルタされた警告（カテゴリフィルターを適用）
   const filteredWarnings = useMemo(() => {
@@ -836,17 +842,17 @@ export default function AssetsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={warningStats.criticalCount > 0 ? 'border-red-300 bg-red-50/50 dark:bg-red-950/20' : ''}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">期限警告</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <AlertTriangle className={`h-4 w-4 ${warningStats.criticalCount > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">
-              {allWarnings.filter(w => w.level === 'critical').length}件
+              {warningStats.criticalCount}件
             </div>
             <p className="text-xs text-muted-foreground">
-              注意: {allWarnings.filter(w => w.level === 'warning').length}件
+              注意: {warningStats.warningCount}件 / 情報: {warningStats.infoCount}件
             </p>
           </CardContent>
         </Card>
@@ -890,9 +896,9 @@ export default function AssetsPage() {
           <TabsTrigger value="warnings" className="relative">
             <span className="hidden sm:inline">期限警告</span>
             <span className="sm:hidden">警告</span>
-            {mounted && stats.criticalWarningsCount > 0 && (
+            {mounted && warningStats.criticalCount > 0 && (
               <Badge variant="destructive" className="ml-1 sm:ml-2 text-xs">
-                {stats.criticalWarningsCount}
+                {warningStats.criticalCount}
               </Badge>
             )}
           </TabsTrigger>
@@ -1450,11 +1456,22 @@ export default function AssetsPage() {
                                   const vehicle = vehicleMap.get(warning.assetId);
                                   if (vehicle) {
                                     setSelectedVehicle(vehicle);
-                                    setDetailModalOpen(true);
+                                    setVehicleDetailOpen(true);
+                                  }
+                                } else if (warning.assetCategory === 'pc') {
+                                  const pc = pcAssetMap.get(warning.assetId);
+                                  if (pc) {
+                                    setSelectedPCAsset(pc);
+                                    setPcDetailOpen(true);
+                                  }
+                                } else if (warning.assetCategory === 'general') {
+                                  const asset = generalAssetMap.get(warning.assetId);
+                                  if (asset) {
+                                    setSelectedGeneralAsset(asset);
+                                    setGeneralAssetDetailOpen(true);
                                   }
                                 }
                               }}
-                              disabled={warning.assetCategory !== 'vehicle'}
                             >
                               詳細
                             </Button>
@@ -1834,6 +1851,45 @@ export default function AssetsPage() {
       <GeneralAssetFormDialog
         open={generalAssetDialogOpen}
         onOpenChange={setGeneralAssetDialogOpen}
+      />
+
+      {/* 車両詳細/編集ダイアログ */}
+      <VehicleFormDialog
+        open={vehicleDetailOpen}
+        onOpenChange={(open) => {
+          setVehicleDetailOpen(open);
+          if (!open) {
+            setSelectedVehicle(null);
+            refreshAllData();
+          }
+        }}
+        vehicle={selectedVehicle || undefined}
+      />
+
+      {/* PC詳細/編集ダイアログ */}
+      <PCFormDialog
+        open={pcDetailOpen}
+        onOpenChange={(open) => {
+          setPcDetailOpen(open);
+          if (!open) {
+            setSelectedPCAsset(null);
+            refreshAllData();
+          }
+        }}
+        pc={selectedPCAsset || undefined}
+      />
+
+      {/* 備品詳細/編集ダイアログ */}
+      <GeneralAssetFormDialog
+        open={generalAssetDetailOpen}
+        onOpenChange={(open) => {
+          setGeneralAssetDetailOpen(open);
+          if (!open) {
+            setSelectedGeneralAsset(null);
+            refreshAllData();
+          }
+        }}
+        asset={selectedGeneralAsset || undefined}
       />
     </div>
   );

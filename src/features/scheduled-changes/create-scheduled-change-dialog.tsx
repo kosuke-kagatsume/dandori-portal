@@ -82,13 +82,13 @@ export function CreateScheduledChangeDialog({
   });
 
   // 入社予約の送信
-  const handleHireSubmit = hireForm.handleSubmit((data) => {
+  const handleHireSubmit = hireForm.handleSubmit(async (data) => {
     if (!currentUser) {
       toast.error('ユーザー情報が取得できませんでした');
       return;
     }
 
-    scheduleChange({
+    const result = await scheduleChange({
       type: 'hire',
       effectiveDate: data.effectiveDate,
       createdBy: currentUser.id,
@@ -104,16 +104,20 @@ export function CreateScheduledChangeDialog({
       },
     });
 
-    const message = data.requiresApproval
-      ? '入社予約を作成しました（承認待ち）'
-      : '入社予約を作成しました';
-    toast.success(message);
-    hireForm.reset();
-    onOpenChange(false);
+    if (result) {
+      const message = data.requiresApproval
+        ? '入社予約を作成しました（承認待ち）'
+        : '入社予約を作成しました';
+      toast.success(message);
+      hireForm.reset();
+      onOpenChange(false);
+    } else {
+      toast.error('入社予約の作成に失敗しました');
+    }
   });
 
   // 異動予約の送信
-  const handleTransferSubmit = transferForm.handleSubmit((data) => {
+  const handleTransferSubmit = transferForm.handleSubmit(async (data) => {
     if (!currentUser) {
       toast.error('ユーザー情報が取得できませんでした');
       return;
@@ -125,7 +129,7 @@ export function CreateScheduledChangeDialog({
       return;
     }
 
-    scheduleChange({
+    const result = await scheduleChange({
       type: 'transfer',
       userId: data.userId,
       userName: user.name,
@@ -142,16 +146,20 @@ export function CreateScheduledChangeDialog({
       },
     });
 
-    const message = data.requiresApproval
-      ? '異動予約を作成しました（承認待ち）'
-      : '異動予約を作成しました';
-    toast.success(message);
-    transferForm.reset();
-    onOpenChange(false);
+    if (result) {
+      const message = data.requiresApproval
+        ? '異動予約を作成しました（承認待ち）'
+        : '異動予約を作成しました';
+      toast.success(message);
+      transferForm.reset();
+      onOpenChange(false);
+    } else {
+      toast.error('異動予約の作成に失敗しました');
+    }
   });
 
   // 退職予約の送信
-  const handleRetirementSubmit = retirementForm.handleSubmit((data) => {
+  const handleRetirementSubmit = retirementForm.handleSubmit(async (data) => {
     if (!currentUser) {
       toast.error('ユーザー情報が取得できませんでした');
       return;
@@ -163,7 +171,7 @@ export function CreateScheduledChangeDialog({
       return;
     }
 
-    scheduleChange({
+    const result = await scheduleChange({
       type: 'retirement',
       userId: data.userId,
       userName: user.name,
@@ -177,12 +185,16 @@ export function CreateScheduledChangeDialog({
       },
     });
 
-    const message = data.requiresApproval
-      ? '退職予約を作成しました（承認待ち）'
-      : '退職予約を作成しました';
-    toast.success(message);
-    retirementForm.reset();
-    onOpenChange(false);
+    if (result) {
+      const message = data.requiresApproval
+        ? '退職予約を作成しました（承認待ち）'
+        : '退職予約を作成しました';
+      toast.success(message);
+      retirementForm.reset();
+      onOpenChange(false);
+    } else {
+      toast.error('退職予約の作成に失敗しました');
+    }
   });
 
   return (

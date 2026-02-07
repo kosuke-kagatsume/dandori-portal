@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 // 予約変更のタイプ
 export type ScheduledChangeType = 'hire' | 'transfer' | 'retirement';
@@ -57,22 +56,42 @@ export interface ScheduledChange {
   rejectionReason?: string; // 却下理由
 }
 
+interface ScheduledChangesStats {
+  total: number;
+  pending: number;
+  applied: number;
+  cancelled: number;
+  byType: Record<ScheduledChangeType, number>;
+}
+
 interface ScheduledChangesState {
   changes: ScheduledChange[];
+  stats: ScheduledChangesStats | null;
+  isLoading: boolean;
+  error: string | null;
+  _hasHydrated: boolean;
 
-  // CRUD操作
-  scheduleChange: (change: Omit<ScheduledChange, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'approvalStatus'>) => void;
-  updateScheduledChange: (id: string, updates: Partial<ScheduledChange>) => void;
-  cancelScheduledChange: (id: string) => void;
-  applyScheduledChange: (id: string) => void;
-  deleteScheduledChange: (id: string) => void;
+  // API連携
+  fetchChanges: (filters?: {
+    type?: ScheduledChangeType;
+    status?: ScheduledChangeStatus;
+    approvalStatus?: ApprovalStatus;
+    userId?: string;
+  }) => Promise<void>;
 
-  // 承認フロー操作
-  approveScheduledChange: (id: string, approverId: string, approverName: string) => void;
-  rejectScheduledChange: (id: string, reason: string) => void;
-  linkWorkflow: (id: string, workflowId: string) => void;
+  // CRUD操作（API経由）
+  scheduleChange: (change: Omit<ScheduledChange, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'approvalStatus'>) => Promise<ScheduledChange | null>;
+  updateScheduledChange: (id: string, updates: Partial<ScheduledChange>) => Promise<boolean>;
+  cancelScheduledChange: (id: string) => Promise<boolean>;
+  applyScheduledChange: (id: string) => Promise<boolean>;
+  deleteScheduledChange: (id: string) => Promise<boolean>;
 
-  // クエリ操作
+  // 承認フロー操作（API経由）
+  approveScheduledChange: (id: string, approverId: string, approverName: string) => Promise<boolean>;
+  rejectScheduledChange: (id: string, rejectedBy: string, rejectedByName: string, reason: string) => Promise<boolean>;
+  linkWorkflow: (id: string, workflowId: string) => Promise<boolean>;
+
+  // クエリ操作（ローカルキャッシュから取得）
   getScheduledChanges: () => ScheduledChange[];
   getPendingChanges: () => ScheduledChange[];
   getChangesByUser: (userId: string) => ScheduledChange[];
@@ -82,90 +101,215 @@ interface ScheduledChangesState {
   getPendingApprovalChanges: () => ScheduledChange[];
 
   // 統計
-  getStats: () => {
-    total: number;
-    pending: number;
-    applied: number;
-    cancelled: number;
-    byType: Record<ScheduledChangeType, number>;
-  };
+  getStats: () => ScheduledChangesStats;
+
+  // Hydration
+  setHasHydrated: (state: boolean) => void;
 }
 
-export const useScheduledChangesStore = create<ScheduledChangesState>()(
-  persist(
-    (set, get) => ({
-      changes: [],
+// APIベースURL
+const API_BASE = '/api/scheduled-changes';
 
-      // 予約を追加
-      scheduleChange: (change) => {
-        const newChange: ScheduledChange = {
-          ...change,
-          id: `schedule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          status: 'pending',
-          approvalStatus: change.requiresApproval ? 'pending_approval' : 'not_required',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
+export const useScheduledChangesStore = create<ScheduledChangesState>()((set, get) => ({
+  changes: [],
+  stats: null,
+  isLoading: false,
+  error: null,
+  _hasHydrated: false,
 
+  setHasHydrated: (state) => {
+    set({ _hasHydrated: state });
+  },
+
+  // APIからデータを取得
+  fetchChanges: async (filters) => {
+    set({ isLoading: true, error: null });
+    try {
+      const params = new URLSearchParams();
+      if (filters?.type) params.append('type', filters.type);
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.approvalStatus) params.append('approvalStatus', filters.approvalStatus);
+      if (filters?.userId) params.append('userId', filters.userId);
+
+      const url = `${API_BASE}${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await fetch(url);
+      const result = await response.json();
+
+      if (result.success) {
+        set({
+          changes: result.data,
+          stats: result.stats,
+          isLoading: false,
+          _hasHydrated: true,
+        });
+      } else {
+        set({ error: result.error, isLoading: false, _hasHydrated: true });
+      }
+    } catch (error) {
+      console.error('Failed to fetch scheduled changes:', error);
+      set({ error: 'データの取得に失敗しました', isLoading: false, _hasHydrated: true });
+    }
+  },
+
+  // 予約を追加
+  scheduleChange: async (change) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(change),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        // ローカルキャッシュを更新
         set((state) => ({
-          changes: [...state.changes, newChange],
+          changes: [...state.changes, result.data],
+          isLoading: false,
         }));
-      },
+        return result.data;
+      } else {
+        set({ error: result.error, isLoading: false });
+        return null;
+      }
+    } catch (error) {
+      console.error('Failed to create scheduled change:', error);
+      set({ error: '予約の作成に失敗しました', isLoading: false });
+      return null;
+    }
+  },
 
-      // 予約を更新
-      updateScheduledChange: (id, updates) => {
+  // 予約を更新
+  updateScheduledChange: async (id, updates) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        set((state) => ({
+          changes: state.changes.map((change) =>
+            change.id === id ? result.data : change
+          ),
+          isLoading: false,
+        }));
+        return true;
+      } else {
+        set({ error: result.error, isLoading: false });
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to update scheduled change:', error);
+      set({ error: '予約の更新に失敗しました', isLoading: false });
+      return false;
+    }
+  },
+
+  // 予約をキャンセル
+  cancelScheduledChange: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE}/${id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const result = await response.json();
+
+      if (result.success) {
         set((state) => ({
           changes: state.changes.map((change) =>
             change.id === id
-              ? {
-                  ...change,
-                  ...updates,
-                  updatedAt: new Date().toISOString(),
-                }
+              ? { ...change, status: 'cancelled' as ScheduledChangeStatus, updatedAt: result.data.updatedAt }
               : change
           ),
+          isLoading: false,
         }));
-      },
+        return true;
+      } else {
+        set({ error: result.error, isLoading: false });
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to cancel scheduled change:', error);
+      set({ error: '予約のキャンセルに失敗しました', isLoading: false });
+      return false;
+    }
+  },
 
-      // 予約をキャンセル
-      cancelScheduledChange: (id) => {
+  // 予約を即座に適用
+  applyScheduledChange: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE}/${id}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const result = await response.json();
+
+      if (result.success) {
         set((state) => ({
           changes: state.changes.map((change) =>
             change.id === id
-              ? {
-                  ...change,
-                  status: 'cancelled' as ScheduledChangeStatus,
-                  updatedAt: new Date().toISOString(),
-                }
+              ? { ...change, status: 'applied' as ScheduledChangeStatus, updatedAt: result.data.updatedAt }
               : change
           ),
+          isLoading: false,
         }));
-      },
+        return true;
+      } else {
+        set({ error: result.error, isLoading: false });
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to apply scheduled change:', error);
+      set({ error: '予約の適用に失敗しました', isLoading: false });
+      return false;
+    }
+  },
 
-      // 予約を即座に適用
-      applyScheduledChange: (id) => {
-        set((state) => ({
-          changes: state.changes.map((change) =>
-            change.id === id
-              ? {
-                  ...change,
-                  status: 'applied' as ScheduledChangeStatus,
-                  updatedAt: new Date().toISOString(),
-                }
-              : change
-          ),
-        }));
-      },
+  // 予約を削除
+  deleteScheduledChange: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
 
-      // 予約を削除
-      deleteScheduledChange: (id) => {
+      if (result.success) {
         set((state) => ({
           changes: state.changes.filter((change) => change.id !== id),
+          isLoading: false,
         }));
-      },
+        return true;
+      } else {
+        set({ error: result.error, isLoading: false });
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to delete scheduled change:', error);
+      set({ error: '予約の削除に失敗しました', isLoading: false });
+      return false;
+    }
+  },
 
-      // 予約を承認
-      approveScheduledChange: (id, approverId, approverName) => {
+  // 予約を承認
+  approveScheduledChange: async (id, approverId, approverName) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE}/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approverId, approverName }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
         set((state) => ({
           changes: state.changes.map((change) =>
             change.id === id
@@ -174,16 +318,37 @@ export const useScheduledChangesStore = create<ScheduledChangesState>()(
                   approvalStatus: 'approved' as ApprovalStatus,
                   approvedBy: approverId,
                   approvedByName: approverName,
-                  approvedAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
+                  approvedAt: result.data.approvedAt,
+                  updatedAt: result.data.updatedAt,
                 }
               : change
           ),
+          isLoading: false,
         }));
-      },
+        return true;
+      } else {
+        set({ error: result.error, isLoading: false });
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to approve scheduled change:', error);
+      set({ error: '予約の承認に失敗しました', isLoading: false });
+      return false;
+    }
+  },
 
-      // 予約を却下
-      rejectScheduledChange: (id, reason) => {
+  // 予約を却下
+  rejectScheduledChange: async (id, rejectedBy, rejectedByName, reason) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`${API_BASE}/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rejectedBy, rejectedByName, reason }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
         set((state) => ({
           changes: state.changes.map((change) =>
             change.id === id
@@ -191,101 +356,99 @@ export const useScheduledChangesStore = create<ScheduledChangesState>()(
                   ...change,
                   approvalStatus: 'rejected' as ApprovalStatus,
                   rejectionReason: reason,
-                  status: 'cancelled' as ScheduledChangeStatus,
-                  updatedAt: new Date().toISOString(),
+                  updatedAt: result.data.updatedAt,
                 }
               : change
           ),
+          isLoading: false,
         }));
-      },
-
-      // ワークフローをリンク
-      linkWorkflow: (id, workflowId) => {
-        set((state) => ({
-          changes: state.changes.map((change) =>
-            change.id === id
-              ? {
-                  ...change,
-                  workflowId,
-                  updatedAt: new Date().toISOString(),
-                }
-              : change
-          ),
-        }));
-      },
-
-      // 全予約を取得
-      getScheduledChanges: () => {
-        return get().changes;
-      },
-
-      // 未適用の予約のみ取得
-      getPendingChanges: () => {
-        return get().changes.filter((change) => change.status === 'pending');
-      },
-
-      // 特定ユーザーの予約を取得
-      getChangesByUser: (userId) => {
-        return get().changes.filter((change) => change.userId === userId);
-      },
-
-      // 特定日付の予約を取得
-      getChangesByDate: (date) => {
-        return get().changes.filter((change) => change.effectiveDate === date);
-      },
-
-      // タイプ別の予約を取得
-      getChangesByType: (type) => {
-        return get().changes.filter((change) => change.type === type);
-      },
-
-      // 近日中（指定日数以内）の予約を取得
-      getUpcomingChanges: (daysAhead) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const futureDate = new Date(today);
-        futureDate.setDate(futureDate.getDate() + daysAhead);
-
-        return get().changes.filter((change) => {
-          if (change.status !== 'pending') return false;
-
-          const effectiveDate = new Date(change.effectiveDate);
-          effectiveDate.setHours(0, 0, 0, 0);
-
-          return effectiveDate >= today && effectiveDate <= futureDate;
-        });
-      },
-
-      // 承認待ちの予約を取得
-      getPendingApprovalChanges: () => {
-        return get().changes.filter(
-          (change) => change.requiresApproval && change.approvalStatus === 'pending_approval'
-        );
-      },
-
-      // 統計を取得
-      getStats: () => {
-        const changes = get().changes;
-        const stats = {
-          total: changes.length,
-          pending: changes.filter((c) => c.status === 'pending').length,
-          applied: changes.filter((c) => c.status === 'applied').length,
-          cancelled: changes.filter((c) => c.status === 'cancelled').length,
-          byType: {
-            hire: changes.filter((c) => c.type === 'hire').length,
-            transfer: changes.filter((c) => c.type === 'transfer').length,
-            retirement: changes.filter((c) => c.type === 'retirement').length,
-          },
-        };
-        return stats;
-      },
-    }),
-    {
-      name: 'scheduled-changes-storage',
-      skipHydration: true,
+        return true;
+      } else {
+        set({ error: result.error, isLoading: false });
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to reject scheduled change:', error);
+      set({ error: '予約の却下に失敗しました', isLoading: false });
+      return false;
     }
-  )
-);
+  },
+
+  // ワークフローをリンク
+  linkWorkflow: async (id, workflowId) => {
+    return get().updateScheduledChange(id, { workflowId });
+  },
+
+  // 全予約を取得
+  getScheduledChanges: () => {
+    return get().changes;
+  },
+
+  // 未適用の予約のみ取得
+  getPendingChanges: () => {
+    return get().changes.filter((change) => change.status === 'pending');
+  },
+
+  // 特定ユーザーの予約を取得
+  getChangesByUser: (userId) => {
+    return get().changes.filter((change) => change.userId === userId);
+  },
+
+  // 特定日付の予約を取得
+  getChangesByDate: (date) => {
+    return get().changes.filter((change) => change.effectiveDate === date);
+  },
+
+  // タイプ別の予約を取得
+  getChangesByType: (type) => {
+    return get().changes.filter((change) => change.type === type);
+  },
+
+  // 近日中（指定日数以内）の予約を取得
+  getUpcomingChanges: (daysAhead) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const futureDate = new Date(today);
+    futureDate.setDate(futureDate.getDate() + daysAhead);
+
+    return get().changes.filter((change) => {
+      if (change.status !== 'pending') return false;
+
+      const effectiveDate = new Date(change.effectiveDate);
+      effectiveDate.setHours(0, 0, 0, 0);
+
+      return effectiveDate >= today && effectiveDate <= futureDate;
+    });
+  },
+
+  // 承認待ちの予約を取得
+  getPendingApprovalChanges: () => {
+    return get().changes.filter(
+      (change) => change.requiresApproval && change.approvalStatus === 'pending_approval'
+    );
+  },
+
+  // 統計を取得
+  getStats: () => {
+    // APIから取得した統計があればそれを返す
+    const cachedStats = get().stats;
+    if (cachedStats) return cachedStats;
+
+    // なければローカルから計算
+    const changes = get().changes;
+    return {
+      total: changes.length,
+      pending: changes.filter((c) => c.status === 'pending').length,
+      applied: changes.filter((c) => c.status === 'applied').length,
+      cancelled: changes.filter((c) => c.status === 'cancelled').length,
+      byType: {
+        hire: changes.filter((c) => c.type === 'hire').length,
+        transfer: changes.filter((c) => c.type === 'transfer').length,
+        retirement: changes.filter((c) => c.type === 'retirement').length,
+      },
+    };
+  },
+}));
 
 // タイプ別のラベル
 export const changeTypeLabels: Record<ScheduledChangeType, string> = {

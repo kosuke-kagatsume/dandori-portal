@@ -48,30 +48,27 @@ export function Header() {
     setCommandPaletteOpen
   } = useUIStore();
   // currentTenant from useTenantStore() - 将来使用予定 (import removed)
-  const { currentUser, setCurrentUser } = useUserStore();
+  const { currentUser, _hasHydrated, fetchCurrentUser, isLoading } = useUserStore();
   const { unreadCount } = useNotificationStore();
   // SSR/CSRハイドレーション対応: 初期値はnull、マウント後に設定
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // デフォルトユーザーと通知を設定
+  // 認証ユーザー情報を取得（hydration完了後に1回だけ実行）
   useEffect(() => {
-    if (!currentUser) {
-      setCurrentUser({
-        id: '1',
-        tenantId: 'tenant-1',
-        name: '山田太郎',
-        email: 'yamada@example.com',
-        department: '開発部',
-        position: 'エンジニア',
-        avatar: '',
-        roles: ['user'],
-        hireDate: '2020-04-01',
-        unitId: 'unit-1',
-        status: 'active',
-        timezone: 'Asia/Tokyo'
-      });
-    }
-  }, [currentUser, setCurrentUser]);
+    // hydrationが完了していない場合は何もしない
+    if (!_hasHydrated) return;
+
+    // 既にユーザー情報がある場合は取得しない
+    if (currentUser) return;
+
+    // ローディング中は取得しない
+    if (isLoading) return;
+
+    // APIからユーザー情報を取得
+    fetchCurrentUser().catch(() => {
+      // エラーは静かに処理（ログインページへのリダイレクトはmiddlewareで処理）
+    });
+  }, [_hasHydrated, currentUser, isLoading, fetchCurrentUser]);
 
   // Auto-refresh timestamp（マウント後に初期化）
   useEffect(() => {

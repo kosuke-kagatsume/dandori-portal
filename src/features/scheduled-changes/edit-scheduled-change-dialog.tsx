@@ -115,10 +115,10 @@ export function EditScheduledChangeDialog({
   }, [change, open, hireForm, transferForm, retirementForm]);
 
   // 入社予約の更新
-  const handleHireSubmit = hireForm.handleSubmit((data) => {
+  const handleHireSubmit = hireForm.handleSubmit(async (data) => {
     if (!change) return;
 
-    updateScheduledChange(change.id, {
+    const success = await updateScheduledChange(change.id, {
       effectiveDate: data.effectiveDate,
       details: {
         name: data.name,
@@ -130,12 +130,16 @@ export function EditScheduledChangeDialog({
       },
     });
 
-    toast.success('入社予約を更新しました');
-    onOpenChange(false);
+    if (success) {
+      toast.success('入社予約を更新しました');
+      onOpenChange(false);
+    } else {
+      toast.error('入社予約の更新に失敗しました');
+    }
   });
 
   // 異動予約の更新
-  const handleTransferSubmit = transferForm.handleSubmit((data) => {
+  const handleTransferSubmit = transferForm.handleSubmit(async (data) => {
     if (!change) return;
 
     const user = users.find((u) => u.id === data.userId);
@@ -144,7 +148,7 @@ export function EditScheduledChangeDialog({
       return;
     }
 
-    updateScheduledChange(change.id, {
+    const success = await updateScheduledChange(change.id, {
       userId: data.userId,
       userName: user.name,
       effectiveDate: data.effectiveDate,
@@ -157,12 +161,16 @@ export function EditScheduledChangeDialog({
       },
     });
 
-    toast.success('異動予約を更新しました');
-    onOpenChange(false);
+    if (success) {
+      toast.success('異動予約を更新しました');
+      onOpenChange(false);
+    } else {
+      toast.error('異動予約の更新に失敗しました');
+    }
   });
 
   // 退職予約の更新
-  const handleRetirementSubmit = retirementForm.handleSubmit((data) => {
+  const handleRetirementSubmit = retirementForm.handleSubmit(async (data) => {
     if (!change) return;
 
     const user = users.find((u) => u.id === data.userId);
@@ -171,7 +179,7 @@ export function EditScheduledChangeDialog({
       return;
     }
 
-    updateScheduledChange(change.id, {
+    const success = await updateScheduledChange(change.id, {
       userId: data.userId,
       userName: user.name,
       effectiveDate: data.effectiveDate,
@@ -181,8 +189,12 @@ export function EditScheduledChangeDialog({
       },
     });
 
-    toast.success('退職予約を更新しました');
-    onOpenChange(false);
+    if (success) {
+      toast.success('退職予約を更新しました');
+      onOpenChange(false);
+    } else {
+      toast.error('退職予約の更新に失敗しました');
+    }
   });
 
   if (!change) return null;
