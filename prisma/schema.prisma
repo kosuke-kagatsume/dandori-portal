@@ -2378,6 +2378,72 @@ model user_permission_overrides {
 // 予約管理（入社・異動・退職）
 // ============================================================================
 
+// ============================================================================
+// 健康管理: 健診マスタ
+// ============================================================================
+
+// 健診種別マスタ
+model health_checkup_types {
+  id          String   @id
+  tenantId    String
+  name        String   // "定期健康診断", "雇入時健診"
+  code        String   // "regular", "pre_employment"
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+// 医療機関マスタ
+model health_medical_institutions {
+  id        String   @id
+  tenantId  String
+  name      String
+  code      String?
+  address   String?
+  phone     String?
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+// 健診予定
+model health_checkup_schedules {
+  id                   String   @id
+  tenantId             String
+  userId               String
+  userName             String
+  departmentName       String?
+  checkupTypeName      String
+  medicalInstitutionId String?
+  scheduledDate        DateTime @db.Date
+  scheduledTime        String?
+  status               String   @default("scheduled") // scheduled, completed, cancelled
+  fiscalYear           Int
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime
+
+  @@index([tenantId, scheduledDate])
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+  @@index([tenantId, fiscalYear])
+}
+
+// ============================================================================
+// 予約管理（入社・異動・退職）
+// ============================================================================
+
 // 予約変更
 model scheduled_changes {
   id               String    @id

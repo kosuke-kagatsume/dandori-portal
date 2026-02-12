@@ -113,6 +113,14 @@ export type Permission =
   | 'approval:executive'    // 経営承認
   // オンボーディング
   | 'onboarding:manage'     // 入社手続き管理
+  // 健康管理
+  | 'health:read:own'       // 自分の健康データ閲覧
+  | 'health:read:team'      // チームの健康データ閲覧
+  | 'health:read:stats'     // 統計データのみ閲覧
+  | 'health:read:all'       // 全社員の健康データ閲覧
+  | 'health:schedule:manage' // 健診予定管理
+  | 'health:master:manage'  // 健診マスタ管理
+  | 'health:export'         // 健康データ出力
   // システム
   | 'system:settings'       // システム設定
   | 'system:audit'          // 監査ログ閲覧
@@ -148,6 +156,15 @@ export const PERMISSIONS: Record<Permission, UserRole[]> = {
 
   // オンボーディング
   'onboarding:manage': ['hr'],
+
+  // 健康管理
+  'health:read:own': ['employee', 'manager', 'executive', 'hr', 'admin'],
+  'health:read:team': ['manager', 'hr', 'admin'],
+  'health:read:stats': ['executive', 'hr', 'admin'],
+  'health:read:all': ['hr', 'admin'],
+  'health:schedule:manage': ['hr', 'admin'],
+  'health:master:manage': ['hr', 'admin'],
+  'health:export': ['executive', 'hr', 'admin'],
 
   // システム
   'system:settings': ['admin'],

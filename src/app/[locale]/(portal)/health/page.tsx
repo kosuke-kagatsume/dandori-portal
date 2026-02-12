@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/lib/store/user-store';
+import { useHealthStore } from '@/lib/store/health-store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,17 +41,12 @@ import { CalendarIcon } from 'lucide-react';
 import {
   Heart,
   Plus,
-  Search,
   AlertTriangle,
   FileText,
   Download,
-  User,
-  Activity,
   Brain,
   TrendingUp,
   Clock,
-  CheckCircle,
-  XCircle,
   BarChart3,
   Play,
 } from 'lucide-react';
@@ -71,51 +67,13 @@ import {
   type HealthCheckupForPDF,
   type StressCheckForPDF,
 } from '@/lib/pdf/health-report-pdf';
+import type { HealthCheckup, StressCheck, OverallResult, CheckupType, FollowUpStatus, StressCheckStatus } from '@/types/health';
 
-// 健康診断の結果タイプ
-type OverallResult = 'A' | 'B' | 'C' | 'D' | 'E';
-type CheckupType = 'regular' | 'hiring' | 'specific';
-type FollowUpStatus = 'none' | 'scheduled' | 'completed';
-
-// 健康診断データの型
-interface HealthCheckup {
-  id: string;
-  userId: string;
-  userName: string;
-  department: string;
-  checkupDate: Date;
-  checkupType: CheckupType;
-  medicalInstitution: string;
-  overallResult: OverallResult;
-  requiresReexam: boolean;
-  requiresTreatment: boolean;
-  requiresGuidance: boolean;
-  height?: number;
-  weight?: number;
-  bmi?: number;
-  bloodPressureSystolic?: number;
-  bloodPressureDiastolic?: number;
-  followUpStatus: FollowUpStatus;
-  doctorOpinion?: string;
-  findings: string[];
-}
-
-// ストレスチェックデータの型
-interface StressCheck {
-  id: string;
-  userId: string;
-  userName: string;
-  department: string;
-  fiscalYear: number;
-  checkDate: Date;
-  status: 'pending' | 'completed' | 'interview_recommended';
-  stressFactorsScore: number;
-  stressResponseScore: number;
-  socialSupportScore: number;
-  isHighStress: boolean;
-  interviewRequested: boolean;
-  interviewDate?: Date;
-}
+// Components
+import { HealthStatsHeader } from './components/health-stats-header';
+import { CheckupSubTabs } from './components/checkups/checkup-sub-tabs';
+import { StressCheckFilters } from './components/stress-checks/stress-check-filters';
+import { FollowUpFilters } from './components/follow-up/follow-up-filters';
 
 // APIからのレスポンス型
 interface APIHealthCheckup {
@@ -237,17 +195,23 @@ export default function HealthPage() {
   const locale = params?.locale as string || 'ja';
   const currentUser = useUserStore(state => state.currentUser);
   const tenantId = currentUser?.tenantId || '';
+  const userRoles = currentUser?.roles || ['employee'];
+  const userRole = userRoles[0] || 'employee';
+
+  // 健診予定ストア
+  const { schedules, fetchSchedules, setTenantId: setHealthStoreTenantId } = useHealthStore();
 
   // APIからのデータ
   const [checkups, setCheckups] = useState<HealthCheckup[]>([]);
   const [stressChecks, setStressChecks] = useState<StressCheck[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_isLoading, setIsLoading] = useState(true); // ローディング状態管理（setIsLoadingで更新）
+  const [_isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState('checkups');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterResult, setFilterResult] = useState<string>('all');
   const [filterDepartment, setFilterDepartment] = useState<string>('all');
+  const [filterJudgment, setFilterJudgment] = useState<string>('all');
   const [selectedCheckup, setSelectedCheckup] = useState<HealthCheckup | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
@@ -265,12 +229,11 @@ export default function HealthPage() {
       if (checkupsRes.ok) {
         const checkupsData = await checkupsRes.json();
         const apiCheckups: APIHealthCheckup[] = checkupsData.data || [];
-        // APIデータをコンポーネント用の型に変換
         const mappedCheckups: HealthCheckup[] = apiCheckups.map(c => ({
           id: c.id,
           userId: c.userId,
           userName: c.userName,
-          department: '', // APIにdepartmentがない場合は空文字
+          department: '',
           checkupDate: new Date(c.checkupDate),
           checkupType: (c.checkupType as CheckupType) || 'regular',
           medicalInstitution: c.medicalInstitution,
@@ -299,10 +262,10 @@ export default function HealthPage() {
           id: s.id,
           userId: s.userId,
           userName: s.userName,
-          department: '', // APIにdepartmentがない場合は空文字
+          department: '',
           fiscalYear: s.fiscalYear,
           checkDate: new Date(s.checkDate),
-          status: (s.status as StressCheck['status']) || 'pending',
+          status: (s.status as StressCheckStatus) || 'pending',
           stressFactorsScore: s.stressFactorsScore || 0,
           stressResponseScore: s.stressResponseScore || 0,
           socialSupportScore: s.socialSupportScore || 0,
@@ -312,12 +275,16 @@ export default function HealthPage() {
         }));
         setStressChecks(mappedStress);
       }
+
+      // 健診予定データを取得
+      setHealthStoreTenantId(tenantId);
+      await fetchSchedules();
     } catch (error) {
       console.error('健康管理データの取得に失敗しました:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, setHealthStoreTenantId, fetchSchedules]);
 
   useEffect(() => {
     fetchData();
@@ -370,6 +337,9 @@ export default function HealthPage() {
     const requiresReexam = checkups.filter((c) => c.requiresReexam).length;
     const requiresTreatment = checkups.filter((c) => c.requiresTreatment).length;
     const highStress = stressChecks.filter((s) => s.isHighStress).length;
+    const stressCheckCompletionRate = stressChecks.length > 0
+      ? Math.round((stressChecks.filter((s) => s.status !== 'pending').length / stressChecks.length) * 100)
+      : 0;
 
     return {
       totalEmployees,
@@ -378,36 +348,28 @@ export default function HealthPage() {
       requiresReexam,
       requiresTreatment,
       highStress,
+      stressCheckCompletionRate,
     };
   }, [checkups, stressChecks]);
-
-  // フィルタリングされた健康診断データ
-  const filteredCheckups = useMemo(() => {
-    return checkups.filter((checkup) => {
-      const matchesSearch =
-        checkup.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        checkup.department.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesResult = filterResult === 'all' || checkup.overallResult === filterResult;
-      const matchesDepartment = filterDepartment === 'all' || checkup.department === filterDepartment;
-      return matchesSearch && matchesResult && matchesDepartment;
-    });
-  }, [checkups, searchQuery, filterResult, filterDepartment]);
 
   // フィルタリングされたストレスチェックデータ
   const filteredStressChecks = useMemo(() => {
     return stressChecks.filter((check) => {
       const matchesSearch =
         check.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        check.department.toLowerCase().includes(searchQuery.toLowerCase());
+        (check.department?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
       const matchesDepartment = filterDepartment === 'all' || check.department === filterDepartment;
-      return matchesSearch && matchesDepartment;
+      const matchesJudgment = filterJudgment === 'all' ||
+        (filterJudgment === 'high_stress' && check.isHighStress) ||
+        (filterJudgment === 'normal' && !check.isHighStress);
+      return matchesSearch && matchesDepartment && matchesJudgment;
     });
-  }, [stressChecks, searchQuery, filterDepartment]);
+  }, [stressChecks, searchQuery, filterDepartment, filterJudgment]);
 
   // 部門リスト
   const departments = useMemo(() => {
     const depts = new Set(checkups.map((c) => c.department).filter(Boolean));
-    return Array.from(depts);
+    return Array.from(depts) as string[];
   }, [checkups]);
 
   const handleViewDetails = (checkup: HealthCheckup) => {
@@ -429,14 +391,12 @@ export default function HealthPage() {
 
   // フォロー記録を保存
   const handleSaveFollowUp = () => {
-    // デモモードでは保存したふりをする
     console.log('フォロー記録を保存:', {
       userId: selectedFollowUpUser?.id,
       userName: selectedFollowUpUser?.name,
       ...followUpRecord,
     });
     setFollowUpDialogOpen(false);
-    // TODO: 実際のAPI呼び出しを実装
   };
 
   // 面談記録ダイアログを開く
@@ -455,22 +415,18 @@ export default function HealthPage() {
 
   // 面談記録を保存
   const handleSaveInterview = () => {
-    // デモモードでは保存したふりをする
     console.log('面談記録を保存:', {
       userId: selectedInterviewUser?.id,
       userName: selectedInterviewUser?.name,
       ...interviewRecord,
     });
     setInterviewDialogOpen(false);
-    // TODO: 実際のAPI呼び出しを実装
   };
 
   // 健診結果を保存
   const handleSaveCheckup = () => {
-    // デモモードでは保存したふりをする
     console.log('健診結果を保存:', newCheckup);
     setCheckupRegistrationDialogOpen(false);
-    // フォームをリセット
     setNewCheckup({
       userName: '',
       department: '',
@@ -486,16 +442,15 @@ export default function HealthPage() {
       bloodPressureDiastolic: '',
       doctorOpinion: '',
     });
-    // TODO: 実際のAPI呼び出しを実装
   };
 
   // CSV出力ハンドラー
   const handleExportHealthCheckups = () => {
-    const exportData: HealthCheckupExport[] = filteredCheckups.map((checkup) => ({
+    const exportData: HealthCheckupExport[] = checkups.map((checkup) => ({
       id: checkup.id,
       userId: checkup.userId,
       userName: checkup.userName,
-      departmentName: checkup.department,
+      departmentName: checkup.department || '',
       checkupDate: format(checkup.checkupDate, 'yyyy-MM-dd'),
       checkupType: checkup.checkupType,
       medicalInstitution: checkup.medicalInstitution,
@@ -516,11 +471,11 @@ export default function HealthPage() {
   };
 
   const handleExportFindingsList = () => {
-    const exportData: HealthCheckupExport[] = filteredCheckups.map((checkup) => ({
+    const exportData: HealthCheckupExport[] = checkups.map((checkup) => ({
       id: checkup.id,
       userId: checkup.userId,
       userName: checkup.userName,
-      departmentName: checkup.department,
+      departmentName: checkup.department || '',
       checkupDate: format(checkup.checkupDate, 'yyyy-MM-dd'),
       checkupType: checkup.checkupType,
       medicalInstitution: checkup.medicalInstitution,
@@ -545,7 +500,7 @@ export default function HealthPage() {
       id: check.id,
       userId: check.userId,
       userName: check.userName,
-      departmentName: check.department,
+      departmentName: check.department || '',
       fiscalYear: check.fiscalYear,
       checkDate: format(check.checkDate, 'yyyy-MM-dd'),
       status: check.status,
@@ -564,11 +519,11 @@ export default function HealthPage() {
 
   // PDF出力ハンドラー
   const handleExportIndustrialPhysicianReportPDF = async () => {
-    const checkupData: HealthCheckupForPDF[] = filteredCheckups.map((checkup) => ({
+    const checkupData: HealthCheckupForPDF[] = checkups.map((checkup) => ({
       id: checkup.id,
       userId: checkup.userId,
       userName: checkup.userName,
-      departmentName: checkup.department,
+      departmentName: checkup.department || '',
       checkupDate: checkup.checkupDate,
       checkupType: checkup.checkupType,
       medicalInstitution: checkup.medicalInstitution,
@@ -594,7 +549,7 @@ export default function HealthPage() {
       id: check.id,
       userId: check.userId,
       userName: check.userName,
-      departmentName: check.department,
+      departmentName: check.department || '',
       fiscalYear: check.fiscalYear,
       checkDate: check.checkDate,
       status: check.status,
@@ -622,7 +577,7 @@ export default function HealthPage() {
       id: check.id,
       userId: check.userId,
       userName: check.userName,
-      departmentName: check.department,
+      departmentName: check.department || '',
       fiscalYear: check.fiscalYear,
       checkDate: check.checkDate,
       status: check.status,
@@ -641,11 +596,11 @@ export default function HealthPage() {
   };
 
   const handleExportHealthCheckupSummaryPDF = async () => {
-    const checkupData: HealthCheckupForPDF[] = filteredCheckups.map((checkup) => ({
+    const checkupData: HealthCheckupForPDF[] = checkups.map((checkup) => ({
       id: checkup.id,
       userId: checkup.userId,
       userName: checkup.userName,
-      departmentName: checkup.department,
+      departmentName: checkup.department || '',
       checkupDate: checkup.checkupDate,
       checkupType: checkup.checkupType,
       medicalInstitution: checkup.medicalInstitution,
@@ -693,77 +648,7 @@ export default function HealthPage() {
       </div>
 
       {/* 統計カード */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">対象社員</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalEmployees}名</div>
-            <p className="text-xs text-muted-foreground">年度対象者</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">受診率</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.completionRate}%</div>
-            <p className="text-xs text-muted-foreground">{stats.completed}名 受診完了</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">要再検査</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.requiresReexam}名</div>
-            <p className="text-xs text-muted-foreground">フォローアップ必要</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">要治療</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.requiresTreatment}名</div>
-            <p className="text-xs text-muted-foreground">医療機関受診推奨</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">高ストレス者</CardTitle>
-            <Brain className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.highStress}名</div>
-            <p className="text-xs text-muted-foreground">面談対象者</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ストレスチェック</CardTitle>
-            <Activity className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {stressChecks.length > 0
-                ? Math.round((stressChecks.filter((s) => s.status !== 'pending').length / stressChecks.length) * 100)
-                : 0}%
-            </div>
-            <p className="text-xs text-muted-foreground">回答率</p>
-          </CardContent>
-        </Card>
-      </div>
+      <HealthStatsHeader {...stats} />
 
       {/* メインコンテンツ */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full">
@@ -786,136 +671,22 @@ export default function HealthPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* 検索・フィルター */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="氏名・部署で検索..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="部署" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">すべての部署</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>
-                  {dept}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {activeTab === 'checkups' && (
-            <Select value={filterResult} onValueChange={setFilterResult}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="判定結果" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべての結果</SelectItem>
-                <SelectItem value="A">A: 異常なし</SelectItem>
-                <SelectItem value="B">B: 軽度異常</SelectItem>
-                <SelectItem value="C">C: 要経過観察</SelectItem>
-                <SelectItem value="D">D: 要精密検査</SelectItem>
-                <SelectItem value="E">E: 要治療</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        {/* 健康診断タブ */}
+        {/* 健康診断タブ（3分割：予定/結果/管理） */}
         <TabsContent value="checkups">
-          <Card>
-            <CardHeader>
-              <CardTitle>健康診断結果一覧</CardTitle>
-              <CardDescription>
-                {filteredCheckups.length}件の健康診断結果
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>氏名</TableHead>
-                      <TableHead>部署</TableHead>
-                      <TableHead>受診日</TableHead>
-                      <TableHead>総合判定</TableHead>
-                      <TableHead>所見</TableHead>
-                      <TableHead>フォロー状況</TableHead>
-                      <TableHead className="text-right">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCheckups.map((checkup) => (
-                      <TableRow key={checkup.id}>
-                        <TableCell className="font-medium">{checkup.userName}</TableCell>
-                        <TableCell>{checkup.department}</TableCell>
-                        <TableCell>
-                          {format(checkup.checkupDate, 'yyyy/MM/dd', { locale: ja })}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getResultBadgeColor(checkup.overallResult)}>
-                            {checkup.overallResult}: {getResultLabel(checkup.overallResult)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1 flex-wrap">
-                            {checkup.requiresReexam && (
-                              <Badge variant="outline" className="border-orange-500 text-orange-600">
-                                要再検査
-                              </Badge>
-                            )}
-                            {checkup.requiresTreatment && (
-                              <Badge variant="outline" className="border-red-500 text-red-600">
-                                要治療
-                              </Badge>
-                            )}
-                            {checkup.findings.map((finding, i) => (
-                              <Badge key={i} variant="secondary">
-                                {finding}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              checkup.followUpStatus === 'completed'
-                                ? 'default'
-                                : checkup.followUpStatus === 'scheduled'
-                                ? 'outline'
-                                : 'secondary'
-                            }
-                          >
-                            {checkup.followUpStatus === 'completed'
-                              ? '完了'
-                              : checkup.followUpStatus === 'scheduled'
-                              ? '予定あり'
-                              : 'なし'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetails(checkup)}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            詳細
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <CheckupSubTabs
+            schedules={schedules}
+            checkups={checkups}
+            departments={departments}
+            searchQuery={searchQuery}
+            filterDepartment={filterDepartment}
+            filterResult={filterResult}
+            onSearchQueryChange={setSearchQuery}
+            onFilterDepartmentChange={setFilterDepartment}
+            onFilterResultChange={setFilterResult}
+            onViewCheckupDetails={handleViewDetails}
+            onRefreshSchedules={() => fetchSchedules()}
+            userRole={userRole}
+          />
         </TabsContent>
 
         {/* ストレスチェックタブ */}
@@ -934,6 +705,17 @@ export default function HealthPage() {
               </Button>
             </CardHeader>
             <CardContent>
+              {/* 部署・判定フィルタ追加 */}
+              <StressCheckFilters
+                searchQuery={searchQuery}
+                filterDepartment={filterDepartment}
+                filterJudgment={filterJudgment}
+                departments={departments}
+                onSearchQueryChange={setSearchQuery}
+                onFilterDepartmentChange={setFilterDepartment}
+                onFilterJudgmentChange={setFilterJudgment}
+              />
+
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -952,7 +734,7 @@ export default function HealthPage() {
                     {filteredStressChecks.map((check) => (
                       <TableRow key={check.id}>
                         <TableCell className="font-medium">{check.userName}</TableCell>
-                        <TableCell>{check.department}</TableCell>
+                        <TableCell>{check.department || '-'}</TableCell>
                         <TableCell>
                           {check.status === 'pending'
                             ? '-'
@@ -998,6 +780,15 @@ export default function HealthPage() {
 
         {/* フォローアップタブ */}
         <TabsContent value="followup">
+          {/* 部署フィルタ追加 */}
+          <FollowUpFilters
+            searchQuery={searchQuery}
+            filterDepartment={filterDepartment}
+            departments={departments}
+            onSearchQueryChange={setSearchQuery}
+            onFilterDepartmentChange={setFilterDepartment}
+          />
+
           <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
@@ -1011,6 +802,8 @@ export default function HealthPage() {
                 <div className="space-y-4">
                   {checkups
                     .filter((c) => c.requiresReexam)
+                    .filter((c) => filterDepartment === 'all' || c.department === filterDepartment)
+                    .filter((c) => c.userName.toLowerCase().includes(searchQuery.toLowerCase()))
                     .map((checkup) => (
                       <div
                         key={checkup.id}
@@ -1057,6 +850,8 @@ export default function HealthPage() {
                 <div className="space-y-4">
                   {stressChecks
                     .filter((s) => s.isHighStress)
+                    .filter((s) => filterDepartment === 'all' || s.department === filterDepartment)
+                    .filter((s) => s.userName.toLowerCase().includes(searchQuery.toLowerCase()))
                     .map((check) => (
                       <div
                         key={check.id}
@@ -1093,6 +888,23 @@ export default function HealthPage() {
 
         {/* レポートタブ */}
         <TabsContent value="reports">
+          {/* 部署フィルタ追加 */}
+          <div className="mb-4">
+            <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="部署" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべての部署</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>
+                    {dept}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             {/* 有所見率推移グラフ */}
             <Card>
