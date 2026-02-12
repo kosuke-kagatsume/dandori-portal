@@ -94,7 +94,7 @@ export default function EvaluationPage() {
     {
       icon: Star,
       title: '評価分析レポート',
-      description: '部門別・評価者別の分析で組織の課題を可視化',
+      description: '部署別・評価者別の分析で組織の課題を可視化',
     },
   ];
 

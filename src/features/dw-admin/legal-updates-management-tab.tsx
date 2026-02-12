@@ -351,7 +351,7 @@ export function LegalUpdatesManagementTab() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">全て</SelectItem>
+                  <SelectItem value="all">すべて</SelectItem>
                   {CATEGORIES.map((c) => (
                     <SelectItem key={c.value} value={c.value}>
                       {c.label}
@@ -367,7 +367,7 @@ export function LegalUpdatesManagementTab() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">全て</SelectItem>
+                  <SelectItem value="all">すべて</SelectItem>
                   <SelectItem value="true">公開済み</SelectItem>
                   <SelectItem value="false">下書き</SelectItem>
                 </SelectContent>

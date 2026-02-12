@@ -313,7 +313,7 @@ export const exportEvaluationToCSV = (
     const headers = [
       '従業員ID',
       '従業員名',
-      '部門',
+      '部署',
       '役職',
       '年度',
       '期間',
@@ -927,7 +927,7 @@ export const exportHealthCheckupsToCSV = (
     const headers = [
       '社員ID',
       '社員名',
-      '部門',
+      '部署',
       '受診日',
       '健診種別',
       '医療機関',
@@ -1005,7 +1005,7 @@ export const exportFindingsListToCSV = (
     const headers = [
       '社員ID',
       '社員名',
-      '部門',
+      '部署',
       '受診日',
       '総合判定',
       '要再検査',
@@ -1089,7 +1089,7 @@ export const exportStressChecksToCSV = (
     const headers = [
       '社員ID',
       '社員名',
-      '部門',
+      '部署',
       '年度',
       '受検日',
       'ステータス',
@@ -1156,7 +1156,7 @@ export const exportHighStressListToCSV = (
     const headers = [
       '社員ID',
       '社員名',
-      '部門',
+      '部署',
       '年度',
       '受検日',
       'ストレス要因スコア',

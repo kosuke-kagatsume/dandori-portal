@@ -170,7 +170,7 @@ export function EditApprovalFlowDialog({
     if (flowType === 'custom' && steps.length > 0) {
       const hasEmptyStepName = steps.some((step) => !step.name?.trim());
       if (hasEmptyStepName) {
-        toast.error('全てのステップ名を入力してください');
+        toast.error('すべてのステップ名を入力してください');
         return;
       }
     }

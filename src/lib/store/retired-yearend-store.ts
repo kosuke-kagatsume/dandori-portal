@@ -135,7 +135,7 @@ const createRetiredYearEndStore = () => {
 
       if (unsentUsers.length === 0) {
         toast.info('送信対象の退職者がいません', {
-          description: '全ての退職者に既に送信済みです',
+          description: 'すべての退職者に既に送信済みです',
         });
         return;
       }

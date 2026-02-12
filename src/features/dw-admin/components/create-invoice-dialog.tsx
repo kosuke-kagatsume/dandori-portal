@@ -153,7 +153,7 @@ export function CreateInvoiceDialog({
   // バリデーション
   const validateForm = () => {
     if (items.some((item) => !item.description.trim())) {
-      toast.error('全ての項目に品目を入力してください');
+      toast.error('すべての項目に品目を入力してください');
       return false;
     }
 

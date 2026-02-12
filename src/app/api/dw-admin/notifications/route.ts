@@ -207,7 +207,7 @@ export async function PUT(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: '全ての通知を既読にしました',
+        message: 'すべての通知を既読にしました',
       });
     }
 

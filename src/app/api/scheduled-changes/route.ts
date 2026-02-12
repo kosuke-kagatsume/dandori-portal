@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     // 入社予約の場合は詳細が必須
     if (type === 'hire' && (!details?.name || !details?.email || !details?.department)) {
       return NextResponse.json(
-        { success: false, error: '入社予約には氏名、メールアドレス、部門が必須です' },
+        { success: false, error: '入社予約には氏名、メールアドレス、部署が必須です' },
         { status: 400 }
       );
     }

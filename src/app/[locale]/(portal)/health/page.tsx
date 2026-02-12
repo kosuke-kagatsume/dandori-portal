@@ -791,7 +791,7 @@ export default function HealthPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="氏名・部門で検索..."
+              placeholder="氏名・部署で検索..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -799,10 +799,10 @@ export default function HealthPage() {
           </div>
           <Select value={filterDepartment} onValueChange={setFilterDepartment}>
             <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="部門" />
+              <SelectValue placeholder="部署" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全ての部門</SelectItem>
+              <SelectItem value="all">すべての部署</SelectItem>
               {departments.map((dept) => (
                 <SelectItem key={dept} value={dept}>
                   {dept}
@@ -816,7 +816,7 @@ export default function HealthPage() {
                 <SelectValue placeholder="判定結果" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全ての結果</SelectItem>
+                <SelectItem value="all">すべての結果</SelectItem>
                 <SelectItem value="A">A: 異常なし</SelectItem>
                 <SelectItem value="B">B: 軽度異常</SelectItem>
                 <SelectItem value="C">C: 要経過観察</SelectItem>
@@ -842,7 +842,7 @@ export default function HealthPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>氏名</TableHead>
-                      <TableHead>部門</TableHead>
+                      <TableHead>部署</TableHead>
                       <TableHead>受診日</TableHead>
                       <TableHead>総合判定</TableHead>
                       <TableHead>所見</TableHead>
@@ -939,7 +939,7 @@ export default function HealthPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>氏名</TableHead>
-                      <TableHead>部門</TableHead>
+                      <TableHead>部署</TableHead>
                       <TableHead>回答日</TableHead>
                       <TableHead>ストレス要因</TableHead>
                       <TableHead>心身の反応</TableHead>
@@ -1153,14 +1153,14 @@ export default function HealthPage() {
               </CardContent>
             </Card>
 
-            {/* 部門別ストレス傾向 */}
+            {/* 部署別ストレス傾向 */}
             <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5" />
-                  部門別ストレス傾向
+                  部署別ストレス傾向
                 </CardTitle>
-                <CardDescription>部門ごとのストレス状況比較（高スコア = 高ストレス / 低サポート）</CardDescription>
+                <CardDescription>部署ごとのストレス状況比較（高スコア = 高ストレス / 低サポート）</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -1269,7 +1269,7 @@ export default function HealthPage() {
                       <span className="font-medium">{selectedCheckup.userName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm">部門</span>
+                      <span className="text-sm">部署</span>
                       <span>{selectedCheckup.department}</span>
                     </div>
                     <div className="flex justify-between">
@@ -1611,7 +1611,7 @@ export default function HealthPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>部門</Label>
+                <Label>部署</Label>
                 <Select
                   value={newCheckup.department}
                   onValueChange={(value) =>
@@ -1619,7 +1619,7 @@ export default function HealthPage() {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="部門を選択" />
+                    <SelectValue placeholder="部署を選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {departments.map((dept) => (

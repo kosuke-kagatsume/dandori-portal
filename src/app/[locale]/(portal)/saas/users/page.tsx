@@ -102,7 +102,7 @@ export default function SaaSUserListPage() {
       return;
     }
 
-    const headers = ['ユーザー名', 'メールアドレス', '部門', '月額コスト', '年額コスト', '利用サービス数'];
+    const headers = ['ユーザー名', 'メールアドレス', '部署', '月額コスト', '年額コスト', '利用サービス数'];
     const rows = sortedUsers.map(u => [
       u.userName,
       u.userEmail,
@@ -128,7 +128,7 @@ export default function SaaSUserListPage() {
       return;
     }
 
-    const headers = ['ユーザー名', 'メールアドレス', '部門', 'サービス名', 'プラン名', '月額コスト'];
+    const headers = ['ユーザー名', 'メールアドレス', '部署', 'サービス名', 'プラン名', '月額コスト'];
     const rows: string[][] = [];
 
     sortedUsers.forEach(user => {
@@ -189,7 +189,7 @@ export default function SaaSUserListPage() {
             onClick={() => router.push('/ja/saas/departments')}
           >
             <Building className="mr-2 h-4 w-4" />
-            部門別分析
+            部署別分析
           </Button>
           <Button
             variant="outline"
@@ -272,7 +272,7 @@ export default function SaaSUserListPage() {
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="ユーザー名、メールアドレス、部門で検索"
+                placeholder="ユーザー名、メールアドレス、部署で検索"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"

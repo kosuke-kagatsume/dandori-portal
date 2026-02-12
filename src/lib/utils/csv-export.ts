@@ -56,7 +56,7 @@ export function downloadCSV(csv: string, filename: string): void {
 export interface UserSaaSExportData {
   ユーザー名: string;
   メールアドレス: string;
-  部門: string;
+  部署: string;
   サービス名: string;
   カテゴリ: string;
   プラン名: string;
@@ -76,7 +76,7 @@ export function exportUserSaaSToCSV(
   const data: UserSaaSExportData[] = saasDetails.map((detail) => ({
     ユーザー名: userName,
     メールアドレス: userEmail,
-    部門: userDepartment || '-',
+    部署: userDepartment || '-',
     サービス名: detail.service.name,
     カテゴリ: String(detail.service.category),
     プラン名: detail.plan.planName,
@@ -94,7 +94,7 @@ export function exportUserSaaSToCSV(
   const headers = [
     'ユーザー名',
     'メールアドレス',
-    '部門',
+    '部署',
     'サービス名',
     'カテゴリ',
     'プラン名',
@@ -116,7 +116,7 @@ export function exportUserSaaSToCSV(
 export interface AllUsersSaaSExportData {
   ユーザー名: string;
   メールアドレス: string;
-  部門: string;
+  部署: string;
   役職: string;
   月額コスト合計: number;
   年額コスト合計: number;
@@ -136,7 +136,7 @@ export function exportAllUsersSaaSToCSV(
   const data: AllUsersSaaSExportData[] = usersData.map((user) => ({
     ユーザー名: user.name,
     メールアドレス: user.email,
-    部門: user.department || '-',
+    部署: user.department || '-',
     役職: user.role || '-',
     月額コスト合計: user.totalCost,
     年額コスト合計: user.totalCost * 12,
@@ -146,7 +146,7 @@ export function exportAllUsersSaaSToCSV(
   const headers = [
     'ユーザー名',
     'メールアドレス',
-    '部門',
+    '部署',
     '役職',
     '月額コスト合計',
     '年額コスト合計',
@@ -164,7 +164,7 @@ export function exportAllUsersSaaSToCSV(
 export interface DetailedUserSaaSExportData {
   ユーザー名: string;
   メールアドレス: string;
-  部門: string;
+  部署: string;
   サービス名: string;
   ベンダー: string;
   カテゴリ: string;
@@ -208,7 +208,7 @@ export function exportDetailedAllUsersSaaSToCSV(
       data.push({
         ユーザー名: user.userName,
         メールアドレス: user.userEmail,
-        部門: user.userDepartment || '-',
+        部署: user.userDepartment || '-',
         サービス名: detail.service.name,
         ベンダー: detail.service.vendor,
         カテゴリ: detail.service.category,
@@ -228,7 +228,7 @@ export function exportDetailedAllUsersSaaSToCSV(
   const headers = [
     'ユーザー名',
     'メールアドレス',
-    '部門',
+    '部署',
     'サービス名',
     'ベンダー',
     'カテゴリ',

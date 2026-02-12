@@ -173,7 +173,7 @@ export function EditAssignmentDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="departmentName">部門</Label>
+              <Label htmlFor="departmentName">部署</Label>
               <Input
                 id="departmentName"
                 value={departmentName}

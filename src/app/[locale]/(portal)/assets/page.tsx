@@ -943,7 +943,7 @@ export default function AssetsPage() {
                       setFilterStatus(e.target.value as typeof filterStatus)
                     }
                   >
-                    <option value="all">全てのステータス</option>
+                    <option value="all">すべてのステータス</option>
                     <option value="active">稼働中</option>
                     <option value="maintenance">整備中</option>
                     <option value="retired">廃車</option>
@@ -1505,7 +1505,7 @@ export default function AssetsPage() {
                     value={maintenanceTypeFilter}
                     onChange={(e) => setMaintenanceTypeFilter(e.target.value)}
                   >
-                    <option value="all">全ての種別</option>
+                    <option value="all">すべての種別</option>
                     <option value="oil_change">オイル交換</option>
                     <option value="tire_change">タイヤ交換</option>
                     <option value="inspection">点検</option>
@@ -1518,7 +1518,7 @@ export default function AssetsPage() {
                     value={maintenanceVendorFilter}
                     onChange={(e) => setMaintenanceVendorFilter(e.target.value)}
                   >
-                    <option value="all">全ての業者</option>
+                    <option value="all">すべての業者</option>
                     {vendors.map((vendor) => (
                       <option key={vendor.id} value={vendor.id}>
                         {vendor.name}

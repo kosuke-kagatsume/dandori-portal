@@ -91,7 +91,7 @@ export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProp
 
   // 異動タイプの表示名
   const transferTypeLabels: Record<TransferHistory['type'], string> = {
-    transfer: '部門異動',
+    transfer: '部署異動',
     promotion: '昇格',
     demotion: '降格',
     role_change: '役割変更'
@@ -129,7 +129,7 @@ export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProp
 
   // CSV出力
   const handleExportCSV = () => {
-    const headers = ['氏名', '異動タイプ', '異動前部門', '異動後部門', '異動前役職', '異動後役職', '発効日', '理由', '承認者', '登録者', '登録日'];
+    const headers = ['氏名', '異動タイプ', '異動前部署', '異動後部署', '異動前役職', '異動後役職', '発効日', '理由', '承認者', '登録者', '登録日'];
     const rows = filteredTransfers.map(t => [
       t.userName,
       transferTypeLabels[t.type],
@@ -186,7 +186,7 @@ export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProp
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="氏名・部門・役職で検索..."
+                placeholder="氏名・部署・役職で検索..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -200,7 +200,7 @@ export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProp
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">すべて</SelectItem>
-                <SelectItem value="transfer">部門異動</SelectItem>
+                <SelectItem value="transfer">部署異動</SelectItem>
                 <SelectItem value="promotion">昇格</SelectItem>
                 <SelectItem value="demotion">降格</SelectItem>
                 <SelectItem value="role_change">役割変更</SelectItem>

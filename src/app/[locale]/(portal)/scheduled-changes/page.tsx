@@ -118,14 +118,14 @@ export default function ScheduledChangesPage() {
         if (change.userName?.toLowerCase().includes(query)) return true;
         // 作成者名で検索
         if (change.createdByName.toLowerCase().includes(query)) return true;
-        // 入社の場合は氏名・部門・役職で検索
+        // 入社の場合は氏名・部署・役職で検索
         if (change.type === 'hire') {
           const details = change.details as HireDetails;
           if (details.name.toLowerCase().includes(query)) return true;
           if (details.department.toLowerCase().includes(query)) return true;
           if (details.position.toLowerCase().includes(query)) return true;
         }
-        // 異動の場合は部門で検索
+        // 異動の場合は部署で検索
         if (change.type === 'transfer') {
           const details = change.details as TransferDetails;
           if (details.currentDepartment.toLowerCase().includes(query)) return true;
@@ -381,7 +381,7 @@ export default function ScheduledChangesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.byType.transfer}</div>
-            <p className="text-xs text-muted-foreground">部門・役職変更</p>
+            <p className="text-xs text-muted-foreground">部署・役職変更</p>
           </CardContent>
         </Card>
 
@@ -405,7 +405,7 @@ export default function ScheduledChangesPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="名前、部門、作成者で検索..."
+                placeholder="名前、部署、作成者で検索..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -446,7 +446,7 @@ export default function ScheduledChangesPage() {
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'all' | 'pending' | 'applied' | 'cancelled')} className="space-y-4 w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="all">
-            全て ({stats.total})
+            すべて ({stats.total})
           </TabsTrigger>
           <TabsTrigger value="pending">
             予約中 ({stats.pending})
@@ -514,7 +514,7 @@ export default function ScheduledChangesPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>
-                  {activeTab === 'all' && '全ての予約'}
+                  {activeTab === 'all' && 'すべての予約'}
                   {activeTab === 'pending' && '予約中の変更'}
                   {activeTab === 'applied' && '適用済みの変更'}
                   {activeTab === 'cancelled' && 'キャンセルされた変更'}

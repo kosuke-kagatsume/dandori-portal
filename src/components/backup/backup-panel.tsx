@@ -177,7 +177,7 @@ export function BackupPanel() {
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
-              <strong>警告:</strong> 現在のデータは全て上書きされます。この操作は取り消せません。
+              <strong>警告:</strong> 現在のデータはすべて上書きされます。この操作は取り消せません。
             </AlertDescription>
           </Alert>
 

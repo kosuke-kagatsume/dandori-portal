@@ -121,7 +121,7 @@ export default function SaaSDepartmentAnalysisPage() {
       return;
     }
 
-    const headers = ['部門', 'ユーザー数', '月額コスト合計', '年額コスト合計', '利用サービス数', '平均コスト/人'];
+    const headers = ['部署', 'ユーザー数', '月額コスト合計', '年額コスト合計', '利用サービス数', '平均コスト/人'];
     const rows = departmentData.map((dept) => [
       dept.departmentName,
       dept.userCount.toString(),
@@ -160,8 +160,8 @@ export default function SaaSDepartmentAnalysisPage() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">部門別SaaS利用分析</h1>
-          <p className="text-muted-foreground">部門ごとのSaaS利用状況とコストを分析（DB接続）</p>
+          <h1 className="text-3xl font-bold tracking-tight">部署別SaaS利用分析</h1>
+          <p className="text-muted-foreground">部署ごとのSaaS利用状況とコストを分析（DB接続）</p>
         </div>
         <div className="flex gap-2">
           {mounted && (
@@ -194,11 +194,11 @@ export default function SaaSDepartmentAnalysisPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">部門数</CardTitle>
+              <CardTitle className="text-sm font-medium">部署数</CardTitle>
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalDepartments}部門</div>
+              <div className="text-2xl font-bold">{totalDepartments}部署</div>
               <p className="text-xs text-muted-foreground mt-1">
                 DBから取得
               </p>
@@ -215,31 +215,31 @@ export default function SaaSDepartmentAnalysisPage() {
                 ¥{totalCost.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                全部門の月額合計
+                全部署の月額合計
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">平均コスト/部門</CardTitle>
+              <CardTitle className="text-sm font-medium">平均コスト/部署</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 ¥{averageCostPerDept.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                部門あたりの平均月額
+                部署あたりの平均月額
               </p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* 部門一覧 */}
+      {/* 部署一覧 */}
       <Card>
         <CardHeader>
-          <CardTitle>部門別利用状況</CardTitle>
+          <CardTitle>部署別利用状況</CardTitle>
           <CardDescription>
             コスト順に表示しています
           </CardDescription>
@@ -256,7 +256,7 @@ export default function SaaSDepartmentAnalysisPage() {
                 <Card key={dept.departmentId || 'unknown'} className="border-l-4 border-l-blue-500/20">
                   <CardContent className="p-6">
                     <div className="space-y-4">
-                      {/* 部門ヘッダー */}
+                      {/* 部署ヘッダー */}
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
@@ -293,7 +293,7 @@ export default function SaaSDepartmentAnalysisPage() {
                         </div>
                       </div>
 
-                      {/* 部門内ユーザー */}
+                      {/* 部署内ユーザー */}
                       <div>
                         <p className="text-sm font-medium mb-2">所属ユーザー（コスト順）:</p>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">

@@ -157,7 +157,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
   const handleCreate = async () => {
     // 最終バリデーション
     if (!formData.adminName || !formData.adminEmail || !formData.adminPassword) {
-      toast.error('管理者情報を全て入力してください');
+      toast.error('管理者情報をすべて入力してください');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail)) {
@@ -485,7 +485,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
               <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
                 <p className="text-sm text-blue-900 dark:text-blue-100">
                   このテナントの初期管理者アカウントを作成します。
-                  管理者は全ての機能にアクセスでき、他のユーザーを招待できます。
+                  管理者はすべての機能にアクセスでき、他のユーザーを招待できます。
                 </p>
               </div>
 

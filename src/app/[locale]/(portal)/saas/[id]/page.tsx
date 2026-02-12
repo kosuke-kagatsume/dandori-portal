@@ -464,7 +464,7 @@ export default function SaaSServiceDetailPage() {
 
                         {assignment.departmentName && (
                           <div>
-                            <p className="text-sm text-muted-foreground">部門</p>
+                            <p className="text-sm text-muted-foreground">部署</p>
                             <p className="font-medium">{assignment.departmentName}</p>
                           </div>
                         )}

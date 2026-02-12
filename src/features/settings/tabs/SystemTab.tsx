@@ -15,9 +15,9 @@ export function SystemTab({ settings: _settings, updateSettings: _updateSettings
   const { resetSettings } = useCompanySettingsStore();
 
   const handleResetAllSettings = () => {
-    if (confirm('全ての設定をリセットしますか？この操作は取り消せません。')) {
+    if (confirm('すべての設定をリセットしますか？この操作は取り消せません。')) {
       resetSettings();
-      toast.success('全ての設定がリセットされました');
+      toast.success('すべての設定がリセットされました');
     }
   };
 
@@ -140,7 +140,7 @@ export function SystemTab({ settings: _settings, updateSettings: _updateSettings
                 <CardTitle className="text-red-600">データの完全削除</CardTitle>
               </div>
               <CardDescription>
-                全てのデータを削除します（危険な操作）
+                すべてのデータを削除します（危険な操作）
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -150,15 +150,15 @@ export function SystemTab({ settings: _settings, updateSettings: _updateSettings
                     ⚠️ 警告: この操作は取り消せません
                   </p>
                   <p className="text-sm text-red-700 mb-2">
-                    このボタンを押すと、LocalStorageに保存されている全てのデータが削除されます:
+                    このボタンを押すと、LocalStorageに保存されているすべてのデータが削除されます:
                   </p>
                   <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-                    <li>全ての設定</li>
+                    <li>すべての設定</li>
                     <li>勤怠履歴データ</li>
                     <li>ワークフロー申請データ</li>
                     <li>休暇管理データ</li>
                     <li>組織データ</li>
-                    <li>その他全ての業務データ</li>
+                    <li>その他すべての業務データ</li>
                   </ul>
                   <p className="text-sm text-red-700 mt-2 font-medium">
                     実行後、ページは自動的にリロードされます。

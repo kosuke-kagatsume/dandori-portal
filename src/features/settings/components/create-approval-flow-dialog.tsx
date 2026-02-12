@@ -168,7 +168,7 @@ export function CreateApprovalFlowDialog({
       // カスタム型の場合、ステップ名が全て入力されているかチェック
       const hasEmptyStepName = steps.some((step) => !step.name?.trim());
       if (hasEmptyStepName) {
-        toast.error('全てのステップ名を入力してください');
+        toast.error('すべてのステップ名を入力してください');
         return;
       }
     }

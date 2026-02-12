@@ -260,7 +260,7 @@ export default function AuditPage() {
                 <SelectValue placeholder="重要度" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全て</SelectItem>
+                <SelectItem value="all">すべて</SelectItem>
                 <SelectItem value="info">情報</SelectItem>
                 <SelectItem value="warning">警告</SelectItem>
                 <SelectItem value="error">エラー</SelectItem>

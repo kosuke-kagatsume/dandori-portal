@@ -343,9 +343,9 @@ export function DepartmentLeaveChart() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-green-500" />
-          部門別休暇取得率
+          部署別休暇取得率
         </CardTitle>
-        <CardDescription>各部門の有給消化状況</CardDescription>
+        <CardDescription>各部署の有給消化状況</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -371,9 +371,9 @@ export function DepartmentSalaryChart() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-yellow-500" />
-          部門別平均給与
+          部署別平均給与
         </CardTitle>
-        <CardDescription>部門ごとの給与構成（基本給・手当・残業代）</CardDescription>
+        <CardDescription>部署ごとの給与構成（基本給・手当・残業代）</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>

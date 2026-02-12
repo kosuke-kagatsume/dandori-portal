@@ -66,11 +66,11 @@ const detailsToString = (change: ScheduledChange): string => {
   switch (change.type) {
     case 'hire': {
       const details = change.details as HireDetails;
-      return `氏名:${details.name}, メール:${details.email}, 部門:${details.department}, 役職:${details.position}, 権限:${details.role}, 社員番号:${details.employeeNumber || 'なし'}`;
+      return `氏名:${details.name}, メール:${details.email}, 部署:${details.department}, 役職:${details.position}, 権限:${details.role}, 社員番号:${details.employeeNumber || 'なし'}`;
     }
     case 'transfer': {
       const details = change.details as TransferDetails;
-      return `現部門:${details.currentDepartment}, 新部門:${details.newDepartment}, 現役職:${details.currentPosition}, 新役職:${details.newPosition}, 理由:${details.reason || 'なし'}`;
+      return `現部署:${details.currentDepartment}, 新部署:${details.newDepartment}, 現役職:${details.currentPosition}, 新役職:${details.newPosition}, 理由:${details.reason || 'なし'}`;
     }
     case 'retirement': {
       const details = change.details as RetirementDetails;
@@ -328,7 +328,7 @@ const parseDetailsFromString = (
       return {
         name: parts['氏名'] || '',
         email: parts['メール'] || '',
-        department: parts['部門'] || '',
+        department: parts['部署'] || '',
         position: parts['役職'] || '',
         role: (parts['権限'] as 'employee' | 'manager' | 'hr' | 'admin') || 'employee',
         employeeNumber: parts['社員番号'] !== 'なし' ? parts['社員番号'] : undefined,
@@ -336,8 +336,8 @@ const parseDetailsFromString = (
 
     case 'transfer':
       return {
-        currentDepartment: parts['現部門'] || '',
-        newDepartment: parts['新部門'] || '',
+        currentDepartment: parts['現部署'] || '',
+        newDepartment: parts['新部署'] || '',
         currentPosition: parts['現役職'] || '',
         newPosition: parts['新役職'] || '',
         reason: parts['理由'] !== 'なし' ? parts['理由'] : undefined,
@@ -395,11 +395,11 @@ export const validateScheduledChanges = (changes: ScheduledChange[]): {
       const details = change.details as HireDetails;
       if (!details.name) errors.push(`行${rowNum}: 氏名が必要です`);
       if (!details.email) errors.push(`行${rowNum}: メールアドレスが必要です`);
-      if (!details.department) errors.push(`行${rowNum}: 部門が必要です`);
+      if (!details.department) errors.push(`行${rowNum}: 部署が必要です`);
       if (!details.position) errors.push(`行${rowNum}: 役職が必要です`);
     } else if (change.type === 'transfer') {
       const details = change.details as TransferDetails;
-      if (!details.newDepartment) errors.push(`行${rowNum}: 新部門が必要です`);
+      if (!details.newDepartment) errors.push(`行${rowNum}: 新部署が必要です`);
       if (!details.newPosition) errors.push(`行${rowNum}: 新役職が必要です`);
     } else if (change.type === 'retirement') {
       const details = change.details as RetirementDetails;

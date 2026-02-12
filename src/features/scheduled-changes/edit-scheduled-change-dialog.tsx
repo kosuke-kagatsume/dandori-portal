@@ -239,7 +239,7 @@ export function EditScheduledChangeDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-hire-department">
-                  部門 <span className="text-red-500">*</span>
+                  部署 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="edit-hire-department"
@@ -338,7 +338,7 @@ export function EditScheduledChangeDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-transfer-newDepartment">
-                  新部門 <span className="text-red-500">*</span>
+                  新部署 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="edit-transfer-newDepartment"

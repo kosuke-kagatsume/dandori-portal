@@ -87,7 +87,7 @@ export function AddTransferDialog({ open, onOpenChange }: AddTransferDialogProps
     const approver = allMembers.find(m => m.id === formData.approvedBy);
 
     if (!fromUnit || !toUnit) {
-      toast.error('部門情報が見つかりません');
+      toast.error('部署情報が見つかりません');
       return;
     }
 
@@ -143,7 +143,7 @@ export function AddTransferDialog({ open, onOpenChange }: AddTransferDialogProps
         <DialogHeader>
           <DialogTitle>異動登録</DialogTitle>
           <DialogDescription>
-            社員の部門異動・昇格などを記録します
+            社員の部署異動・昇格などを記録します
           </DialogDescription>
         </DialogHeader>
 
@@ -186,7 +186,7 @@ export function AddTransferDialog({ open, onOpenChange }: AddTransferDialogProps
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="transfer">部門異動</SelectItem>
+                <SelectItem value="transfer">部署異動</SelectItem>
                 <SelectItem value="promotion">昇格</SelectItem>
                 <SelectItem value="demotion">降格</SelectItem>
                 <SelectItem value="role_change">役割変更</SelectItem>
@@ -194,40 +194,40 @@ export function AddTransferDialog({ open, onOpenChange }: AddTransferDialogProps
             </Select>
           </div>
 
-          {/* 異動前部門 */}
+          {/* 異動前部署 */}
           <div className="grid gap-2">
-            <Label htmlFor="fromUnitId">異動前部門 *</Label>
+            <Label htmlFor="fromUnitId">異動前部署 *</Label>
             <Select
               value={formData.fromUnitId}
               onValueChange={(value) => setFormData({ ...formData, fromUnitId: value })}
             >
               <SelectTrigger id="fromUnitId">
-                <SelectValue placeholder="異動前の部門を選択" />
+                <SelectValue placeholder="異動前の部署を選択" />
               </SelectTrigger>
               <SelectContent>
                 {allNodes.map((node) => (
                   <SelectItem key={node.id} value={node.id}>
-                    {node.name} ({node.type === 'company' ? '会社' : node.type === 'division' ? '事業部' : node.type === 'department' ? '部門' : 'チーム'})
+                    {node.name} ({node.type === 'company' ? '会社' : node.type === 'division' ? '事業部' : node.type === 'department' ? '部署' : 'チーム'})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* 異動後部門 */}
+          {/* 異動後部署 */}
           <div className="grid gap-2">
-            <Label htmlFor="toUnitId">異動後部門 *</Label>
+            <Label htmlFor="toUnitId">異動後部署 *</Label>
             <Select
               value={formData.toUnitId}
               onValueChange={(value) => setFormData({ ...formData, toUnitId: value })}
             >
               <SelectTrigger id="toUnitId">
-                <SelectValue placeholder="異動後の部門を選択" />
+                <SelectValue placeholder="異動後の部署を選択" />
               </SelectTrigger>
               <SelectContent>
                 {allNodes.map((node) => (
                   <SelectItem key={node.id} value={node.id}>
-                    {node.name} ({node.type === 'company' ? '会社' : node.type === 'division' ? '事業部' : node.type === 'department' ? '部門' : 'チーム'})
+                    {node.name} ({node.type === 'company' ? '会社' : node.type === 'division' ? '事業部' : node.type === 'department' ? '部署' : 'チーム'})
                   </SelectItem>
                 ))}
               </SelectContent>

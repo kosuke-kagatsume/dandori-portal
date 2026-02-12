@@ -168,7 +168,7 @@ export default function SaaSManagementPage() {
   // ライセンス割り当てCSV出力ハンドラー
   const handleExportAssignmentsCSV = () => {
     try {
-      const headers = ['サービス名', 'プラン名', 'ユーザー名', 'メールアドレス', '部門', '月額コスト', '割当日', 'ステータス'];
+      const headers = ['サービス名', 'プラン名', 'ユーザー名', 'メールアドレス', '部署', '月額コスト', '割当日', 'ステータス'];
       const rows = assignments.map(a => {
         const cost = a.plan?.pricePerUser || a.plan?.fixedPrice || 0;
         return [
@@ -245,7 +245,7 @@ export default function SaaSManagementPage() {
           </Button>
           <Button variant="outline" onClick={() => router.push('/ja/saas/departments')} className="w-full sm:w-auto">
             <Building className="mr-2 h-4 w-4" />
-            部門別分析
+            部署別分析
           </Button>
           <CreateServiceDialog onServiceCreated={handleRefreshData} />
         </div>
@@ -348,7 +348,7 @@ export default function SaaSManagementPage() {
                 <SelectValue placeholder="カテゴリ" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全て</SelectItem>
+                <SelectItem value="all">すべて</SelectItem>
                 {Object.entries(categoryLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
@@ -361,7 +361,7 @@ export default function SaaSManagementPage() {
                 <SelectValue placeholder="ライセンスタイプ" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全て</SelectItem>
+                <SelectItem value="all">すべて</SelectItem>
                 {Object.entries(licenseTypeLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}

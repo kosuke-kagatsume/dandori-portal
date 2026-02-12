@@ -391,7 +391,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                 )}
                 {user.department && (
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">部門</p>
+                    <p className="text-sm font-medium text-muted-foreground">部署</p>
                     <p className="text-sm mt-1">{user.department}</p>
                   </div>
                 )}

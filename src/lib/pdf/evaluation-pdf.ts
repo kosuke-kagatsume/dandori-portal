@@ -57,7 +57,7 @@ export const generateEvaluationPDF = async (evaluation: PerformanceEvaluation): 
     yPos += 6;
     doc.text(`従業員ID: ${evaluation.employeeId}`, 20, yPos);
     yPos += 6;
-    doc.text(`部門: ${evaluation.department}`, 20, yPos);
+    doc.text(`部署: ${evaluation.department}`, 20, yPos);
     yPos += 6;
     doc.text(`役職: ${evaluation.position}`, 20, yPos);
     yPos += 6;

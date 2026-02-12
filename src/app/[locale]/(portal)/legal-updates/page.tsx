@@ -425,7 +425,7 @@ export default function LegalUpdatesPage() {
                 size="sm"
                 onClick={() => setActiveStatus('all')}
               >
-                全て
+                すべて
               </Button>
               <Button
                 variant={activeStatus === 'pending' ? 'default' : 'outline'}
@@ -483,7 +483,7 @@ export default function LegalUpdatesPage() {
       <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as LegalCategory | 'all')} className="w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 h-auto">
           <TabsTrigger value="all" className="text-xs sm:text-sm">
-            全て ({categoryStats.all})
+            すべて ({categoryStats.all})
           </TabsTrigger>
           <TabsTrigger value="tax" className="text-xs sm:text-sm">
             {categoryLabels.tax} ({categoryStats.tax})

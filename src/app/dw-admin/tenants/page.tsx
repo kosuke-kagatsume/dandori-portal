@@ -157,7 +157,7 @@ export default function AdminTenantsPage() {
               <SelectValue placeholder="ステータス" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">全て</SelectItem>
+              <SelectItem value="all">すべて</SelectItem>
               <SelectItem value="trial">試用中</SelectItem>
               <SelectItem value="active">有効</SelectItem>
               <SelectItem value="suspended">停止中</SelectItem>

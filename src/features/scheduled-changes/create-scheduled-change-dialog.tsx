@@ -253,7 +253,7 @@ export function CreateScheduledChangeDialog({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="hire-department">
-                    部門 <span className="text-red-500">*</span>
+                    部署 <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="hire-department"
@@ -365,7 +365,7 @@ export function CreateScheduledChangeDialog({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="transfer-newDepartment">
-                    新部門 <span className="text-red-500">*</span>
+                    新部署 <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="transfer-newDepartment"

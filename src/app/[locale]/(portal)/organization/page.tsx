@@ -202,7 +202,7 @@ export default function OrganizationPage() {
         <Card>
           <CardContent className="flex items-center justify-between p-6">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">部門数</p>
+              <p className="text-sm font-medium text-muted-foreground">部署数</p>
               <p className="text-2xl font-bold">{organizationStats.departments}</p>
             </div>
             <Building2 className="h-8 w-8 text-orange-600" />
@@ -351,13 +351,13 @@ export default function OrganizationPage() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <BarChart3 className="h-5 w-5" />
-                  <span>部門別メンバー数</span>
+                  <span>部署別メンバー数</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">技術部門</span>
+                    <span className="text-sm font-medium">技術部署</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-32 bg-gray-200 rounded-full h-2">
                         <div className="bg-blue-600 h-2 rounded-full" style={{ width: '60%' }} />
@@ -366,7 +366,7 @@ export default function OrganizationPage() {
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">ビジネス部門</span>
+                    <span className="text-sm font-medium">ビジネス部署</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-32 bg-gray-200 rounded-full h-2">
                         <div className="bg-green-600 h-2 rounded-full" style={{ width: '30%' }} />
