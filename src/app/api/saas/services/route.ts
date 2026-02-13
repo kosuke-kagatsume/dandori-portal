@@ -267,7 +267,20 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    return successResponse(services, {
+    // フィールド名を変換（Prismaのテーブル名 → フロントエンド用）
+    const transformedServices = includeDetails
+      ? services.map((service) => ({
+          ...service,
+          plans: (service as Record<string, unknown>).saas_license_plans,
+          assignments: (service as Record<string, unknown>).saas_license_assignments,
+          monthlyCosts: (service as Record<string, unknown>).saas_monthly_costs,
+          saas_license_plans: undefined,
+          saas_license_assignments: undefined,
+          saas_monthly_costs: undefined,
+        }))
+      : services;
+
+    return successResponse(transformedServices, {
       count: services.length,
       pagination: {
         page,

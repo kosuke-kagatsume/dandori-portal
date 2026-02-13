@@ -1456,6 +1456,7 @@ model saas_services {
   contractEndDate          DateTime?                  @db.Date
   autoRenew                Boolean                    @default(false)
   isActive                 Boolean                    @default(true)
+  notes                    String?
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime
   saas_license_assignments saas_license_assignments[]

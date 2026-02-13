@@ -169,45 +169,26 @@ export default function SaaSUserListPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/ja/saas')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">ユーザー別SaaS利用状況</h1>
-          <p className="text-muted-foreground">個人ごとのSaaS利用とコストを管理（DB接続）</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/ja/saas')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">ユーザー別SaaS利用状況</h1>
+            <p className="text-muted-foreground mt-1">SaaS利用・コストをユーザー単位で管理（DB接続）</p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {mounted && (
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <Button variant="outline" onClick={handleRefresh}>
               <RefreshCw className="mr-2 h-4 w-4" />
               更新
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={() => router.push('/ja/saas/departments')}
-          >
+          <Button variant="outline" onClick={() => router.push('/ja/saas/departments')}>
             <Building className="mr-2 h-4 w-4" />
             部署別分析
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportSummaryCSV}
-            disabled={sortedUsers.length === 0}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            サマリー出力
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportDetailedCSV}
-            disabled={sortedUsers.length === 0}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            詳細出力
           </Button>
         </div>
       </div>
@@ -261,11 +242,35 @@ export default function SaaSUserListPage() {
         </div>
       )}
 
-      {/* 検索 */}
+      {/* ユーザー一覧 */}
       <Card>
         <CardHeader>
-          <CardTitle>ユーザー一覧</CardTitle>
-          <CardDescription>コスト順に表示しています</CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle>ユーザー一覧</CardTitle>
+              <CardDescription className="text-primary font-medium">コストの高い順で表示しています</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportSummaryCSV}
+                disabled={sortedUsers.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                サマリー出力
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportDetailedCSV}
+                disabled={sortedUsers.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                詳細出力
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-6">

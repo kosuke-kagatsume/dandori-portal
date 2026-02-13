@@ -116,9 +116,9 @@ export function EditServiceDialog({ open, onClose, service, onSuccess }: EditSer
           website: website || null,
           contractStartDate: contractStartDate || null,
           contractEndDate: contractEndDate || null,
-          autoRenewal: autoRenew,
+          autoRenew,
           ssoEnabled,
-          mfaRequired: mfaEnabled,
+          mfaEnabled,
           notes: notes || null,
         }),
       });

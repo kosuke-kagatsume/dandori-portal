@@ -30,9 +30,27 @@ export async function GET(
       );
     }
 
+    // フィールド名を変換（Prismaのテーブル名 → フロントエンド用）
+    const transformedService = {
+      ...service,
+      plans: service.saas_license_plans?.map((plan) => ({
+        ...plan,
+        plan: undefined,
+      })),
+      assignments: service.saas_license_assignments?.map((assignment) => ({
+        ...assignment,
+        plan: assignment.saas_license_plans,
+        saas_license_plans: undefined,
+      })),
+      monthlyCosts: service.saas_monthly_costs,
+      saas_license_plans: undefined,
+      saas_license_assignments: undefined,
+      saas_monthly_costs: undefined,
+    };
+
     return NextResponse.json({
       success: true,
-      data: service,
+      data: transformedService,
     });
   } catch (error) {
     console.error('Error fetching SaaS service:', error);
@@ -71,6 +89,7 @@ export async function PUT(
       adminEmail,
       supportUrl,
       isActive,
+      notes,
     } = body;
 
     const service = await prisma.saas_services.update({
@@ -92,6 +111,7 @@ export async function PUT(
         adminEmail,
         supportUrl,
         isActive,
+        notes,
       },
     });
 

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, TrendingUp, AlertCircle, Users, Building, Database, Download, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { Search, TrendingUp, AlertCircle, Users, Building, Database, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { useSaaSServicesAPI, type SaaSServiceFromAPI } from '@/hooks/use-saas-api';
 import { CreateServiceDialog } from '@/features/saas/create-service-dialog';
 import { toast } from 'sonner';
@@ -34,12 +34,12 @@ const categoryLabels: Record<string, string> = {
 
 // ライセンスタイプラベル
 const licenseTypeLabels: Record<string, string> = {
-  per_user: 'ユーザー単位',
-  per_seat: 'シート単位',
-  enterprise: 'エンタープライズ',
-  flat_rate: '定額制',
-  usage_based: '従量課金',
-  freemium: 'フリーミアム',
+  'user-based': 'ユーザー単位',
+  'fixed': '固定料金',
+  'per_seat': 'シート単位',
+  'enterprise': 'エンタープライズ',
+  'usage-based': '従量課金',
+  'freemium': 'フリーミアム',
 };
 
 type SaaSCategory = keyof typeof categoryLabels;
@@ -133,8 +133,9 @@ export default function SaaSManagementPage() {
     return plan.fixedPrice || 0;
   };
 
-  // SaaSサービスCSV出力ハンドラー
-  const handleExportServicesCSV = () => {
+  // SaaSサービスCSV出力ハンドラー（将来使用予定）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleExportServicesCSV = () => {
     try {
       const headers = ['サービス名', 'ベンダー', 'カテゴリ', 'ライセンスタイプ', 'ユーザー数', 'プラン名', '月額コスト', '契約終了日', 'ステータス'];
       const rows = filteredServices.map(s => {
@@ -165,8 +166,9 @@ export default function SaaSManagementPage() {
     }
   };
 
-  // ライセンス割り当てCSV出力ハンドラー
-  const handleExportAssignmentsCSV = () => {
+  // ライセンス割り当てCSV出力ハンドラー（将来使用予定）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleExportAssignmentsCSV = () => {
     try {
       const headers = ['サービス名', 'プラン名', 'ユーザー名', 'メールアドレス', '部署', '月額コスト', '割当日', 'ステータス'];
       const rows = assignments.map(a => {
@@ -211,39 +213,25 @@ export default function SaaSManagementPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* ヘッダー */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">SaaS管理</h1>
-          <p className="text-muted-foreground">
-            社内で利用しているSaaSサービスのライセンスとコストを一元管理（DB接続）
+          <p className="text-muted-foreground mt-1">
+            SaaSライセンス・利用コストを一元管理（DB接続）
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-wrap gap-2">
           {mounted && (
-            <>
-              <Button variant="outline" onClick={handleRefreshData} className="w-full sm:w-auto">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                更新
-              </Button>
-              {services.length > 0 && (
-                <>
-                  <Button variant="outline" size="sm" onClick={handleExportServicesCSV} className="w-full sm:w-auto">
-                    <Download className="mr-2 h-4 w-4" />
-                    サービスCSV
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleExportAssignmentsCSV} className="w-full sm:w-auto">
-                    <Download className="mr-2 h-4 w-4" />
-                    割り当てCSV
-                  </Button>
-                </>
-              )}
-            </>
+            <Button variant="outline" onClick={handleRefreshData}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              更新
+            </Button>
           )}
-          <Button variant="outline" onClick={() => router.push('/ja/saas/users')} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={() => router.push('/ja/saas/users')}>
             <Users className="mr-2 h-4 w-4" />
             ユーザー別利用
           </Button>
-          <Button variant="outline" onClick={() => router.push('/ja/saas/departments')} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={() => router.push('/ja/saas/departments')}>
             <Building className="mr-2 h-4 w-4" />
             部署別分析
           </Button>
@@ -344,11 +332,11 @@ export default function SaaSManagementPage() {
               </div>
             </div>
             <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as SaaSCategory | 'all')}>
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="カテゴリ" />
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="すべてのツール" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべて</SelectItem>
+                <SelectItem value="all">すべてのツール</SelectItem>
                 {Object.entries(categoryLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
@@ -358,10 +346,10 @@ export default function SaaSManagementPage() {
             </Select>
             <Select value={licenseTypeFilter} onValueChange={(value) => setLicenseTypeFilter(value as LicenseType | 'all')}>
               <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="ライセンスタイプ" />
+                <SelectValue placeholder="すべてのライセンスタイプ" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべて</SelectItem>
+                <SelectItem value="all">すべてのライセンスタイプ</SelectItem>
                 {Object.entries(licenseTypeLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}

@@ -155,36 +155,26 @@ export default function SaaSDepartmentAnalysisPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* ヘッダー */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/ja/saas')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight">部署別SaaS利用分析</h1>
-          <p className="text-muted-foreground">部署ごとのSaaS利用状況とコストを分析（DB接続）</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/ja/saas')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">部署別SaaS利用分析</h1>
+            <p className="text-muted-foreground mt-1">SaaS利用・コストを部署単位で分析（DB接続）</p>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {mounted && (
-            <Button variant="outline" size="sm" onClick={handleRefresh}>
+            <Button variant="outline" onClick={handleRefresh}>
               <RefreshCw className="mr-2 h-4 w-4" />
               更新
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={() => router.push('/ja/saas/users')}
-          >
+          <Button variant="outline" onClick={() => router.push('/ja/saas/users')}>
             <Users className="mr-2 h-4 w-4" />
             ユーザー別利用
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            disabled={departmentData.length === 0}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            CSV出力
           </Button>
         </div>
       </div>
@@ -239,10 +229,21 @@ export default function SaaSDepartmentAnalysisPage() {
       {/* 部署一覧 */}
       <Card>
         <CardHeader>
-          <CardTitle>部署別利用状況</CardTitle>
-          <CardDescription>
-            コスト順に表示しています
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle>部署別一覧</CardTitle>
+              <CardDescription className="text-primary font-medium">コストの高い順で表示しています</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              disabled={departmentData.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              CSV出力
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {departmentData.length === 0 ? (
@@ -253,80 +254,34 @@ export default function SaaSDepartmentAnalysisPage() {
           ) : (
             <div className="space-y-4">
               {departmentData.map((dept) => (
-                <Card key={dept.departmentId || 'unknown'} className="border-l-4 border-l-blue-500/20">
+                <Card key={dept.departmentId || 'unknown'}>
                   <CardContent className="p-6">
-                    <div className="space-y-4">
-                      {/* 部署ヘッダー */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <Building className="h-5 w-5 text-muted-foreground" />
-                            <h3 className="font-semibold text-xl">{dept.departmentName}</h3>
-                            <Badge variant="outline">{dept.userCount}人</Badge>
-                          </div>
-                        </div>
-                      </div>
+                    {/* 部署ヘッダー */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <Building className="h-5 w-5 text-muted-foreground" />
+                      <h3 className="font-semibold text-xl">{dept.departmentName}</h3>
+                      <Badge variant="outline">{dept.userCount}人</Badge>
+                    </div>
 
-                      {/* 統計グリッド */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">月額コスト合計</p>
-                          <p className="text-2xl font-bold text-primary">
-                            ¥{dept.totalMonthlyCost.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">年額コスト合計</p>
-                          <p className="text-2xl font-bold">
-                            ¥{dept.totalAnnualCost.toLocaleString()}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">利用サービス数</p>
-                          <p className="text-2xl font-bold">{dept.serviceCount}件</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">平均コスト/人</p>
-                          <p className="text-2xl font-bold">
-                            ¥{Math.round(dept.totalMonthlyCost / dept.userCount).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* 部署内ユーザー */}
+                    {/* 統計グリッド - シンプル化 */}
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm font-medium mb-2">所属ユーザー（コスト順）:</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                          {dept.users
-                            .sort((a, b) => b.cost - a.cost)
-                            .map((user) => (
-                              <div
-                                key={user.id}
-                                className="flex items-center justify-between p-2 bg-muted/50 rounded hover:bg-muted transition-colors cursor-pointer"
-                                onClick={() => router.push(`/ja/users/${user.id}`)}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Users className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm font-medium">{user.name}</span>
-                                </div>
-                                <span className="text-sm font-bold text-primary">
-                                  ¥{user.cost.toLocaleString()}
-                                </span>
-                              </div>
-                            ))}
-                        </div>
+                        <p className="text-sm text-muted-foreground">月額コスト合計</p>
+                        <p className="text-2xl font-bold text-primary">
+                          ¥{dept.totalMonthlyCost.toLocaleString()}
+                        </p>
                       </div>
-
-                      {/* 利用サービス */}
                       <div>
-                        <p className="text-sm font-medium mb-2">利用中のサービス:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {Array.from(dept.services).map((serviceName) => (
-                            <Badge key={serviceName} variant="secondary">
-                              {serviceName}
-                            </Badge>
-                          ))}
-                        </div>
+                        <p className="text-sm text-muted-foreground">年額コスト合計</p>
+                        <p className="text-2xl font-bold">
+                          ¥{dept.totalAnnualCost.toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">平均コスト/人</p>
+                        <p className="text-2xl font-bold">
+                          ¥{Math.round(dept.totalMonthlyCost / dept.userCount).toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   </CardContent>
