@@ -52,15 +52,25 @@ export async function POST(request: NextRequest) {
     // パスワードをハッシュ化
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // tenantIdのバリデーション
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'テナントIDは必須です' },
+        { status: 400 }
+      );
+    }
+
     // ユーザーを作成
+    const userRole = role || 'admin';
     const user = await prisma.users.create({
       data: {
         id: crypto.randomUUID(),
         email,
         name,
         passwordHash,
-        role: role || 'admin',
-        tenantId: tenantId || null,
+        role: userRole,
+        roles: [userRole], // roles配列も設定（必須フィールド）
+        tenantId,
         status: 'active',
         updatedAt: new Date(),
       },

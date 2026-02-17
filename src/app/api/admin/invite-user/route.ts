@@ -22,6 +22,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'テナントIDは必須です' },
+        { status: 400 }
+      );
+    }
+
     // メールアドレス形式チェック
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -48,13 +55,15 @@ export async function POST(request: NextRequest) {
     const inviteExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7日後
 
     // ユーザーを招待状態で作成
+    const userRole = role || 'employee';
     const user = await prisma.users.create({
       data: {
         id: crypto.randomUUID(),
         email,
         name,
-        role: role || 'employee',
-        tenantId: tenantId || null,
+        role: userRole,
+        roles: [userRole], // roles配列も設定（必須フィールド）
+        tenantId,
         status: 'inactive', // 招待受諾まで無効
         updatedAt: new Date(),
         // 招待トークンは別途管理する必要があります
