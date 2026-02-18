@@ -14,7 +14,6 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     const attendance = await prisma.attendance.findFirst({
@@ -49,7 +48,6 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
@@ -104,7 +102,6 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     // 存在確認

@@ -290,7 +290,6 @@ export async function GET(request: NextRequest) {
 // 健康診断登録
 export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const body = await request.json();

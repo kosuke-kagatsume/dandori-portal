@@ -13,7 +13,6 @@ export async function GET(
   { params }: { params: { userId: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     const overrides = await prisma.user_permission_overrides.findMany({
@@ -37,7 +36,6 @@ export async function POST(
   { params }: { params: { userId: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 

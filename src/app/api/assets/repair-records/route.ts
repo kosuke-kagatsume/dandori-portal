@@ -60,7 +60,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     const records = await prisma.repair_records.findMany({
@@ -100,7 +99,6 @@ export async function GET(request: NextRequest) {
 // POST: 修理記録を作成
 export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     const body = await request.json();

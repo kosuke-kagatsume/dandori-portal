@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
       return successResponse(demoReport);
     }
 
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const currentYear = new Date().getFullYear();

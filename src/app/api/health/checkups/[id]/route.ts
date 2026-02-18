@@ -119,7 +119,6 @@ export async function GET(
       return successResponse(checkup);
     }
 
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const checkup = await prisma.health_checkups.findFirst({
@@ -152,7 +151,6 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const { id } = await params;
@@ -289,7 +287,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const { id } = await params;

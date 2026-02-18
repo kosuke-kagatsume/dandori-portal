@@ -306,7 +306,6 @@ export async function GET(request: NextRequest) {
 // ストレスチェック結果登録（回答送信）
 export async function POST(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const body = await request.json();

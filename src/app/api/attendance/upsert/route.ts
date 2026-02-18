@@ -5,7 +5,6 @@ import { handleApiError, getTenantIdFromRequest } from '@/lib/api/api-helpers';
 // POST /api/attendance/upsert - 勤怠upsert（同日の場合は更新、なければ新規作成）
 export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 

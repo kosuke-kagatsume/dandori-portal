@@ -11,7 +11,6 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     let rules = await prisma.overtime_rules.findUnique({
@@ -41,7 +40,6 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     const rules = await prisma.overtime_rules.upsert({

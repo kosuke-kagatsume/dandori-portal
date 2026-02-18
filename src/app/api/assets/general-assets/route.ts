@@ -62,7 +62,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     const assets = await prisma.general_assets.findMany({
@@ -88,7 +87,6 @@ export async function GET(request: NextRequest) {
 // POST: 汎用資産を作成
 export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     const body = await request.json();

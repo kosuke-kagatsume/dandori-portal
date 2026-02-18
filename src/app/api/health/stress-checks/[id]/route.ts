@@ -87,7 +87,6 @@ export async function GET(
       return successResponse(stressCheck);
     }
 
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const stressCheck = await prisma.stress_checks.findFirst({
@@ -117,7 +116,6 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const { id } = await params;
@@ -178,7 +176,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
 
     const { id } = await params;

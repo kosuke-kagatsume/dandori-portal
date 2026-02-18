@@ -10,7 +10,6 @@ import {
 // GET /api/permissions/roles - ロール一覧
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
 
     const roles = await prisma.roles.findMany({
@@ -30,7 +29,6 @@ export async function GET(request: NextRequest) {
 // POST /api/permissions/roles - カスタムロール作成
 export async function POST(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 

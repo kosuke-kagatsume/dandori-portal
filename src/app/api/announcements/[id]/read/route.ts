@@ -13,7 +13,6 @@ export async function POST(
 ) {
   try {
     const { id: announcementId } = await params;
-    const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
