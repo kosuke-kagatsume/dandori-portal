@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,8 @@ import { useUserStore } from '@/lib/store/user-store';
 import { useDashboardStore } from '@/lib/store/dashboard-store';
 import { type UserRole, ROLE_LABELS } from '@/lib/rbac';
 import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
+import { allApplications } from '@/lib/demo-onboarding-applications';
+import type { OnboardingApplication } from '@/types/onboarding';
 import {
   DepartmentLeaveChart,
   DepartmentSalaryChart,
@@ -155,6 +157,27 @@ export function DashboardContent() {
   const canViewTeam = permissions.viewTeam;
   const canApprove = permissions.approve;
   const canManageSystem = permissions.manageSystem;
+
+  // 締切間近（3日以内）の入社手続き申請を計算
+  const upcomingDeadlineApplications = useMemo((): (OnboardingApplication & { daysUntilDeadline: number })[] => {
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+    return allApplications
+      .filter((app) => {
+        // 承認済み・登録完了は除外
+        if (app.status === 'approved' || app.status === 'registered') return false;
+        const deadline = new Date(app.deadline);
+        // 3日以内または期限超過
+        return deadline <= threeDaysFromNow;
+      })
+      .map((app) => {
+        const deadline = new Date(app.deadline);
+        const daysUntilDeadline = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return { ...app, daysUntilDeadline };
+      })
+      .sort((a, b) => a.daysUntilDeadline - b.daysUntilDeadline);
+  }, []);
   const canManageUsers = permissions.manageUsers;
 
   // マウント完了までローディング表示
@@ -247,6 +270,80 @@ export function DashboardContent() {
 
       {/* 最新アナウンス */}
       <LatestAnnouncementCard />
+
+      {/* 入社手続き締切アラート（HR・管理者のみ） */}
+      {(currentUserRole === 'hr' || currentUserRole === 'admin') && upcomingDeadlineApplications.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <CardTitle className="text-lg text-amber-900 dark:text-amber-100">
+                  入社手続き締切アラート
+                </CardTitle>
+                <Badge variant="secondary" className="bg-amber-200 text-amber-800">
+                  {upcomingDeadlineApplications.length}件
+                </Badge>
+              </div>
+              <Link href="/ja/onboarding-admin">
+                <Button variant="outline" size="sm" className="text-amber-700 border-amber-300 hover:bg-amber-100">
+                  管理画面へ
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-amber-700 dark:text-amber-300">
+              提出期限が3日以内の入社申請があります
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              {upcomingDeadlineApplications.slice(0, 5).map((app) => (
+                <Link
+                  key={app.id}
+                  href={`/ja/onboarding-admin/${app.id}`}
+                  className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center">
+                      <Users className="h-4 w-4 text-amber-700 dark:text-amber-300" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{app.applicantName}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {app.department} / 入社日: {new Date(app.hireDate).toLocaleDateString('ja-JP')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    {app.daysUntilDeadline < 0 ? (
+                      <Badge variant="destructive">
+                        期限超過（{Math.abs(app.daysUntilDeadline)}日前）
+                      </Badge>
+                    ) : app.daysUntilDeadline === 0 ? (
+                      <Badge variant="destructive">
+                        本日締切
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-amber-200 text-amber-800">
+                        あと{app.daysUntilDeadline}日
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {upcomingDeadlineApplications.length > 5 && (
+              <div className="mt-3 text-center">
+                <Link href="/ja/onboarding-admin">
+                  <Button variant="link" className="text-amber-700">
+                    他 {upcomingDeadlineApplications.length - 5} 件を表示
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Role-based KPI Cards - 新しい構成 */}
       <div className={`grid gap-4 grid-cols-1 sm:grid-cols-2 ${

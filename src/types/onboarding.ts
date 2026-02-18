@@ -13,7 +13,9 @@
  * 入社申請全体のステータス
  */
 export type OnboardingStatus =
-  | 'draft' // 下書き（入力中）
+  | 'not_invited' // 未招待（メール未送信）
+  | 'invited' // 招待済み（メール送信済み、未着手）
+  | 'not_submitted' // 未提出（入力中）
   | 'submitted' // 提出済み（人事確認待ち）
   | 'returned' // 差し戻し
   | 'approved' // 承認済み
@@ -385,6 +387,7 @@ export interface OnboardingApplication {
   // タイムスタンプ
   createdAt: string;
   updatedAt: string;
+  invitedAt?: string; // 招待メール送信日時
 
   // 4フォームへの参照
   basicInfoFormId: string;
@@ -593,7 +596,9 @@ export interface SortConfig {
  */
 export interface OnboardingStatistics {
   total: number; // 総数
-  draft: number; // 下書き
+  notInvited: number; // 未招待
+  invited: number; // 招待済み
+  notSubmitted: number; // 未提出
   submitted: number; // 提出済み
   returned: number; // 差し戻し
   approved: number; // 承認済み

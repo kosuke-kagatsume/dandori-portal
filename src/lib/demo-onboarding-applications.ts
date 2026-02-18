@@ -25,7 +25,7 @@ void (undefined as unknown as BankAccountFormAlias);
 void (undefined as unknown as CommuteRouteFormAlias);
 
 // ============================================================================
-// 1. 新入太郎 - 下書き
+// 1. 新入太郎 - 未提出（入力中）
 // ============================================================================
 
 export const application001: OnboardingApplication = {
@@ -34,9 +34,10 @@ export const application001: OnboardingApplication = {
   applicantEmail: 'shinnyu@dandori.local',
   applicantName: '新入太郎',
   hireDate: '2025-11-01',
-  status: 'draft',
+  status: 'not_submitted',
   createdAt: '2025-10-15T00:00:00Z',
   updatedAt: '2025-10-18T00:00:00Z',
+  invitedAt: '2025-10-15T09:00:00Z',
   basicInfoFormId: 'demo-basic-001',
   familyInfoFormId: 'demo-family-001',
   bankAccountFormId: 'demo-bank-001',
@@ -61,6 +62,7 @@ export const application002: OnboardingApplication = {
   status: 'submitted',
   createdAt: '2025-10-10T00:00:00Z',
   updatedAt: '2025-10-16T00:00:00Z',
+  invitedAt: '2025-10-10T09:00:00Z',
   basicInfoFormId: 'demo-basic-002',
   familyInfoFormId: 'demo-family-002',
   bankAccountFormId: 'demo-bank-002',
@@ -188,6 +190,7 @@ export const application003: OnboardingApplication = {
   status: 'returned',
   createdAt: '2025-10-05T00:00:00Z',
   updatedAt: '2025-10-17T00:00:00Z',
+  invitedAt: '2025-10-05T09:00:00Z',
   basicInfoFormId: 'demo-basic-003',
   familyInfoFormId: 'demo-family-003',
   bankAccountFormId: 'demo-bank-003',
@@ -320,6 +323,7 @@ export const application004: OnboardingApplication = {
   status: 'approved',
   createdAt: '2025-10-01T00:00:00Z',
   updatedAt: '2025-10-18T00:00:00Z',
+  invitedAt: '2025-10-01T09:00:00Z',
   basicInfoFormId: 'demo-basic-004',
   familyInfoFormId: 'demo-family-004',
   bankAccountFormId: 'demo-bank-004',
@@ -454,7 +458,7 @@ export const commuteRouteForm004: CommuteRouteForm = {
 };
 
 // ============================================================================
-// 5. 佐藤明 - 下書き
+// 5. 佐藤明 - 招待済み（未着手）
 // ============================================================================
 
 export const application005: OnboardingApplication = {
@@ -463,9 +467,10 @@ export const application005: OnboardingApplication = {
   applicantEmail: 'sato.akira@dandori.local',
   applicantName: '佐藤明',
   hireDate: '2025-12-01',
-  status: 'draft',
+  status: 'invited',
   createdAt: '2025-10-12T00:00:00Z',
   updatedAt: '2025-10-18T00:00:00Z',
+  invitedAt: '2025-10-18T09:00:00Z',
   basicInfoFormId: 'demo-basic-005',
   familyInfoFormId: 'demo-family-005',
   bankAccountFormId: 'demo-bank-005',
@@ -564,6 +569,18 @@ export const commuteRouteForm005: CommuteRouteForm = {
   address: '',
   commuteStatus: 'commute',
 };
+
+// ============================================================================
+// 全申請一覧
+// ============================================================================
+
+export const allApplications: OnboardingApplication[] = [
+  application001,
+  application002,
+  application003,
+  application004,
+  application005,
+];
 
 // ============================================================================
 // データ取得関数

@@ -39,6 +39,7 @@ export function TransferHistoryPanel() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'transfer' | 'promotion' | 'demotion' | 'role_change'>('all');
   const [filterPeriod, setFilterPeriod] = useState<'all' | '1month' | '3months' | '6months' | '1year'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'completed' | 'cancelled'>('all');
 
   // 異動履歴の取得とフィルター
   const allTransfers = getAllTransferHistories();
@@ -61,6 +62,15 @@ export function TransferHistoryPanel() {
     // タイプでフィルター
     if (filterType !== 'all' && transfer.type !== filterType) {
       return false;
+    }
+
+    // ステータスでフィルター
+    if (filterStatus !== 'all') {
+      // statusフィールドがない場合はeffectiveDateで判定
+      const status = transfer.status || (new Date(transfer.effectiveDate) > new Date() ? 'scheduled' : 'completed');
+      if (status !== filterStatus) {
+        return false;
+      }
     }
 
     // 期間でフィルター
@@ -171,7 +181,7 @@ export function TransferHistoryPanel() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* 検索 */}
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -211,18 +221,93 @@ export function TransferHistoryPanel() {
               </SelectContent>
             </Select>
 
-            {/* 件数表示 */}
-            <div className="flex items-center justify-end">
-              <Badge variant="secondary">
-                {filteredTransfers.length}件
-              </Badge>
-            </div>
+            {/* ステータスフィルター */}
+            <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as 'all' | 'scheduled' | 'completed' | 'cancelled')}>
+              <SelectTrigger>
+                <SelectValue placeholder="ステータス" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべて</SelectItem>
+                <SelectItem value="scheduled">予約中</SelectItem>
+                <SelectItem value="completed">完了</SelectItem>
+                <SelectItem value="cancelled">キャンセル</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
 
+      {/* 予約中の異動カード */}
+      {filterStatus === 'all' && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center space-x-2">
+              <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                予約中
+              </Badge>
+              <span className="text-blue-900">発効待ちの異動</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const scheduledTransfers = filteredTransfers.filter(t => {
+                const status = t.status || (new Date(t.effectiveDate) > new Date() ? 'scheduled' : 'completed');
+                return status === 'scheduled';
+              });
+              if (scheduledTransfers.length === 0) {
+                return <p className="text-sm text-muted-foreground">予約中の異動はありません</p>;
+              }
+              return (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>氏名</TableHead>
+                      <TableHead>異動タイプ</TableHead>
+                      <TableHead>異動後</TableHead>
+                      <TableHead>発効予定日</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {scheduledTransfers.map((transfer) => (
+                      <TableRow key={transfer.id}>
+                        <TableCell className="font-medium">{transfer.userName}</TableCell>
+                        <TableCell>
+                          <Badge variant={getTransferBadgeVariant(transfer.type)} className="flex items-center space-x-1 w-fit">
+                            {getTransferIcon(transfer.type)}
+                            <span>{transferTypeLabels[transfer.type]}</span>
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">{transfer.toUnitName}</div>
+                            <div className="text-xs text-muted-foreground">{transfer.toPosition}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-blue-100 text-blue-700">
+                            {format(new Date(transfer.effectiveDate), 'yyyy年M月d日', { locale: ja })}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
+
       {/* 異動履歴テーブル */}
       <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">
+            {filterStatus === 'scheduled' ? '予約中の異動' : filterStatus === 'completed' ? '完了した異動' : '異動履歴'}
+          </CardTitle>
+          <Badge variant="secondary">
+            {filteredTransfers.length}件
+          </Badge>
+        </CardHeader>
         <CardContent className="p-0">
           {filteredTransfers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">

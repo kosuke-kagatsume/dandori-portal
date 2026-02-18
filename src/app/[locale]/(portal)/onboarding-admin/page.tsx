@@ -12,7 +12,9 @@ import {
   ExclamationTriangleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  // ArrowPathIcon, // リロードボタンで使用予定
+  EnvelopeIcon,
+  PlusIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import type {
   OnboardingApplication,
@@ -40,6 +42,22 @@ export default function OnboardingAdminPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // 新規登録ダイアログ
+  const [showNewDialog, setShowNewDialog] = useState(false);
+  const [newApplicant, setNewApplicant] = useState({
+    name: '',
+    email: '',
+    hireDate: '',
+    department: '',
+    position: '',
+  });
+
+  // 招待メール送信確認
+  const [sendingInvite, setSendingInvite] = useState<string | null>(null);
+
+  // デモ用: applicationの状態管理
+  const [localApplications, setLocalApplications] = useState<OnboardingApplication[]>([]);
+
   // Demo data - 複数の申請データ
   const applications: OnboardingApplication[] = useMemo(() => [
     {
@@ -48,9 +66,10 @@ export default function OnboardingAdminPage() {
       applicantEmail: 'shinnyu@dandori.local',
       applicantName: '新入太郎',
       hireDate: '2025-11-01',
-      status: 'draft',
+      status: 'not_submitted',
       createdAt: '2025-10-15T00:00:00Z',
       updatedAt: '2025-10-18T00:00:00Z',
+      invitedAt: '2025-10-15T09:00:00Z',
       basicInfoFormId: 'demo-basic-001',
       familyInfoFormId: 'demo-family-001',
       bankAccountFormId: 'demo-bank-001',
@@ -70,6 +89,7 @@ export default function OnboardingAdminPage() {
       status: 'submitted',
       createdAt: '2025-10-10T00:00:00Z',
       updatedAt: '2025-10-17T00:00:00Z',
+      invitedAt: '2025-10-10T09:00:00Z',
       submittedAt: '2025-10-17T14:30:00Z',
       basicInfoFormId: 'demo-basic-002',
       familyInfoFormId: 'demo-family-002',
@@ -89,6 +109,7 @@ export default function OnboardingAdminPage() {
       status: 'returned',
       createdAt: '2025-10-12T00:00:00Z',
       updatedAt: '2025-10-16T00:00:00Z',
+      invitedAt: '2025-10-05T09:00:00Z',
       submittedAt: '2025-10-16T10:00:00Z',
       basicInfoFormId: 'demo-basic-003',
       familyInfoFormId: 'demo-family-003',
@@ -109,6 +130,7 @@ export default function OnboardingAdminPage() {
       status: 'approved',
       createdAt: '2025-10-01T00:00:00Z',
       updatedAt: '2025-10-14T00:00:00Z',
+      invitedAt: '2025-10-01T09:00:00Z',
       submittedAt: '2025-10-13T16:45:00Z',
       reviewedAt: '2025-10-14T09:30:00Z',
       approvedAt: '2025-10-14T09:30:00Z',
@@ -128,9 +150,10 @@ export default function OnboardingAdminPage() {
       applicantEmail: 'sato.akira@dandori.local',
       applicantName: '佐藤明',
       hireDate: '2025-12-01',
-      status: 'draft',
+      status: 'invited',
       createdAt: '2025-10-18T00:00:00Z',
       updatedAt: '2025-10-18T00:00:00Z',
+      invitedAt: '2025-10-18T09:00:00Z',
       basicInfoFormId: 'demo-basic-005',
       familyInfoFormId: 'demo-family-005',
       bankAccountFormId: 'demo-bank-005',
@@ -144,7 +167,7 @@ export default function OnboardingAdminPage() {
 
   // フィルター・検索処理
   const filteredApplications = useMemo(() => {
-    let filtered = applications;
+    let filtered = localApplications;
 
     // ステータスフィルター
     if (statusFilter !== 'all') {
@@ -163,7 +186,7 @@ export default function OnboardingAdminPage() {
     }
 
     return filtered;
-  }, [applications, statusFilter, searchQuery]);
+  }, [localApplications, statusFilter, searchQuery]);
 
   // ページネーション計算
   const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
@@ -178,30 +201,88 @@ export default function OnboardingAdminPage() {
     setCurrentPage(1);
   }, [statusFilter, searchQuery]);
 
+  // 初期データのロード
+  useEffect(() => {
+    setLocalApplications(applications);
+  }, [applications]);
+
+  // 新規登録処理（デモ用）
+  const handleCreateApplication = () => {
+    if (!newApplicant.name || !newApplicant.email || !newApplicant.hireDate) {
+      alert('氏名、メールアドレス、入社日は必須です');
+      return;
+    }
+
+    const newApp: OnboardingApplication = {
+      id: `demo-onboarding-${Date.now()}`,
+      employeeId: undefined,
+      applicantEmail: newApplicant.email,
+      applicantName: newApplicant.name,
+      hireDate: newApplicant.hireDate,
+      status: 'not_invited',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      basicInfoFormId: `demo-basic-${Date.now()}`,
+      familyInfoFormId: `demo-family-${Date.now()}`,
+      bankAccountFormId: `demo-bank-${Date.now()}`,
+      commuteRouteFormId: `demo-commute-${Date.now()}`,
+      deadline: new Date(new Date(newApplicant.hireDate).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      accessToken: `demo-token-${Date.now()}`,
+      department: newApplicant.department || undefined,
+      position: newApplicant.position || undefined,
+    };
+
+    setLocalApplications([newApp, ...localApplications]);
+    setNewApplicant({ name: '', email: '', hireDate: '', department: '', position: '' });
+    setShowNewDialog(false);
+  };
+
+  // 招待メール送信処理（デモ用）
+  const handleSendInvite = (applicationId: string) => {
+    setSendingInvite(applicationId);
+
+    // デモ用: 1秒後にステータス更新
+    setTimeout(() => {
+      setLocalApplications(prev =>
+        prev.map(app =>
+          app.id === applicationId
+            ? { ...app, status: 'invited' as OnboardingStatus, invitedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+            : app
+        )
+      );
+      setSendingInvite(null);
+      alert('招待メールを送信しました（デモ）');
+    }, 1000);
+  };
+
 
   // 統計データ
   const statistics = useMemo(() => {
-    const total = applications.length;
-    const draft = applications.filter((app) => app.status === 'draft').length;
-    const submitted = applications.filter((app) => app.status === 'submitted').length;
-    const returned = applications.filter((app) => app.status === 'returned').length;
-    const approved = applications.filter((app) => app.status === 'approved').length;
-    const registered = applications.filter((app) => app.status === 'registered').length;
+    const total = localApplications.length;
+    const notInvited = localApplications.filter((app) => app.status === 'not_invited').length;
+    const invited = localApplications.filter((app) => app.status === 'invited').length;
+    const notSubmitted = localApplications.filter((app) => app.status === 'not_submitted').length;
+    const submitted = localApplications.filter((app) => app.status === 'submitted').length;
+    const returned = localApplications.filter((app) => app.status === 'returned').length;
+    const approved = localApplications.filter((app) => app.status === 'approved').length;
+    const registered = localApplications.filter((app) => app.status === 'registered').length;
 
     // 期限超過
     const now = new Date();
-    const overdue = applications.filter((app) => {
+    const overdue = localApplications.filter((app) => {
       if (app.status === 'approved' || app.status === 'registered') return false;
       return new Date(app.deadline) < now;
     }).length;
 
-    return { total, draft, submitted, returned, approved, registered, overdue };
-  }, [applications]);
+    return { total, notInvited, invited, notSubmitted, submitted, returned, approved, registered, overdue };
+  }, [localApplications]);
 
   // ステータスバッジ
   const getStatusBadge = (status: OnboardingStatus) => {
     const badges = {
-      draft: { label: '下書き', class: 'bg-gray-100 text-gray-800' },
+      not_invited: { label: '未招待', class: 'bg-slate-100 text-slate-800' },
+      invited: { label: '招待済み', class: 'bg-cyan-100 text-cyan-800' },
+      not_submitted: { label: '未提出', class: 'bg-gray-100 text-gray-800' },
       submitted: { label: '提出済み', class: 'bg-blue-100 text-blue-800' },
       returned: { label: '差し戻し', class: 'bg-yellow-100 text-yellow-800' },
       approved: { label: '承認済み', class: 'bg-green-100 text-green-800' },
@@ -254,11 +335,20 @@ export default function OnboardingAdminPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">入社手続き管理</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            入社予定者の手続き状況を管理します
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">入社手続き管理</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              入社予定者の手続き状況を管理します
+            </p>
+          </div>
+          <button
+            onClick={() => setShowNewDialog(true)}
+            className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+          >
+            <PlusIcon className="h-5 w-5" />
+            新規登録
+          </button>
         </div>
 
         {/* Statistics Cards */}
@@ -338,7 +428,9 @@ export default function OnboardingAdminPage() {
                 className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="all">すべて</option>
-                <option value="draft">下書き</option>
+                <option value="not_invited">未招待</option>
+                <option value="invited">招待済み</option>
+                <option value="not_submitted">未提出</option>
                 <option value="submitted">提出済み</option>
                 <option value="returned">差し戻し</option>
                 <option value="approved">承認済み</option>
@@ -435,12 +527,24 @@ export default function OnboardingAdminPage() {
                         {getDeadlineDisplay(application)}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
-                        <Link
-                          href={`/${locale}/onboarding-admin/${application.id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          詳細を見る
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          {application.status === 'not_invited' && (
+                            <button
+                              onClick={() => handleSendInvite(application.id)}
+                              disabled={sendingInvite === application.id}
+                              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-cyan-600 hover:bg-cyan-50 disabled:opacity-50"
+                            >
+                              <EnvelopeIcon className="h-4 w-4" />
+                              {sendingInvite === application.id ? '送信中...' : '招待送信'}
+                            </button>
+                          )}
+                          <Link
+                            href={`/${locale}/onboarding-admin/${application.id}`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            詳細を見る
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -517,6 +621,103 @@ export default function OnboardingAdminPage() {
           )}
         </div>
       </div>
+      {/* 新規登録ダイアログ */}
+      {showNewDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">新規入社予定者を登録</h2>
+              <button
+                onClick={() => setShowNewDialog(false)}
+                className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  氏名 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newApplicant.name}
+                  onChange={(e) => setNewApplicant({ ...newApplicant, name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="例: 山田太郎"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  メールアドレス <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={newApplicant.email}
+                  onChange={(e) => setNewApplicant({ ...newApplicant, email: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="例: yamada@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  入社日 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={newApplicant.hireDate}
+                  onChange={(e) => setNewApplicant({ ...newApplicant, hireDate: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  部署
+                </label>
+                <input
+                  type="text"
+                  value={newApplicant.department}
+                  onChange={(e) => setNewApplicant({ ...newApplicant, department: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="例: 営業部"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  役職
+                </label>
+                <input
+                  type="text"
+                  value={newApplicant.position}
+                  onChange={(e) => setNewApplicant({ ...newApplicant, position: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="例: 営業"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowNewDialog(false)}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleCreateApplication}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+              >
+                登録（未招待状態）
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

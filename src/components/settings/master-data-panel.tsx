@@ -15,6 +15,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Tabs,
   TabsContent,
   TabsList,
@@ -49,7 +56,7 @@ export function MasterDataPanel() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingType, setEditingType] = useState<'department' | 'position' | 'employmentType'>('department');
   const [editingItem, setEditingItem] = useState<Department | Position | EmploymentType | null>(null);
-  const [formData, setFormData] = useState({ name: '', level: 1, order: 0 });
+  const [formData, setFormData] = useState({ name: '', code: '', parentId: '', level: 1, order: 0 });
 
   // user-storeからtenantIdを取得（currentUserではなく、ストア直接のtenantId）
   const userStoreTenantId = useUserStore((state) => state.tenantId);
@@ -98,6 +105,8 @@ export function MasterDataPanel() {
     if (item) {
       setFormData({
         name: item.name,
+        code: 'code' in item ? (item.code || '') : '',
+        parentId: 'parentId' in item ? (item.parentId || '') : '',
         level: 'level' in item ? item.level : 1,
         order: item.order,
       });
@@ -111,7 +120,7 @@ export function MasterDataPanel() {
       } else {
         maxOrder = Math.max(...employmentTypes.map(t => t.order), 0);
       }
-      setFormData({ name: '', level: 1, order: maxOrder + 1 });
+      setFormData({ name: '', code: '', parentId: '', level: 1, order: maxOrder + 1 });
     }
 
     setEditDialogOpen(true);
@@ -127,7 +136,12 @@ export function MasterDataPanel() {
     if (editingItem) {
       // 更新
       if (editingType === 'department') {
-        updateDepartment(editingItem.id, { name: formData.name, order: formData.order });
+        updateDepartment(editingItem.id, {
+          code: formData.code || undefined,
+          name: formData.name,
+          parentId: formData.parentId || null,
+          order: formData.order,
+        });
       } else if (editingType === 'position') {
         updatePosition(editingItem.id, { name: formData.name, level: formData.level, order: formData.order });
       } else {
@@ -137,7 +151,13 @@ export function MasterDataPanel() {
     } else {
       // 新規追加
       if (editingType === 'department') {
-        addDepartment({ name: formData.name, order: formData.order, isActive: true });
+        addDepartment({
+          code: formData.code || undefined,
+          name: formData.name,
+          parentId: formData.parentId || null,
+          order: formData.order,
+          isActive: true,
+        });
       } else if (editingType === 'position') {
         addPosition({ name: formData.name, level: formData.level, order: formData.order, isActive: true });
       } else {
@@ -268,47 +288,64 @@ export function MasterDataPanel() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-24">コード</TableHead>
                   <TableHead>部署名</TableHead>
+                  <TableHead className="w-32">親部署</TableHead>
+                  <TableHead className="w-20">表示順</TableHead>
                   <TableHead className="w-24">状態</TableHead>
                   <TableHead className="w-32 text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {departments.sort((a, b) => a.order - b.order).map((dept) => (
-                  <TableRow key={dept.id}>
-                    <TableCell>
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                    </TableCell>
-                    <TableCell>
-                      <span className={dept.parentId ? 'ml-4' : ''}>
-                        {dept.name}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={dept.isActive}
-                        onCheckedChange={(checked) => handleToggleActive('department', dept.id, checked)}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog('department', dept)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete('department', dept.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {departments.sort((a, b) => a.order - b.order).map((dept) => {
+                  const parentDept = dept.parentId ? departments.find(d => d.id === dept.parentId) : null;
+                  return (
+                    <TableRow key={dept.id}>
+                      <TableCell>
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">{dept.code || '-'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className={dept.parentId ? 'ml-4' : ''}>
+                          {dept.name}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {parentDept ? parentDept.name : '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{dept.order}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={dept.isActive}
+                          onCheckedChange={(checked) => handleToggleActive('department', dept.id, checked)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog('department', dept)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete('department', dept.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TabsContent>
@@ -440,6 +477,20 @@ export function MasterDataPanel() {
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {editingType === 'department' && (
+              <div className="grid gap-2">
+                <Label htmlFor="code">部署コード</Label>
+                <Input
+                  id="code"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  placeholder="例: SALES-001"
+                />
+                <p className="text-xs text-muted-foreground">
+                  部署を識別するためのコード（任意）
+                </p>
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="name">{getTypeLabel()}名</Label>
               <Input
@@ -449,6 +500,33 @@ export function MasterDataPanel() {
                 placeholder={`${getTypeLabel()}名を入力`}
               />
             </div>
+            {editingType === 'department' && (
+              <div className="grid gap-2">
+                <Label htmlFor="parentId">親部署</Label>
+                <Select
+                  value={formData.parentId}
+                  onValueChange={(value) => setFormData({ ...formData, parentId: value === 'none' ? '' : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="親部署を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">なし（トップレベル）</SelectItem>
+                    {departments
+                      .filter(d => d.id !== editingItem?.id) // 自分自身は除外
+                      .sort((a, b) => a.order - b.order)
+                      .map(d => (
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  上位の部署を選択します
+                </p>
+              </div>
+            )}
             {editingType === 'position' && (
               <div className="grid gap-2">
                 <Label htmlFor="level">レベル</Label>

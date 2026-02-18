@@ -91,6 +91,11 @@ export function AddTransferDialog({ open, onOpenChange }: AddTransferDialogProps
       return;
     }
 
+    // 発効日に基づいてステータスを決定
+    const effectiveDate = new Date(formData.effectiveDate);
+    const now = new Date();
+    const status = effectiveDate > now ? 'scheduled' : 'completed';
+
     const newTransfer: TransferHistory = {
       id: `transfer-${Date.now()}`,
       userId: formData.userId,
@@ -105,6 +110,7 @@ export function AddTransferDialog({ open, onOpenChange }: AddTransferDialogProps
       fromRole: selectedUser.role as 'admin' | 'hr' | 'employee' | 'manager',
       toRole: selectedUser.role as 'admin' | 'hr' | 'employee' | 'manager', // 必要に応じて変更可能
       effectiveDate: formData.effectiveDate,
+      status,
       reason: formData.reason || undefined,
       notes: formData.notes || undefined,
       approvedBy: formData.approvedBy || undefined,

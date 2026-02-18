@@ -111,7 +111,8 @@ export function UserManagementPanel({
     avatar: '',
     isManager: false,
     joinDate: new Date().toISOString().split('T')[0],
-    status: 'active'
+    status: 'active',
+    displayOrder: 0
   });
 
   // フィルタリングされたメンバーリスト
@@ -139,7 +140,8 @@ export function UserManagementPanel({
         avatar: '',
         isManager: false,
         joinDate: new Date().toISOString().split('T')[0],
-        status: 'active'
+        status: 'active',
+        displayOrder: 0
       });
       setIsAddDialogOpen(false);
     }
@@ -249,16 +251,27 @@ export function UserManagementPanel({
                         onChange={(e) => setNewMember(prev => ({ ...prev, joinDate: e.target.value }))}
                       />
                     </div>
-                    <div className="flex items-center space-x-2 pt-6">
-                      <input
-                        type="checkbox"
-                        id="isManager"
-                        checked={newMember.isManager}
-                        onChange={(e) => setNewMember(prev => ({ ...prev, isManager: e.target.checked }))}
-                        className="rounded"
+                    <div>
+                      <Label htmlFor="displayOrder">部署内表示順</Label>
+                      <Input
+                        id="displayOrder"
+                        type="number"
+                        min="0"
+                        value={newMember.displayOrder ?? 0}
+                        onChange={(e) => setNewMember(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
+                        placeholder="0"
                       />
-                      <Label htmlFor="isManager">管理職</Label>
                     </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isManager"
+                      checked={newMember.isManager}
+                      onChange={(e) => setNewMember(prev => ({ ...prev, isManager: e.target.checked }))}
+                      className="rounded"
+                    />
+                    <Label htmlFor="isManager">管理職</Label>
                   </div>
                   
                   <div className="flex justify-end space-x-2">
@@ -318,6 +331,7 @@ export function UserManagementPanel({
                 <TableHead>役職</TableHead>
                 <TableHead>状態</TableHead>
                 <TableHead>入社日</TableHead>
+                <TableHead className="text-center">表示順</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
@@ -361,6 +375,11 @@ export function UserManagementPanel({
                   <TableCell>
                     <span className="text-sm">
                       {new Date(member.joinDate).getFullYear()}年{new Date(member.joinDate).getMonth() + 1}月
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span className="text-sm text-muted-foreground">
+                      {member.displayOrder ?? '-'}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
@@ -456,7 +475,7 @@ export function UserManagementPanel({
                   <Label htmlFor="edit-status">状態</Label>
                   <Select
                     value={editingMember.status}
-                    onValueChange={(value: OrganizationMember['status']) => 
+                    onValueChange={(value: OrganizationMember['status']) =>
                       setEditingMember(prev => prev ? { ...prev, status: value } : null)
                     }
                   >
@@ -472,16 +491,27 @@ export function UserManagementPanel({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center space-x-2 pt-6">
-                  <input
-                    type="checkbox"
-                    id="edit-isManager"
-                    checked={editingMember.isManager}
-                    onChange={(e) => setEditingMember(prev => prev ? { ...prev, isManager: e.target.checked } : null)}
-                    className="rounded"
+                <div>
+                  <Label htmlFor="edit-displayOrder">部署内表示順</Label>
+                  <Input
+                    id="edit-displayOrder"
+                    type="number"
+                    min="0"
+                    value={editingMember.displayOrder ?? 0}
+                    onChange={(e) => setEditingMember(prev => prev ? { ...prev, displayOrder: parseInt(e.target.value) || 0 } : null)}
+                    placeholder="0"
                   />
-                  <Label htmlFor="edit-isManager">管理職</Label>
                 </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-isManager"
+                  checked={editingMember.isManager}
+                  onChange={(e) => setEditingMember(prev => prev ? { ...prev, isManager: e.target.checked } : null)}
+                  className="rounded"
+                />
+                <Label htmlFor="edit-isManager">管理職</Label>
               </div>
               
               <div className="flex justify-end space-x-2">

@@ -37,10 +37,11 @@ export const demoOnboardingApplication: OnboardingApplication = {
   applicantEmail: 'shinnyu@dandori.local',
   applicantName: '新入太郎',
   hireDate: '2025-11-01', // 入社日
-  status: 'draft', // 下書き状態
+  status: 'not_submitted', // 未提出状態
 
   createdAt: '2025-10-15T00:00:00Z',
   updatedAt: '2025-10-18T00:00:00Z',
+  invitedAt: '2025-10-15T09:00:00Z', // 招待日時
 
   // 4フォームのID
   basicInfoFormId: 'demo-basic-001',

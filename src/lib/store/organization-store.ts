@@ -53,6 +53,13 @@ async function apiDeleteDepartment(id: string) {
   return true;
 }
 
+// テンプレートタイプ
+export type ChartTemplateType =
+  | 'pyramid-with-names'      // ピラミッド × 名前あり
+  | 'pyramid-without-names'   // ピラミッド × 名前なし
+  | 'horizontal-with-names'   // 横並び × 名前あり
+  | 'horizontal-without-names'; // 横並び × 名前なし
+
 interface OrganizationStore {
   // State
   organizationTree: OrganizationNode | null;
@@ -60,6 +67,7 @@ interface OrganizationStore {
   selectedMember: OrganizationMember | null;
   selectedNode: OrganizationNode | null;
   viewMode: 'tree' | 'list';
+  templateType: ChartTemplateType;
   searchQuery: string;
   filters: {
     role: UserRole | 'all';
@@ -78,6 +86,7 @@ interface OrganizationStore {
   setSelectedMember: (member: OrganizationMember | null) => void;
   setSelectedNode: (node: OrganizationNode | null) => void;
   setViewMode: (mode: 'tree' | 'list') => void;
+  setTemplateType: (type: ChartTemplateType) => void;
   setSearchQuery: (query: string) => void;
   setFilters: (filters: Partial<OrganizationStore['filters']>) => void;
   
@@ -118,6 +127,7 @@ export const useOrganizationStore = create<OrganizationStore>()(
       selectedMember: null,
       selectedNode: null,
       viewMode: 'tree',
+      templateType: 'pyramid-with-names',
       searchQuery: '',
       filters: {
         role: 'all',
@@ -194,6 +204,7 @@ export const useOrganizationStore = create<OrganizationStore>()(
       setSelectedMember: (member) => set({ selectedMember: member }),
       setSelectedNode: (node) => set({ selectedNode: node }),
       setViewMode: (mode) => set({ viewMode: mode }),
+      setTemplateType: (type) => set({ templateType: type }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setFilters: (newFilters) => set((state) => ({ 
         filters: { ...state.filters, ...newFilters }

@@ -8,6 +8,7 @@ import { create } from 'zustand';
 
 export interface Department {
   id: string;
+  code?: string; // 部署コード
   name: string;
   parentId?: string | null;
   order: number;
@@ -69,8 +70,9 @@ interface MasterDataState {
 }
 
 // DB応答をフロントエンド型に変換
-const mapDepartment = (d: { id: string; name: string; parentId?: string | null; sortOrder: number; isActive: boolean }): Department => ({
+const mapDepartment = (d: { id: string; code?: string; name: string; parentId?: string | null; sortOrder: number; isActive: boolean }): Department => ({
   id: d.id,
+  code: d.code,
   name: d.name,
   parentId: d.parentId || undefined,
   order: d.sortOrder,
@@ -137,6 +139,7 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tenantId,
+          code: department.code || null,
           name: department.name,
           parentId: department.parentId || null,
           sortOrder: department.order,
@@ -160,6 +163,7 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id,
+          ...(data.code !== undefined && { code: data.code }),
           ...(data.name !== undefined && { name: data.name }),
           ...(data.parentId !== undefined && { parentId: data.parentId }),
           ...(data.order !== undefined && { sortOrder: data.order }),

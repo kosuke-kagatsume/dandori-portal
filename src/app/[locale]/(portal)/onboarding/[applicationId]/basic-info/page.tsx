@@ -130,7 +130,7 @@ export default function BasicInfoFormPage() {
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">入社案内</h1>
           <p className="mt-1 text-sm text-gray-600">
-            基本情報を入力してください（39項目）
+            基本情報を入力してください
           </p>
         </div>
 
@@ -138,24 +138,6 @@ export default function BasicInfoFormPage() {
           {/* Section 1: 基本情報 */}
           <FormSection>
             <SectionHeader title="基本情報" />
-            <div className="grid gap-4 md:grid-cols-2">
-              <InputField
-                label="メールアドレス"
-                name="email"
-                type="email"
-                required
-                register={register}
-                errors={errors}
-              />
-              <InputField
-                label="入社日"
-                name="hireDate"
-                type="date"
-                required
-                register={register}
-                errors={errors}
-              />
-            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <InputField
                 label="姓（漢字）"
@@ -204,38 +186,20 @@ export default function BasicInfoFormPage() {
                 name="gender"
                 required
                 options={[
-                  { value: 'male', label: '男性' },
-                  { value: 'female', label: '女性' },
-                  { value: 'other', label: 'その他' },
+                  { value: 'male', label: '男' },
+                  { value: 'female', label: '女' },
                 ]}
                 register={register}
                 errors={errors}
               />
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <InputField
-                label="電話番号"
-                name="phoneNumber"
-                type="tel"
-                required
-                placeholder="09012345678"
-                helpText="ハイフンなしで入力"
-                register={register}
-                errors={errors}
-              />
-              <InputField
-                label="個人メールアドレス"
-                name="personalEmail"
-                type="email"
-                required
-                register={register}
-                errors={errors}
-              />
-            </div>
             <InputField
-              label="機器受け取り希望時間（任意）"
-              name="equipmentPickupTime"
-              placeholder="例: 14:00"
+              label="電話番号"
+              name="phoneNumber"
+              type="tel"
+              required
+              placeholder="090-1234-5678"
+              helpText="半角ハイフンあり"
               register={register}
               errors={errors}
             />

@@ -16,10 +16,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OrganizationNode, OrganizationMember } from '@/types';
+import type { ChartTemplateType } from '@/lib/store/organization-store';
 
 interface OrganizationChartProps {
   data: OrganizationNode;
   viewMode?: 'tree' | 'list';
+  templateType?: ChartTemplateType;
   onMemberSelect?: (member: OrganizationMember) => void;
   onNodeSelect?: (node: OrganizationNode) => void;
   selectedMemberId?: string;
@@ -29,11 +31,15 @@ interface OrganizationChartProps {
 export function OrganizationChart({
   data,
   viewMode = 'tree',
+  templateType = 'pyramid-with-names',
   onMemberSelect,
   onNodeSelect,
   selectedMemberId,
   selectedNodeId
 }: OrganizationChartProps) {
+  // テンプレートタイプから設定を抽出
+  const isHorizontal = templateType.startsWith('horizontal');
+  const showNames = templateType.endsWith('with-names');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set([data.id]));
 
   const toggleNode = (nodeId: string) => {
@@ -59,56 +65,94 @@ export function OrganizationChart({
     }
   };
 
-  const renderMember = (member: OrganizationMember) => (
-    <div
-      key={member.id}
-      className={cn(
-        'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
-        selectedMemberId === member.id 
-          ? 'bg-blue-50 border-blue-200' 
-          : 'hover:bg-gray-50',
-        member.status !== 'active' && 'opacity-50'
-      )}
-      onClick={() => onMemberSelect?.(member)}
-    >
-      <Avatar className="h-10 w-10">
-        <AvatarImage src={member.avatar} alt={member.name} />
-        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
-      </Avatar>
-      
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center space-x-2">
-          <p className="font-medium text-sm truncate">{member.name}</p>
+  const renderMember = (member: OrganizationMember) => {
+    // 名前なしテンプレートの場合はコンパクト表示
+    if (!showNames) {
+      return (
+        <div
+          key={member.id}
+          className={cn(
+            'flex items-center space-x-2 p-2 rounded-lg border cursor-pointer transition-colors',
+            selectedMemberId === member.id
+              ? 'bg-blue-50 border-blue-200'
+              : 'hover:bg-gray-50',
+            member.status !== 'active' && 'opacity-50'
+          )}
+          onClick={() => onMemberSelect?.(member)}
+        >
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={member.avatar} alt={member.name} />
+            <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
+          </Avatar>
           {member.isManager && (
             <Badge variant="outline" className="text-xs">
               責任者
             </Badge>
           )}
+          <div className={cn(
+            'w-2 h-2 rounded-full',
+            member.status === 'active' ? 'bg-green-500' :
+            member.status === 'leave' ? 'bg-red-500' : 'bg-gray-400'
+          )} />
         </div>
-        <p className="text-sm text-muted-foreground truncate">{member.position}</p>
-        <div className="flex items-center space-x-1 mt-1">
-          <span className="text-xs text-muted-foreground">
-            {new Date(member.joinDate).getFullYear()}年入社
-          </span>
-        </div>
-      </div>
+      );
+    }
 
-      <div className="flex flex-col items-end space-y-1">
-        <div className={cn(
-          'w-2 h-2 rounded-full',
-          member.status === 'active' ? 'bg-green-500' :
-          member.status === 'leave' ? 'bg-red-500' : 'bg-gray-400'
-        )} />
+    return (
+      <div
+        key={member.id}
+        className={cn(
+          'flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors',
+          selectedMemberId === member.id
+            ? 'bg-blue-50 border-blue-200'
+            : 'hover:bg-gray-50',
+          member.status !== 'active' && 'opacity-50'
+        )}
+        onClick={() => onMemberSelect?.(member)}
+      >
+        <Avatar className="h-10 w-10">
+          <AvatarImage src={member.avatar} alt={member.name} />
+          <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center space-x-2">
+            <p className="font-medium text-sm truncate">{member.name}</p>
+            {member.isManager && (
+              <Badge variant="outline" className="text-xs">
+                責任者
+              </Badge>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground truncate">{member.position}</p>
+          <div className="flex items-center space-x-1 mt-1">
+            <span className="text-xs text-muted-foreground">
+              {new Date(member.joinDate).getFullYear()}年入社
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-end space-y-1">
+          <div className={cn(
+            'w-2 h-2 rounded-full',
+            member.status === 'active' ? 'bg-green-500' :
+            member.status === 'leave' ? 'bg-red-500' : 'bg-gray-400'
+          )} />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderNode = (node: OrganizationNode, depth = 0) => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children.length > 0;
-    
+
     return (
-      <div key={node.id} className={cn("w-full", depth > 0 && "ml-6")}>
+      <div key={node.id} className={cn(
+        "w-full",
+        // ピラミッド型は左マージン、横並びは上マージン
+        depth > 0 && (isHorizontal ? "mt-0" : "ml-6")
+      )}>
         {/* Node Header */}
         <Card 
           className={cn(
@@ -164,37 +208,56 @@ export function OrganizationChart({
           {/* Members */}
           {node.members.length > 0 && (
             <CardContent className="pt-0">
-              <div className="space-y-2">
-                {node.headMember && (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                      責任者
-                    </h4>
-                    {renderMember(node.headMember)}
-                  </div>
-                )}
-                
-                {node.members.filter(m => m.id !== node.headMember?.id).length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                      メンバー ({node.members.filter(m => m.id !== node.headMember?.id).length}人)
-                    </h4>
-                    <div className="grid gap-2">
-                      {node.members
-                        .filter(m => m.id !== node.headMember?.id)
-                        .map(renderMember)}
+              {showNames ? (
+                // 名前ありモード: 詳細表示
+                <div className="space-y-2">
+                  {node.headMember && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                        責任者
+                      </h4>
+                      {renderMember(node.headMember)}
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+
+                  {node.members.filter(m => m.id !== node.headMember?.id).length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                        メンバー ({node.members.filter(m => m.id !== node.headMember?.id).length}人)
+                      </h4>
+                      <div className="grid gap-2">
+                        {node.members
+                          .filter(m => m.id !== node.headMember?.id)
+                          .map(renderMember)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // 名前なしモード: コンパクト表示
+                <div className="flex flex-wrap gap-2">
+                  {node.headMember && renderMember(node.headMember)}
+                  {node.members
+                    .filter(m => m.id !== node.headMember?.id)
+                    .map(renderMember)}
+                </div>
+              )}
             </CardContent>
           )}
         </Card>
         
         {/* Children */}
         {isExpanded && hasChildren && (
-          <div className="space-y-2">
-            {node.children.map(child => renderNode(child, depth + 1))}
+          <div className={cn(
+            isHorizontal
+              ? "flex flex-wrap gap-4 mt-4" // 横並びレイアウト
+              : "space-y-2" // ピラミッド（縦並び）レイアウト
+          )}>
+            {node.children.map(child => (
+              <div key={child.id} className={isHorizontal ? "flex-1 min-w-[300px] max-w-md" : ""}>
+                {renderNode(child, depth + 1)}
+              </div>
+            ))}
           </div>
         )}
       </div>

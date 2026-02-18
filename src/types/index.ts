@@ -278,6 +278,7 @@ export const TransferHistorySchema = z.object({
   fromRole: z.enum(['employee', 'manager', 'hr', 'admin']).optional(),
   toRole: z.enum(['employee', 'manager', 'hr', 'admin']).optional(),
   effectiveDate: z.string(),
+  status: z.enum(['scheduled', 'completed', 'cancelled']), // 予約状態
   reason: z.string().optional(),
   notes: z.string().optional(),
   approvedBy: z.string().optional(),
@@ -332,6 +333,7 @@ export interface OrganizationMember {
   isManager: boolean;
   joinDate: string;
   status: 'active' | 'inactive' | 'leave';
+  displayOrder?: number; // 部署内表示順（小さい順に表示）
 }
 
 // 権限管理関連の型
