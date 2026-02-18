@@ -34,10 +34,9 @@ import { TransferHistoryPanel } from '@/components/organization/transfer-history
 import { AddTransferDialog } from '@/components/organization/add-transfer-dialog';
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { useUserStore } from '@/lib/store';
-import { demoTransferHistories } from '@/lib/demo-organization';
-import { unifiedOrganizationTree, unifiedOrganizationMembers } from '@/lib/unified-organization-data';
 import { hasPermission as hasRbacPermission, type UserRole } from '@/lib/rbac';
 import type { OrganizationNode, OrganizationMember } from '@/types';
+import { Loader2 } from 'lucide-react';
 
 export default function OrganizationPage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -50,25 +49,24 @@ export default function OrganizationPage() {
     selectedMember,
     selectedNode,
     viewMode,
-    setOrganizationTree,
+    isLoading,
+    error,
+    fetchOrganization,
     setSelectedMember,
     setSelectedNode,
     setViewMode,
     addMember,
     updateMember,
     removeMember,
-    initializeTransferHistories
   } = useOrganizationStore();
 
-  // 初期データの設定
+  // APIから組織データを取得
   useEffect(() => {
-    // 組織ツリーが未設定、またはallMembersが18人以下（旧demoMembers）の場合、50人の統一データで初期化
-    if (!organizationTree || allMembers.length <= 18) {
-      setOrganizationTree(unifiedOrganizationTree);
-    }
-    // 異動履歴データの初期化
-    initializeTransferHistories(demoTransferHistories);
-  }, [organizationTree, allMembers.length, setOrganizationTree, initializeTransferHistories]);
+    // Zustand persistのhydration
+    useOrganizationStore.persist.rehydrate();
+    // APIから組織データを取得
+    fetchOrganization();
+  }, [fetchOrganization]);
 
   // 権限チェック - 本番ユーザーとデモユーザー両方に対応
   const getUserRole = (): UserRole | null => {
@@ -89,10 +87,10 @@ export default function OrganizationPage() {
 
   // 組織統計の計算
   const organizationStats = {
-    totalMembers: allMembers.length || unifiedOrganizationMembers.length,
-    activeMembers: (allMembers.length ? allMembers : unifiedOrganizationMembers).filter(m => m.status === 'active').length,
-    managers: (allMembers.length ? allMembers : unifiedOrganizationMembers).filter(m => m.isManager).length,
-    departments: organizationTree ? countNodes(organizationTree, 'department') : 8
+    totalMembers: allMembers.length,
+    activeMembers: allMembers.filter(m => m.status === 'active').length,
+    managers: allMembers.filter(m => m.isManager).length,
+    departments: organizationTree ? countNodes(organizationTree, 'department') : 0
   };
 
   function countNodes(node: OrganizationNode, type?: string): number {
@@ -128,6 +126,36 @@ export default function OrganizationPage() {
   const handleMemberRemove = (memberId: string) => {
     removeMember(memberId);
   };
+
+  // ローディング状態
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
+            <p className="text-muted-foreground">組織データを読み込んでいます...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // エラー状態
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Shield className="h-12 w-12 text-destructive mb-4" />
+            <h2 className="text-xl font-semibold mb-2">エラーが発生しました</h2>
+            <p className="text-muted-foreground text-center mb-4">{error}</p>
+            <Button onClick={() => fetchOrganization()}>再読み込み</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!canViewAll) {
     return (
@@ -328,7 +356,7 @@ export default function OrganizationPage() {
         {/* メンバー管理タブ */}
         <TabsContent value="members">
           <UserManagementPanel
-            members={allMembers.length ? allMembers : unifiedOrganizationMembers}
+            members={allMembers}
             organizationNodes={organizationTree ? [organizationTree] : []}
             onMemberAdd={canManageOrganization ? handleMemberAdd : undefined}
             onMemberUpdate={canManageOrganization ? handleMemberUpdate : undefined}
