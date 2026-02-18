@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 // DW管理者認証情報（環境変数から取得）
 // 本番環境ではAWS Secrets Manager等を使用すべき
 // デフォルトパスワード: "dwadmin2025" (開発・緊急用のみ)
-const DEFAULT_PASSWORD_HASH = '$2b$10$LvXCOu49LLW9V8CIHB9mr.TZiAZ9/YcCLPKxCxtLNUiFJDqy4vMZq';
+const DEFAULT_PASSWORD_HASH = '$2b$10$57/PnU8TV0MdG6oIRxAphOLTV5HSE63NGuih0wMca6CCGO5E2BF5u';
 
 const DW_ADMIN_CREDENTIALS = [
   {
