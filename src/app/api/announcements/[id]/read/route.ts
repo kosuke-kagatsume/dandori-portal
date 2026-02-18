@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   errorResponse,
 } from '@/lib/api/api-helpers';
 
@@ -14,7 +14,7 @@ export async function POST(
   try {
     const { id: announcementId } = await params;
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     const userId = body.userId;

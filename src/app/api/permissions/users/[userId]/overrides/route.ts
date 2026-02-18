@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   errorResponse,
 } from '@/lib/api/api-helpers';
 
@@ -14,7 +14,7 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const overrides = await prisma.user_permission_overrides.findMany({
       where: { tenantId, userId: params.userId },
@@ -38,7 +38,7 @@ export async function POST(
 ) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     const { permissionId, overrideType, reason, grantedBy, roleId, expiresAt } = body;

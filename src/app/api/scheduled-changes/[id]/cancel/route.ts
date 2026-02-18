@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// テナントID取得
-function getTenantId(request: NextRequest): string {
-  return request.nextUrl.searchParams.get('tenantId') || 'tenant-1';
-}
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -20,7 +17,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantIdFromRequest(request);
 
     // 既存の予約を取得
     const existing = await prisma.scheduled_changes.findFirst({

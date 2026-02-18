@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
 import {
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       });
     }
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const category = searchParams.get('category');
     const status = searchParams.get('status'); // テナント側の対応状況でフィルタ
     const year = searchParams.get('year');

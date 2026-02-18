@@ -6,7 +6,7 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
 import { createVendorSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const includeDetails = searchParams.get('include') === 'details';
     const { page, limit, skip } = getPaginationParams(searchParams);
 

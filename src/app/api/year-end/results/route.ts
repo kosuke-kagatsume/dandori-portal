@@ -4,7 +4,7 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
 
@@ -56,7 +56,7 @@ function calculateIncomeTax(taxableIncome: number): number {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const { page, limit, skip } = getPaginationParams(searchParams);
     const userId = searchParams.get('userId');
     const fiscalYear = searchParams.get('fiscalYear');
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const { userIds, fiscalYear } = body;
 
@@ -389,7 +389,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const id = searchParams.get('id');
     const action = searchParams.get('action'); // confirm, pay
 

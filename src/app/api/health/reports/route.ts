@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTenantId, successResponse } from '@/lib/api/api-helpers';
+import { getTenantIdFromRequest, successResponse } from '@/lib/api/api-helpers';
 
 // 健康管理レポート取得
 export async function GET(request: NextRequest) {
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const currentYear = new Date().getFullYear();
 

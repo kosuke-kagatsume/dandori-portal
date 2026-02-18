@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   errorResponse,
 } from '@/lib/api/api-helpers';
 
@@ -11,7 +11,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const roles = await prisma.roles.findMany({
       where: { tenantId },
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     const { code, name, description, color } = body;

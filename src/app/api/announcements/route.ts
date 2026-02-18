@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   getPaginationParams,
   validateRequired,
   errorResponse,
@@ -13,7 +13,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const published = searchParams.get('published');
     const type = searchParams.get('type');
     const { page, limit, skip } = getPaginationParams(searchParams);
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     // 必須フィールドの検証

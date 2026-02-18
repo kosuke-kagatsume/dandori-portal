@@ -6,7 +6,7 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
 import { createRepairRecordSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
 
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const records = await prisma.repair_records.findMany({
       where: { tenantId },
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const body = await request.json();
 

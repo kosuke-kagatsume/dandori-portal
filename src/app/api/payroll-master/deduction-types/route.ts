@@ -4,7 +4,7 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   validateRequiredFields,
 } from '@/lib/api/api-helpers';
 
@@ -14,7 +14,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const activeOnly = searchParams.get('activeOnly') === 'true';
     const category = searchParams.get('category'); // social_insurance, tax, other
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const validation = validateRequiredFields(body, ['code', 'name']);
     if (!validation.valid) {
@@ -86,7 +86,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const id = searchParams.get('id');
 
     if (!id) {
@@ -130,7 +130,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const id = searchParams.get('id');
 
     if (!id) {

@@ -3,14 +3,14 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
 
 // GET /api/admin/certifications - 管理者向けダッシュボードデータ
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const now = new Date();
     const in7Days = new Date();

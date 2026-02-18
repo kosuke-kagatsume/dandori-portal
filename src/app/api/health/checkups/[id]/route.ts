@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTenantId, successResponse } from '@/lib/api/api-helpers';
+import { getTenantIdFromRequest, successResponse } from '@/lib/api/api-helpers';
 
 // デモ用健康診断データ（checkups/route.tsと同じデータを参照）
 const demoHealthCheckups = [
@@ -120,7 +120,7 @@ export async function GET(
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const checkup = await prisma.health_checkups.findFirst({
       where: { id, tenantId },
@@ -153,7 +153,7 @@ export async function PUT(
 ) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const { id } = await params;
     const body = await request.json();
@@ -290,7 +290,7 @@ export async function DELETE(
 ) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const { id } = await params;
 

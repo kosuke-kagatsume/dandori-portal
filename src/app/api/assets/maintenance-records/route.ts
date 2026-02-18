@@ -6,7 +6,7 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
 import { createMaintenanceRecordSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const vehicleId = searchParams.get('vehicleId');
     const type = searchParams.get('type');
     const { page, limit, skip } = getPaginationParams(searchParams);

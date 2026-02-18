@@ -4,7 +4,7 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   validateRequiredFields,
 } from '@/lib/api/api-helpers';
 
@@ -14,7 +14,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const fiscalYear = searchParams.get('fiscalYear');
 
     const where: { tenantId: string; fiscalYear?: number } = { tenantId };
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const validation = validateRequiredFields(body, ['fiscalYear', 'effectiveStartDate', 'effectiveEndDate']);
     if (!validation.valid) {
@@ -97,7 +97,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const id = searchParams.get('id');
 
     if (!id) {
@@ -136,7 +136,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const id = searchParams.get('id');
 
     if (!id) {

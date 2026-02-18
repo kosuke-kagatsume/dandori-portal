@@ -3,14 +3,14 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
 
 // GET /api/admin/certifications/settings - 通知設定取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     let settings = await prisma.certification_notification_settings.findUnique({
       where: { tenantId },

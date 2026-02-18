@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
 
 /**
@@ -12,7 +12,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     let rules = await prisma.overtime_rules.findUnique({
       where: { tenantId },
@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const rules = await prisma.overtime_rules.upsert({
       where: { tenantId },

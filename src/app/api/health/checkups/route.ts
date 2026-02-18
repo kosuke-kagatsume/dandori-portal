@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTenantId } from '@/lib/api/api-helpers';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 // デモ用健康診断データ
 const demoHealthCheckups = [
@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const userId = searchParams.get('userId');
     const fiscalYear = searchParams.get('fiscalYear');
     const status = searchParams.get('status');
@@ -291,7 +291,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const body = await request.json();
     const {

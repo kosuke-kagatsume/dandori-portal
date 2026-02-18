@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
 
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const serviceId = searchParams.get('serviceId');
     const userId = searchParams.get('userId');
     const isActive = searchParams.get('isActive');

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
-  getTenantId,
+  getTenantIdFromRequest,
   successResponse,
   handleApiError,
   validateRequired,
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const activeOnly = searchParams.get('activeOnly') === 'true';
 
     const where: Record<string, unknown> = { tenantId };

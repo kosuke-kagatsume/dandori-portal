@@ -3,14 +3,14 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
 
 // GET /api/certifications/expiring - 期限接近資格一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const days = parseInt(searchParams.get('days') || '90', 10);
     const status = searchParams.get('status'); // active, expiring, expired
 

@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// テナントID取得
-function getTenantId(request: NextRequest): string {
-  return request.nextUrl.searchParams.get('tenantId') || 'tenant-1';
-}
-
 // 予約一覧取得
 export async function GET(request: NextRequest) {
   try {
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantIdFromRequest(request);
     const { searchParams } = request.nextUrl;
 
     // フィルターパラメータ
@@ -150,7 +146,7 @@ function formatDetails(change: {
 // 予約作成
 export async function POST(request: NextRequest) {
   try {
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     const {

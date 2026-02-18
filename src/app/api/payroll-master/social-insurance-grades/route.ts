@@ -4,7 +4,7 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   validateRequiredFields,
 } from '@/lib/api/api-helpers';
 
@@ -14,7 +14,7 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const fiscalYear = searchParams.get('fiscalYear');
     const insuranceType = searchParams.get('insuranceType');
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const validation = validateRequiredFields(body, [
       'fiscalYear',
@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     if (!body.fiscalYear || !Array.isArray(body.grades)) {
       return errorResponse('fiscalYearとgradesが必要です', 400);
@@ -163,7 +163,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const id = searchParams.get('id');
     const fiscalYear = searchParams.get('fiscalYear');
 

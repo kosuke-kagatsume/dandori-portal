@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantId,
+  getTenantIdFromRequest,
   errorResponse,
 } from '@/lib/api/api-helpers';
 
@@ -15,7 +15,7 @@ export async function GET(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const announcement = await prisma.announcements.findFirst({
       where: { id, tenantId },
@@ -49,7 +49,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     // 存在確認
@@ -98,7 +98,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const tenantId = getTenantId(searchParams);
+    const tenantId = await getTenantIdFromRequest(request);
 
     // 存在確認
     const existing = await prisma.announcements.findFirst({

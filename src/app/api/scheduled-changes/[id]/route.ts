@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// テナントID取得
-function getTenantId(request: NextRequest): string {
-  return request.nextUrl.searchParams.get('tenantId') || 'tenant-1';
-}
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -20,7 +16,7 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantIdFromRequest(request);
 
     const change = await prisma.scheduled_changes.findFirst({
       where: { id, tenantId },
@@ -53,7 +49,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await context.params;
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     // 既存の予約を取得
@@ -147,7 +143,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await context.params;
-    const tenantId = getTenantId(request);
+    const tenantId = await getTenantIdFromRequest(request);
 
     // 既存の予約を取得
     const existing = await prisma.scheduled_changes.findFirst({
