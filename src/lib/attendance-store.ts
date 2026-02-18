@@ -48,6 +48,8 @@ export interface TodayAttendanceStatus {
   recordDate?: string;
   // ユーザー識別用（同一PC複数ユーザー対応）
   userId?: string;
+  // APIから取得したレコードID
+  attendanceRecordId?: string;
 }
 
 interface AttendanceStore {
@@ -84,6 +86,9 @@ interface AttendanceStore {
   // 勤怠記録リストの更新通知
   onAttendanceUpdate: (() => void) | null;
   setOnAttendanceUpdate: (callback: () => void) => void;
+
+  // APIから今日の勤怠を取得してストアを同期
+  syncTodayFromApi: (userId: string, tenantId: string) => Promise<void>;
 }
 
 // 今日の日付を取得（YYYY-MM-DD形式）
@@ -100,6 +105,69 @@ const getInitialTodayStatus = (): TodayAttendanceStatus => ({
   recordDate: getTodayDateString(),
 });
 
+// API呼び出し用ヘルパー
+const attendanceApi = {
+  // 今日の勤怠を取得
+  async getTodayAttendance(userId: string, _tenantId: string) {
+    const today = getTodayDateString();
+    const response = await fetch(
+      `/api/attendance?userId=${userId}&startDate=${today}&endDate=${today}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch attendance');
+    }
+    const result = await response.json();
+    return result.data?.[0] || null;
+  },
+
+  // 出勤打刻（新規作成）
+  async checkIn(params: {
+    userId: string;
+    tenantId: string;
+    date: string;
+    checkIn: string;
+    workLocation: string;
+    status: string;
+    approvalStatus?: string;
+    approvalReason?: string;
+  }) {
+    const response = await fetch('/api/attendance', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to check in');
+    }
+    return response.json();
+  },
+
+  // 勤怠更新（休憩開始/終了、退勤）
+  async updateAttendance(id: string, data: Record<string, unknown>) {
+    const response = await fetch(`/api/attendance/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update attendance');
+    }
+    return response.json();
+  },
+};
+
 export const useAttendanceStore = create<AttendanceStore>()(
   persist(
     (set, get) => ({
@@ -109,6 +177,72 @@ export const useAttendanceStore = create<AttendanceStore>()(
 
       setOnAttendanceUpdate: (callback) => {
         set({ onAttendanceUpdate: callback });
+      },
+
+      // APIから今日の勤怠を取得してストアを同期
+      syncTodayFromApi: async (userId: string, tenantId: string) => {
+        try {
+          const attendance = await attendanceApi.getTodayAttendance(userId, tenantId);
+          if (attendance) {
+            // APIのデータからストアの状態を復元
+            let status: TodayAttendanceStatus['status'] = 'notStarted';
+            if (attendance.checkOut) {
+              status = 'finished';
+            } else if (attendance.breakStart && !attendance.breakEnd) {
+              status = 'onBreak';
+            } else if (attendance.checkIn) {
+              status = 'working';
+            }
+
+            set({
+              todayStatus: {
+                status,
+                checkIn: attendance.checkIn
+                  ? new Date(attendance.checkIn).toLocaleTimeString('ja-JP', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : undefined,
+                checkOut: attendance.checkOut
+                  ? new Date(attendance.checkOut).toLocaleTimeString('ja-JP', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : undefined,
+                breakStart: attendance.breakStart
+                  ? new Date(attendance.breakStart).toLocaleTimeString('ja-JP', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : undefined,
+                breakEnd: attendance.breakEnd
+                  ? new Date(attendance.breakEnd).toLocaleTimeString('ja-JP', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : undefined,
+                totalBreakTime: attendance.totalBreakMinutes || 0,
+                workLocation: attendance.workLocation || 'office',
+                memo: attendance.memo,
+                needsApproval: attendance.approvalStatus === 'pending',
+                approvalReason: attendance.approvalReason,
+                recordDate: getTodayDateString(),
+                userId,
+                attendanceRecordId: attendance.id,
+              },
+            });
+          } else {
+            // 今日のレコードがない場合は初期状態
+            set({
+              todayStatus: {
+                ...getInitialTodayStatus(),
+                userId,
+              },
+            });
+          }
+        } catch (error) {
+          console.error('[AttendanceStore] Failed to sync from API:', error);
+        }
       },
 
       // 日付変更をチェックしてリセット
@@ -149,7 +283,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
           todayStatus: { ...state.todayStatus, ...status }
         }));
       },
-      
+
       checkIn: async (workLocation) => {
         const now = new Date();
         const timeString = now.toLocaleTimeString('ja-JP', {
@@ -171,6 +305,34 @@ export const useAttendanceStore = create<AttendanceStore>()(
           console.warn('Failed to get location for check-in:', error);
         }
 
+        const { todayStatus } = get();
+        const userId = todayStatus.userId;
+        const tenantId = 'tenant-006'; // TODO: 動的に取得
+
+        // APIに出勤を記録
+        let attendanceRecordId: string | undefined;
+        if (userId) {
+          try {
+            const today = getTodayDateString();
+            const checkInDateTime = new Date(`${today}T${timeString}:00`);
+
+            const result = await attendanceApi.checkIn({
+              userId,
+              tenantId,
+              date: today,
+              checkIn: checkInDateTime.toISOString(),
+              workLocation,
+              status: isLate ? 'late' : (workLocation === 'home' ? 'remote' : 'present'),
+              approvalStatus: isLate ? 'pending' : undefined,
+              approvalReason: isLate ? '遅刻のため承認が必要です' : undefined,
+            });
+            attendanceRecordId = result.data?.id;
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to check in via API:', error);
+            // APIエラーでも状態は更新（オフライン対応のため）
+          }
+        }
+
         set((state) => ({
           todayStatus: {
             ...state.todayStatus,
@@ -181,6 +343,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             needsApproval: isLate,
             approvalReason: isLate ? '遅刻のため承認が必要です' : undefined,
             recordDate: getTodayDateString(),
+            attendanceRecordId,
           }
         }));
 
@@ -194,14 +357,30 @@ export const useAttendanceStore = create<AttendanceStore>()(
           onAttendanceUpdate();
         }
       },
-      
+
       startBreak: async () => {
         const now = new Date();
-        const timeString = now.toLocaleTimeString('ja-JP', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        const timeString = now.toLocaleTimeString('ja-JP', {
+          hour: '2-digit',
+          minute: '2-digit'
         });
-        
+
+        const { todayStatus } = get();
+        const attendanceRecordId = todayStatus.attendanceRecordId;
+
+        // APIに休憩開始を記録
+        if (attendanceRecordId) {
+          try {
+            const today = getTodayDateString();
+            const breakStartDateTime = new Date(`${today}T${timeString}:00`);
+            await attendanceApi.updateAttendance(attendanceRecordId, {
+              breakStart: breakStartDateTime.toISOString(),
+            });
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to start break via API:', error);
+          }
+        }
+
         set((state) => ({
           todayStatus: {
             ...state.todayStatus,
@@ -210,33 +389,50 @@ export const useAttendanceStore = create<AttendanceStore>()(
           }
         }));
       },
-      
+
       endBreak: async () => {
         const now = new Date();
-        const timeString = now.toLocaleTimeString('ja-JP', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        const timeString = now.toLocaleTimeString('ja-JP', {
+          hour: '2-digit',
+          minute: '2-digit'
         });
-        
+
         const state = get();
         let additionalBreakTime = 0;
-        
+
         if (state.todayStatus.breakStart) {
           const start = new Date(`2024-01-01 ${state.todayStatus.breakStart}`);
           const end = new Date(`2024-01-01 ${timeString}`);
           additionalBreakTime = (end.getTime() - start.getTime()) / 1000 / 60; // minutes
         }
-        
-        set((state) => ({
+
+        const totalBreakTime = state.todayStatus.totalBreakTime + additionalBreakTime;
+        const attendanceRecordId = state.todayStatus.attendanceRecordId;
+
+        // APIに休憩終了を記録
+        if (attendanceRecordId) {
+          try {
+            const today = getTodayDateString();
+            const breakEndDateTime = new Date(`${today}T${timeString}:00`);
+            await attendanceApi.updateAttendance(attendanceRecordId, {
+              breakEnd: breakEndDateTime.toISOString(),
+              totalBreakMinutes: Math.floor(totalBreakTime),
+            });
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to end break via API:', error);
+          }
+        }
+
+        set((prevState) => ({
           todayStatus: {
-            ...state.todayStatus,
+            ...prevState.todayStatus,
             status: 'working',
             breakEnd: timeString,
-            totalBreakTime: state.todayStatus.totalBreakTime + additionalBreakTime,
+            totalBreakTime,
           }
         }));
       },
-      
+
       checkOut: async (memo) => {
         const now = new Date();
         const timeString = now.toLocaleTimeString('ja-JP', {
@@ -258,15 +454,48 @@ export const useAttendanceStore = create<AttendanceStore>()(
           console.warn('Failed to get location for check-out:', error);
         }
 
-        set((state) => ({
+        const state = get();
+        const attendanceRecordId = state.todayStatus.attendanceRecordId;
+
+        // 勤務時間計算
+        let workMinutes = 0;
+        let overtimeMinutes = 0;
+        if (state.todayStatus.checkIn) {
+          const checkIn = new Date(`2024-01-01 ${state.todayStatus.checkIn}`);
+          const checkOut = new Date(`2024-01-01 ${timeString}`);
+          const totalMinutes = (checkOut.getTime() - checkIn.getTime()) / 1000 / 60;
+          workMinutes = Math.floor(totalMinutes - state.todayStatus.totalBreakTime);
+          overtimeMinutes = Math.max(0, workMinutes - 480); // 8時間 = 480分
+        }
+
+        // APIに退勤を記録
+        if (attendanceRecordId) {
+          try {
+            const today = getTodayDateString();
+            const checkOutDateTime = new Date(`${today}T${timeString}:00`);
+            await attendanceApi.updateAttendance(attendanceRecordId, {
+              checkOut: checkOutDateTime.toISOString(),
+              workMinutes,
+              overtimeMinutes,
+              memo,
+              status: isEarlyLeave ? 'early_leave' : undefined,
+              approvalStatus: isEarlyLeave ? 'pending' : undefined,
+              approvalReason: isEarlyLeave ? '早退のため承認が必要です' : undefined,
+            });
+          } catch (error) {
+            console.error('[AttendanceStore] Failed to check out via API:', error);
+          }
+        }
+
+        set((prevState) => ({
           todayStatus: {
-            ...state.todayStatus,
+            ...prevState.todayStatus,
             status: 'finished',
             checkOut: timeString,
             checkOutLocation: locationData,
             memo,
-            needsApproval: state.todayStatus.needsApproval || isEarlyLeave,
-            approvalReason: isEarlyLeave ? '早退のため承認が必要です' : state.todayStatus.approvalReason,
+            needsApproval: prevState.todayStatus.needsApproval || isEarlyLeave,
+            approvalReason: isEarlyLeave ? '早退のため承認が必要です' : prevState.todayStatus.approvalReason,
           }
         }));
 
@@ -280,17 +509,17 @@ export const useAttendanceStore = create<AttendanceStore>()(
           onAttendanceUpdate();
         }
       },
-      
+
       getTodayRecord: () => {
         const state = get();
         const today = new Date();
         const dateString = `${today.getMonth() + 1}/${today.getDate()}`;
         const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][today.getDay()];
-        
+
         if (state.todayStatus.status === 'notStarted') {
           return null;
         }
-        
+
         // 勤務時間計算
         let workHours = 0;
         if (state.todayStatus.checkIn && state.todayStatus.checkOut) {
@@ -299,17 +528,27 @@ export const useAttendanceStore = create<AttendanceStore>()(
           const totalMinutes = (checkOut.getTime() - checkIn.getTime()) / 1000 / 60;
           workHours = (totalMinutes - state.todayStatus.totalBreakTime) / 60;
         }
-        
+
         // ステータス判定
         let status: AttendanceRecord['status'] = 'present';
         if (state.todayStatus.workLocation === 'home') {
           status = 'remote';
         } else if (state.todayStatus.needsApproval) {
-          const now = new Date();
-          const isLate = state.todayStatus.checkIn && 
-            (now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 30));
-          const isEarlyLeave = state.todayStatus.checkOut && now.getHours() < 17;
-          
+          const checkInTime = state.todayStatus.checkIn;
+          const checkOutTime = state.todayStatus.checkOut;
+
+          // 遅刻判定: 9:30以降の出勤
+          const isLate = checkInTime && (() => {
+            const [h, m] = checkInTime.split(':').map(Number);
+            return h > 9 || (h === 9 && m > 30);
+          })();
+
+          // 早退判定: 17:00前の退勤
+          const isEarlyLeave = checkOutTime && (() => {
+            const [h] = checkOutTime.split(':').map(Number);
+            return h < 17;
+          })();
+
           if (isLate && isEarlyLeave) {
             status = 'late'; // 遅刻を優先
           } else if (isLate) {
@@ -318,10 +557,10 @@ export const useAttendanceStore = create<AttendanceStore>()(
             status = 'early_leave';
           }
         }
-        
+
         return {
-          id: `today-${today.getDate()}`,
-          userId: '1', // 現在のユーザー（田中太郎）
+          id: state.todayStatus.attendanceRecordId || `today-${today.getDate()}`,
+          userId: state.todayStatus.userId || '1',
           userName: '田中太郎',
           date: dateString,
           dayOfWeek,
@@ -346,7 +585,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
       partialize: (state) => {
         const today = new Date().toDateString();
         const stored = localStorage.getItem('attendance-store-date');
-        
+
         if (stored !== today) {
           localStorage.setItem('attendance-store-date', today);
           return {
@@ -358,7 +597,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             onAttendanceUpdate: null,
           };
         }
-        
+
         return state;
       },
     }
