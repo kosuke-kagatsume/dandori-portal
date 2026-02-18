@@ -97,12 +97,7 @@ async function reverseGeocode(
   latitude: number,
   longitude: number
 ): Promise<string | null> {
-  // デモモードの場合はモック住所を返す
-  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-    return `東京都千代田区丸の内1-1-1 (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`;
-  }
-
-  // 本番環境では外部ジオコーディングAPIを使用
+  // 外部ジオコーディングAPIを使用
   // 例: OpenStreetMap Nominatim API（無料、利用規約に注意）
   try {
     const response = await fetch(

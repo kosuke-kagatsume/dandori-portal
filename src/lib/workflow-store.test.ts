@@ -18,7 +18,7 @@ jest.mock('./store/notification-store', () => ({
 jest.mock('./store/user-store', () => ({
   useUserStore: {
     getState: jest.fn(() => ({
-      currentDemoUser: { id: '1', name: 'Test User' },
+      currentUser: { id: '1', name: 'Test User' },
     })),
   },
 }));

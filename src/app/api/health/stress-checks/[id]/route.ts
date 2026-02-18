@@ -1,71 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTenantIdFromRequest, successResponse } from '@/lib/api/api-helpers';
-
-// デモ用ストレスチェックデータ
-const demoStressChecks = [
-  {
-    id: 'stress-001',
-    tenantId: 'tenant-1',
-    userId: 'user-001',
-    userName: '田中太郎',
-    fiscalYear: 2024,
-    checkDate: new Date('2024-11-01'),
-    status: 'completed',
-    stressFactorsScore: 65,
-    stressResponseScore: 58,
-    socialSupportScore: 72,
-    totalScore: 65,
-    isHighStress: false,
-    highStressReason: null,
-    interviewRequested: false,
-    interviewScheduled: false,
-    interviewCompleted: false,
-    createdAt: new Date('2024-11-01'),
-    updatedAt: new Date('2024-11-01'),
-  },
-  {
-    id: 'stress-003',
-    tenantId: 'tenant-1',
-    userId: 'user-003',
-    userName: '佐藤次郎',
-    fiscalYear: 2024,
-    checkDate: new Date('2024-11-03'),
-    status: 'completed',
-    stressFactorsScore: 82,
-    stressResponseScore: 78,
-    socialSupportScore: 45,
-    totalScore: 78,
-    isHighStress: true,
-    highStressReason: 'ストレス要因と反応スコアが高く、サポート環境が不十分',
-    interviewRequested: true,
-    interviewScheduled: true,
-    interviewScheduledAt: new Date('2024-11-15'),
-    interviewCompleted: false,
-    createdAt: new Date('2024-11-03'),
-    updatedAt: new Date('2024-11-03'),
-  },
-  {
-    id: 'stress-006',
-    tenantId: 'tenant-1',
-    userId: 'user-006',
-    userName: '伊藤健',
-    fiscalYear: 2024,
-    checkDate: new Date('2024-11-06'),
-    status: 'interview_recommended',
-    stressFactorsScore: 88,
-    stressResponseScore: 85,
-    socialSupportScore: 38,
-    totalScore: 85,
-    isHighStress: true,
-    highStressReason: '業務負荷が高く、職場環境のサポートが不足',
-    interviewRequested: true,
-    interviewScheduled: false,
-    interviewCompleted: false,
-    createdAt: new Date('2024-11-06'),
-    updatedAt: new Date('2024-11-06'),
-  },
-];
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 // ストレスチェック詳細取得
 export async function GET(
@@ -74,19 +9,6 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-
-    // デモモードの場合はデモデータを返す
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      const stressCheck = demoStressChecks.find(s => s.id === id);
-      if (!stressCheck) {
-        return NextResponse.json(
-          { error: 'Stress check not found' },
-          { status: 404 }
-        );
-      }
-      return successResponse(stressCheck);
-    }
-
     const tenantId = await getTenantIdFromRequest(request);
 
     const stressCheck = await prisma.stress_checks.findFirst({

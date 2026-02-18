@@ -34,7 +34,7 @@ export function ApprovalFlowTab({ settings: _settings, updateSettings: _updateSe
     getStats,
     deleteFlow,
     duplicateFlow,
-    initializeDemoData,
+    initialize,
   } = useApprovalFlowStore();
 
   const [activeDocumentType, setActiveDocumentType] = useState<DocumentType>('leave_request');
@@ -45,9 +45,9 @@ export function ApprovalFlowTab({ settings: _settings, updateSettings: _updateSe
   // 初期化
   useEffect(() => {
     if (!initialized) {
-      initializeDemoData();
+      initialize();
     }
-  }, [initialized, initializeDemoData]);
+  }, [initialized, initialize]);
 
   const stats = getStats();
   const currentFlows = getFlowsByDocumentType(activeDocumentType);

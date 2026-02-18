@@ -54,218 +54,9 @@ interface ApprovalFlowStore {
 
   // Actions - 初期化・同期
   fetchFlows: () => Promise<void>;
-  initializeDemoData: () => void;
+  initialize: () => void;
   resetData: () => void;
 }
-
-/**
- * デモデータ生成（APIからデータがない場合のフォールバック）
- */
-const generateDemoFlows = (): ApprovalFlow[] => {
-  const now = new Date().toISOString();
-  const companyId = 'tenant-1';
-  const createdBy = 'system';
-
-  return [
-    // 1. 休暇申請 - 組織連動型（デフォルト）
-    {
-      id: 'flow_leave_default',
-      name: '標準休暇承認フロー（組織連動）',
-      description: '組織階層に基づく休暇承認。直属上司→部長の順で承認',
-      type: 'organization',
-      documentType: 'leave_request',
-      useOrganizationHierarchy: true,
-      organizationLevels: 2,
-      conditions: [],
-      isActive: true,
-      isDefault: true,
-      priority: 1,
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-      companyId,
-    },
-    // 2. 休暇申請 - 長期休暇用（5日以上）
-    {
-      id: 'flow_leave_long',
-      name: '長期休暇承認フロー（5日以上）',
-      description: '5日以上の休暇申請は人事部長の承認も必要',
-      type: 'organization',
-      documentType: 'leave_request',
-      useOrganizationHierarchy: true,
-      organizationLevels: 3,
-      conditions: [
-        {
-          id: 'cond_leave_long',
-          field: 'days',
-          operator: 'gte',
-          value: 5,
-          description: '5日以上の休暇',
-        },
-      ],
-      isActive: true,
-      isDefault: false,
-      priority: 10,
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-      companyId,
-    },
-    // 3. 経費申請 - 組織連動型（デフォルト）
-    {
-      id: 'flow_expense_default',
-      name: '標準経費承認フロー（組織連動）',
-      description: '組織階層に基づく経費承認。直属上司→部長の順で承認',
-      type: 'organization',
-      documentType: 'expense_claim',
-      useOrganizationHierarchy: true,
-      organizationLevels: 2,
-      conditions: [],
-      isActive: true,
-      isDefault: true,
-      priority: 1,
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-      companyId,
-    },
-    // 4. 経費申請 - 高額用（10万円以上）
-    {
-      id: 'flow_expense_high',
-      name: '高額経費承認フロー（10万円以上）',
-      description: '10万円以上の経費は経理部長の承認も必要',
-      type: 'custom',
-      documentType: 'expense_claim',
-      steps: [
-        {
-          id: 'step_expense_1',
-          stepNumber: 1,
-          name: '直属上司承認',
-          mode: 'serial',
-          approvers: [],
-          requiredApprovals: 1,
-          timeoutHours: 48,
-          allowDelegate: true,
-          allowSkip: false,
-        },
-        {
-          id: 'step_expense_2',
-          stepNumber: 2,
-          name: '部長承認',
-          mode: 'serial',
-          approvers: [],
-          requiredApprovals: 1,
-          timeoutHours: 48,
-          allowDelegate: true,
-          allowSkip: false,
-        },
-        {
-          id: 'step_expense_3',
-          stepNumber: 3,
-          name: '経理部長承認',
-          mode: 'serial',
-          approvers: [],
-          requiredApprovals: 1,
-          timeoutHours: 72,
-          allowDelegate: false,
-          allowSkip: false,
-        },
-      ],
-      conditions: [
-        {
-          id: 'cond_expense_high',
-          field: 'amount',
-          operator: 'gte',
-          value: 100000,
-          description: '10万円以上の経費',
-        },
-      ],
-      isActive: true,
-      isDefault: false,
-      priority: 10,
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-      companyId,
-    },
-    // 5. 残業申請 - 組織連動型（デフォルト）
-    {
-      id: 'flow_overtime_default',
-      name: '標準残業承認フロー（組織連動）',
-      description: '組織階層に基づく残業承認。直属上司の承認が必要',
-      type: 'organization',
-      documentType: 'overtime_request',
-      useOrganizationHierarchy: true,
-      organizationLevels: 1,
-      conditions: [],
-      isActive: true,
-      isDefault: true,
-      priority: 1,
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-      companyId,
-    },
-    // 6. 出張申請 - 組織連動型（デフォルト）
-    {
-      id: 'flow_trip_default',
-      name: '標準出張承認フロー（組織連動）',
-      description: '組織階層に基づく出張承認。直属上司→部長の順で承認',
-      type: 'organization',
-      documentType: 'business_trip',
-      useOrganizationHierarchy: true,
-      organizationLevels: 2,
-      conditions: [],
-      isActive: true,
-      isDefault: true,
-      priority: 1,
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-      companyId,
-    },
-    // 7. 購買申請 - カスタム型
-    {
-      id: 'flow_purchase_default',
-      name: '標準購買承認フロー（カスタム）',
-      description: '資産責任者と経理部長の承認が必要',
-      type: 'custom',
-      documentType: 'purchase_request',
-      steps: [
-        {
-          id: 'step_purchase_1',
-          stepNumber: 1,
-          name: '資産責任者承認',
-          mode: 'serial',
-          approvers: [],
-          requiredApprovals: 1,
-          timeoutHours: 24,
-          allowDelegate: true,
-          allowSkip: false,
-        },
-        {
-          id: 'step_purchase_2',
-          stepNumber: 2,
-          name: '経理部長承認',
-          mode: 'serial',
-          approvers: [],
-          requiredApprovals: 1,
-          timeoutHours: 48,
-          allowDelegate: false,
-          allowSkip: false,
-        },
-      ],
-      conditions: [],
-      isActive: true,
-      isDefault: true,
-      priority: 1,
-      createdBy,
-      createdAt: now,
-      updatedAt: now,
-      companyId,
-    },
-  ];
-};
 
 /**
  * 条件判定ロジック
@@ -318,18 +109,14 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
           const response = await fetch('/api/approval-flows?tenantId=tenant-1');
           const result = await response.json();
 
-          if (result.success && result.data.length > 0) {
-            set({ flows: result.data, initialized: true, isLoading: false });
+          if (result.success) {
+            set({ flows: result.data || [], initialized: true, isLoading: false });
           } else {
-            // APIにデータがない場合はデモデータを使用
-            const demoFlows = generateDemoFlows();
-            set({ flows: demoFlows, initialized: true, isLoading: false });
+            set({ flows: [], initialized: true, isLoading: false, error: result.error || 'データの取得に失敗しました' });
           }
         } catch (error) {
           console.error('Error fetching approval flows:', error);
-          // エラー時はローカルのデモデータを使用
-          const demoFlows = generateDemoFlows();
-          set({ flows: demoFlows, initialized: true, isLoading: false, error: 'APIからの取得に失敗しました' });
+          set({ flows: [], initialized: true, isLoading: false, error: 'APIからの取得に失敗しました' });
         }
       },
 
@@ -642,16 +429,15 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
         return stats;
       },
 
-      // 初期化（APIから取得を試み、失敗時はデモデータ）
-      initializeDemoData: () => {
+      // 初期化（APIからフローを取得）
+      initialize: () => {
         const state = get();
 
         if (state.initialized && state.flows.length > 0) {
-          console.log('Approval flows already initialized');
           return;
         }
 
-        // APIから取得を試みる
+        // APIから取得
         get().fetchFlows();
       },
 

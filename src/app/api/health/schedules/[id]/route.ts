@@ -10,24 +10,6 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // デモモードの場合
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return NextResponse.json({
-        success: true,
-        data: {
-          id,
-          tenantId: 'tenant-1',
-          userId: 'user-001',
-          userName: '田中太郎',
-          departmentName: '営業部',
-          checkupTypeName: '定期健康診断',
-          scheduledDate: new Date(),
-          status: 'scheduled',
-          fiscalYear: 2024,
-        },
-      });
-    }
-
     const schedule = await prisma.health_checkup_schedules.findUnique({
       where: { id },
     });
@@ -52,16 +34,6 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-
-    // デモモードの場合
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      const body = await request.json();
-      return NextResponse.json({
-        success: true,
-        data: { id, ...body, updatedAt: new Date() },
-      });
-    }
-
     const body = await request.json();
     const {
       userName,
@@ -104,11 +76,6 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-
-    // デモモードの場合
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return NextResponse.json({ success: true });
-    }
 
     await prisma.health_checkup_schedules.delete({
       where: { id },

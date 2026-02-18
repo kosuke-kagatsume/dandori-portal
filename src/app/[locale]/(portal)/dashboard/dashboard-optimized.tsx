@@ -18,10 +18,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
-import { hasPermission, roleDisplayNames, demoUsers } from '@/lib/demo-users';
+import { ROLE_LABELS, type UserRole } from '@/lib/rbac';
 import { useCachedData } from '@/lib/cache-service';
 import { usePerformanceTracking } from '@/lib/performance';
-import type { UserRole } from '@/types';
 
 // 重いコンポーネントを動的インポート
 const ActivityFeed = lazy(() => import('./components/activity-feed'));
@@ -85,24 +84,18 @@ const CardSkeleton = () => (
 export default function OptimizedDashboard() {
   // パフォーマンス追跡
   const cleanup = usePerformanceTracking('OptimizedDashboard');
-  
-  const { currentDemoUser, switchDemoRole } = useUserStore();
-  const [effectiveDemoUser, setEffectiveDemoUser] = useState(currentDemoUser);
-  
-  // 初期化時にローカルストレージから役割を読み込み
+
+  const { currentUser } = useUserStore();
+  const [mounted, setMounted] = useState(false);
+
+  // 本番ユーザーのロールを取得
+  const currentUserRole: UserRole = currentUser?.roles?.[0] as UserRole || 'employee';
+
+  // マウント完了を設定
   useEffect(() => {
-    const storedRole = localStorage.getItem('demo-role') as UserRole;
-    if (storedRole && demoUsers[storedRole]) {
-      switchDemoRole(storedRole);
-      setEffectiveDemoUser(demoUsers[storedRole]);
-    } else if (currentDemoUser) {
-      setEffectiveDemoUser(currentDemoUser);
-    } else {
-      setEffectiveDemoUser(demoUsers.employee);
-    }
-    
+    setMounted(true);
     return cleanup;
-  }, []);
+  }, [cleanup]);
   
   // 固定の日本語翻訳をメモ化
   const translations: Record<string, string> = useMemo(() => ({
@@ -160,11 +153,11 @@ export default function OptimizedDashboard() {
 
   // 権限チェック（メモ化）
   const permissions = useMemo(() => ({
-    canViewAll: hasPermission(effectiveDemoUser, 'view_all'),
-    canViewTeam: hasPermission(effectiveDemoUser, 'view_team'),
-    canApprove: hasPermission(effectiveDemoUser, 'approve_requests'),
-    canManageSystem: hasPermission(effectiveDemoUser, 'manage_system'),
-  }), [effectiveDemoUser]);
+    canViewAll: ['admin', 'hr', 'executive'].includes(currentUserRole),
+    canViewTeam: ['admin', 'hr', 'executive', 'manager'].includes(currentUserRole),
+    canApprove: ['admin', 'hr', 'executive', 'manager'].includes(currentUserRole),
+    canManageSystem: currentUserRole === 'admin',
+  }), [currentUserRole]);
 
   // KPIカードの設定をメモ化
   const kpiCards = useMemo(() => {
@@ -215,26 +208,42 @@ export default function OptimizedDashboard() {
     return cards;
   }, [permissions, kpiData, t]);
 
+  // ローディング中は表示しない
+  if (!mounted) {
+    return (
+      <div className="space-y-6">
+        <CardSkeleton />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">
-          {effectiveDemoUser ? `${effectiveDemoUser.name}さん（${roleDisplayNames[effectiveDemoUser.role] || effectiveDemoUser.role}）のダッシュボード` : '今日の概要と重要な指標を確認できます'}
+          {currentUser ? `${currentUser.name}さん（${ROLE_LABELS[currentUserRole]}）のダッシュボード` : '今日の概要と重要な指標を確認できます'}
         </p>
-        {effectiveDemoUser && (
+        {currentUser && (
           <div className="mt-2 flex items-center gap-2">
             <Badge variant={
-              effectiveDemoUser.role === 'admin' ? 'destructive' :
-              effectiveDemoUser.role === 'hr' ? 'default' :
-              effectiveDemoUser.role === 'manager' ? 'secondary' :
+              currentUserRole === 'admin' ? 'destructive' :
+              currentUserRole === 'hr' ? 'default' :
+              currentUserRole === 'manager' ? 'secondary' :
               'outline'
             }>
-              {effectiveDemoUser.role === 'employee' && '👤 自分の情報のみ表示'}
-              {effectiveDemoUser.role === 'manager' && '👥 チーム8名の情報を表示'}
-              {effectiveDemoUser.role === 'hr' && '🏢 全社50名の情報を表示'}
-              {effectiveDemoUser.role === 'admin' && '⚙️ システム管理機能付き'}
+              {currentUserRole === 'employee' && '自分の情報のみ表示'}
+              {currentUserRole === 'manager' && 'チームの情報を表示'}
+              {currentUserRole === 'hr' && '全社の情報を表示'}
+              {currentUserRole === 'executive' && '経営情報を表示'}
+              {currentUserRole === 'admin' && 'システム管理機能付き'}
             </Badge>
           </div>
         )}
@@ -243,7 +252,7 @@ export default function OptimizedDashboard() {
       {/* KPI Cards with Loading State */}
       <StaggerContainer>
         <div className={`grid gap-4 md:grid-cols-2 ${
-          effectiveDemoUser?.role === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
+          currentUserRole === 'employee' ? 'lg:grid-cols-2' : 'lg:grid-cols-4'
         }`}>
           {kpiLoading ? (
             <>
@@ -263,7 +272,7 @@ export default function OptimizedDashboard() {
       </StaggerContainer>
 
       {/* Employee Notice */}
-      {effectiveDemoUser?.role === 'employee' && (
+      {currentUserRole === 'employee' && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -357,7 +366,6 @@ export default function OptimizedDashboard() {
       {/* Quick Actions - Lazy Loaded */}
       <Suspense fallback={<CardSkeleton />}>
         <QuickActions
-          effectiveDemoUser={effectiveDemoUser}
           permissions={permissions}
         />
       </Suspense>

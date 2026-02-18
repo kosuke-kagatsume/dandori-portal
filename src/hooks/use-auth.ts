@@ -29,15 +29,6 @@ export function useAuth() {
 
   useEffect(() => {
     const getUser = async () => {
-      // デモモードの場合はAPIを呼ばない
-      const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-      if (isDemoMode) {
-        authCache = { user: null, checked: true, timestamp: Date.now() };
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
       // キャッシュが有効な場合はAPIを呼ばない
       const now = Date.now();
       if (authCache.checked && (now - authCache.timestamp) < AUTH_CACHE_TTL) {

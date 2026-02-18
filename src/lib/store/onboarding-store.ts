@@ -5,10 +5,10 @@
  * Features:
  * - State management for 4 forms
  * - Auto-save functionality (every 30 seconds)
- * - LocalStorage persistence (dev) / S3 (prod)
+ * - LocalStorage persistence for caching
  * - Progress tracking
  * - Form submission/approval flow
- * - API integration for production mode
+ * - Full API integration
  */
 
 import { create } from 'zustand';
@@ -209,25 +209,9 @@ function calculateDaysUntilDeadline(deadline: string): number {
 }
 
 /**
- * Check if running in demo mode
- */
-function isDemoMode(): boolean {
-  return process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-}
-
-/**
  * API call to save form data
- * Demo mode: Save to localStorage
- * Production mode: Save to API
  */
 async function saveFormToAPI(formType: string, formData: OnboardingFormData): Promise<void> {
-  if (isDemoMode()) {
-    // Demo mode: Save to localStorage
-    localStorage.setItem(`onboarding_${formType}_${formData.id}`, JSON.stringify(formData));
-    return;
-  }
-
-  // Production mode: Save to API
   try {
     const applicationId = formData.applicationId;
 
@@ -257,24 +241,8 @@ async function saveFormToAPI(formType: string, formData: OnboardingFormData): Pr
 
 /**
  * API call to submit form
- * Demo mode: Update localStorage
- * Production mode: Submit to API
  */
-async function submitFormToAPI(formType: string, formId: string, formData: OnboardingFormData): Promise<void> {
-  if (isDemoMode()) {
-    // Demo mode: Update localStorage
-    const key = `onboarding_${formType}_${formId}`;
-    const data = localStorage.getItem(key);
-    if (data) {
-      const form = JSON.parse(data);
-      form.status = 'submitted';
-      form.submittedAt = new Date().toISOString();
-      localStorage.setItem(key, JSON.stringify(form));
-    }
-    return;
-  }
-
-  // Production mode: Submit to API
+async function submitFormToAPI(formType: string, _formId: string, formData: OnboardingFormData): Promise<void> {
   try {
     const applicationId = formData.applicationId;
 
@@ -323,26 +291,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
         set({ isLoading: true, error: null });
 
         try {
-          if (isDemoMode()) {
-            // Demo mode: Load from localStorage
-            const appData = localStorage.getItem(`onboarding_application_${applicationId}`);
-            const basicData = localStorage.getItem(`onboarding_basic_info_${applicationId}`);
-            const familyData = localStorage.getItem(`onboarding_family_info_${applicationId}`);
-            const bankData = localStorage.getItem(`onboarding_bank_account_${applicationId}`);
-            const commuteData = localStorage.getItem(`onboarding_commute_route_${applicationId}`);
-
-            set({
-              application: appData ? JSON.parse(appData) : null,
-              basicInfoForm: basicData ? JSON.parse(basicData) : null,
-              familyInfoForm: familyData ? JSON.parse(familyData) : null,
-              bankAccountForm: bankData ? JSON.parse(bankData) : null,
-              commuteRouteForm: commuteData ? JSON.parse(commuteData) : null,
-              isLoading: false,
-            });
-            return;
-          }
-
-          // Production mode: Load from API
+          // Load from API
           const application = await getApplication(applicationId);
 
           // Load all forms in parallel

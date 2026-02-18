@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,52 +43,31 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, parseISO } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useTenantStore } from '@/lib/store';
 
-// デモ用チームメンバーデータ
-const DEMO_TEAM_MEMBERS = [
-  { id: '1', name: '田中太郎', department: '開発部', position: 'エンジニア', employeeNumber: 'EMP001' },
-  { id: '2', name: '佐藤花子', department: '開発部', position: 'デザイナー', employeeNumber: 'EMP002' },
-  { id: '3', name: '鈴木一郎', department: '営業部', position: '営業', employeeNumber: 'EMP003' },
-  { id: '4', name: '高橋美咲', department: '開発部', position: 'PM', employeeNumber: 'EMP004' },
-  { id: '5', name: '伊藤健太', department: '人事部', position: '人事担当', employeeNumber: 'EMP005' },
-  { id: '6', name: '渡辺優子', department: '経理部', position: '経理担当', employeeNumber: 'EMP006' },
-  { id: '7', name: '山本大輔', department: '開発部', position: 'エンジニア', employeeNumber: 'EMP007' },
-  { id: '8', name: '中村真理', department: '営業部', position: '営業', employeeNumber: 'EMP008' },
-];
+interface TeamMember {
+  id: string;
+  name: string;
+  department: string | null;
+  position: string | null;
+  employeeNumber?: string;
+}
 
-// デモ用勤怠データ生成
-const generateDemoAttendance = (memberId: string, date: Date) => {
-  const rand = Math.random();
-  const isWeekendDay = isWeekend(date);
-
-  if (isWeekendDay) {
-    return { status: 'weekend' as const, checkIn: null, checkOut: null };
-  }
-
-  if (rand < 0.1) {
-    return { status: 'absent' as const, checkIn: null, checkOut: null };
-  }
-
-  const checkInHour = 8 + Math.floor(Math.random() * 2);
-  const checkInMinute = Math.floor(Math.random() * 60);
-  const checkOutHour = 17 + Math.floor(Math.random() * 3);
-  const checkOutMinute = Math.floor(Math.random() * 60);
-
-  const isLate = checkInHour >= 9 && checkInMinute > 30;
-  const isRemote = rand > 0.7;
-
-  return {
-    status: isLate ? 'late' as const : isRemote ? 'remote' as const : 'present' as const,
-    checkIn: `${checkInHour.toString().padStart(2, '0')}:${checkInMinute.toString().padStart(2, '0')}`,
-    checkOut: rand > 0.2 ? `${checkOutHour.toString().padStart(2, '0')}:${checkOutMinute.toString().padStart(2, '0')}` : null,
-    workLocation: isRemote ? 'home' : 'office',
-  };
-};
+interface AttendanceRecord {
+  id: string;
+  userId: string;
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  workLocation: string | null;
+  status: string;
+}
 
 interface TeamMemberAttendance {
   memberId: string;
@@ -122,86 +101,220 @@ interface TeamAttendanceSummary {
 }
 
 export function TeamAttendance() {
+  const { currentTenant } = useTenantStore();
+  const tenantId = currentTenant?.id || 'tenant-1';
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Initialize date on client side to avoid SSR/CSR hydration mismatch
-  useEffect(() => {
-    setCurrentDate(new Date());
-  }, []);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [closingFilter, setClosingFilter] = useState<string>('all');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
   const [bulkActionType, setBulkActionType] = useState<'approve' | 'close' | 'reopen' | null>(null);
 
-  // 今日の日付
+  // API data states
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize date on client side
+  useEffect(() => {
+    setCurrentDate(new Date());
+  }, []);
+
+  // Fetch team members and attendance data
+  const fetchData = useCallback(async () => {
+    if (!tenantId || !currentDate) return;
+
+    setIsLoading(true);
+    try {
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+
+      // Fetch users and attendance in parallel
+      const [usersRes, attendanceRes] = await Promise.all([
+        fetch(`/api/users?tenantId=${tenantId}`),
+        fetch(`/api/attendance?tenantId=${tenantId}&startDate=${format(monthStart, 'yyyy-MM-dd')}&endDate=${format(monthEnd, 'yyyy-MM-dd')}`),
+      ]);
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        if (usersData.success) {
+          setTeamMembers(usersData.data.map((u: { id: string; name: string; department: string | null; position: string | null; employeeNumber?: string }) => ({
+            id: u.id,
+            name: u.name,
+            department: u.department || '',
+            position: u.position || '',
+            employeeNumber: u.employeeNumber || `EMP${u.id.slice(0, 6)}`,
+          })));
+        }
+      }
+
+      if (attendanceRes.ok) {
+        const attendanceData = await attendanceRes.json();
+        if (attendanceData.success) {
+          setAttendanceRecords(attendanceData.data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch team attendance data:', error);
+      toast.error('チーム勤怠データの取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tenantId, currentDate]);
+
+  useEffect(() => {
+    if (tenantId && currentDate) {
+      fetchData();
+    }
+  }, [tenantId, currentDate, fetchData]);
+
   const today = new Date();
 
-  // チームメンバーの勤怠データを生成
+  // Transform attendance data for today
   const teamAttendanceData: TeamMemberAttendance[] = useMemo(() => {
-    return DEMO_TEAM_MEMBERS.map(member => {
-      const attendance = generateDemoAttendance(member.id, today);
-      const alerts: string[] = [];
+    const todayStr = format(today, 'yyyy-MM-dd');
 
-      if (attendance.status === 'late') {
-        alerts.push('遅刻');
+    return teamMembers.map(member => {
+      const record = attendanceRecords.find(
+        r => r.userId === member.id && r.date === todayStr
+      );
+
+      const alerts: string[] = [];
+      let status: TeamMemberAttendance['status'] = 'not_checked_in';
+
+      if (isWeekend(today)) {
+        status = 'weekend';
+      } else if (record) {
+        if (record.status === 'absent') {
+          status = 'absent';
+        } else if (record.checkIn) {
+          const checkInTime = record.checkIn;
+          const isLate = checkInTime > '09:30';
+          const isRemote = record.workLocation === 'home' || record.workLocation === 'remote';
+
+          if (isLate) {
+            status = 'late';
+            alerts.push('遅刻');
+          } else if (isRemote) {
+            status = 'remote';
+          } else {
+            status = 'present';
+          }
+
+          if (!record.checkOut && record.checkIn) {
+            alerts.push('未退勤');
+          }
+        }
       }
-      if (!attendance.checkOut && attendance.checkIn) {
-        alerts.push('未退勤');
+
+      // Calculate work hours if both checkIn and checkOut exist
+      let workHours: number | undefined;
+      if (record?.checkIn && record?.checkOut) {
+        const [inH, inM] = record.checkIn.split(':').map(Number);
+        const [outH, outM] = record.checkOut.split(':').map(Number);
+        workHours = (outH * 60 + outM - inH * 60 - inM) / 60;
       }
 
       return {
         memberId: member.id,
         memberName: member.name,
-        department: member.department,
-        position: member.position,
-        employeeNumber: member.employeeNumber,
-        status: attendance.checkIn ? attendance.status : 'not_checked_in',
-        checkIn: attendance.checkIn,
-        checkOut: attendance.checkOut,
-        workLocation: attendance.workLocation,
-        workHours: attendance.checkIn && attendance.checkOut ? 8 + Math.random() * 2 : undefined,
-        overtime: Math.random() > 0.7 ? Math.random() * 3 : 0,
-        closingStatus: Math.random() > 0.7 ? 'approved' : Math.random() > 0.5 ? 'pending' : 'open',
+        department: member.department || '',
+        position: member.position || '',
+        employeeNumber: member.employeeNumber || '',
+        status,
+        checkIn: record?.checkIn || null,
+        checkOut: record?.checkOut || null,
+        workLocation: record?.workLocation || undefined,
+        workHours,
+        overtime: workHours && workHours > 8 ? workHours - 8 : 0,
+        closingStatus: 'open' as const, // TODO: get from API
         alerts,
       };
     });
-  }, [today]);
+  }, [teamMembers, attendanceRecords, today]);
 
-  // 月間集計データを生成
+  // Monthly summary data
   const teamSummaryData: TeamAttendanceSummary[] = useMemo(() => {
-    const dateToUse = currentDate || new Date();
-    const monthStart = startOfMonth(dateToUse);
-    const monthEnd = endOfMonth(dateToUse);
+    if (!currentDate) return [];
+
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
     const workDays = daysInMonth.filter(d => !isWeekend(d)).length;
 
-    return DEMO_TEAM_MEMBERS.map(member => {
-      const presentDays = Math.floor(workDays * (0.85 + Math.random() * 0.15));
-      const remoteDays = Math.floor(presentDays * (0.2 + Math.random() * 0.3));
-      const absentDays = workDays - presentDays;
-      const lateDays = Math.floor(Math.random() * 3);
-      const earlyLeaveDays = Math.floor(Math.random() * 2);
+    return teamMembers.map(member => {
+      const memberRecords = attendanceRecords.filter(r => r.userId === member.id);
+
+      let presentDays = 0;
+      let remoteDays = 0;
+      let absentDays = 0;
+      let lateDays = 0;
+      let earlyLeaveDays = 0;
+      let totalWorkHours = 0;
+      let totalOvertimeHours = 0;
+
+      memberRecords.forEach(record => {
+        const recordDate = parseISO(record.date);
+        if (isWeekend(recordDate)) return;
+
+        if (record.status === 'absent') {
+          absentDays++;
+          return;
+        }
+
+        if (record.checkIn) {
+          const isRemote = record.workLocation === 'home' || record.workLocation === 'remote';
+          if (isRemote) {
+            remoteDays++;
+          } else {
+            presentDays++;
+          }
+
+          if (record.checkIn > '09:30') {
+            lateDays++;
+          }
+
+          if (record.checkOut && record.checkOut < '17:00') {
+            earlyLeaveDays++;
+          }
+
+          // Calculate hours
+          if (record.checkIn && record.checkOut) {
+            const [inH, inM] = record.checkIn.split(':').map(Number);
+            const [outH, outM] = record.checkOut.split(':').map(Number);
+            const hours = (outH * 60 + outM - inH * 60 - inM) / 60;
+            totalWorkHours += hours;
+            if (hours > 8) {
+              totalOvertimeHours += hours - 8;
+            }
+          }
+        }
+      });
+
+      // Calculate absent days for days without records
+      const workedOrAbsent = presentDays + remoteDays + absentDays;
+      const daysUntilToday = daysInMonth.filter(d => !isWeekend(d) && d <= today).length;
+      absentDays = Math.max(0, daysUntilToday - workedOrAbsent);
 
       return {
         memberId: member.id,
         memberName: member.name,
-        department: member.department,
+        department: member.department || '',
         workDays,
         presentDays,
         remoteDays,
         absentDays,
         lateDays,
         earlyLeaveDays,
-        totalWorkHours: presentDays * 8 + Math.random() * 20,
-        totalOvertimeHours: Math.random() * 30,
-        closingStatus: Math.random() > 0.7 ? 'approved' : Math.random() > 0.5 ? 'pending' : 'open',
+        totalWorkHours,
+        totalOvertimeHours,
+        closingStatus: 'open' as const, // TODO: get from API
       };
     });
-  }, [currentDate]);
+  }, [teamMembers, attendanceRecords, currentDate, today]);
 
-  // フィルタリング
+  // Filtering
   const filteredAttendance = useMemo(() => {
     return teamAttendanceData.filter(member => {
       const matchesSearch = member.memberName.includes(searchQuery) ||
@@ -222,7 +335,7 @@ export function TeamAttendance() {
     });
   }, [teamSummaryData, searchQuery, closingFilter]);
 
-  // 選択制御
+  // Selection controls
   const toggleMemberSelection = (memberId: string) => {
     setSelectedMembers(prev =>
       prev.includes(memberId)
@@ -239,7 +352,7 @@ export function TeamAttendance() {
     }
   };
 
-  // 一括操作
+  // Bulk actions
   const handleBulkAction = (action: 'approve' | 'close' | 'reopen') => {
     if (selectedMembers.length === 0) {
       toast.error('メンバーを選択してください');
@@ -262,7 +375,7 @@ export function TeamAttendance() {
     setBulkActionType(null);
   };
 
-  // ステータスバッジ
+  // Status badge
   const getStatusBadge = (status: TeamMemberAttendance['status']) => {
     const config = {
       present: { label: '出勤', variant: 'default' as const, className: 'bg-green-500' },
@@ -287,7 +400,7 @@ export function TeamAttendance() {
     return <Badge variant={variant}>{label}</Badge>;
   };
 
-  // 月移動
+  // Month navigation
   const goToPreviousMonth = () => {
     setCurrentDate(prev => {
       const date = prev || new Date();
@@ -301,6 +414,20 @@ export function TeamAttendance() {
       return new Date(date.getFullYear(), date.getMonth() + 1, 1);
     });
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">チーム勤怠データを読み込み中...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -327,7 +454,7 @@ export function TeamAttendance() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* フィルター */}
+        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -364,7 +491,7 @@ export function TeamAttendance() {
           </Select>
         </div>
 
-        {/* 一括操作ボタン */}
+        {/* Bulk action buttons */}
         {selectedMembers.length > 0 && (
           <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
             <span className="text-sm font-medium">{selectedMembers.length}名選択中</span>
@@ -396,7 +523,7 @@ export function TeamAttendance() {
           </div>
         )}
 
-        {/* タブ */}
+        {/* Tabs */}
         <Tabs defaultValue="punch" className="space-y-4">
           <TabsList>
             <TabsTrigger value="punch" className="flex items-center gap-2">
@@ -409,7 +536,7 @@ export function TeamAttendance() {
             </TabsTrigger>
           </TabsList>
 
-          {/* 打刻状況タブ */}
+          {/* Punch status tab */}
           <TabsContent value="punch">
             <div className="border rounded-lg overflow-hidden">
               <Table>
@@ -433,66 +560,74 @@ export function TeamAttendance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAttendance.map((member) => (
-                    <TableRow key={member.memberId}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedMembers.includes(member.memberId)}
-                          onCheckedChange={() => toggleMemberSelection(member.memberId)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{member.employeeNumber}</TableCell>
-                      <TableCell className="font-medium">{member.memberName}</TableCell>
-                      <TableCell>{member.department}</TableCell>
-                      <TableCell>{getStatusBadge(member.status)}</TableCell>
-                      <TableCell>
-                        {member.checkIn ? (
-                          <span className="font-mono">{member.checkIn}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {member.checkOut ? (
-                          <span className="font-mono">{member.checkOut}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {member.workLocation === 'home' ? (
-                          <div className="flex items-center gap-1">
-                            <Home className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm">在宅</span>
-                          </div>
-                        ) : member.workLocation === 'office' ? (
-                          <div className="flex items-center gap-1">
-                            <Building2 className="h-4 w-4" />
-                            <span className="text-sm">オフィス</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{getClosingBadge(member.closingStatus)}</TableCell>
-                      <TableCell>
-                        {member.alerts.length > 0 ? (
-                          <div className="flex items-center gap-1">
-                            <AlertTriangle className="h-4 w-4 text-orange-500" />
-                            <span className="text-xs text-orange-600">{member.alerts.join(', ')}</span>
-                          </div>
-                        ) : (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        )}
+                  {filteredAttendance.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        チームメンバーが見つかりません
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredAttendance.map((member) => (
+                      <TableRow key={member.memberId}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedMembers.includes(member.memberId)}
+                            onCheckedChange={() => toggleMemberSelection(member.memberId)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{member.employeeNumber}</TableCell>
+                        <TableCell className="font-medium">{member.memberName}</TableCell>
+                        <TableCell>{member.department}</TableCell>
+                        <TableCell>{getStatusBadge(member.status)}</TableCell>
+                        <TableCell>
+                          {member.checkIn ? (
+                            <span className="font-mono">{member.checkIn}</span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {member.checkOut ? (
+                            <span className="font-mono">{member.checkOut}</span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {member.workLocation === 'home' || member.workLocation === 'remote' ? (
+                            <div className="flex items-center gap-1">
+                              <Home className="h-4 w-4 text-blue-500" />
+                              <span className="text-sm">在宅</span>
+                            </div>
+                          ) : member.workLocation === 'office' ? (
+                            <div className="flex items-center gap-1">
+                              <Building2 className="h-4 w-4" />
+                              <span className="text-sm">オフィス</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{getClosingBadge(member.closingStatus)}</TableCell>
+                        <TableCell>
+                          {member.alerts.length > 0 ? (
+                            <div className="flex items-center gap-1">
+                              <AlertTriangle className="h-4 w-4 text-orange-500" />
+                              <span className="text-xs text-orange-600">{member.alerts.join(', ')}</span>
+                            </div>
+                          ) : (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
           </TabsContent>
 
-          {/* 勤怠項目別集計タブ */}
+          {/* Monthly summary tab */}
           <TabsContent value="summary">
             <div className="border rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
@@ -519,58 +654,66 @@ export function TeamAttendance() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSummary.map((member) => (
-                      <TableRow key={member.memberId}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedMembers.includes(member.memberId)}
-                            onCheckedChange={() => toggleMemberSelection(member.memberId)}
-                          />
+                    {filteredSummary.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                          チームメンバーが見つかりません
                         </TableCell>
-                        <TableCell className="font-medium">{member.memberName}</TableCell>
-                        <TableCell>{member.department}</TableCell>
-                        <TableCell className="text-right">{member.workDays}日</TableCell>
-                        <TableCell className="text-right">{member.presentDays}日</TableCell>
-                        <TableCell className="text-right">{member.remoteDays}日</TableCell>
-                        <TableCell className="text-right">
-                          {member.absentDays > 0 ? (
-                            <span className="text-red-600 font-medium">{member.absentDays}日</span>
-                          ) : (
-                            '0日'
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {member.lateDays > 0 ? (
-                            <span className="text-orange-600">{member.lateDays}回</span>
-                          ) : (
-                            '0回'
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {member.earlyLeaveDays > 0 ? (
-                            <span className="text-yellow-600">{member.earlyLeaveDays}回</span>
-                          ) : (
-                            '0回'
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {member.totalWorkHours.toFixed(1)}h
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {member.totalOvertimeHours > 0 ? (
-                            <span className={cn(
-                              member.totalOvertimeHours > 40 ? 'text-red-600 font-medium' :
-                              member.totalOvertimeHours > 30 ? 'text-orange-600' : ''
-                            )}>
-                              {member.totalOvertimeHours.toFixed(1)}h
-                            </span>
-                          ) : (
-                            '0h'
-                          )}
-                        </TableCell>
-                        <TableCell>{getClosingBadge(member.closingStatus)}</TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredSummary.map((member) => (
+                        <TableRow key={member.memberId}>
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedMembers.includes(member.memberId)}
+                              onCheckedChange={() => toggleMemberSelection(member.memberId)}
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">{member.memberName}</TableCell>
+                          <TableCell>{member.department}</TableCell>
+                          <TableCell className="text-right">{member.workDays}日</TableCell>
+                          <TableCell className="text-right">{member.presentDays}日</TableCell>
+                          <TableCell className="text-right">{member.remoteDays}日</TableCell>
+                          <TableCell className="text-right">
+                            {member.absentDays > 0 ? (
+                              <span className="text-red-600 font-medium">{member.absentDays}日</span>
+                            ) : (
+                              '0日'
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {member.lateDays > 0 ? (
+                              <span className="text-orange-600">{member.lateDays}回</span>
+                            ) : (
+                              '0回'
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {member.earlyLeaveDays > 0 ? (
+                              <span className="text-yellow-600">{member.earlyLeaveDays}回</span>
+                            ) : (
+                              '0回'
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {member.totalWorkHours.toFixed(1)}h
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {member.totalOvertimeHours > 0 ? (
+                              <span className={cn(
+                                member.totalOvertimeHours > 40 ? 'text-red-600 font-medium' :
+                                member.totalOvertimeHours > 30 ? 'text-orange-600' : ''
+                              )}>
+                                {member.totalOvertimeHours.toFixed(1)}h
+                              </span>
+                            ) : (
+                              '0h'
+                            )}
+                          </TableCell>
+                          <TableCell>{getClosingBadge(member.closingStatus)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -578,7 +721,7 @@ export function TeamAttendance() {
           </TabsContent>
         </Tabs>
 
-        {/* サマリー */}
+        {/* Summary */}
         <div className="flex flex-wrap gap-4 pt-4 border-t">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500" />
@@ -599,7 +742,7 @@ export function TeamAttendance() {
         </div>
       </CardContent>
 
-      {/* 一括操作確認ダイアログ */}
+      {/* Bulk action confirmation dialog */}
       <Dialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -616,7 +759,7 @@ export function TeamAttendance() {
             <p className="text-sm text-muted-foreground mb-2">対象メンバー:</p>
             <div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-1">
               {selectedMembers.map(id => {
-                const member = DEMO_TEAM_MEMBERS.find(m => m.id === id);
+                const member = teamMembers.find(m => m.id === id);
                 return member ? (
                   <div key={id} className="text-sm">
                     {member.name} ({member.department})

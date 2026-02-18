@@ -911,7 +911,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
       
       // 一括承認機能
       bulkApprove: (requestIds, comments) => {
-        const userId = useUserStore.getState().currentDemoUser?.id || 'user1';
+        const userId = useUserStore.getState().currentUser?.id || 'user1';
         const requests = get().requests.filter(r => requestIds.includes(r.id));
 
         requests.forEach(request => {
@@ -930,7 +930,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
       },
       
       bulkReject: (requestIds, reason) => {
-        const userId = useUserStore.getState().currentDemoUser?.id || 'user1';
+        const userId = useUserStore.getState().currentUser?.id || 'user1';
         const requests = get().requests.filter(r => requestIds.includes(r.id));
 
         requests.forEach(request => {

@@ -41,7 +41,7 @@ import { Loader2 } from 'lucide-react';
 export default function OrganizationPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const { currentUser, currentDemoUser } = useUserStore();
+  const { currentUser } = useUserStore();
   
   const {
     organizationTree,
@@ -68,15 +68,10 @@ export default function OrganizationPage() {
     fetchOrganization();
   }, [fetchOrganization]);
 
-  // 権限チェック - 本番ユーザーとデモユーザー両方に対応
+  // 権限チェック
   const getUserRole = (): UserRole | null => {
-    // 本番ユーザーの場合
     if (currentUser?.roles && currentUser.roles.length > 0) {
       return currentUser.roles[0] as UserRole;
-    }
-    // デモユーザーの場合（フォールバック）
-    if (currentDemoUser) {
-      return currentDemoUser.role as UserRole;
     }
     return null;
   };

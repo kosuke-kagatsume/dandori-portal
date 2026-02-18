@@ -17,25 +17,3 @@ export function getCookie(name: string): string | null {
   return null;
 }
 
-interface DemoUserFromCookie {
-  id: string;
-  name: string;
-  email?: string;
-  role?: string;
-}
-
-/**
- * デモセッションCookieからユーザー情報を取得
- */
-export function getDemoUserFromCookie(): DemoUserFromCookie | null {
-  try {
-    const demoSessionCookie = getCookie('demo_session');
-    if (demoSessionCookie) {
-      return JSON.parse(decodeURIComponent(demoSessionCookie));
-    }
-    return null;
-  } catch (error) {
-    console.error('Failed to parse demo session cookie:', error);
-    return null;
-  }
-}

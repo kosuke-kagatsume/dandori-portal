@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense, lazy, memo, useMemo } from 'react';
-import { generateRealisticAttendanceData } from '@/lib/realistic-mock-data';
+// generateRealisticAttendanceData は削除されました
 import { useAttendanceStore } from '@/lib/attendance-store';
 import {
   Clock,
@@ -174,10 +174,8 @@ export default function AttendancePage() {
   const { records: allHistoryRecords, addOrUpdateRecord } = useAttendanceHistoryStore();
 
   // ユーザー権限の確認
-  const { currentUser, currentDemoUser, isDemoMode } = useUserStore();
-  const currentUserRoles = isDemoMode
-    ? (currentDemoUser?.role ? [currentDemoUser.role] : ['employee'])
-    : (currentUser?.roles || ['employee']);
+  const { currentUser } = useUserStore();
+  const currentUserRoles = currentUser?.roles || ['employee'];
 
   // チーム勤怠タブを表示できる権限（人事/マネージャー/経営者/システム管理者）
   const canViewTeamAttendance = currentUserRoles.some((role: string) =>
@@ -263,69 +261,7 @@ export default function AttendancePage() {
   };
 
 
-  // デモデータの自動生成（デモモードのみ）
-  useEffect(() => {
-    // デモモードでない場合はスキップ（本番APIへの不要なリクエストを防止）
-    if (!isDemoMode && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
-      return;
-    }
-
-    if (allHistoryRecords.length === 0) {
-      console.log('[Demo] 勤怠履歴が空のため、デモデータを生成します...');
-
-      // デモデータ生成
-      const demoData = generateRealisticAttendanceData();
-
-      // 勤怠履歴ストアの形式に変換して追加
-      demoData.forEach((record) => {
-        // 日付を YYYY-MM-DD 形式に変換
-        const today = new Date();
-        const [month, day] = record.date.split('/');
-        const dateString = `${today.getFullYear()}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-
-        // ステータスをマッピング
-        const statusMap: Record<string, 'present' | 'absent' | 'holiday' | 'leave' | 'late' | 'early'> = {
-          'normal': 'present',
-          'late': 'late',
-          'early_leave': 'early',
-          'absence': 'absent',
-          'holiday': 'holiday',
-          'paid_leave': 'leave',
-          'sick_leave': 'leave',
-          'remote': 'present',
-        };
-
-        // 休憩時間を分に変換（文字列から）
-        const parseBreakTime = (breakTime: string): number => {
-          if (breakTime === '-') return 0;
-          const match = breakTime.match(/(\d+)分/);
-          return match ? parseInt(match[1]) : 60; // デフォルト60分
-        };
-
-        addOrUpdateRecord({
-          id: record.id,
-          userId: record.userId,
-          userName: record.userName,
-          date: dateString,
-          checkIn: record.checkIn || null,
-          checkOut: record.checkOut || null,
-          breakStart: record.breakStart || null,
-          breakEnd: record.breakEnd || null,
-          totalBreakMinutes: parseBreakTime(record.breakTime),
-          workMinutes: Math.round(record.workHours * 60),
-          overtimeMinutes: Math.round(record.overtime * 60),
-          workLocation: record.workLocation,
-          status: statusMap[record.status] || 'present',
-          memo: record.memo,
-          approvalStatus: record.approvalStatus,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      });
-
-      console.log(`[Demo] ${demoData.length}件の勤怠データを生成しました`);
-    }
-  }, [allHistoryRecords.length, addOrUpdateRecord]);
+  // デモデータ生成機能は削除されました
 
   // 初期ローディング状態の管理
   useEffect(() => {

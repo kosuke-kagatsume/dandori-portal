@@ -56,8 +56,8 @@ export function SimplePunchCard() {
   const requireLocation = attendanceSettings?.requireLocationOnCheckIn ?? false;
 
   // ユーザー情報を取得（同一PC複数ユーザー対応）
-  const { currentUser, currentDemoUser, isDemoMode } = useUserStore();
-  const currentUserId = isDemoMode ? currentDemoUser?.id : currentUser?.id;
+  const { currentUser } = useUserStore();
+  const currentUserId = currentUser?.id;
 
   // Check for day change on mount and every minute
   useEffect(() => {

@@ -10,8 +10,8 @@ const intlMiddleware = createMiddleware({
 // DW社管理者メールアドレス（環境変数から取得、なければデフォルト）
 const DW_ADMIN_EMAILS = (process.env.DW_ADMIN_EMAILS || 'admin@dw-inc.co.jp,super@dw-inc.co.jp').split(',');
 
-// メインドメインのデフォルトテナント（デモモード用のみ）
-const DEFAULT_TENANT_ID = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? 'tenant-1' : null;
+// メインドメインのデフォルトテナント
+const DEFAULT_TENANT_ID: string | null = null;
 
 // テナント情報のキャッシュ（メモリ内）
 // Edge Runtimeでもグローバル変数は利用可能
@@ -297,28 +297,7 @@ export default async function middleware(request: NextRequest) {
     return finalResponse;
   }
 
-  // 2. デモモードチェック
-  const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
-
-  if (isDemoMode) {
-    // デモモードでもロールベースアクセス制御を実施
-    const userRole = request.cookies.get('user_role')?.value || 'employee';
-    const menuKey = getMenuKeyFromPath(pathname);
-
-    if (menuKey && !hasMenuAccess(userRole, menuKey)) {
-      // アクセス権限がない場合、ダッシュボードにリダイレクト
-      // 現在のロケールをpathnameから取得
-      const locale = pathname.match(/^\/(ja|en)/)?.[1] || 'ja';
-      const dashboardUrl = new URL(`/${locale}/dashboard`, request.url);
-      const redirectResponse = NextResponse.redirect(dashboardUrl);
-      return addTenantHeaders(redirectResponse, tenantId, subdomain);
-    }
-
-    const response = intlMiddleware(request);
-    return addTenantHeaders(response, tenantId, subdomain);
-  }
-
-  // 3. 認証チェック（Cookie）
+  // 2. 認証チェック（Cookie）
   const accessToken = request.cookies.get('access_token')?.value;
 
   if (!accessToken) {
@@ -331,7 +310,7 @@ export default async function middleware(request: NextRequest) {
     return addTenantHeaders(redirectResponse, tenantId, subdomain);
   }
 
-  // 4. ロールベースアクセス制御
+  // 3. ロールベースアクセス制御
   const userRole = request.cookies.get('user_role')?.value;
   const menuKey = getMenuKeyFromPath(pathname);
 
@@ -342,7 +321,7 @@ export default async function middleware(request: NextRequest) {
     return addTenantHeaders(redirectResponse, tenantId, subdomain);
   }
 
-  // 5. 認証済み・権限OKの場合、next-intlミドルウェアに処理を渡す
+  // 4. 認証済み・権限OKの場合、next-intlミドルウェアに処理を渡す
   const response = intlMiddleware(request);
   return addTenantHeaders(response, tenantId, subdomain);
 }

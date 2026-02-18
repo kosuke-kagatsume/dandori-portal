@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { roleDisplayNames } from '@/lib/demo-users';
+import { ROLE_LABELS } from '@/lib/rbac';
 import { useMasterDataStore } from '@/lib/store/master-data-store';
 import type { UserRole } from '@/types';
 import {
@@ -59,11 +59,11 @@ interface InviteUserDialogProps {
 
 // 役職権限オプション (UserRole型を使用)
 const roleOptions: Array<{ value: UserRole; label: string }> = [
-  { value: 'employee', label: roleDisplayNames.employee },
-  { value: 'manager', label: roleDisplayNames.manager },
-  { value: 'executive', label: roleDisplayNames.executive },
-  { value: 'hr', label: roleDisplayNames.hr },
-  { value: 'admin', label: roleDisplayNames.admin },
+  { value: 'employee', label: ROLE_LABELS.employee },
+  { value: 'manager', label: ROLE_LABELS.manager },
+  { value: 'executive', label: ROLE_LABELS.executive },
+  { value: 'hr', label: ROLE_LABELS.hr },
+  { value: 'admin', label: ROLE_LABELS.admin },
 ];
 
 type InviteStatus = 'idle' | 'sending' | 'success' | 'error';

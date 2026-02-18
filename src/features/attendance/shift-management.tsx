@@ -57,9 +57,9 @@ const sampleUsers = [
 ];
 
 export function ShiftManagement() {
-  const { currentUser, currentDemoUser, isDemoMode } = useUserStore();
-  const currentUserId = isDemoMode ? (currentDemoUser?.id || '1') : (currentUser?.id || '1');
-  const currentUserName = isDemoMode ? (currentDemoUser?.name || '田中太郎') : (currentUser?.name || '田中太郎');
+  const { currentUser } = useUserStore();
+  const currentUserId = currentUser?.id || '1';
+  const currentUserName = currentUser?.name || '田中太郎';
 
   const {
     getActiveWorkPatterns,

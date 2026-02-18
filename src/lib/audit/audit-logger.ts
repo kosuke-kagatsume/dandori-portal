@@ -18,14 +18,12 @@ export function logAudit(input: AuditLogInput): void {
     const userStore = useUserStore.getState();
     const auditStore = useAuditStore.getState();
 
-    // 本番モード: currentUser、デモモード: currentDemoUser を使用
+    // ユーザー情報を取得
     const user = userStore.currentUser;
-    const demoUser = userStore.currentDemoUser;
 
-    // ユーザー情報を取得（本番ユーザー優先、なければデモユーザー）
-    const userId = user?.id || demoUser?.id;
-    const userName = user?.name || demoUser?.name;
-    const userRole = user?.roles?.[0] || demoUser?.role;
+    const userId = user?.id;
+    const userName = user?.name;
+    const userRole = user?.roles?.[0];
 
     if (!userId || !userName) {
       // ログイン前や認証処理中は警告を出さない（静かに終了）

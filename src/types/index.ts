@@ -307,20 +307,6 @@ export type TransferHistory = z.infer<typeof TransferHistorySchema>;
 export type UserRole = 'employee' | 'manager' | 'executive' | 'hr' | 'admin' | 'applicant';
 export type Permission = 'view_own' | 'view_team' | 'view_all' | 'approve_requests' | 'manage_system';
 
-export interface DemoUser {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  department: string;
-  avatar: string;
-  permissions: Permission[];
-  unitId?: string;
-  positionId?: string;
-  managerIds?: string[];
-  teamMemberIds?: string[];
-}
-
 // 組織図関連の型
 export interface OrganizationNode {
   id: string;

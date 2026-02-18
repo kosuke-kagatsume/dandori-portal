@@ -218,9 +218,9 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit, initialData, 
   const { createFlow, submitRequest } = useApprovalStore();
   const { getActiveLeaveTypes, getLeaveTypeById } = useLeaveTypeStore();
   const { getLeaveBalance } = useLeaveManagementStore();
-  const { currentUser, currentDemoUser, isDemoMode } = useUserStore();
+  const { currentUser } = useUserStore();
 
-  const currentUserId = isDemoMode ? (currentDemoUser?.id || '1') : (currentUser?.id || '1');
+  const currentUserId = currentUser?.id || '1';
   const currentYear = new Date().getFullYear();
 
   const [leaveUnit, setLeaveUnit] = useState<LeaveUnit>('full_day');
@@ -375,7 +375,7 @@ export function LeaveRequestDialog({ open, onOpenChange, onSubmit, initialData, 
         requestId,
         'leave',
         currentUserId,
-        isDemoMode ? (currentDemoUser?.name || '田中太郎') : (currentUser?.name || '田中太郎'),
+        currentUser?.name || '田中太郎',
         urgency
       );
 

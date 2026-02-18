@@ -12,89 +12,10 @@ import {
   CACHE_TTL,
   CACHE_PREFIX,
 } from '@/lib/cache/redis';
-import { demoLegalUpdates as importedDemoLegalUpdates } from '@/lib/demo-legal-updates';
-
-// デモ用の法令・制度更新データ（demo-legal-updates.tsから変換）
-const demoLegalUpdates = importedDemoLegalUpdates.map((update, index) => ({
-  id: `legal-${String(index + 1).padStart(3, '0')}`,
-  title: update.title,
-  description: update.description,
-  // カテゴリは英語キーをそのまま保持（フロントエンドで日本語変換）
-  category: update.category,
-  effectiveDate: new Date(update.effectiveDate),
-  relatedLaws: update.lawName || null,
-  affectedAreas: update.affectedAreas,
-  priority: update.importance === 'critical' ? 'high' :
-            update.importance === 'high' ? 'high' :
-            update.importance === 'medium' ? 'medium' : 'low',
-  referenceUrl: update.referenceUrl || null,
-  publishedAt: new Date(update.effectiveDate),
-  tenantStatus: {
-    status: update.status === 'applied' ? 'completed' :
-            update.status === 'preparing' ? 'in_progress' : 'pending',
-    notes: update.systemUpdateDetails || null,
-    completedAt: update.status === 'applied' ? new Date(update.effectiveDate) : null,
-    completedBy: update.status === 'applied' ? update.createdBy : null,
-  },
-}));
 
 // GET /api/legal-updates - テナント用：公開済み法令一覧取得（自社のステータス込み）
 export async function GET(request: NextRequest) {
   try {
-    // デモモードの場合はデモデータを返す
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      const { searchParams } = new URL(request.url);
-      const category = searchParams.get('category');
-      const status = searchParams.get('status');
-      const year = searchParams.get('year');
-
-      // フィルタリング
-      let filteredData = [...demoLegalUpdates];
-
-      // カテゴリでフィルタ
-      if (category && category !== 'all') {
-        filteredData = filteredData.filter((d) => d.category === category);
-      }
-
-      // 年度でフィルタ
-      if (year && year !== 'all') {
-        const yearNum = parseInt(year);
-        filteredData = filteredData.filter((d) => {
-          const effectiveYear = d.effectiveDate.getFullYear();
-          return effectiveYear === yearNum;
-        });
-      }
-
-      // ステータスでフィルタ
-      if (status && status !== 'all') {
-        filteredData = filteredData.filter((d) => {
-          if (status === 'pending') {
-            return d.tenantStatus.status === 'pending';
-          }
-          return d.tenantStatus.status === status;
-        });
-      }
-
-      // 全体の統計（フィルタ前のデータで計算）
-      const stats = {
-        total: demoLegalUpdates.length,
-        completed: demoLegalUpdates.filter((d) => d.tenantStatus.status === 'completed').length,
-        inProgress: demoLegalUpdates.filter((d) => d.tenantStatus.status === 'in_progress').length,
-        pending: demoLegalUpdates.filter((d) => d.tenantStatus.status === 'pending').length,
-      };
-
-      return successResponse(filteredData, {
-        count: filteredData.length,
-        pagination: {
-          page: 1,
-          limit: 20,
-          total: filteredData.length,
-          totalPages: 1,
-        },
-        stats,
-        cacheSeconds: 300,
-      });
-    }
     const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
     const category = searchParams.get('category');

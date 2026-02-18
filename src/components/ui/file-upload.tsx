@@ -78,20 +78,7 @@ export function FileUpload({
 
     try {
       const uploadPromises = files.map(async (file) => {
-        // デモモードの場合はモックURLを返す
-        if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-          const mockFile: UploadedFile = {
-            id: `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: URL.createObjectURL(file),
-            uploadedAt: new Date().toISOString(),
-          };
-          return mockFile;
-        }
-
-        // 本番環境ではAWS S3にアップロード
+        // AWS S3にアップロード
         const { data, error: uploadError } = await uploadFile(bucket, file);
 
         if (uploadError) {
@@ -131,10 +118,8 @@ export function FileUpload({
 
   const handleRemove = async (fileToRemove: UploadedFile) => {
     try {
-      // デモモード以外の場合、AWS S3から削除
-      if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
-        await deleteFile(bucket, fileToRemove.id);
-      }
+      // AWS S3から削除
+      await deleteFile(bucket, fileToRemove.id);
 
       const newFiles = value.filter((file) => file.id !== fileToRemove.id);
       onChange?.(newFiles);

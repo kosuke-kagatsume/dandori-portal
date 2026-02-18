@@ -18,29 +18,17 @@ import { usePermissionStore } from '@/lib/store/permission-store';
 interface UsePermissionsOptions {
   userId?: string;
   tenantId?: string;
-  /** trueの場合、デモモードとして旧rbac.tsを使用 */
-  demoMode?: boolean;
-  /** デモモードのロール */
-  demoRole?: string;
 }
 
 export function usePermissions(options?: UsePermissionsOptions) {
   const store = usePermissionStore();
 
   useEffect(() => {
-    if (options?.demoMode) {
-      store.setDemoMode(
-        true,
-        (options.demoRole as Parameters<typeof store.setDemoMode>[1]) || undefined
-      );
-      return;
-    }
-
     if (options?.userId && options?.tenantId) {
       store.fetchPermissions(options.userId, options.tenantId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options?.userId, options?.tenantId, options?.demoMode, options?.demoRole]);
+  }, [options?.userId, options?.tenantId]);
 
   return {
     /** 特定の権限コードを持つかチェック */

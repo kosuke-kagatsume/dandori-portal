@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { useDashboardStore } from '@/lib/store/dashboard-store';
-import { demoUsers } from '@/lib/demo-users';
 import { type UserRole, ROLE_LABELS } from '@/lib/rbac';
 import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
 import {
@@ -35,10 +34,8 @@ import {
 } from '@/components/dashboard/role-based-charts';
 
 export function DashboardContent() {
-  const { currentUser, currentDemoUser, switchDemoRole } = useUserStore();
+  const { currentUser } = useUserStore();
   const { kpiData, isLoading: isLoadingStats, fetchDashboardStats } = useDashboardStore();
-  // 初期値を確実に設定（SSR/CSR一致のため）
-  const [effectiveDemoUser, setEffectiveDemoUser] = useState(demoUsers.employee);
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -67,53 +64,18 @@ export function DashboardContent() {
 
   // 本番ユーザーのロールを取得
   const getCurrentUserRole = (): UserRole => {
-    // 本番ユーザーがいる場合はそのロールを使用
     if (currentUser?.roles && currentUser.roles.length > 0) {
       return currentUser.roles[0] as UserRole;
-    }
-    // デモユーザーの場合
-    if (effectiveDemoUser) {
-      return effectiveDemoUser.role as UserRole;
     }
     return 'employee';
   };
 
   const currentUserRole = getCurrentUserRole();
 
-  // 初期化時にローカルストレージから役割を読み込み
+  // マウント完了を設定
   useEffect(() => {
     setMounted(true);
-
-    // 本番ユーザーがいる場合はデモモードの初期化をスキップ
-    if (currentUser?.roles && currentUser.roles.length > 0) {
-      return;
-    }
-
-    // localStorageへの安全なアクセス（デモモードのみ）
-    if (typeof window !== 'undefined') {
-      try {
-        const storedRole = localStorage.getItem('demo-role') as UserRole;
-        if (storedRole && demoUsers[storedRole]) {
-          switchDemoRole(storedRole);
-          setEffectiveDemoUser(demoUsers[storedRole]);
-        } else if (currentDemoUser) {
-          setEffectiveDemoUser(currentDemoUser);
-        } else {
-          setEffectiveDemoUser(demoUsers.employee);
-        }
-      } catch (error) {
-        console.error('Failed to access localStorage:', error);
-        setEffectiveDemoUser(demoUsers.employee);
-      }
-    }
-  }, [currentUser]); // currentUserを依存配列に追加
-
-  // currentDemoUserの変更を監視してeffectiveDemoUserを同期
-  useEffect(() => {
-    if (mounted && currentDemoUser && !currentUser) {
-      setEffectiveDemoUser(currentDemoUser);
-    }
-  }, [currentDemoUser, mounted, currentUser]);
+  }, []);
 
   // 固定の日本語翻訳関数
   const t = (key: string) => {
@@ -213,7 +175,7 @@ export function DashboardContent() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <p className="text-muted-foreground">
-          {currentUser ? `${ROLE_LABELS[currentUserRole]}としてログイン中` : 'デモモードで実行中'}
+          {currentUser ? `${ROLE_LABELS[currentUserRole]}としてログイン中` : '今日の概要と重要な指標を確認できます'}
         </p>
       </div>
 

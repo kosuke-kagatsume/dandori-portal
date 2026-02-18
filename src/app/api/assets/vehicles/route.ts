@@ -11,71 +11,9 @@ import {
 } from '@/lib/api/api-helpers';
 import { createVehicleSchema, validateWithSchema } from '@/lib/validation/asset-schemas';
 
-// デモ用車両データ
-const demoVehicles = [
-  {
-    id: 'vehicle-001',
-    tenantId: 'tenant-1',
-    vehicleNumber: 'V-001',
-    licensePlate: '品川 300 あ 1234',
-    make: 'トヨタ',
-    model: 'プリウス',
-    year: 2022,
-    color: '白',
-    ownershipType: 'owned',
-    status: 'active',
-    assignedUserId: 'user-001',
-    assignedUserName: '田中太郎',
-    assignedDate: new Date('2022-04-01'),
-    inspectionDate: new Date('2024-04-15'),
-    maintenanceDate: new Date('2024-02-20'),
-    insuranceDate: new Date('2024-06-01'),
-    currentMileage: 45000,
-    purchaseCost: 3200000,
-    purchaseDate: new Date('2022-03-15'),
-    notes: '営業用車両',
-    createdAt: new Date('2022-03-15'),
-    updatedAt: new Date('2024-02-20'),
-  },
-  {
-    id: 'vehicle-002',
-    tenantId: 'tenant-1',
-    vehicleNumber: 'V-002',
-    licensePlate: '品川 500 い 5678',
-    make: 'ホンダ',
-    model: 'フィット',
-    year: 2021,
-    color: '青',
-    ownershipType: 'leased',
-    status: 'active',
-    assignedUserId: 'user-002',
-    assignedUserName: '鈴木花子',
-    assignedDate: new Date('2021-07-01'),
-    inspectionDate: new Date('2024-07-20'),
-    maintenanceDate: new Date('2024-01-15'),
-    insuranceDate: new Date('2024-08-01'),
-    currentMileage: 32000,
-    leaseMonthlyCost: 45000,
-    leaseStartDate: new Date('2021-07-01'),
-    leaseEndDate: new Date('2026-06-30'),
-    notes: '通勤用車両',
-    createdAt: new Date('2021-07-01'),
-    updatedAt: new Date('2024-01-15'),
-  },
-];
-
 // GET /api/assets/vehicles - 車両一覧取得
 export async function GET(request: NextRequest) {
   try {
-    // デモモードの場合はデモデータを返す
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return successResponse(demoVehicles, {
-        count: demoVehicles.length,
-        pagination: { page: 1, limit: 20, total: demoVehicles.length, totalPages: 1 },
-        cacheSeconds: 60,
-      });
-    }
-
     const { searchParams } = new URL(request.url);
     const tenantId = await getTenantIdFromRequest(request);
     const status = searchParams.get('status');
@@ -169,6 +107,7 @@ export async function GET(request: NextRequest) {
 // POST /api/assets/vehicles - 車両登録
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     // Zodバリデーション
@@ -181,7 +120,7 @@ export async function POST(request: NextRequest) {
 
     const createData: Prisma.vehiclesUncheckedCreateInput = {
       id: randomUUID(),
-      tenantId: data.tenantId || 'tenant-1',
+      tenantId: data.tenantId || tenantId,
       vehicleNumber: data.vehicleNumber,
       licensePlate: data.licensePlate,
       make: data.make,

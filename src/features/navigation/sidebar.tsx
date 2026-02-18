@@ -83,7 +83,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   // RBAC-based filtering: DB権限があればcanMenu、なければ旧hasMenuAccessにフォールバック
   const filteredNavigation = navigation.filter(item => {
     // DB権限が解決済みの場合はそちらを使用
-    if (permissionStore.resolved && !permissionStore.isDemoMode) {
+    if (permissionStore.resolved) {
       return permissionStore.canMenu(item.menuKey);
     }
     // フォールバック: 旧ハードコード権限

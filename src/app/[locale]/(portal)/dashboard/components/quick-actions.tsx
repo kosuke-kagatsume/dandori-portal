@@ -12,13 +12,10 @@ import {
   ShieldCheck,
   Settings
 } from 'lucide-react';
-import { roleDisplayNames } from '@/lib/demo-users';
-import type { DemoUser } from '@/types';
 import { StaggerContainer, StaggerItem } from '@/components/motion/page-transition';
 import { motion } from 'framer-motion';
 
 interface QuickActionsProps {
-  effectiveDemoUser: DemoUser | null;
   permissions: {
     canViewAll: boolean;
     canViewTeam: boolean;
@@ -27,13 +24,13 @@ interface QuickActionsProps {
   };
 }
 
-const QuickActions = memo(({ effectiveDemoUser, permissions }: QuickActionsProps) => {
+const QuickActions = memo(({ permissions }: QuickActionsProps) => {
   return (
     <Card>
       <CardHeader>
         <CardTitle>クイックアクション</CardTitle>
         <CardDescription>
-          {effectiveDemoUser ? `${roleDisplayNames[effectiveDemoUser.role]}として実行可能な操作` : 'よく使う操作をすばやく実行できます'}
+          よく使う操作をすばやく実行できます
         </CardDescription>
       </CardHeader>
       <CardContent>

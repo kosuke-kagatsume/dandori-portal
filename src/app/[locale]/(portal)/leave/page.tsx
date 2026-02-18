@@ -81,15 +81,13 @@ export default function LeavePage() {
   } = useLeaveManagementStore();
 
   // 現在のログインユーザーを取得
-  const { currentUser, currentDemoUser, isDemoMode } = useUserStore();
-  const currentUserId = isDemoMode ? (currentDemoUser?.id || '1') : (currentUser?.id || '1');
-  const currentUserName = isDemoMode ? (currentDemoUser?.name || '田中太郎') : (currentUser?.name || '田中太郎');
+  const { currentUser } = useUserStore();
+  const currentUserId = currentUser?.id || '1';
+  const currentUserName = currentUser?.name || '田中太郎';
   const currentYear = new Date().getFullYear();
 
   // ユーザーの権限を確認
-  const currentUserRoles = isDemoMode
-    ? (currentDemoUser?.role ? [currentDemoUser.role] : ['employee'])
-    : (currentUser?.roles || ['employee']);
+  const currentUserRoles = currentUser?.roles || ['employee'];
   const isHR = currentUserRoles.includes('hr') || currentUserRoles.includes('admin');
 
   // 初期化：破損データのリセットとサンプルデータの作成
@@ -475,7 +473,7 @@ export default function LeavePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }

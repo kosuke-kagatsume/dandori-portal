@@ -7,54 +7,9 @@ import {
   validateRequired,
 } from '@/lib/api/api-helpers';
 
-// デモ用医療機関データ
-const demoInstitutions = [
-  {
-    id: 'inst-001',
-    tenantId: 'tenant-1',
-    name: '東京健診センター',
-    code: 'tokyo-kenshin',
-    address: '東京都千代田区丸の内1-1-1',
-    phone: '03-1234-5678',
-    isActive: true,
-    sortOrder: 1,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-  {
-    id: 'inst-002',
-    tenantId: 'tenant-1',
-    name: '新宿メディカルクリニック',
-    code: 'shinjuku-medical',
-    address: '東京都新宿区西新宿2-2-2',
-    phone: '03-2345-6789',
-    isActive: true,
-    sortOrder: 2,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-  {
-    id: 'inst-003',
-    tenantId: 'tenant-1',
-    name: '渋谷健康管理センター',
-    code: 'shibuya-health',
-    address: '東京都渋谷区道玄坂3-3-3',
-    phone: '03-3456-7890',
-    isActive: true,
-    sortOrder: 3,
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date('2024-01-01'),
-  },
-];
-
 // 医療機関一覧取得
 export async function GET(request: NextRequest) {
   try {
-    // デモモードの場合はデモデータを返す
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return successResponse(demoInstitutions);
-    }
-
     const searchParams = request.nextUrl.searchParams;
     const tenantId = await getTenantIdFromRequest(request);
     const activeOnly = searchParams.get('activeOnly') === 'true';
@@ -78,20 +33,6 @@ export async function GET(request: NextRequest) {
 // 医療機関追加
 export async function POST(request: NextRequest) {
   try {
-    // デモモードの場合は成功レスポンスを返す
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      const body = await request.json();
-      const newInst = {
-        id: `inst-${Date.now()}`,
-        ...body,
-        isActive: body.isActive ?? true,
-        sortOrder: body.sortOrder ?? 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      return NextResponse.json({ success: true, data: newInst }, { status: 201 });
-    }
-
     const body = await request.json();
     const { tenantId, name, code, address, phone, isActive, sortOrder } = body;
 
@@ -123,12 +64,6 @@ export async function POST(request: NextRequest) {
 // 医療機関更新
 export async function PUT(request: NextRequest) {
   try {
-    // デモモードの場合は成功レスポンスを返す
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      const body = await request.json();
-      return NextResponse.json({ success: true, data: { ...body, updatedAt: new Date() } });
-    }
-
     const body = await request.json();
     const { id, name, code, address, phone, isActive, sortOrder } = body;
 
@@ -158,11 +93,6 @@ export async function PUT(request: NextRequest) {
 // 医療機関削除
 export async function DELETE(request: NextRequest) {
   try {
-    // デモモードの場合は成功レスポンスを返す
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return NextResponse.json({ success: true });
-    }
-
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
 

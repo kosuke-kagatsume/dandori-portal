@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { User, DemoUser, UserRole, Tenant } from '@/types';
-import { demoUsers } from '@/lib/demo-users';
+import type { User, UserRole, Tenant } from '@/types';
 import { APIError, apiClient } from '@/lib/api/client';
 import {
   saveTokenData,
@@ -88,12 +87,6 @@ interface UserState {
   // API統合用
   tenantId: string | null;
 
-  // デモ用の役割管理
-  isDemoMode: boolean;
-  currentDemoUser: DemoUser | null;
-  switchDemoRole: (role: UserRole) => void;
-  setDemoMode: (enabled: boolean) => void;
-
   // 認証トークン管理
   accessToken: string | null;
   refreshToken: string | null;
@@ -131,25 +124,6 @@ interface UserState {
 
 // SSR対応: サーバーではpersistを無効化
 const createUserStore = () => {
-  // 初期デモユーザー（employee）のcurrentUser形式を作成
-  const initialDemoUser = demoUsers.employee;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const initialCurrentUser: User = {
-    id: initialDemoUser.id,
-    tenantId: 'tenant-1',
-    name: initialDemoUser.name,
-    email: initialDemoUser.email,
-    phone: '090-1234-5678',
-    hireDate: '2020-04-01',
-    unitId: '1',
-    roles: ['employee'],
-    status: 'active',
-    timezone: 'Asia/Tokyo',
-    avatar: initialDemoUser.avatar || '',
-    position: 'スタッフ',
-    department: initialDemoUser.department,
-  };
-
   const storeCreator = (set: (partial: Partial<UserState> | ((state: UserState) => Partial<UserState>)) => void, get: () => UserState): UserState => ({
       // 本番モード: 認証後に設定
       currentUser: null,
@@ -159,10 +133,6 @@ const createUserStore = () => {
 
       // API統合用（認証後にテナントIDが設定される）
       tenantId: null,
-
-      // デモモードは削除されました
-      isDemoMode: false,
-      currentDemoUser: null,
 
       // 認証トークン
       accessToken: null,
@@ -224,8 +194,6 @@ const createUserStore = () => {
             currentUser: user,
             accessToken: accessToken,
             refreshToken: apiRefreshToken,
-            isDemoMode: false,
-            currentDemoUser: null,
             isLoading: false,
             _hasHydrated: true,
           });
@@ -324,8 +292,6 @@ const createUserStore = () => {
             currentUser: null,
             accessToken: null,
             refreshToken: null,
-            isDemoMode: false,
-            currentDemoUser: null,
             isLoading: false,
           });
 
@@ -417,7 +383,7 @@ const createUserStore = () => {
       // 認証状態チェック
       isAuthenticated: () => {
         const state = get();
-        return state.isDemoMode || (state.currentUser !== null && state.accessToken !== null);
+        return state.currentUser !== null && state.accessToken !== null;
       },
 
       setCurrentUser: (user: User) => {
@@ -604,60 +570,6 @@ const createUserStore = () => {
       setError: (error: string | null) => {
         set({ error });
       },
-
-      // デモ役割切り替え機能
-      switchDemoRole: (role: UserRole) => {
-        const demoUser = demoUsers[role];
-        // currentUserも同時に更新（サイドバーのRBACチェック用）
-        const currentUser: User = {
-          id: demoUser.id,
-          tenantId: 'tenant-1',
-          name: demoUser.name,
-          email: demoUser.email,
-          phone: '090-1234-5678',
-          hireDate: '2020-04-01',
-          unitId: '1',
-          roles: [role], // ロールを配列で設定
-          status: 'active',
-          timezone: 'Asia/Tokyo',
-          avatar: demoUser.avatar || '',
-          position: demoUser.role === 'admin' ? 'システム管理者' :
-                    demoUser.role === 'manager' ? 'マネージャー' :
-                    demoUser.role === 'executive' ? '社長' :
-                    demoUser.role === 'hr' ? '人事担当' :
-                    demoUser.role === 'applicant' ? '新入社員' : 'スタッフ',
-          department: demoUser.department,
-        };
-
-        // ロールCookieも更新（middleware用）
-        if (typeof window !== 'undefined') {
-          document.cookie = `user_role=${role}; path=/; SameSite=Lax`;
-        }
-
-        set({
-          currentDemoUser: demoUser,
-          currentUser,
-          isDemoMode: true
-        });
-
-        // 監査ログ記録
-        authAudit.switchRole(demoUser.name + ' (' + role + ')');
-      },
-
-      setDemoMode: (enabled: boolean) => {
-        if (enabled) {
-          // デモモード有効化時、デフォルトで一般社員
-          set({
-            isDemoMode: true,
-            currentDemoUser: demoUsers.employee
-          });
-        } else {
-          set({
-            isDemoMode: false,
-            currentDemoUser: null
-          });
-        }
-      },
   });
 
   // SSR時はpersistを使わない（ハイドレーション完了扱いにする）
@@ -675,7 +587,7 @@ const createUserStore = () => {
       skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => {
-        // isDemoModeとcurrentDemoUserは永続化しない
+        // 永続化する状態を選択
         return {
           currentUser: state.currentUser,
           users: state.users,
@@ -687,9 +599,6 @@ const createUserStore = () => {
       onRehydrateStorage: () => (state) => {
         // localStorageからの読み込み完了時に呼ばれる
         if (state) {
-          // デモモードは無効
-          state.isDemoMode = false;
-          state.currentDemoUser = null;
           state.setHasHydrated(true);
           // トークンがある場合、apiClientにも設定
           if (state.accessToken) {

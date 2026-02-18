@@ -39,61 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // デモモードの場合はデモユーザーで認証
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      const cookieStore = await cookies();
-
-      const demoUser = {
-        id: 'demo-user-' + Date.now(),
-        email: email,
-        name: 'デモユーザー',
-        role: 'admin',
-        roles: ['admin'],
-        department: '営業部',
-        tenantId: 'tenant-1',
-      };
-
-      const accessToken = sign(
-        { userId: demoUser.id, email: demoUser.email, role: demoUser.role },
-        JWT_SECRET,
-        { expiresIn: TOKEN_EXPIRY }
-      );
-
-      const refreshToken = sign(
-        { userId: demoUser.id, type: 'refresh' },
-        JWT_SECRET,
-        { expiresIn: TOKEN_EXPIRY * 7 } // 7 days
-      );
-
-      // Set demo session cookie
-      cookieStore.set('demo_session', JSON.stringify(demoUser), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: TOKEN_EXPIRY,
-      });
-
-      // Set user role cookie for middleware
-      cookieStore.set('user_role', demoUser.role, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: TOKEN_EXPIRY,
-      });
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          user: demoUser,
-          accessToken,
-          refreshToken,
-          expiresIn: TOKEN_EXPIRY,
-        },
-        mode: 'demo',
-      });
-    }
-
-    // 本番モード: Prismaでユーザーを検索（テナント情報も取得）
+    // Prismaでユーザーを検索（テナント情報も取得）
     console.log('Searching for user with email:', email);
     const user = await prisma.users.findFirst({
       where: { email },

@@ -37,7 +37,7 @@ export function WorkflowTab({ settings: _settings, updateSettings: _updateSettin
     getStats,
     deleteFlow,
     duplicateFlow,
-    initializeDemoData,
+    initialize,
   } = useApprovalFlowStore();
 
   // DB連携用のストア
@@ -58,9 +58,9 @@ export function WorkflowTab({ settings: _settings, updateSettings: _updateSettin
   // 初期化
   useEffect(() => {
     if (!flowsInitialized) {
-      initializeDemoData();
+      initialize();
     }
-  }, [flowsInitialized, initializeDemoData]);
+  }, [flowsInitialized, initialize]);
 
   // DB設定を取得
   useEffect(() => {

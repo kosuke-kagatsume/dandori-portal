@@ -36,18 +36,13 @@ import {
 } from '@/components/ui/table';
 import {
   Shield,
-  // Plus, // 追加ボタンで使用予定
   Settings,
-  // Users, // ユーザーアイコンで使用予定
   Eye,
-  // Edit, // 編集ボタンで使用予定
-  // Trash2, // 削除ボタンで使用予定
   Search,
-  // Info, // 情報アイコンで使用予定
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { OrganizationMember, UserRole } from '@/types';
-import { permissionDefinitions, roleDefinitions } from '@/lib/demo-organization';
 
 interface ApiRole {
   id: string;
@@ -72,6 +67,18 @@ interface ApiPermission {
   description: string | null;
   category: string;
   menuKey: string | null;
+}
+
+interface PermissionCategory {
+  id: string;
+  name: string;
+  permissions: {
+    id: string;
+    code: string;
+    name: string;
+    description: string;
+    level: 'self' | 'team' | 'department' | 'company' | 'system';
+  }[];
 }
 
 interface PermissionManagementPanelProps {
@@ -106,6 +113,23 @@ const roleLabels: Record<UserRole, string> = {
   applicant: '応募者',
 };
 
+// scope から level を変換
+function scopeToLevel(scope: string): 'self' | 'team' | 'department' | 'company' | 'system' {
+  const mapping: Record<string, 'self' | 'team' | 'department' | 'company' | 'system'> = {
+    'self': 'self',
+    'own': 'self',
+    'team': 'team',
+    'department': 'department',
+    'dept': 'department',
+    'company': 'company',
+    'all': 'company',
+    'tenant': 'company',
+    'system': 'system',
+    'global': 'system',
+  };
+  return mapping[scope.toLowerCase()] || 'self';
+}
+
 export function PermissionManagementPanel({
   members = [],
   tenantId,
@@ -116,19 +140,23 @@ export function PermissionManagementPanel({
   const [activeTab, setActiveTab] = useState('roles');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
-  const [editingRole, setEditingRole] = useState<typeof roleDefinitions[0] | null>(null);
+  const [editingRole, setEditingRole] = useState<ApiRole | null>(null);
   const [editingMember, setEditingMember] = useState<OrganizationMember | null>(null);
 
   // API連携用のステート
   const [apiRoles, setApiRoles] = useState<ApiRole[]>([]);
   const [apiPermissions, setApiPermissions] = useState<ApiPermission[]>([]);
   const [apiRolePermissions, setApiRolePermissions] = useState<Record<string, string[]>>({});
-  const [useApi, setUseApi] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   // API からロールと権限マスタを取得
   const fetchApiData = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
     try {
       const [rolesRes, permsRes] = await Promise.all([
         fetch(`/api/permissions/roles?tenantId=${tenantId}`),
@@ -140,7 +168,6 @@ export function PermissionManagementPanel({
         if (rolesData.success && permsData.success) {
           setApiRoles(rolesData.data);
           setApiPermissions(permsData.data);
-          setUseApi(true);
 
           // 各ロールの権限を取得
           const rpMap: Record<string, string[]> = {};
@@ -157,8 +184,9 @@ export function PermissionManagementPanel({
         }
       }
     } catch {
-      // APIエラー時はデモデータにフォールバック
-      setUseApi(false);
+      // APIエラー
+    } finally {
+      setIsLoading(false);
     }
   }, [tenantId]);
 
@@ -168,7 +196,7 @@ export function PermissionManagementPanel({
 
   // API経由でロール権限を保存
   const saveRolePermissions = async (roleCode: string, permissionCodes: string[]) => {
-    if (!useApi || !tenantId) return;
+    if (!tenantId) return;
     const role = apiRoles.find(r => r.code === roleCode);
     if (!role) return;
 
@@ -195,10 +223,31 @@ export function PermissionManagementPanel({
     }
   };
 
-  // 権限カテゴリの変換
-  const permissionCategories = useMemo(() => {
-    return Object.values(permissionDefinitions);
-  }, []);
+  // 権限カテゴリをAPIデータから構築
+  const permissionCategories = useMemo<PermissionCategory[]>(() => {
+    const categoryMap = new Map<string, PermissionCategory>();
+
+    for (const perm of apiPermissions) {
+      const categoryKey = perm.category || 'その他';
+      if (!categoryMap.has(categoryKey)) {
+        categoryMap.set(categoryKey, {
+          id: categoryKey,
+          name: categoryKey,
+          permissions: [],
+        });
+      }
+      const cat = categoryMap.get(categoryKey)!;
+      cat.permissions.push({
+        id: perm.id,
+        code: perm.code,
+        name: perm.name,
+        description: perm.description || '',
+        level: scopeToLevel(perm.scope),
+      });
+    }
+
+    return Array.from(categoryMap.values());
+  }, [apiPermissions]);
 
   // フィルタリングされたメンバー
   const filteredMembers = useMemo(() => {
@@ -212,18 +261,14 @@ export function PermissionManagementPanel({
     });
   }, [members, searchQuery, selectedRole]);
 
-  // ロールの権限取得（API優先、フォールバック対応）
+  // ロールの権限取得
   const getRolePermissions = (role: UserRole) => {
-    if (useApi && apiRolePermissions[role]) {
-      return apiRolePermissions[role];
-    }
-    const roleDefinition = roleDefinitions.find(r => r.code === role);
-    return roleDefinition ? roleDefinition.permissions : [];
+    return apiRolePermissions[role] || [];
   };
 
   // 権限の説明取得
   const getPermissionDescription = (permissionCode: string) => {
-    for (const category of Object.values(permissionDefinitions)) {
+    for (const category of permissionCategories) {
       const permission = category.permissions.find(p => p.code === permissionCode);
       if (permission) return permission;
     }
@@ -232,12 +277,10 @@ export function PermissionManagementPanel({
 
   const handleRolePermissionUpdate = (roleCode: string, permissions: string[]) => {
     // API経由で保存
-    if (useApi) {
-      saveRolePermissions(roleCode, permissions);
-    }
+    saveRolePermissions(roleCode, permissions);
     // 旧コールバックも呼び出し
     if (onRoleUpdate) {
-      const role = roleDefinitions.find(r => r.code === roleCode);
+      const role = apiRoles.find(r => r.code === roleCode);
       if (role) {
         onRoleUpdate(role.id, permissions);
       }
@@ -252,11 +295,11 @@ export function PermissionManagementPanel({
   }) => {
     const handlePermissionChange = (permissionCode: string, checked: boolean) => {
       if (readOnly) return;
-      
+
       const newPermissions = checked
         ? [...permissions, permissionCode]
         : permissions.filter(p => p !== permissionCode);
-      
+
       onUpdate(newPermissions);
     };
 
@@ -271,7 +314,7 @@ export function PermissionManagementPanel({
               <div className="grid gap-3">
                 {category.permissions.map((permission) => {
                   const isChecked = permissions.includes(permission.code);
-                  
+
                   return (
                     <div
                       key={permission.id}
@@ -284,7 +327,7 @@ export function PermissionManagementPanel({
                       <Checkbox
                         id={`${role}-${permission.id}`}
                         checked={isChecked}
-                        onCheckedChange={(checked) => 
+                        onCheckedChange={(checked) =>
                           handlePermissionChange(permission.code, !!checked)
                         }
                         disabled={readOnly}
@@ -292,14 +335,14 @@ export function PermissionManagementPanel({
                       />
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center space-x-2">
-                          <Label 
+                          <Label
                             htmlFor={`${role}-${permission.id}`}
                             className="font-medium cursor-pointer"
                           >
                             {permission.name}
                           </Label>
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={cn('text-xs', roleLevelColors[permission.level])}
                           >
                             {levelLabels[permission.level]}
@@ -319,6 +362,20 @@ export function PermissionManagementPanel({
       </div>
     );
   };
+
+  // ローディング中の表示
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">権限情報を読み込み中...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -340,48 +397,60 @@ export function PermissionManagementPanel({
             {/* ロール設定タブ */}
             <TabsContent value="roles" className="space-y-4">
               <div className="grid gap-4">
-                {roleDefinitions.map((role) => (
-                  <Card key={role.id}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg">{role.name}</CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {role.description}
-                          </p>
+                {apiRoles.map((role) => {
+                  const rolePermissions = apiRolePermissions[role.code] || [];
+                  return (
+                    <Card key={role.id}>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-lg">{role.name}</CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {role.description || '説明なし'}
+                            </p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingRole(role)}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            権限編集
+                          </Button>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingRole(role)}
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          権限編集
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <h4 className="font-medium">付与されている権限:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {role.permissions.map((permissionCode) => {
-                            const permission = getPermissionDescription(permissionCode);
-                            return (
-                              <Badge
-                                key={permissionCode}
-                                variant="secondary"
-                                className="text-xs"
-                                title={permission?.description}
-                              >
-                                {permission?.name || permissionCode}
-                              </Badge>
-                            );
-                          })}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <h4 className="font-medium">付与されている権限:</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {rolePermissions.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">権限が設定されていません</p>
+                            ) : (
+                              rolePermissions.map((permissionCode) => {
+                                const permission = getPermissionDescription(permissionCode);
+                                return (
+                                  <Badge
+                                    key={permissionCode}
+                                    variant="secondary"
+                                    className="text-xs"
+                                    title={permission?.description}
+                                  >
+                                    {permission?.name || permissionCode}
+                                  </Badge>
+                                );
+                              })
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+                {apiRoles.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    ロールが登録されていません
+                  </div>
+                )}
               </div>
             </TabsContent>
 
@@ -480,8 +549,8 @@ export function PermissionManagementPanel({
                       </TableHeader>
                       <TableBody>
                         {category.permissions.map((permission) => {
-                          const assignedRoles = roleDefinitions.filter(role =>
-                            role.permissions.includes(permission.code)
+                          const assignedRoles = apiRoles.filter(role =>
+                            (apiRolePermissions[role.code] || []).includes(permission.code)
                           );
 
                           return (
@@ -490,8 +559,8 @@ export function PermissionManagementPanel({
                                 {permission.name}
                               </TableCell>
                               <TableCell>
-                                <Badge 
-                                  variant="outline" 
+                                <Badge
+                                  variant="outline"
                                   className={cn('text-xs', roleLevelColors[permission.level])}
                                 >
                                   {levelLabels[permission.level]}
@@ -533,7 +602,7 @@ export function PermissionManagementPanel({
             </DialogHeader>
             <PermissionMatrix
               role={editingRole.code}
-              permissions={editingRole.permissions}
+              permissions={apiRolePermissions[editingRole.code] || []}
               onUpdate={(permissions) => handleRolePermissionUpdate(editingRole.code, permissions)}
             />
             <div className="flex justify-end space-x-2 mt-6">
@@ -567,7 +636,7 @@ export function PermissionManagementPanel({
                   {roleLabels[editingMember.role]}
                 </Badge>
               </div>
-              
+
               <div>
                 <h4 className="font-medium mb-2">基本ロールによる権限</h4>
                 <p className="text-sm text-muted-foreground mb-4">

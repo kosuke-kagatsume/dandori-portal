@@ -19,46 +19,6 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
 
-    // Check for demo session first
-    const demoSessionCookie = cookieStore.get('demo_session');
-    if (demoSessionCookie) {
-      try {
-        const demoUser = JSON.parse(demoSessionCookie.value);
-        const response = NextResponse.json({
-          success: true,
-          data: {
-            user: demoUser,
-          },
-          mode: 'demo',
-        });
-        // 60秒キャッシュ（stale-while-revalidateで120秒）
-        response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
-        return response;
-      } catch {
-        // Invalid demo session, continue to check access token
-      }
-    }
-
-    // デモモードの場合、Cookieがなくてもデフォルトユーザーを返す
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      const response = NextResponse.json({
-        success: true,
-        data: {
-          user: {
-            id: 'demo-user-001',
-            email: 'demo@dandori-portal.com',
-            name: 'デモユーザー',
-            role: 'admin',
-            roles: ['admin'],
-            tenantId: 'tenant-1',
-          },
-        },
-        mode: 'demo',
-      });
-      response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=120');
-      return response;
-    }
-
     // Check for access token
     const accessToken = cookieStore.get('access_token');
     if (!accessToken) {
@@ -77,24 +37,6 @@ export async function GET() {
         { success: false, error: 'トークンが無効です' },
         { status: 401 }
       );
-    }
-
-    // デモモードの場合
-    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-      return NextResponse.json({
-        success: true,
-        data: {
-          user: {
-            id: payload.userId,
-            email: payload.email,
-            name: 'デモユーザー',
-            role: payload.role,
-            roles: [payload.role],
-            tenantId: payload.tenantId || 'tenant-1',
-          },
-        },
-        mode: 'demo',
-      });
     }
 
     // Fetch user from database

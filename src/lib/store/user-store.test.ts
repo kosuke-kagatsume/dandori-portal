@@ -560,18 +560,6 @@ describe('UserStore', () => {
   });
 
   describe('isAuthenticated', () => {
-    it('デモモードの場合はtrueを返す', () => {
-      const { isAuthenticated } = useUserStore.getState();
-
-      useUserStore.setState({
-        isDemoMode: true,
-        currentUser: null,
-        accessToken: null,
-      });
-
-      expect(isAuthenticated()).toBe(true);
-    });
-
     it('currentUserとaccessTokenがある場合はtrueを返す', () => {
       const { isAuthenticated } = useUserStore.getState();
 
@@ -591,7 +579,6 @@ describe('UserStore', () => {
       };
 
       useUserStore.setState({
-        isDemoMode: false,
         currentUser: user,
         accessToken: 'test-token',
       });
@@ -603,7 +590,6 @@ describe('UserStore', () => {
       const { isAuthenticated } = useUserStore.getState();
 
       useUserStore.setState({
-        isDemoMode: false,
         currentUser: null,
         accessToken: null,
       });

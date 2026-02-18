@@ -4,7 +4,6 @@ import { useEffect } from 'react';
 import { useUIStore, useUserStore } from '@/lib/store';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import { useLegalUpdatesStore } from '@/lib/store/legal-updates-store';
-import { useAnnouncementsStore } from '@/lib/store/announcements-store';
 import { useNotificationHistoryStore } from '@/lib/store/notification-history-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { useAdminTenantStore as useBillingTenantStore } from '@/lib/store/admin-tenant-store';
@@ -19,8 +18,6 @@ import { cn } from '@/lib/utils';
 import { useGlobalShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { SkipLink } from '@/components/a11y/skip-link';
 import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
-import { initializeLegalUpdatesDemo } from '@/lib/demo-legal-updates';
-import { initializeAnnouncementsDemo } from '@/lib/demo-announcements';
 import { useScheduledChangesNotifications } from '@/hooks/use-scheduled-changes-notifications';
 import { usePaymentReminderCheck } from '@/hooks/use-payment-reminder-check';
 import { initBackgroundSync } from '@/lib/offline/sync-manager';
@@ -44,8 +41,7 @@ export default function PortalLayout({
     initializeBankAccountForm,
     initializeCommuteRouteForm,
   } = useOnboardingStore();
-  const { addUpdate, getLegalUpdates } = useLegalUpdatesStore();
-  const { createAnnouncement, getAnnouncements } = useAnnouncementsStore();
+  const { fetchLegalUpdates } = useLegalUpdatesStore();
   const { initializeNotifications } = useNotificationHistoryStore();
   const { initializeInvoices } = useInvoiceStore();
   const { initializeTenants } = useBillingTenantStore();
@@ -89,31 +85,10 @@ export default function PortalLayout({
     initializeCommuteRouteForm,
   ]);
 
-  // Initialize legal updates demo data (only once if no data exists)
+  // Initialize legal updates from API
   useEffect(() => {
-    const existingUpdates = getLegalUpdates();
-    if (existingUpdates.length === 0) {
-      initializeLegalUpdatesDemo(addUpdate);
-    }
-  }, [addUpdate, getLegalUpdates]);
-
-  // Initialize announcements demo data (only once if no data exists)
-  // デモ環境のみで実行（Amplifyなど本番環境では Supabase 401 エラーを防ぐ）
-  useEffect(() => {
-    // デモ環境以外では何もしない
-    if (process.env.NEXT_PUBLIC_ENV !== 'demo') {
-      return;
-    }
-
-    try {
-      const existingAnnouncements = getAnnouncements();
-      if (existingAnnouncements.length === 0) {
-        initializeAnnouncementsDemo(createAnnouncement);
-      }
-    } catch (error) {
-      console.warn('Failed to initialize announcements demo data:', error);
-    }
-  }, [createAnnouncement, getAnnouncements]);
+    fetchLegalUpdates();
+  }, [fetchLegalUpdates]);
 
   // Initialize billing data (invoices, tenants, notification history)
   useEffect(() => {

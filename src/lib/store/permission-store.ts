@@ -2,7 +2,6 @@
  * Permission Store - Zustand権限ストア
  *
  * 解決済み権限をキャッシュし、権限チェックを高速化する。
- * デモモードではハードコードにフォールバック。
  */
 
 import { create } from 'zustand';
@@ -16,7 +15,6 @@ import {
   canResource as canResourceCheck,
   resolvePermissions,
 } from '@/lib/rbac-v2';
-import { hasMenuAccess, hasPermission, type UserRole, type MenuKey, type Permission } from '@/lib/rbac';
 
 interface PermissionState {
   // 解決済み権限データ
@@ -26,14 +24,9 @@ interface PermissionState {
   error: string | null;
   // 最終更新時刻
   lastFetchedAt: number | null;
-  // デモモードフラグ
-  isDemoMode: boolean;
-  // デモモード用のユーザーロール
-  demoRole: UserRole | null;
 
   // アクション
   fetchPermissions: (userId: string, tenantId: string) => Promise<void>;
-  setDemoMode: (isDemoMode: boolean, role?: UserRole) => void;
   clear: () => void;
 
   // 権限チェック
@@ -53,8 +46,6 @@ export const usePermissionStore = create<PermissionState>()(
       isLoading: false,
       error: null,
       lastFetchedAt: null,
-      isDemoMode: false,
-      demoRole: null,
 
       fetchPermissions: async (userId: string, tenantId: string) => {
         const state = get();
@@ -84,48 +75,33 @@ export const usePermissionStore = create<PermissionState>()(
         }
       },
 
-      setDemoMode: (isDemoMode: boolean, role?: UserRole) => {
-        set({ isDemoMode, demoRole: role || null });
-      },
-
       clear: () => {
         set({ resolved: null, lastFetchedAt: null, error: null });
       },
 
-      // 権限チェック関数（デモモードフォールバック付き）
+      // 権限チェック関数
       can: (permissionCode: string) => {
         const state = get();
-        if (state.isDemoMode && state.demoRole) {
-          // デモモード: 旧rbac.tsのPERMISSIONSでチェック
-          // permissionCode を旧形式に変換試行
-          return hasPermission(state.demoRole, permissionCode as Permission);
-        }
         return canCheck(permissionCode, state.resolved);
       },
 
       canMenu: (menuKey: string) => {
         const state = get();
-        if (state.isDemoMode && state.demoRole) {
-          return hasMenuAccess(state.demoRole, menuKey as MenuKey);
-        }
         return canMenuCheck(menuKey, state.resolved);
       },
 
       canAny: (permissionCodes: string[]) => {
         const state = get();
-        if (state.isDemoMode) return false;
         return canAnyCheck(permissionCodes, state.resolved);
       },
 
       canAll: (permissionCodes: string[]) => {
         const state = get();
-        if (state.isDemoMode) return false;
         return canAllCheck(permissionCodes, state.resolved);
       },
 
       canResource: (resource: string, action: string) => {
         const state = get();
-        if (state.isDemoMode) return false;
         return canResourceCheck(resource, action, state.resolved);
       },
     }),
@@ -134,8 +110,6 @@ export const usePermissionStore = create<PermissionState>()(
       partialize: (state) => ({
         resolved: state.resolved,
         lastFetchedAt: state.lastFetchedAt,
-        isDemoMode: state.isDemoMode,
-        demoRole: state.demoRole,
       }),
     }
   )

@@ -53,8 +53,41 @@ export interface LegalUpdate {
   createdBy: string;                       // 登録者（運営側の担当者名）
 }
 
+// APIステータスからLegalUpdateStatusへの変換
+function mapTenantStatusToLegalStatus(status?: string): LegalUpdateStatus {
+  switch (status) {
+    case 'completed':
+      return 'applied';
+    case 'in_progress':
+      return 'preparing';
+    default:
+      return 'scheduled';
+  }
+}
+
+// APIの優先度から重要度への変換
+function mapPriorityToImportance(priority?: string): LegalUpdateImportance {
+  switch (priority) {
+    case 'critical':
+      return 'critical';
+    case 'high':
+      return 'high';
+    case 'medium':
+      return 'medium';
+    case 'low':
+      return 'low';
+    default:
+      return 'medium';
+  }
+}
+
 interface LegalUpdatesState {
   updates: LegalUpdate[];
+  isLoading: boolean;
+  error: string | null;
+
+  // API取得
+  fetchLegalUpdates: () => Promise<void>;
 
   // CRUD操作
   addUpdate: (update: Omit<LegalUpdate, 'id' | 'createdAt' | 'updatedAt'>) => void;
@@ -84,6 +117,66 @@ export const useLegalUpdatesStore = create<LegalUpdatesState>()(
   persist(
     (set, get) => ({
       updates: [],
+      isLoading: false,
+      error: null,
+
+      // APIから法令変更を取得
+      fetchLegalUpdates: async () => {
+        // 既にデータがあれば再取得しない
+        if (get().updates.length > 0) return;
+
+        set({ isLoading: true, error: null });
+        try {
+          const response = await fetch('/api/legal-updates');
+          if (!response.ok) {
+            throw new Error('法令情報の取得に失敗しました');
+          }
+          const result = await response.json();
+
+          // APIレスポンスをストア形式に変換
+          const updates: LegalUpdate[] = (result.data || []).map((item: {
+            id: string;
+            title: string;
+            description: string;
+            category: string;
+            effectiveDate: string;
+            relatedLaws?: string[];
+            affectedAreas?: string[];
+            priority?: string;
+            referenceUrl?: string;
+            tenantStatus?: {
+              status: string;
+              notes?: string;
+              completedAt?: string;
+              completedBy?: string;
+            };
+            publishedAt?: string;
+          }) => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            category: item.category as LegalUpdateCategory,
+            effectiveDate: item.effectiveDate,
+            status: mapTenantStatusToLegalStatus(item.tenantStatus?.status),
+            importance: mapPriorityToImportance(item.priority),
+            affectedAreas: item.affectedAreas || [],
+            lawName: item.relatedLaws?.join(', ') || '',
+            referenceUrl: item.referenceUrl,
+            systemUpdated: item.tenantStatus?.status === 'completed',
+            systemUpdateDetails: item.tenantStatus?.notes || undefined,
+            createdAt: item.publishedAt || new Date().toISOString(),
+            updatedAt: item.tenantStatus?.completedAt || new Date().toISOString(),
+            createdBy: item.tenantStatus?.completedBy || 'システム',
+          }));
+
+          set({ updates, isLoading: false });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : '不明なエラー',
+            isLoading: false
+          });
+        }
+      },
 
       // 法令変更を追加
       addUpdate: (update) => {

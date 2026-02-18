@@ -34,7 +34,6 @@ import {
 import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenterV2 } from './notification-center-v2';
 import { CommandPalette } from './command-palette';
-import { SimpleDemoSwitcher } from '@/components/demo/simple-demo-switcher';
 
 export function Header() {
   const router = useRouter();
@@ -155,13 +154,6 @@ export function Header() {
             </div>
 
             <Separator orientation="vertical" className="h-6 hidden lg:block" />
-
-            {/* Demo Role Switcher - Hidden on mobile */}
-            <div className="hidden md:block">
-              <SimpleDemoSwitcher />
-            </div>
-
-            <Separator orientation="vertical" className="h-6 hidden md:block" />
 
             {/* Notifications */}
             <NotificationCenterV2>

@@ -165,7 +165,7 @@ const settingCategories: SettingCategory[] = [
 
 export default function SettingsPage() {
   const mounted = useIsMounted();
-  const { currentUser, currentDemoUser, switchDemoRole } = useUserStore();
+  const { currentUser } = useUserStore();
   // 会社設定（将来的に設定画面で使用予定）
   // const {
   //   companyInfo,
@@ -180,28 +180,15 @@ export default function SettingsPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [openSheet, setOpenSheet] = useState<string | null>(null);
 
-  // Get user role (production or demo)
+  // Get user role
   const getUserRole = (): UserRole | null => {
     if (currentUser?.roles && currentUser.roles.length > 0) {
       return currentUser.roles[0] as UserRole;
-    }
-    if (currentDemoUser) {
-      return currentDemoUser.role as UserRole;
     }
     return null;
   };
 
   const userRole = getUserRole();
-
-  // Load role from localStorage for demo mode
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !currentUser) {
-      const storedRole = localStorage.getItem('demo-role') as UserRole | null;
-      if (storedRole && !currentDemoUser) {
-        switchDemoRole(storedRole);
-      }
-    }
-  }, [currentDemoUser, switchDemoRole, currentUser]);
 
   // Load settings
   useEffect(() => {
