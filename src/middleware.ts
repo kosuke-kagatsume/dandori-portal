@@ -53,26 +53,36 @@ async function fetchTenantFromDatabase(
   baseUrl: string
 ): Promise<string | null> {
   try {
-    const url = new URL('/api/tenant/resolve', baseUrl);
+    // メインドメインのURLを使用（サブドメインからの呼び出しでも動作するように）
+    const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'dandori-portal.com';
+    const protocol = baseUrl.startsWith('https') ? 'https' : 'http';
+    const apiBaseUrl = `${protocol}://${mainDomain}`;
+
+    const url = new URL('/api/tenant/resolve', apiBaseUrl);
     url.searchParams.set('subdomain', subdomain);
+
+    console.log(`[Middleware] Fetching tenant from: ${url.toString()}`);
 
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      // タイムアウト設定（3秒）
-      signal: AbortSignal.timeout(3000),
+      // タイムアウト設定（5秒に延長）
+      signal: AbortSignal.timeout(5000),
     });
+
+    console.log(`[Middleware] Tenant API response status: ${response.status}`);
 
     if (!response.ok) {
       console.warn(
-        `[Middleware] Tenant not found in database: ${subdomain}`
+        `[Middleware] Tenant not found in database: ${subdomain}, status: ${response.status}`
       );
       return null;
     }
 
     const data = await response.json();
+    console.log(`[Middleware] Tenant found: ${subdomain} -> ${data.tenantId}`);
     return data.tenantId || null;
   } catch (error) {
     console.error('[Middleware] Failed to fetch tenant:', error);
