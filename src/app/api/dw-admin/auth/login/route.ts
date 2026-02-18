@@ -7,17 +7,30 @@ export const dynamic = 'force-dynamic';
 
 // DW管理者認証情報（環境変数から取得）
 // 本番環境ではAWS Secrets Manager等を使用すべき
+// デフォルトパスワード: "dwadmin2025" (開発・緊急用のみ)
+const DEFAULT_PASSWORD_HASH = '$2b$10$LvXCOu49LLW9V8CIHB9mr.TZiAZ9/YcCLPKxCxtLNUiFJDqy4vMZq';
+
 const DW_ADMIN_CREDENTIALS = [
   {
     email: process.env.DW_ADMIN_EMAIL_1 || 'admin@dw-inc.co.jp',
-    // パスワードハッシュ（環境変数で設定、なければデフォルト）
-    passwordHash: process.env.DW_ADMIN_PASSWORD_HASH_1 || '$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    passwordHash: process.env.DW_ADMIN_PASSWORD_HASH_1 || DEFAULT_PASSWORD_HASH,
   },
   {
     email: process.env.DW_ADMIN_EMAIL_2 || 'super@dw-inc.co.jp',
-    passwordHash: process.env.DW_ADMIN_PASSWORD_HASH_2 || '$2a$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    passwordHash: process.env.DW_ADMIN_PASSWORD_HASH_2 || DEFAULT_PASSWORD_HASH,
   },
 ];
+
+// 起動時に環境変数の状態をログ出力（デバッグ用）
+if (typeof window === 'undefined') {
+  console.log('[DW Admin Auth] Environment check:', {
+    hasEmail1: !!process.env.DW_ADMIN_EMAIL_1,
+    hasHash1: !!process.env.DW_ADMIN_PASSWORD_HASH_1,
+    hasEmail2: !!process.env.DW_ADMIN_EMAIL_2,
+    hasHash2: !!process.env.DW_ADMIN_PASSWORD_HASH_2,
+    hasJwtSecret: !!process.env.DW_ADMIN_JWT_SECRET,
+  });
+}
 
 // JWT署名用シークレット
 const JWT_SECRET = new TextEncoder().encode(

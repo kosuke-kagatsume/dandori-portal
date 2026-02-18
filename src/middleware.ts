@@ -222,7 +222,10 @@ export default async function middleware(request: NextRequest) {
 
     // テナントエラーページにリダイレクト（ループ防止）
     if (!pathname.includes('/tenant-not-found')) {
-      const errorUrl = new URL('/tenant-not-found', request.url);
+      // メインドメインにリダイレクト（サブドメインの問題を回避）
+      const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'dandori-portal.com';
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+      const errorUrl = new URL(`${protocol}://${mainDomain}/tenant-not-found`);
       errorUrl.searchParams.set('subdomain', subdomain || '');
       if (isDWAdminReferer) {
         errorUrl.searchParams.set('from', 'dw-admin');
@@ -264,6 +267,11 @@ export default async function middleware(request: NextRequest) {
       return response;
     }
 
+    return NextResponse.next();
+  }
+
+  // 0-2. テナントエラーページ（locale不要、認証不要）
+  if (pathname === '/tenant-not-found' || pathname.startsWith('/tenant-not-found')) {
     return NextResponse.next();
   }
 

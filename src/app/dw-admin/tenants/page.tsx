@@ -23,7 +23,10 @@ import {
   LayoutGrid,
   Table as TableIcon,
   Filter,
+  LogIn,
+  Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -50,6 +53,34 @@ export default function AdminTenantsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [proxyLoginLoading, setProxyLoginLoading] = useState<string | null>(null);
+
+  // 代理ログイン処理
+  const handleProxyLogin = async (tenantId: string, tenantName: string) => {
+    setProxyLoginLoading(tenantId);
+    try {
+      const response = await fetch('/api/dw-admin/tenants/proxy-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || '代理ログインに失敗しました');
+      }
+
+      // 新しいタブで代理ログインページを開く
+      toast.success(`${tenantName} への代理ログインを開始します`);
+      window.open(result.data.proxyLoginUrl, '_blank');
+    } catch (error) {
+      console.error('Proxy login error:', error);
+      toast.error(error instanceof Error ? error.message : '代理ログインに失敗しました');
+    } finally {
+      setProxyLoginLoading(null);
+    }
+  };
 
   // フィルター処理
   const filteredTenants = tenants.filter((tenant) => {
@@ -237,11 +268,26 @@ export default function AdminTenantsPage() {
                 )}
               </div>
 
-              <Link href={`/dw-admin/tenants/${tenant.id}`}>
-                <Button className="w-full" variant="outline">
-                  詳細を見る
+              <div className="flex gap-2">
+                <Link href={`/dw-admin/tenants/${tenant.id}`} className="flex-1">
+                  <Button className="w-full" variant="outline">
+                    詳細を見る
+                  </Button>
+                </Link>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  onClick={() => handleProxyLogin(tenant.id, tenant.name)}
+                  disabled={proxyLoginLoading === tenant.id}
+                  title="代理ログイン"
+                >
+                  {proxyLoginLoading === tenant.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogIn className="h-4 w-4" />
+                  )}
                 </Button>
-              </Link>
+              </div>
             </Card>
           ))}
         </div>
@@ -301,11 +347,26 @@ export default function AdminTenantsPage() {
                       : 'トライアル'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link href={`/dw-admin/tenants/${tenant.id}`}>
-                      <Button variant="ghost" size="sm">
-                        詳細
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleProxyLogin(tenant.id, tenant.name)}
+                        disabled={proxyLoginLoading === tenant.id}
+                        title="代理ログイン"
+                      >
+                        {proxyLoginLoading === tenant.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <LogIn className="h-4 w-4" />
+                        )}
                       </Button>
-                    </Link>
+                      <Link href={`/dw-admin/tenants/${tenant.id}`}>
+                        <Button variant="ghost" size="sm">
+                          詳細
+                        </Button>
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

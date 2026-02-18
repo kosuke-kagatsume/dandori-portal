@@ -30,6 +30,8 @@ import {
   Plus,
   Globe,
   ExternalLink,
+  LogIn,
+  Loader2,
 } from 'lucide-react';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
@@ -49,6 +51,7 @@ export default function TenantDetailPage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [createInvoiceDialogOpen, setCreateInvoiceDialogOpen] = useState(false);
+  const [proxyLoginLoading, setProxyLoginLoading] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     subdomain: '',
@@ -166,6 +169,34 @@ export default function TenantDetailPage() {
     toast.success('テナント情報を更新しました');
   };
 
+  // 代理ログイン処理
+  const handleProxyLogin = async () => {
+    if (!tenant) return;
+    setProxyLoginLoading(true);
+    try {
+      const response = await fetch('/api/dw-admin/tenants/proxy-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: tenant.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || '代理ログインに失敗しました');
+      }
+
+      // 新しいタブで代理ログインページを開く
+      toast.success(`${tenant.name} への代理ログインを開始します`);
+      window.open(result.data.proxyLoginUrl, '_blank');
+    } catch (error) {
+      console.error('Proxy login error:', error);
+      toast.error(error instanceof Error ? error.message : '代理ログインに失敗しました');
+    } finally {
+      setProxyLoginLoading(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
       {/* ヘッダー */}
@@ -197,9 +228,23 @@ export default function TenantDetailPage() {
             テナント詳細情報と管理
           </p>
         </div>
-        <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
-          {tenant.status === 'active' ? 'アクティブ' : '無効'}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant={tenant.status === 'active' ? 'default' : 'secondary'}>
+            {tenant.status === 'active' ? 'アクティブ' : '無効'}
+          </Badge>
+          <Button
+            variant="secondary"
+            onClick={handleProxyLogin}
+            disabled={proxyLoginLoading}
+          >
+            {proxyLoginLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <LogIn className="h-4 w-4 mr-2" />
+            )}
+            このテナントにログイン
+          </Button>
+        </div>
       </div>
 
       {/* 統計カード */}
@@ -581,7 +626,7 @@ export default function TenantDetailPage() {
                         <div className="p-2 bg-green-100 dark:bg-green-950 rounded-full">
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         </div>
-                        <div className="w-px h-full bg-border"></div>
+                        <div className="w-px h-full bg-border" />
                       </div>
                       <div className="flex-1 pb-8">
                         <div className="flex items-center gap-2 mb-1">
