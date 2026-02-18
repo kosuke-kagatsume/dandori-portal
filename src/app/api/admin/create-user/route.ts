@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { sendEmail, getTenantWelcomeEmail } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,16 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, name, role, tenantId } = await request.json();
+    const {
+      email,
+      password,
+      name,
+      role,
+      tenantId,
+      passwordResetRequired = false,
+      sendInviteEmail = false,
+      tenantName,
+    } = await request.json();
 
     // バリデーション
     if (!email || !password || !name) {
@@ -69,14 +79,44 @@ export async function POST(request: NextRequest) {
         name,
         passwordHash,
         role: userRole,
-        roles: [userRole], // roles配列も設定（必須フィールド）
+        roles: [userRole],
         tenantId,
         status: 'active',
+        passwordResetRequired,
+        invitedAt: sendInviteEmail ? new Date() : null,
         updatedAt: new Date(),
       },
     });
 
     console.log('User created successfully:', email);
+
+    // 招待メール送信
+    if (sendInviteEmail) {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com';
+        const loginUrl = `${baseUrl}/ja/auth/login`;
+
+        const emailContent = getTenantWelcomeEmail({
+          tenantName: tenantName || '新しいテナント',
+          ownerName: name,
+          email,
+          password,
+          loginUrl,
+        });
+
+        await sendEmail({
+          to: email,
+          subject: emailContent.subject,
+          html: emailContent.html,
+          text: emailContent.text,
+        });
+
+        console.log('Invite email sent successfully to:', email);
+      } catch (emailError) {
+        console.error('Failed to send invite email:', emailError);
+        // メール送信失敗してもユーザー作成は成功とする
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -87,6 +127,7 @@ export async function POST(request: NextRequest) {
         role: user.role,
         tenantId: user.tenantId,
       },
+      emailSent: sendInviteEmail,
     });
   } catch (error) {
     console.error('Create user error:', error);

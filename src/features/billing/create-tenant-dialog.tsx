@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Building2, Mail, Calendar, Users, CreditCard, Globe, AlertCircle, CheckCircle, Lock, Loader2 } from 'lucide-react';
+import { Building2, Mail, Calendar, Users, CreditCard, Globe, AlertCircle, CheckCircle, Lock, Loader2, Wand2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
 // useInvoiceStore - 将来使用予定
 import { toast } from 'sonner';
@@ -40,6 +41,8 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
     adminEmail: '',
     adminPassword: '',
     adminPasswordConfirm: '',
+    autoGeneratePassword: true,
+    sendInviteEmail: true,
   });
 
   // 作成中のローディング状態
@@ -104,9 +107,23 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
   const tax = calculateTax(pricing.totalPrice);
   const total = calculateTotalWithTax(pricing.totalPrice);
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // パスワード自動生成
+  const generatePassword = useCallback(() => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setFormData(prev => ({
+      ...prev,
+      adminPassword: password,
+      adminPasswordConfirm: password,
+    }));
+  }, []);
 
   const handleNext = () => {
     // バリデーション
@@ -156,19 +173,23 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
 
   const handleCreate = async () => {
     // 最終バリデーション
-    if (!formData.adminName || !formData.adminEmail || !formData.adminPassword) {
-      toast.error('管理者情報をすべて入力してください');
+    if (!formData.adminName || !formData.adminEmail) {
+      toast.error('管理者名とメールアドレスを入力してください');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.adminEmail)) {
       toast.error('有効な管理者メールアドレスを入力してください');
       return;
     }
+    if (!formData.adminPassword) {
+      toast.error('パスワードを入力または自動生成してください');
+      return;
+    }
     if (formData.adminPassword.length < 8) {
       toast.error('パスワードは8文字以上必要です');
       return;
     }
-    if (formData.adminPassword !== formData.adminPasswordConfirm) {
+    if (!formData.autoGeneratePassword && formData.adminPassword !== formData.adminPasswordConfirm) {
       toast.error('パスワードが一致しません');
       return;
     }
@@ -205,7 +226,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
 
       const tenantId = tenantData.data.id;
 
-      // 2. Supabase Authにユーザーを作成
+      // 2. 管理者ユーザーを作成
       const authResponse = await fetch('/api/admin/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -215,6 +236,9 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
           name: formData.adminName,
           role: 'admin',
           tenantId: tenantId,
+          passwordResetRequired: formData.sendInviteEmail,
+          sendInviteEmail: formData.sendInviteEmail,
+          tenantName: formData.companyName,
         }),
       });
 
@@ -257,7 +281,11 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
         updatedAt: new Date().toISOString(),
       });
 
-      toast.success(`テナント「${formData.companyName}」を作成しました`);
+      if (formData.sendInviteEmail) {
+        toast.success(`テナント「${formData.companyName}」を作成し、招待メールを送信しました`);
+      } else {
+        toast.success(`テナント「${formData.companyName}」を作成しました`);
+      }
 
       // フォームリセット
       setFormData({
@@ -271,6 +299,8 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
         adminEmail: '',
         adminPassword: '',
         adminPasswordConfirm: '',
+        autoGeneratePassword: true,
+        sendInviteEmail: true,
       });
       setSubdomainStatus('idle');
       setStep(1);
@@ -519,38 +549,110 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
                 </p>
               </div>
 
-              <div>
-                <Label htmlFor="adminPassword">パスワード *</Label>
-                <div className="relative mt-2">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="adminPassword"
-                    type="password"
-                    value={formData.adminPassword}
-                    onChange={(e) => handleChange('adminPassword', e.target.value)}
-                    placeholder="8文字以上"
-                    className="pl-10"
-                    disabled={isCreating}
-                    minLength={8}
-                  />
-                </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="autoGeneratePassword"
+                  checked={formData.autoGeneratePassword}
+                  onCheckedChange={(checked) => {
+                    handleChange('autoGeneratePassword', checked === true);
+                    if (checked) {
+                      generatePassword();
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        adminPassword: '',
+                        adminPasswordConfirm: '',
+                      }));
+                    }
+                  }}
+                  disabled={isCreating}
+                />
+                <Label htmlFor="autoGeneratePassword" className="text-sm font-normal cursor-pointer">
+                  パスワードを自動生成する
+                </Label>
               </div>
 
-              <div>
-                <Label htmlFor="adminPasswordConfirm">パスワード（確認） *</Label>
-                <div className="relative mt-2">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="adminPasswordConfirm"
-                    type="password"
-                    value={formData.adminPasswordConfirm}
-                    onChange={(e) => handleChange('adminPasswordConfirm', e.target.value)}
-                    placeholder="パスワードを再入力"
-                    className="pl-10"
-                    disabled={isCreating}
-                  />
+              {formData.autoGeneratePassword ? (
+                <div>
+                  <Label>生成されたパスワード</Label>
+                  <div className="flex gap-2 mt-2">
+                    <div className="relative flex-1">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        value={formData.adminPassword}
+                        readOnly
+                        className="pl-10 font-mono"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={generatePassword}
+                      disabled={isCreating}
+                    >
+                      <Wand2 className="h-4 w-4 mr-1" />
+                      再生成
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    このパスワードは招待メールに記載されます
+                  </p>
                 </div>
+              ) : (
+                <>
+                  <div>
+                    <Label htmlFor="adminPassword">パスワード *</Label>
+                    <div className="relative mt-2">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="adminPassword"
+                        type="password"
+                        value={formData.adminPassword}
+                        onChange={(e) => handleChange('adminPassword', e.target.value)}
+                        placeholder="8文字以上"
+                        className="pl-10"
+                        disabled={isCreating}
+                        minLength={8}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="adminPasswordConfirm">パスワード（確認） *</Label>
+                    <div className="relative mt-2">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="adminPasswordConfirm"
+                        type="password"
+                        value={formData.adminPasswordConfirm}
+                        onChange={(e) => handleChange('adminPasswordConfirm', e.target.value)}
+                        placeholder="パスワードを再入力"
+                        className="pl-10"
+                        disabled={isCreating}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox
+                  id="sendInviteEmail"
+                  checked={formData.sendInviteEmail}
+                  onCheckedChange={(checked) => handleChange('sendInviteEmail', checked === true)}
+                  disabled={isCreating}
+                />
+                <Label htmlFor="sendInviteEmail" className="text-sm font-normal cursor-pointer">
+                  招待メールを送信する
+                </Label>
               </div>
+              {formData.sendInviteEmail && (
+                <p className="text-xs text-muted-foreground ml-6">
+                  ログインURL、初期パスワード、パスワード変更の案内を含むメールが送信されます。
+                  初回ログイン時にパスワード変更が必要になります。
+                </p>
+              )}
 
               {/* 確認サマリー */}
               <Card className="p-4">

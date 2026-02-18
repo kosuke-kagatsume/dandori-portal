@@ -38,6 +38,27 @@ function ActualLoginForm() {
     setLocalError(null);
 
     try {
+      // APIを直接呼び出してpasswordResetRequiredをチェック
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'ログインに失敗しました');
+      }
+
+      // passwordResetRequiredがtrueの場合はパスワード変更ページへリダイレクト
+      if (result.data.user.passwordResetRequired) {
+        toast.info('初回ログインのため、パスワードの変更が必要です');
+        router.push(`/${locale}/auth/change-password`);
+        return;
+      }
+
+      // 通常のログイン処理を続行
       await login(email, password);
 
       toast.success('ログインしました');

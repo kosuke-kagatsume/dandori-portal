@@ -1701,9 +1701,13 @@ model users {
   department       String?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime
-  passwordHash     String?
-  role             String?      @default("employee")
-  attendance       attendance[]
+  passwordHash          String?
+  role                  String?      @default("employee")
+  passwordResetRequired Boolean      @default(false)
+  invitedAt             DateTime?
+  inviteToken           String?
+  inviteTokenExpiry     DateTime?
+  attendance            attendance[]
   tenants          tenants      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   org_units        org_units?   @relation(fields: [unitId], references: [id])
 

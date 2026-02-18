@@ -187,6 +187,7 @@ export async function POST(request: NextRequest) {
           department: user.department,
           position: user.position,
           tenantId: user.tenantId,
+          passwordResetRequired: user.passwordResetRequired,
         },
         tenant: user.tenants ? {
           id: user.tenants.id,
