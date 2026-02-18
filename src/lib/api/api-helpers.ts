@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 // 共通のAPIレスポンス型
 export interface ApiSuccessResponse<T> {
@@ -100,9 +101,39 @@ export function handleApiError(error: unknown, operation: string) {
   return errorResponse(`${operation}に失敗しました`, 500);
 }
 
-// テナントID取得（将来の認証統合用）
+/**
+ * テナントID取得（Cookie優先、URLパラメータ、フォールバック）
+ *
+ * 優先順位:
+ * 1. x-tenant-id Cookie（ミドルウェアが設定）
+ * 2. URLパラメータ（後方互換性のため）
+ * 3. フォールバック値（デモモード用）
+ */
+export async function getTenantIdFromRequest(request: NextRequest): Promise<string> {
+  // 1. Cookieから取得（ミドルウェアが設定）
+  const cookieStore = await cookies();
+  const tenantIdFromCookie = cookieStore.get('x-tenant-id')?.value;
+  if (tenantIdFromCookie) {
+    return tenantIdFromCookie;
+  }
+
+  // 2. URLパラメータから取得（後方互換性）
+  const { searchParams } = new URL(request.url);
+  const tenantIdFromParams = searchParams.get('tenantId');
+  if (tenantIdFromParams) {
+    return tenantIdFromParams;
+  }
+
+  // 3. フォールバック（デモモード用）
+  // 本番では空の場合エラーにすべきだが、既存コードの後方互換性のため
+  console.warn('[API] No tenant ID found in cookie or params, using fallback');
+  return 'tenant-1';
+}
+
+// 同期版（後方互換性のため維持、非推奨）
+// @deprecated 代わりに getTenantIdFromRequest を使用
 export function getTenantId(searchParams: URLSearchParams): string {
-  // TODO: 認証からテナントIDを取得するように変更
+  console.warn('[API] getTenantId is deprecated, use getTenantIdFromRequest instead');
   return searchParams.get('tenantId') || 'tenant-1';
 }
 
