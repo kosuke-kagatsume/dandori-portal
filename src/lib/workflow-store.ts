@@ -2,7 +2,6 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { generateDemoWorkflowData } from './workflow-demo-data';
 import { useNotificationStore } from './store/notification-store';
 import { useUserStore } from './store/user-store';
 import { getBroadcast } from '@/lib/realtime/broadcast';
@@ -12,18 +11,39 @@ import { useOrganizationStore } from './store/organization-store';
 import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration'; // workflowTypeToDocumentTypeは将来的に使用予定
 import { workflowAudit } from '@/lib/audit/audit-logger';
 
-// REST API helper function
+// REST API helper functions
+const API_BASE = '/api/workflows';
+const getTenantId = () => 'tenant-1';
+
+async function apiFetchWorkflows(filters?: { status?: string; type?: string; requesterId?: string; approverId?: string }) {
+  const params = new URLSearchParams({ tenantId: getTenantId() });
+  if (filters?.status) params.set('status', filters.status);
+  if (filters?.type) params.set('type', filters.type);
+  if (filters?.requesterId) params.set('requesterId', filters.requesterId);
+  if (filters?.approverId) params.set('approverId', filters.approverId);
+
+  const response = await fetch(`${API_BASE}?${params}`);
+  if (!response.ok) {
+    throw new Error('ワークフロー一覧の取得に失敗しました');
+  }
+  const result = await response.json();
+  return result.data || [];
+}
+
 async function apiCreateWorkflow(data: {
   tenantId: string;
   type: string;
   title: string;
   description: string | null;
   requesterId: string;
+  requesterName: string;
+  department?: string;
   status: string;
-  details: Record<string, unknown>;
+  priority?: string;
+  details?: Record<string, unknown>;
+  approval_steps?: { approverRole: string; approverId: string; approverName: string }[];
 }) {
-  const params = new URLSearchParams({ tenantId: data.tenantId });
-  const response = await fetch(`/api/workflows?${params}`, {
+  const response = await fetch(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -33,6 +53,48 @@ async function apiCreateWorkflow(data: {
   }
   const result = await response.json();
   return result;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function apiUpdateWorkflow(id: string, data: Record<string, unknown>) {
+  const response = await fetch(`${API_BASE}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('ワークフローの更新に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function apiApproveWorkflow(id: string, approverId: string, approverName: string, comments?: string) {
+  const response = await fetch(`${API_BASE}/${id}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ approverId, approverName, comments }),
+  });
+  if (!response.ok) {
+    throw new Error('ワークフローの承認に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function apiRejectWorkflow(id: string, approverId: string, approverName: string, reason: string) {
+  const response = await fetch(`${API_BASE}/${id}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ approverId, approverName, reason }),
+  });
+  if (!response.ok) {
+    throw new Error('ワークフローの却下に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
 }
 
 /**
@@ -168,9 +230,8 @@ interface WorkflowStore {
     isActive: boolean;
   }[];
 
-  // 初期化
-  initializeDemoData: () => void;
-  resetDemoData: () => void;
+  // API連携
+  fetchRequests: (filters?: { status?: string; type?: string; requesterId?: string; approverId?: string }) => Promise<void>;
 
   // 申請の作成・更新
   createRequest: (request: Omit<WorkflowRequest, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
@@ -277,105 +338,145 @@ export const useWorkflowStore = create<WorkflowStore>()(
       error: null,
       delegateSettings: [],
 
-      initializeDemoData: () => {
-        const state = get();
-        console.log('Initializing demo data...', { initialized: state.initialized, requestsCount: state.requests.length });
-        
-        // 初期化済みの場合はスキップ
-        if (state.initialized && state.requests.length > 0) {
-          console.log('Demo data already initialized, skipping...');
-          return;
+      fetchRequests: async (filters) => {
+        set({ isLoading: true, error: null });
+        try {
+          const apiWorkflows = await apiFetchWorkflows(filters);
+
+          // API形式をWorkflowRequest形式に変換
+          const requests: WorkflowRequest[] = apiWorkflows.map((wf: Record<string, unknown>) => ({
+            id: wf.id as string,
+            type: wf.type as WorkflowType,
+            title: wf.title as string,
+            description: (wf.description as string) || '',
+            requesterId: wf.requesterId as string,
+            requesterName: (wf.requesterName as string) || '',
+            department: (wf.department as string) || '',
+            status: wf.status as WorkflowStatus,
+            priority: (wf.priority as 'low' | 'normal' | 'high' | 'urgent') || 'normal',
+            details: (wf.details as Record<string, unknown>) || {},
+            approvalSteps: ((wf.approval_steps as Record<string, unknown>[]) || []).map((step) => ({
+              id: step.id as string,
+              order: step.order as number,
+              approverRole: (step.approverRole as ApproverRole) || 'direct_manager',
+              approverId: step.approverId as string,
+              approverName: step.approverName as string,
+              status: step.status as 'pending' | 'approved' | 'rejected' | 'skipped',
+              comments: step.comments as string | undefined,
+              actionDate: step.actionDate as string | undefined,
+            })),
+            currentStep: (wf.currentStep as number) || 0,
+            attachments: [],
+            timeline: ((wf.timeline_entries as Record<string, unknown>[]) || []).map((entry) => ({
+              id: entry.id as string,
+              action: entry.action as string,
+              userId: entry.actorId as string,
+              userName: entry.actorName as string,
+              timestamp: entry.createdAt as string,
+              comments: entry.details as string | undefined,
+            })),
+            createdAt: wf.createdAt as string,
+            updatedAt: wf.updatedAt as string,
+            dueDate: wf.dueDate as string | undefined,
+          }));
+
+          set({ requests, initialized: true, isLoading: false });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'ワークフロー一覧の取得に失敗しました';
+          set({ error: errorMessage, isLoading: false });
+          throw error;
         }
-        
-        const demoData = generateDemoWorkflowData();
-        console.log('Generated demo data count:', demoData.length);
-        
-        const workflowRequests: WorkflowRequest[] = demoData.map((demo, index) => {
-          const request = {
-            id: `WF-DEMO-${Date.now()}-${index}`,
-            ...demo,
-          } as WorkflowRequest;
-          console.log(`Created demo request ${index + 1}:`, request.title, request.status);
-          return request;
-        });
-        
-        console.log('Final requests count:', workflowRequests.length);
-        set({ requests: workflowRequests, initialized: true });
       },
-      
-      resetDemoData: () => {
-        console.log('Resetting demo data...');
-        set({ requests: [], initialized: false });
-        // 少し待ってから再初期化
-        setTimeout(() => {
-          get().initializeDemoData();
-        }, 100);
-      },
-      
+
       createRequest: async (request) => {
         set({ isLoading: true, error: null });
         try {
-          const id = `WF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           const now = new Date().toISOString();
 
           // 承認フローの自動生成を試みる
           let generatedApprovalSteps: ApprovalStep[] | undefined;
 
           try {
-          // WorkflowTypeをDocumentTypeに変換（直接対応する5種類のみ）
-          const documentType = request.type as 'leave_request' | 'overtime_request' | 'expense_claim' | 'business_trip' | 'purchase_request';
-          const supportedTypes: string[] = ['leave_request', 'overtime_request', 'expense_claim', 'business_trip', 'purchase_request'];
+            // WorkflowTypeをDocumentTypeに変換（直接対応する5種類のみ）
+            const documentType = request.type as 'leave_request' | 'overtime_request' | 'expense_claim' | 'business_trip' | 'purchase_request';
+            const supportedTypes: string[] = ['leave_request', 'overtime_request', 'expense_claim', 'business_trip', 'purchase_request'];
 
-          if (supportedTypes.includes(documentType)) {
-            // 承認フローストアから適用可能なフローを検索
-            const approvalFlowStore = useApprovalFlowStore.getState();
-            const applicableFlow = approvalFlowStore.findApplicableFlow(documentType, request.details || {});
+            if (supportedTypes.includes(documentType)) {
+              // 承認フローストアから適用可能なフローを検索
+              const approvalFlowStore = useApprovalFlowStore.getState();
+              const applicableFlow = approvalFlowStore.findApplicableFlow(documentType, request.details || {});
 
-            if (applicableFlow) {
-              // 組織メンバー情報を取得
-              const organizationStore = useOrganizationStore.getState();
-              const organizationMembers = organizationStore.getFilteredMembers();
+              if (applicableFlow) {
+                // 組織メンバー情報を取得
+                const organizationStore = useOrganizationStore.getState();
+                const organizationMembers = organizationStore.getFilteredMembers();
 
-              // 承認ルートを解決
-              const resolvedRoute = approvalFlowStore.resolveApprovalRoute(
-                applicableFlow.id,
-                request.requesterId,
-                organizationMembers
-              );
+                // 承認ルートを解決
+                const resolvedRoute = approvalFlowStore.resolveApprovalRoute(
+                  applicableFlow.id,
+                  request.requesterId,
+                  organizationMembers
+                );
 
-              if (resolvedRoute && resolvedRoute.steps.length > 0) {
-                // 承認ステップを生成
-                const flowSteps = generateApprovalStepsFromFlow(resolvedRoute);
+                if (resolvedRoute && resolvedRoute.steps.length > 0) {
+                  // 承認ステップを生成
+                  const flowSteps = generateApprovalStepsFromFlow(resolvedRoute);
 
-                // WorkflowRequest形式のApprovalStepに変換
-                generatedApprovalSteps = flowSteps.map((step) => {
-                  const approver = step.approvers[0]; // 最初の承認者を使用
-                  return {
-                    id: step.id,
-                    order: step.order,
-                    approverRole: 'direct_manager' as ApproverRole, // デフォルトロール
-                    approverId: approver?.userId || '',
-                    approverName: approver?.name || '',
-                    status: step.status as 'pending' | 'approved' | 'rejected' | 'skipped',
-                    isOptional: false,
-                  };
-                });
+                  // WorkflowRequest形式のApprovalStepに変換
+                  generatedApprovalSteps = flowSteps.map((step) => {
+                    const approver = step.approvers[0]; // 最初の承認者を使用
+                    return {
+                      id: step.id,
+                      order: step.order,
+                      approverRole: 'direct_manager' as ApproverRole, // デフォルトロール
+                      approverId: approver?.userId || '',
+                      approverName: approver?.name || '',
+                      status: step.status as 'pending' | 'approved' | 'rejected' | 'skipped',
+                      isOptional: false,
+                    };
+                  });
 
-                console.log(`承認フローを自動生成しました: ${applicableFlow.name} (${generatedApprovalSteps.length}ステップ)`);
+                  console.log(`承認フローを自動生成しました: ${applicableFlow.name} (${generatedApprovalSteps.length}ステップ)`);
+                }
               }
             }
+          } catch (error) {
+            console.warn('承認フローの自動生成に失敗しました。手動設定の承認ステップを使用します。', error);
           }
-        } catch (error) {
-          console.warn('承認フローの自動生成に失敗しました。手動設定の承認ステップを使用します。', error);
-        }
 
+          // REST APIに保存
+          const tenantId = getTenantId();
+          const approvalStepsForApi = (generatedApprovalSteps || request.approvalSteps).map((step) => ({
+            approverRole: step.approverRole,
+            approverId: step.approverId,
+            approverName: step.approverName,
+          }));
+
+          const result = await apiCreateWorkflow({
+            tenantId,
+            type: request.type,
+            title: request.title,
+            description: request.description || null,
+            requesterId: request.requesterId,
+            requesterName: request.requesterName,
+            department: request.department,
+            status: 'pending',
+            priority: request.priority,
+            details: request.details || {},
+            approval_steps: approvalStepsForApi,
+          });
+
+          if (!result.success || !result.data) {
+            throw new Error('ワークフロー申請の作成に失敗しました');
+          }
+
+          const apiData = result.data;
           const newRequest: WorkflowRequest = {
             ...request,
-            id,
-            createdAt: now,
-            updatedAt: now,
+            id: apiData.id,
+            createdAt: apiData.createdAt || now,
+            updatedAt: apiData.updatedAt || now,
             currentStep: 0,
-            // 自動生成された承認ステップ、または手動設定された承認ステップを使用
             approvalSteps: generatedApprovalSteps || request.approvalSteps,
             timeline: [{
               id: `TL-${Date.now()}`,
@@ -388,33 +489,6 @@ export const useWorkflowStore = create<WorkflowStore>()(
             }],
           };
 
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            // デモモード: localStorageのみ
-            set((state) => ({
-              requests: [...state.requests, newRequest],
-              isLoading: false,
-            }));
-            return id;
-          }
-
-          // 本番モード: REST APIに保存
-          const tenantId = 'tenant-1'; // 仮のテナントID
-
-          const result = await apiCreateWorkflow({
-            tenantId,
-            type: request.type,
-            title: request.title,
-            description: request.description || null,
-            requesterId: request.requesterId,
-            status: 'draft',
-            details: request.details || {},
-          });
-
-          if (!result.success || !result.data) {
-            throw new Error('ワークフロー申請の作成に失敗しました');
-          }
-
           // ローカルステートも更新
           set((state) => ({
             requests: [...state.requests, newRequest],
@@ -422,9 +496,9 @@ export const useWorkflowStore = create<WorkflowStore>()(
           }));
 
           // 監査ログ記録
-          workflowAudit.create(id, request.title);
+          workflowAudit.create(apiData.id, request.title);
 
-          return id;
+          return apiData.id;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'ワークフロー申請の作成に失敗しました';
           set({ error: errorMessage, isLoading: false });
@@ -947,47 +1021,14 @@ export const useWorkflowStore = create<WorkflowStore>()(
     {
       name: 'workflow-store',
       skipHydration: true, // SSR対応: クライアント側でのみhydration
-      // 初期化時にデモデータを強制リセット（開発用）
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // マイグレーション: 古いプレースホルダー形式のapproverIdを実際のユーザーIDに変換
-          const roleToUserIdMap: Record<ApproverRole, string> = {
-            direct_manager: '2',      // 佐藤部長（manager）
-            department_head: '2',     // 佐藤部長（manager）
-            hr_manager: '3',          // 山田人事（hr）
-            finance_manager: '3',     // 山田人事（hr）
-            general_manager: '4',     // システム管理者（admin）
-            ceo: '4',                 // システム管理者（admin）
-          };
-
-          const migratedRequests = state.requests.map(req => {
-            const needsMigration = req.approvalSteps.some(step =>
-              step.approverId.startsWith('user-')
-            );
-
-            if (!needsMigration) return req;
-
-            console.log(`Migrating approver IDs for request ${req.id}`);
-            return {
-              ...req,
-              approvalSteps: req.approvalSteps.map(step => ({
-                ...step,
-                approverId: step.approverId.startsWith('user-')
-                  ? roleToUserIdMap[step.approverRole] || '2'
-                  : step.approverId,
-              })),
-            };
-          });
-
-          if (migratedRequests.some((req, i) => req !== state.requests[i])) {
-            console.log('Applied approver ID migration');
-            state.requests = migratedRequests;
-          }
-
-          // デモデータの初期化
+          // APIからデータを取得（初回読み込み時）
           if (!state.initialized || state.requests.length === 0) {
-            console.log('Rehydrating and initializing demo data...');
-            state.initializeDemoData();
+            console.log('Rehydrating and fetching workflow data from API...');
+            state.fetchRequests().catch((error) => {
+              console.error('Failed to fetch workflows on rehydration:', error);
+            });
           }
         }
       },

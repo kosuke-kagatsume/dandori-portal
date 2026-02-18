@@ -1,6 +1,55 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// REST API helper functions
+const API_BASE = '/api/audit-logs';
+const getTenantId = () => 'tenant-1';
+
+interface ApiFetchLogsParams {
+  userId?: string;
+  category?: AuditCategory;
+  action?: AuditAction;
+  startDate?: string;
+  endDate?: string;
+  severity?: AuditLog['severity'];
+  searchQuery?: string;
+  page?: number;
+  limit?: number;
+}
+
+async function apiFetchLogs(filters?: ApiFetchLogsParams) {
+  const params = new URLSearchParams({ tenantId: getTenantId() });
+  if (filters?.userId) params.set('userId', filters.userId);
+  if (filters?.category) params.set('category', filters.category);
+  if (filters?.action) params.set('action', filters.action);
+  if (filters?.startDate) params.set('startDate', filters.startDate);
+  if (filters?.endDate) params.set('endDate', filters.endDate);
+  if (filters?.severity) params.set('severity', filters.severity);
+  if (filters?.searchQuery) params.set('searchQuery', filters.searchQuery);
+  if (filters?.page) params.set('page', String(filters.page));
+  if (filters?.limit) params.set('limit', String(filters.limit));
+
+  const response = await fetch(`${API_BASE}?${params}`);
+  if (!response.ok) {
+    throw new Error('監査ログの取得に失敗しました');
+  }
+  const result = await response.json();
+  return result;
+}
+
+async function apiCreateLog(log: Omit<AuditLog, 'id' | 'timestamp'>) {
+  const response = await fetch(`${API_BASE}?tenantId=${getTenantId()}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(log),
+  });
+  if (!response.ok) {
+    throw new Error('監査ログの作成に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
 export type AuditAction =
   | 'login'
   | 'logout'
@@ -46,11 +95,22 @@ export interface AuditLog {
 
 interface AuditStore {
   logs: AuditLog[];
+  isLoading: boolean;
+  error: string | null;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+
+  // API連携
+  fetchLogs: (filters?: ApiFetchLogsParams) => Promise<void>;
 
   // ログ追加
-  addLog: (log: Omit<AuditLog, 'id' | 'timestamp'>) => void;
+  addLog: (log: Omit<AuditLog, 'id' | 'timestamp'>) => Promise<void>;
 
-  // ログ検索
+  // ログ検索（ローカル）
   getLogs: (filters?: {
     userId?: string;
     category?: AuditCategory;
@@ -61,7 +121,7 @@ interface AuditStore {
     searchQuery?: string;
   }) => AuditLog[];
 
-  // ログクリア（管理者のみ）
+  // ログクリア（ローカルのみ）
   clearLogs: (beforeDate?: string) => void;
 
   // 統計取得
@@ -78,17 +138,76 @@ export const useAuditStore = create<AuditStore>()(
   persist(
     (set, get) => ({
       logs: [],
+      isLoading: false,
+      error: null,
+      pagination: {
+        page: 1,
+        limit: 50,
+        total: 0,
+        totalPages: 0,
+      },
 
-      addLog: (log) => {
-        const newLog: AuditLog = {
-          ...log,
-          id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          timestamp: new Date().toISOString(),
-        };
+      fetchLogs: async (filters) => {
+        set({ isLoading: true, error: null });
+        try {
+          const result = await apiFetchLogs(filters);
 
-        set((state) => ({
-          logs: [newLog, ...state.logs],
-        }));
+          // APIレスポンスをAuditLog形式に変換
+          const logs: AuditLog[] = (result.data || []).map((log: Record<string, unknown>) => ({
+            id: log.id as string,
+            timestamp: log.createdAt as string,
+            userId: log.userId as string,
+            userName: log.userName as string,
+            userRole: (log.userRole as 'employee' | 'manager' | 'hr' | 'admin') || 'employee',
+            action: log.action as AuditAction,
+            category: log.category as AuditCategory,
+            targetType: log.targetType as string || '',
+            targetId: log.targetId as string,
+            targetName: log.targetName as string,
+            description: log.description as string,
+            ipAddress: log.ipAddress as string,
+            userAgent: log.userAgent as string,
+            metadata: log.metadata as Record<string, unknown>,
+            severity: (log.severity as 'info' | 'warning' | 'error' | 'critical') || 'info',
+          }));
+
+          set({
+            logs,
+            isLoading: false,
+            pagination: result.pagination || {
+              page: 1,
+              limit: 50,
+              total: logs.length,
+              totalPages: 1,
+            },
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '監査ログの取得に失敗しました';
+          set({ error: errorMessage, isLoading: false });
+          throw error;
+        }
+      },
+
+      addLog: async (log) => {
+        set({ isLoading: true, error: null });
+        try {
+          const createdLog = await apiCreateLog(log);
+
+          const newLog: AuditLog = {
+            id: createdLog.id,
+            timestamp: createdLog.createdAt,
+            ...log,
+          };
+
+          set((state) => ({
+            logs: [newLog, ...state.logs],
+            isLoading: false,
+          }));
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '監査ログの作成に失敗しました';
+          set({ error: errorMessage, isLoading: false });
+          throw error;
+        }
       },
 
       getLogs: (filters) => {

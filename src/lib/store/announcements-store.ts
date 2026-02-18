@@ -150,12 +150,6 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            set({ isLoading: false });
-            return;
-          }
-
           // 既存のuserStatesを保持（ローカル既読状態をマージするため）
           const existingAnnouncements = get().announcements;
           const existingUserStatesMap = new Map<string, UserAnnouncementState[]>(
@@ -214,23 +208,6 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            const newAnnouncement: Announcement = {
-              ...announcement,
-              id: `announcement-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              userStates: [],
-            };
-
-            set((state) => ({
-              announcements: [...state.announcements, newAnnouncement],
-              isLoading: false,
-            }));
-            return;
-          }
-
           const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}?tenantId=tenant-1`, {
             method: 'POST',
             body: JSON.stringify(announcement),
@@ -263,23 +240,6 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            set((state) => ({
-              announcements: state.announcements.map((announcement) =>
-                announcement.id === id
-                  ? {
-                      ...announcement,
-                      ...updates,
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : announcement
-              ),
-              isLoading: false,
-            }));
-            return;
-          }
-
           const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
             method: 'PUT',
             body: JSON.stringify(updates),
@@ -315,15 +275,6 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            set((state) => ({
-              announcements: state.announcements.filter((announcement) => announcement.id !== id),
-              isLoading: false,
-            }));
-            return;
-          }
-
           await apiFetch<{ success: boolean }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
             method: 'DELETE',
           });
@@ -350,24 +301,6 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            set((state) => ({
-              announcements: state.announcements.map((announcement) =>
-                announcement.id === id
-                  ? {
-                      ...announcement,
-                      published: true,
-                      publishedAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : announcement
-              ),
-              isLoading: false,
-            }));
-            return;
-          }
-
           const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
             method: 'PUT',
             body: JSON.stringify({ published: true }),
@@ -403,23 +336,6 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック
-          if (process.env.NEXT_PUBLIC_ENV === 'demo' || process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            set((state) => ({
-              announcements: state.announcements.map((announcement) =>
-                announcement.id === id
-                  ? {
-                      ...announcement,
-                      published: false,
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : announcement
-              ),
-              isLoading: false,
-            }));
-            return;
-          }
-
           const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
             method: 'PUT',
             body: JSON.stringify({ published: false }),
@@ -498,13 +414,11 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         updateState();
 
         try {
-          // デモモードでなければAPIも呼び出す
-          if (process.env.NEXT_PUBLIC_ENV !== 'demo' && process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
-            await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=tenant-1`, {
-              method: 'POST',
-              body: JSON.stringify({ userId }),
-            });
-          }
+          // APIを呼び出す
+          await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=tenant-1`, {
+            method: 'POST',
+            body: JSON.stringify({ userId }),
+          });
         } catch (error) {
           console.error('Failed to mark as read:', error);
           // APIエラー時もローカル状態は維持（後でリロード時に同期される）

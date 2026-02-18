@@ -95,6 +95,87 @@ export async function PUT(
   }
 }
 
+// PATCH /api/attendance/[id] - 勤怠部分更新（休憩開始・終了等）
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const tenantId = await getTenantIdFromRequest(request);
+    const body = await request.json();
+
+    // 存在確認
+    const existing = await prisma.attendance.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!existing) {
+      return errorResponse('勤怠記録が見つかりません', 404);
+    }
+
+    // PATCHは渡されたフィールドのみ更新
+    const updateData: Record<string, unknown> = {};
+
+    if (body.checkIn !== undefined) {
+      updateData.checkIn = body.checkIn ? new Date(body.checkIn) : null;
+    }
+    if (body.checkOut !== undefined) {
+      updateData.checkOut = body.checkOut ? new Date(body.checkOut) : null;
+    }
+    if (body.breakStart !== undefined) {
+      updateData.breakStart = body.breakStart ? new Date(body.breakStart) : null;
+    }
+    if (body.breakEnd !== undefined) {
+      updateData.breakEnd = body.breakEnd ? new Date(body.breakEnd) : null;
+    }
+    if (body.totalBreakMinutes !== undefined) {
+      updateData.totalBreakMinutes = body.totalBreakMinutes;
+    }
+    if (body.workMinutes !== undefined) {
+      updateData.workMinutes = body.workMinutes;
+    }
+    if (body.overtimeMinutes !== undefined) {
+      updateData.overtimeMinutes = body.overtimeMinutes;
+    }
+    if (body.workLocation !== undefined) {
+      updateData.workLocation = body.workLocation;
+    }
+    if (body.status !== undefined) {
+      updateData.status = body.status;
+    }
+    if (body.memo !== undefined) {
+      updateData.memo = body.memo;
+    }
+    if (body.approvalStatus !== undefined) {
+      updateData.approvalStatus = body.approvalStatus;
+    }
+    if (body.approvalReason !== undefined) {
+      updateData.approvalReason = body.approvalReason;
+    }
+
+    const attendance = await prisma.attendance.update({
+      where: { id },
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            position: true,
+            department: true,
+          },
+        },
+      },
+    });
+
+    return successResponse(attendance);
+  } catch (error) {
+    return handleApiError(error, '勤怠記録の部分更新');
+  }
+}
+
 // DELETE /api/attendance/[id] - 勤怠削除
 export async function DELETE(
   request: NextRequest,

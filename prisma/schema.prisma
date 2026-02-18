@@ -2499,3 +2499,35 @@ model scheduled_changes {
   @@index([tenantId, userId])
   @@index([tenantId, approvalStatus])
 }
+
+// ============================================
+// 監査ログ
+// ============================================
+
+model audit_logs {
+  id          String   @id
+  tenantId    String
+  userId      String?
+  userName    String?
+  userRole    String?
+  action      String   // login, logout, create, update, delete, approve, reject, return, export, import, access
+  category    String   // auth, user, attendance, leave, workflow, payroll, organization, settings, saas, assets
+  targetType  String?  // 対象エンティティの種類
+  targetId    String?  // 対象エンティティのID
+  targetName  String?  // 対象エンティティの名前
+  description String
+  oldValue    Json?    // 変更前の値
+  newValue    Json?    // 変更後の値
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  severity    String   @default("info") // info, warning, error, critical
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([tenantId, category])
+  @@index([tenantId, action])
+  @@index([tenantId, createdAt])
+  @@index([createdAt])
+}

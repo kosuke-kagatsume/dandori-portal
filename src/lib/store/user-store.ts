@@ -10,7 +10,6 @@ import {
   stopTokenRefreshTimer,
 } from '@/lib/auth/token-manager';
 import { userAudit, authAudit } from '@/lib/audit/audit-logger';
-import { IS_DEMO_BUILD } from '@/config/demo';
 import { useTenantStore } from './tenant-store';
 
 // REST API helper functions
@@ -134,6 +133,7 @@ interface UserState {
 const createUserStore = () => {
   // 初期デモユーザー（employee）のcurrentUser形式を作成
   const initialDemoUser = demoUsers.employee;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const initialCurrentUser: User = {
     id: initialDemoUser.id,
     tenantId: 'tenant-1',
@@ -151,19 +151,18 @@ const createUserStore = () => {
   };
 
   const storeCreator = (set: (partial: Partial<UserState> | ((state: UserState) => Partial<UserState>)) => void, get: () => UserState): UserState => ({
-      // 本番モード: null、デモモード: デモユーザー
-      // IS_DEMO_BUILDを使用することでSSR/CSRで一貫した値になる
-      currentUser: IS_DEMO_BUILD ? initialCurrentUser : null,
+      // 本番モード: 認証後に設定
+      currentUser: null,
       users: [],
       isLoading: false,
       error: null,
 
-      // API統合用（本番では認証後にテナントIDが設定される）
-      tenantId: IS_DEMO_BUILD ? 'tenant-1' : null,
+      // API統合用（認証後にテナントIDが設定される）
+      tenantId: null,
 
-      // デモモードの初期状態（ビルド時に確定、localStorageからは読み込まない）
-      isDemoMode: IS_DEMO_BUILD,
-      currentDemoUser: IS_DEMO_BUILD ? demoUsers.employee : null,
+      // デモモードは削除されました
+      isDemoMode: false,
+      currentDemoUser: null,
 
       // 認証トークン
       accessToken: null,
@@ -187,29 +186,7 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック（ビルド時定数を使用）
-          if (IS_DEMO_BUILD) {
-            // デモモード: ハードコードされたユーザーを使用
-            set({
-              currentUser: initialCurrentUser,
-              isDemoMode: true,
-              currentDemoUser: demoUsers.employee,
-              isLoading: false,
-            });
-
-            // デモモード用のCookie保存（middleware用）
-            if (typeof window !== 'undefined') {
-              const userRole = initialCurrentUser.roles[0] || 'employee';
-              document.cookie = `user_role=${userRole}; path=/; SameSite=Lax`;
-            }
-
-            // 監査ログ記録
-            authAudit.login();
-
-            return;
-          }
-
-          // プロダクションモード: REST API で認証
+          // REST API で認証
           const response = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -326,13 +303,10 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック（ビルド時定数を使用）
-          if (!IS_DEMO_BUILD) {
-            // プロダクションモード: REST API でログアウト
-            await fetch('/api/auth/logout', {
-              method: 'POST',
-            });
-          }
+          // REST API でログアウト
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+          });
 
           // トークンリフレッシュタイマーを停止
           stopTokenRefreshTimer();
@@ -377,14 +351,7 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック（ビルド時定数を使用）
-          if (IS_DEMO_BUILD) {
-            // デモモード: 既存のユーザーを返す
-            set({ isLoading: false });
-            return;
-          }
-
-          // プロダクションモード: REST API でユーザー情報を取得
+          // REST API でユーザー情報を取得
           const response = await fetch('/api/auth/me', {
             credentials: 'include', // クッキーを送信
           });
@@ -462,12 +429,6 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック（ビルド時定数を使用）
-          if (IS_DEMO_BUILD) {
-            set({ isLoading: false });
-            return;
-          }
-
           const state = get();
           if (!state.tenantId) {
             throw new Error('テナントIDが設定されていません');
@@ -497,17 +458,6 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック（ビルド時定数を使用）
-          if (IS_DEMO_BUILD) {
-            set((state: UserState) => ({
-              users: [...state.users, user],
-              isLoading: false,
-            }));
-            // 監査ログ記録
-            userAudit.create(user.id, user.name);
-            return;
-          }
-
           const state = get();
           if (!state.tenantId) {
             throw new Error('テナントIDが設定されていません');
@@ -538,25 +488,6 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック（ビルド時定数を使用）
-          if (IS_DEMO_BUILD) {
-            const existingUser = get().users.find(u => u.id === id);
-            set((state: UserState) => ({
-              users: state.users.map((u) =>
-                u.id === id ? { ...u, ...updates } : u
-              ),
-              currentUser:
-                state.currentUser?.id === id
-                  ? { ...state.currentUser, ...updates }
-                  : state.currentUser,
-              isLoading: false,
-            }));
-            // 監査ログ記録
-            const changesDescription = Object.keys(updates).join(', ');
-            userAudit.update(id, existingUser?.name || id, changesDescription);
-            return;
-          }
-
           const existingUser = get().users.find(u => u.id === id);
           const updatedUser = await apiUpdateUser(id, updates);
           set((state: UserState) => ({
@@ -590,17 +521,6 @@ const createUserStore = () => {
         set({ isLoading: true, error: null });
 
         try {
-          // デモモードチェック（ビルド時定数を使用）
-          if (IS_DEMO_BUILD) {
-            set((state: UserState) => ({
-              users: state.users.filter((u) => u.id !== id),
-              currentUser:
-                state.currentUser?.id === id ? null : state.currentUser,
-              isLoading: false,
-            }));
-            return;
-          }
-
           await apiDeleteUser(id);
           set((state: UserState) => ({
             users: state.users.filter((u) => u.id !== id),
@@ -634,36 +554,6 @@ const createUserStore = () => {
         };
 
         try {
-          // デモモードチェック（ビルド時定数を使用）
-          if (IS_DEMO_BUILD) {
-            const existingUser = get().users.find(u => u.id === id);
-            set((state: UserState) => ({
-              users: state.users.map((u) =>
-                u.id === id
-                  ? {
-                      ...u,
-                      status: 'retired' as const,
-                      retiredDate,
-                      retirementReason: reason,
-                    }
-                  : u
-              ),
-              currentUser:
-                state.currentUser?.id === id
-                  ? {
-                      ...state.currentUser,
-                      status: 'retired' as const,
-                      retiredDate,
-                      retirementReason: reason,
-                    }
-                  : state.currentUser,
-              isLoading: false,
-            }));
-            // 監査ログ記録
-            userAudit.retire(id, existingUser?.name || id, reasonLabels[reason] || reason);
-            return;
-          }
-
           const existingUser = get().users.find(u => u.id === id);
           const updatedUser = await apiRetireUser(id, retiredDate, reason);
           set((state: UserState) => ({
@@ -785,25 +675,11 @@ const createUserStore = () => {
       skipHydration: true,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => {
-        // 本番ビルドの場合はisDemoModeとcurrentDemoUserを永続化しない
-        // これにより古いlocalStorageの値でDEMOモードになることを防ぐ
-        if (!IS_DEMO_BUILD) {
-          return {
-            currentUser: state.currentUser,
-            users: state.users,
-            tenantId: state.tenantId,
-            // isDemoModeとcurrentDemoUserは永続化しない
-            accessToken: state.accessToken,
-            refreshToken: state.refreshToken,
-          };
-        }
-        // デモビルドの場合は従来通り
+        // isDemoModeとcurrentDemoUserは永続化しない
         return {
           currentUser: state.currentUser,
           users: state.users,
           tenantId: state.tenantId,
-          isDemoMode: state.isDemoMode,
-          currentDemoUser: state.currentDemoUser,
           accessToken: state.accessToken,
           refreshToken: state.refreshToken,
         };
@@ -811,12 +687,9 @@ const createUserStore = () => {
       onRehydrateStorage: () => (state) => {
         // localStorageからの読み込み完了時に呼ばれる
         if (state) {
-          // 本番ビルドの場合、localStorageからisDemoMode=trueが読み込まれていても
-          // 強制的にfalseにリセットする（Hydrationエラー防止）
-          if (!IS_DEMO_BUILD) {
-            state.isDemoMode = false;
-            state.currentDemoUser = null;
-          }
+          // デモモードは無効
+          state.isDemoMode = false;
+          state.currentDemoUser = null;
           state.setHasHydrated(true);
           // トークンがある場合、apiClientにも設定
           if (state.accessToken) {

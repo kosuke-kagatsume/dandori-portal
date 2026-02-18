@@ -24,13 +24,13 @@ export function useWorkflowData(userId: string) {
 
         if (!response.ok) {
           // APIからの取得に失敗した場合はZustandストアのデータを使用
-          store.initializeDemoData();
+          await store.fetchRequests();
         }
       } catch (err) {
         console.error('Failed to fetch workflow data:', err);
         setError('データの取得に失敗しました');
         // エラー時もZustandストアを初期化
-        store.initializeDemoData();
+        await store.fetchRequests();
       } finally {
         setLoading(false);
       }

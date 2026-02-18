@@ -141,7 +141,8 @@ const getCurrentUserId = () => {
   }
 };
 
-// 現在のユーザー名を取得（デモ用）
+// 現在のユーザー名を取得（デモ用）- 将来的にAPI連携で使用予定
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getCurrentUserName = () => {
   if (typeof window === 'undefined') return 'デモユーザー';
 
@@ -164,12 +165,6 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
       fetchRecords: async (userId, startDate, endDate) => {
         set({ isLoading: true, error: null });
         try {
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            // デモモード: localStorageから読み込むのみ
-            set({ isLoading: false });
-            return;
-          }
-
           const records = await apiFetchAttendanceRecords(userId, startDate, endDate);
           set({ records, isLoading: false });
         } catch (error) {
@@ -182,53 +177,10 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
       addOrUpdateRecord: async (record) => {
         set({ isLoading: true, error: null });
         try {
-          const now = new Date().toISOString();
           const userId = record.userId || getCurrentUserId();
           const date = record.date || new Date().toISOString().split('T')[0];
 
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            // デモモード: localStorageのみ更新
-            set((state) => {
-              const existingIndex = state.records.findIndex(
-                r => r.userId === userId && r.date === date
-              );
-
-              if (existingIndex >= 0) {
-                // 更新
-                const updatedRecords = [...state.records];
-                updatedRecords[existingIndex] = {
-                  ...updatedRecords[existingIndex],
-                  ...record,
-                  updatedAt: now,
-                };
-                return { records: updatedRecords, isLoading: false };
-              } else {
-                // 新規追加
-                const newRecord: AttendanceRecord = {
-                  id: `attendance-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                  userId,
-                  userName: record.userName || getCurrentUserName(),
-                  date,
-                  checkIn: null,
-                  checkOut: null,
-                  breakStart: null,
-                  breakEnd: null,
-                  totalBreakMinutes: 0,
-                  workMinutes: 0,
-                  overtimeMinutes: 0,
-                  workLocation: 'office',
-                  status: 'present',
-                  createdAt: now,
-                  updatedAt: now,
-                  ...record,
-                };
-                return { records: [...state.records, newRecord], isLoading: false };
-              }
-            });
-            return;
-          }
-
-          // 本番モード: REST APIでupsert
+          // REST APIでupsert
           const existingRecord = get().records.find(
             r => r.userId === userId && r.date === date
           );
@@ -469,16 +421,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
       deleteRecord: async (id) => {
         set({ isLoading: true, error: null });
         try {
-          if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
-            // デモモード: localStorageのみ削除
-            set((state) => ({
-              records: state.records.filter(r => r.id !== id),
-              isLoading: false,
-            }));
-            return;
-          }
-
-          // 本番モード: REST APIから削除
+          // REST APIから削除
           await apiDeleteAttendanceRecord(id);
 
           // ローカルステートからも削除

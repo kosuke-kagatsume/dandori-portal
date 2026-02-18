@@ -111,10 +111,9 @@ export default function WorkflowPage() {
   // デモデータに合わせてユーザーIDを設定（田中太郎: 営業部マネージャー）
   const currentUserId = currentUser?.id || '1';
   
-  const { 
+  const {
     requests,
-    initializeDemoData,
-    resetDemoData,
+    fetchRequests,
     createRequest,
     submitRequest,
     getMyRequests,
@@ -126,11 +125,11 @@ export default function WorkflowPage() {
     getStatistics,
   } = useWorkflowStore();
 
-  // Zustand persistのhydration（SSR対応）とデモデータ初期化を統合
+  // Zustand persistのhydration（SSR対応）とAPIからデータ取得
   useEffect(() => {
     useWorkflowStore.persist.rehydrate();
-    initializeDemoData();
-  }, [initializeDemoData]);
+    fetchRequests();
+  }, [fetchRequests]);
 
   // 承認待ちのリクエスト
   const pendingApprovals = useMemo(() => 
@@ -501,9 +500,6 @@ export default function WorkflowPage() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={resetDemoData} className="w-full sm:w-auto">
-            デモデータリセット
-          </Button>
           <Button onClick={() => setShowNewRequestDialog(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             新規申請

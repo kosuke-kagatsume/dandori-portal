@@ -2,6 +2,57 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { OrganizationNode, OrganizationMember, UserRole, TransferHistory } from '@/types';
 
+// REST API helper functions
+const API_BASE = '/api/organization';
+
+async function apiFetchOrganization() {
+  const response = await fetch(API_BASE);
+  if (!response.ok) {
+    throw new Error('組織構造の取得に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function apiCreateDepartment(data: Record<string, unknown>) {
+  const response = await fetch(`${API_BASE}/departments`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('部門の作成に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function apiUpdateDepartment(id: string, data: Record<string, unknown>) {
+  const response = await fetch(`${API_BASE}/departments/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error('部門の更新に失敗しました');
+  }
+  const result = await response.json();
+  return result.data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function apiDeleteDepartment(id: string) {
+  const response = await fetch(`${API_BASE}/departments/${id}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('部門の削除に失敗しました');
+  }
+  return true;
+}
+
 interface OrganizationStore {
   // State
   organizationTree: OrganizationNode | null;
@@ -16,6 +67,11 @@ interface OrganizationStore {
     status: 'active' | 'inactive' | 'all';
   };
   transferHistories: TransferHistory[];
+
+  // API連携
+  isLoading: boolean;
+  error: string | null;
+  fetchOrganization: () => Promise<void>;
 
   // Actions
   setOrganizationTree: (tree: OrganizationNode) => void;
@@ -69,6 +125,49 @@ export const useOrganizationStore = create<OrganizationStore>()(
         status: 'active'
       },
       transferHistories: [],
+      isLoading: false,
+      error: null,
+
+      // API連携
+      fetchOrganization: async () => {
+        set({ isLoading: true, error: null });
+        try {
+          const data = await apiFetchOrganization();
+          if (data?.tree) {
+            // ツリーから全メンバーを抽出
+            const extractAllMembers = (node: OrganizationNode): OrganizationMember[] => {
+              let members = [...(node.members || [])];
+              for (const child of (node.children || [])) {
+                members = [...members, ...extractAllMembers(child)];
+              }
+              return members;
+            };
+
+            const allExtractedMembers = extractAllMembers(data.tree);
+            const uniqueMembers = allExtractedMembers.filter(
+              (member, index, self) => self.findIndex(m => m.id === member.id) === index
+            );
+
+            set({
+              organizationTree: data.tree,
+              allMembers: uniqueMembers,
+              isLoading: false,
+            });
+          } else if (data?.members) {
+            // メンバーリストのみの場合
+            set({
+              allMembers: data.members,
+              isLoading: false,
+            });
+          } else {
+            set({ isLoading: false });
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '組織構造の取得に失敗しました';
+          set({ error: errorMessage, isLoading: false });
+          throw error;
+        }
+      },
 
       // Basic setters
       setOrganizationTree: (tree) => {
