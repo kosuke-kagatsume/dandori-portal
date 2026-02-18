@@ -27,6 +27,7 @@ import {
   Bell,
   RefreshCw,
   Scale,
+  LogOut,
 } from 'lucide-react';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
 import { useAdminTenantStore } from '@/lib/store/admin-tenant-store';
@@ -48,6 +49,20 @@ function DWAdminDashboardPage() {
   const { tenants, fetchTenants, isLoading: tenantsLoading } = useAdminTenantStore();
   const { getStats: getNotificationStats, fetchNotifications, isLoading: notificationsLoading } = useNotificationHistoryStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // ログアウトハンドラー
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await fetch('/api/dw-admin/auth/logout', { method: 'POST' });
+      router.push('/dw-admin/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('ログアウトに失敗しました');
+      setIsLoggingOut(false);
+    }
+  };
 
   // URLパラメータからタブを取得（デフォルトは 'dashboard'）
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -170,24 +185,44 @@ function DWAdminDashboardPage() {
             全テナントの収益状況と管理機能
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefreshData}
-          disabled={isRefreshing || isLoading}
-        >
-          {isRefreshing || isLoading ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              読み込み中...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              データ更新
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshData}
+            disabled={isRefreshing || isLoading}
+          >
+            {isRefreshing || isLoading ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                読み込み中...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                データ更新
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ログアウト中...
+              </>
+            ) : (
+              <>
+                <LogOut className="h-4 w-4 mr-2" />
+                ログアウト
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* タブ */}

@@ -7,8 +7,11 @@ const intlMiddleware = createMiddleware({
   defaultLocale: 'ja'
 });
 
-// メインドメインのデフォルトテナント（デモ用サンプル会社）
-const DEFAULT_TENANT_ID = 'tenant-1'; // 株式会社サンプル
+// DW社管理者メールアドレス（環境変数から取得、なければデフォルト）
+const DW_ADMIN_EMAILS = (process.env.DW_ADMIN_EMAILS || 'admin@dw-inc.co.jp,super@dw-inc.co.jp').split(',');
+
+// メインドメインのデフォルトテナント（デモモード用のみ）
+const DEFAULT_TENANT_ID = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' ? 'tenant-1' : null;
 
 // テナント情報のキャッシュ（メモリ内）
 // Edge Runtimeでもグローバル変数は利用可能
@@ -84,14 +87,15 @@ async function extractTenantFromHostname(
   hostname: string,
   requestUrl: string
 ): Promise<{
-  tenantId: string;
+  tenantId: string | null;
   subdomain: string | null;
+  error?: string;
 }> {
   // ローカル開発環境のチェック
   const isLocalhost = hostname.includes('localhost') || hostname.includes('127.0.0.1');
 
   let subdomain: string | null = null;
-  let tenantId = DEFAULT_TENANT_ID;
+  let tenantId: string | null = DEFAULT_TENANT_ID;
 
   if (isLocalhost) {
     // ローカル開発: subdomain.localhost:3000 形式
@@ -134,15 +138,15 @@ async function extractTenantFromHostname(
           console.log('[Middleware] Database hit:', subdomain, '→', tenantId);
         }
       } else {
-        // 3. 見つからない場合はデフォルト
+        // 3. テナントが見つからない場合はエラー（デモモードでない限り）
         if (process.env.NODE_ENV === 'development') {
           console.warn(
-            '[Middleware] Tenant not found, using default:',
-            subdomain,
-            '→',
-            DEFAULT_TENANT_ID
+            '[Middleware] Tenant not found:',
+            subdomain
           );
         }
+        // デモモードでない場合、tenantIdはnullのまま（エラーとして処理）
+        return { tenantId: null, subdomain, error: 'TENANT_NOT_FOUND' };
       }
     }
   }
@@ -205,15 +209,61 @@ export default async function middleware(request: NextRequest) {
 
   // 0. マルチテナント識別（すべてのリクエストで実行）
   const hostname = request.headers.get('host') || '';
-  const { tenantId, subdomain } = await extractTenantFromHostname(
+  const { tenantId, subdomain, error: tenantError } = await extractTenantFromHostname(
     hostname,
     request.url
   );
 
+  // テナントが見つからない場合（デモモード以外）
+  if (tenantError === 'TENANT_NOT_FOUND' && !tenantId) {
+    // DW管理画面からのアクセスかどうかをチェック
+    const referer = request.headers.get('referer') || '';
+    const isDWAdminReferer = referer.includes('/dw-admin');
+
+    // テナントエラーページにリダイレクト（ループ防止）
+    if (!pathname.includes('/tenant-not-found')) {
+      const errorUrl = new URL('/tenant-not-found', request.url);
+      errorUrl.searchParams.set('subdomain', subdomain || '');
+      if (isDWAdminReferer) {
+        errorUrl.searchParams.set('from', 'dw-admin');
+      }
+      return NextResponse.redirect(errorUrl);
+    }
+  }
+
   // 0-1. DW社管理画面（locale不要、テナント識別スキップ）
   if (pathname.startsWith('/dw-admin')) {
-    // DW社管理画面は locale 処理をスキップ
-    // TODO: 将来的にDW社専用の認証チェックを追加
+    // DW社管理画面はDW社専用の認証チェックを実施
+    const dwAccessToken = request.cookies.get('dw_access_token')?.value;
+    const dwUserEmail = request.cookies.get('dw_user_email')?.value;
+
+    // DW管理者ログインページは認証不要
+    if (pathname === '/dw-admin/login') {
+      // 既にログイン済みならダッシュボードにリダイレクト
+      if (dwAccessToken && dwUserEmail && DW_ADMIN_EMAILS.includes(dwUserEmail)) {
+        return NextResponse.redirect(new URL('/dw-admin/dashboard', request.url));
+      }
+      return NextResponse.next();
+    }
+
+    // 認証チェック
+    if (!dwAccessToken || !dwUserEmail) {
+      // 未認証の場合、DW管理者ログインページにリダイレクト
+      const loginUrl = new URL('/dw-admin/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // DW管理者権限チェック
+    if (!DW_ADMIN_EMAILS.includes(dwUserEmail)) {
+      // 権限がない場合、ログインページにリダイレクト
+      const response = NextResponse.redirect(new URL('/dw-admin/login', request.url));
+      // 不正なCookieを削除
+      response.cookies.delete('dw_access_token');
+      response.cookies.delete('dw_user_email');
+      return response;
+    }
+
     return NextResponse.next();
   }
 
@@ -284,9 +334,14 @@ export default async function middleware(request: NextRequest) {
  */
 function addTenantHeaders(
   response: NextResponse,
-  tenantId: string,
+  tenantId: string | null,
   subdomain: string | null
 ): NextResponse {
+  // tenantIdがnullの場合は何も設定しない（エラーケース）
+  if (!tenantId) {
+    return response;
+  }
+
   // リクエストヘッダーに追加（サーバーコンポーネントで使用）
   response.headers.set('x-tenant-id', tenantId);
   response.headers.set('x-subdomain', subdomain || 'main');
