@@ -33,11 +33,7 @@ import type { TransferHistory } from '@/types';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
-interface TransferHistoryPanelProps {
-  onAddTransfer?: () => void;
-}
-
-export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProps) {
+export function TransferHistoryPanel() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { getAllTransferHistories, getTransferHistoriesByUser: _getTransferHistoriesByUser } = useOrganizationStore(); // getTransferHistoriesByUserは将来的にユーザー別履歴で使用予定
   const [searchQuery, setSearchQuery] = useState('');
@@ -171,12 +167,6 @@ export function TransferHistoryPanel({ onAddTransfer }: TransferHistoryPanelProp
                 <Download className="h-4 w-4 mr-2" />
                 CSV出力
               </Button>
-              {onAddTransfer && (
-                <Button size="sm" onClick={onAddTransfer}>
-                  <ArrowRightLeft className="h-4 w-4 mr-2" />
-                  異動登録
-                </Button>
-              )}
             </div>
           </div>
         </CardHeader>

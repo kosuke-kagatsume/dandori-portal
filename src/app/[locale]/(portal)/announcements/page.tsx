@@ -33,6 +33,7 @@ import { useAnnouncementsStore } from '@/lib/store/announcements-store';
 import type { Announcement, AnnouncementPriority, AnnouncementType, UserAnnouncementStatus } from '@/lib/store/announcements-store';
 import { useIsMounted } from '@/hooks/useIsMounted';
 import ReactMarkdown from 'react-markdown';
+import { useAnnouncementTypeMasterStore } from '@/features/announcements/announcement-type-master-panel';
 
 // 優先度ラベル
 const PRIORITY_LABELS: Record<AnnouncementPriority, string> = {
@@ -42,8 +43,8 @@ const PRIORITY_LABELS: Record<AnnouncementPriority, string> = {
   low: '低',
 };
 
-// 種別ラベル
-const TYPE_LABELS: Record<AnnouncementType, string> = {
+// デフォルト種別ラベル（マスター取得前のフォールバック）
+const DEFAULT_TYPE_LABELS: Record<AnnouncementType, string> = {
   general: '一般告知',
   deadline: '締切・期限',
   system: 'システム関連',
@@ -62,6 +63,9 @@ export default function AnnouncementsPage() {
     markAsCompleted,
   } = useAnnouncementsStore();
 
+  // マスター設定から種別を取得
+  const { types: masterTypes, fetchTypes } = useAnnouncementTypeMasterStore();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<AnnouncementType | 'all'>('all');
@@ -74,7 +78,24 @@ export default function AnnouncementsPage() {
   // 初期化: アナウンスを取得
   useEffect(() => {
     fetchAnnouncements();
-  }, [fetchAnnouncements]);
+    fetchTypes();
+  }, [fetchAnnouncements, fetchTypes]);
+
+  // マスター設定からTYPE_LABELSを生成
+  const TYPE_LABELS = useMemo(() => {
+    const labels: Record<string, string> = { ...DEFAULT_TYPE_LABELS };
+    masterTypes.filter(t => t.isActive).forEach(type => {
+      labels[type.code] = type.name;
+    });
+    return labels;
+  }, [masterTypes]);
+
+  // マスター設定から有効な種別リストを取得（フィルターセレクト用）
+  const activeTypes = useMemo(() => {
+    return masterTypes
+      .filter(t => t.isActive)
+      .sort((a, b) => a.order - b.order);
+  }, [masterTypes]);
 
   // 現在のユーザーID（仮）
   const currentUserId = 'current-user-id'; // TODO: 実際のユーザーIDを取得
@@ -166,7 +187,11 @@ export default function AnnouncementsPage() {
       return a.published && status === 'unread';
     }).length;
     const urgent = announcements.filter((a) => a.published && a.priority === 'urgent').length;
-    const requiresAction = announcements.filter((a) => a.published && a.requiresAction).length;
+    // 対応が必要な件数は、ユーザーが未対応（completed以外）のもののみカウント
+    const requiresAction = announcements.filter((a) => {
+      const status = getUserStatus(a.id);
+      return a.published && a.requiresAction && status !== 'completed';
+    }).length;
 
     return { total, unread, urgent, requiresAction };
   }, [announcements, getUserStatus]);
@@ -222,7 +247,17 @@ export default function AnnouncementsPage() {
 
       {/* 統計カード */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card
+          className="cursor-pointer transition-colors hover:bg-muted/50 hover:border-primary"
+          onClick={() => {
+            setStatusFilter('all');
+            setPriorityFilter('all');
+            setRequiresActionFilter(false);
+            setTypeFilter('all');
+            setDepartmentFilter('all');
+            setSearchQuery('');
+          }}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               総アナウンス数
@@ -328,19 +363,16 @@ export default function AnnouncementsPage() {
               </SelectContent>
             </Select>
 
-            {/* 種別フィルター */}
-            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as 'general' | 'deadline' | 'system' | 'event' | 'policy' | 'emergency' | 'all')}>
+            {/* 種別フィルター（マスター設定から取得） */}
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as AnnouncementType | 'all')}>
               <SelectTrigger>
                 <SelectValue placeholder="種別" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">すべての種別</SelectItem>
-                <SelectItem value="general">一般告知</SelectItem>
-                <SelectItem value="deadline">締切・期限</SelectItem>
-                <SelectItem value="system">システム関連</SelectItem>
-                <SelectItem value="event">イベント</SelectItem>
-                <SelectItem value="policy">規程・ポリシー</SelectItem>
-                <SelectItem value="emergency">緊急連絡</SelectItem>
+                {activeTypes.map((type) => (
+                  <SelectItem key={type.code} value={type.code}>{type.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

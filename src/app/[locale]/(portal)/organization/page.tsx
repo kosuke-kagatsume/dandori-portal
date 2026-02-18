@@ -17,21 +17,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Building2, 
-  Users, 
-  Shield, 
-  BarChart3,
+import {
+  Building2,
+  Users,
+  Shield,
+  // BarChart3, // 分析タブ削除に伴い未使用
   TreePine,
   List,
   // Search, // 検索機能で使用予定
-  Plus,
+  // Plus, // ヘッダーの追加ボタン削除に伴い未使用
   // Settings, // 設定ボタンで使用予定
 } from 'lucide-react';
 import { OrganizationChart } from '@/components/organization/organization-chart';
 import { UserManagementPanel } from '@/components/organization/user-management-panel';
 import { TransferHistoryPanel } from '@/components/organization/transfer-history-panel';
-import { AddTransferDialog } from '@/components/organization/add-transfer-dialog';
+// import { AddTransferDialog } from '@/components/organization/add-transfer-dialog'; // 異動登録ボタン削除に伴い未使用
 import { useOrganizationStore } from '@/lib/store/organization-store';
 import { useUserStore } from '@/lib/store';
 import { hasPermission as hasRbacPermission, type UserRole } from '@/lib/rbac';
@@ -40,7 +40,6 @@ import { Loader2 } from 'lucide-react';
 
 export default function OrganizationPage() {
   const [activeTab, setActiveTab] = useState('overview');
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const { currentUser } = useUserStore();
   
   const {
@@ -179,13 +178,6 @@ export default function OrganizationPage() {
             組織構造とメンバーの管理、権限設定を行います
           </p>
         </div>
-
-        {canManageOrganization && (
-          <Button className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            新規追加
-          </Button>
-        )}
       </div>
 
       {/* Stats Cards */}
@@ -235,11 +227,10 @@ export default function OrganizationPage() {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">組織図</TabsTrigger>
           <TabsTrigger value="members">メンバー</TabsTrigger>
           <TabsTrigger value="transfers">異動</TabsTrigger>
-          <TabsTrigger value="analytics">分析</TabsTrigger>
         </TabsList>
 
         {/* 組織図タブ */}
@@ -362,88 +353,9 @@ export default function OrganizationPage() {
 
         {/* 異動履歴タブ */}
         <TabsContent value="transfers">
-          <TransferHistoryPanel
-            onAddTransfer={canManageOrganization ? () => setTransferDialogOpen(true) : undefined}
-          />
-        </TabsContent>
-
-        {/* 分析タブ */}
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BarChart3 className="h-5 w-5" />
-                  <span>部署別メンバー数</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">技術部署</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{ width: '60%' }} />
-                      </div>
-                      <span className="text-sm font-medium">10人</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">ビジネス部署</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full" style={{ width: '30%' }} />
-                      </div>
-                      <span className="text-sm font-medium">5人</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">人事部</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div className="bg-purple-600 h-2 rounded-full" style={{ width: '18%' }} />
-                      </div>
-                      <span className="text-sm font-medium">3人</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>権限レベル分布</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">システム管理者</span>
-                    <Badge variant="outline" className="bg-red-100 text-red-800">2人</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">人事</span>
-                    <Badge variant="outline" className="bg-blue-100 text-blue-800">3人</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">マネージャー</span>
-                    <Badge variant="outline" className="bg-green-100 text-green-800">5人</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">一般社員</span>
-                    <Badge variant="outline" className="bg-gray-100 text-gray-800">8人</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <TransferHistoryPanel />
         </TabsContent>
       </Tabs>
-
-      {/* 異動登録ダイアログ */}
-      <AddTransferDialog
-        open={transferDialogOpen}
-        onOpenChange={setTransferDialogOpen}
-      />
     </div>
   );
 }

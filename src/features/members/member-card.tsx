@@ -3,16 +3,17 @@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { LazyAvatar } from '@/components/ui/lazy-avatar';
-import { 
-  MapPin, 
-  Home, 
-  Plane, 
+import {
+  MapPin,
+  Home,
+  Plane,
   GraduationCap,
   Clock,
   CheckCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { User } from '@/types';
+import Link from 'next/link';
 
 interface MemberCardProps {
   member: User & {
@@ -74,7 +75,8 @@ export function MemberCard({ member }: MemberCardProps) {
   const StatusIcon = config.icon;
 
   return (
-    <Card className={cn('transition-all hover:shadow-md', config.bgClass)}>
+    <Link href={`/ja/users/${member.id}`}>
+      <Card className={cn('transition-all hover:shadow-md cursor-pointer', config.bgClass)}>
       <CardContent className="p-4">
         <div className="flex items-start space-x-3">
           {/* Avatar */}
@@ -113,5 +115,6 @@ export function MemberCard({ member }: MemberCardProps) {
         </div>
       </CardContent>
     </Card>
+    </Link>
   );
 }

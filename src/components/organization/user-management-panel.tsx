@@ -35,14 +35,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  Search, 
+import {
+  Search,
   Plus,
   MoreHorizontal,
   Edit,
   Trash2,
   UserCheck,
-  Mail,
+  // Mail, // メール機能削除に伴い未使用
   // Building2, // 組織アイコンで使用予定
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -75,25 +75,6 @@ const statusLabels = {
   retired: '退職済み',
 };
 
-const getRoleColor = (role: UserRole) => {
-  switch (role) {
-    case 'admin':
-      return 'bg-red-100 text-red-800 border-red-200';
-    case 'hr':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'manager':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'employee':
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-    case 'executive':
-      return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'applicant':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
 const getStatusColor = (status: OrganizationMember['status']) => {
   switch (status) {
     case 'active':
@@ -117,7 +98,6 @@ export function UserManagementPanel({
   selectedMemberId
 }: UserManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<OrganizationMember['status'] | 'all'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OrganizationMember | null>(null);
@@ -139,16 +119,14 @@ export function UserManagementPanel({
     return members.filter(member => {
       const matchesSearch = searchQuery === '' || (
         member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         member.position.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      
-      const matchesRole = selectedRole === 'all' || member.role === selectedRole;
+
       const matchesStatus = selectedStatus === 'all' || member.status === selectedStatus;
-      
-      return matchesSearch && matchesRole && matchesStatus;
+
+      return matchesSearch && matchesStatus;
     });
-  }, [members, searchQuery, selectedRole, selectedStatus]);
+  }, [members, searchQuery, selectedStatus]);
 
   const handleAddMember = () => {
     if (onMemberAdd && newMember.name && newMember.email) {
@@ -308,20 +286,6 @@ export function UserManagementPanel({
               />
             </div>
             
-            <Select value={selectedRole} onValueChange={(value: UserRole | 'all') => setSelectedRole(value)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="権限で絞り込み" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべての権限</SelectItem>
-                {Object.entries(roleLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
             <Select value={selectedStatus} onValueChange={(value: OrganizationMember['status'] | 'all') => setSelectedStatus(value)}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="状態で絞り込み" />
@@ -352,7 +316,6 @@ export function UserManagementPanel({
               <TableRow>
                 <TableHead>ユーザー</TableHead>
                 <TableHead>役職</TableHead>
-                <TableHead>権限</TableHead>
                 <TableHead>状態</TableHead>
                 <TableHead>入社日</TableHead>
                 <TableHead className="text-right">操作</TableHead>
@@ -381,22 +344,11 @@ export function UserManagementPanel({
                             </Badge>
                           )}
                         </div>
-                        <span className="text-sm text-muted-foreground">
-                          {member.email}
-                        </span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">{member.position}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className={cn('text-xs', getRoleColor(member.role))}
-                    >
-                      {roleLabels[member.role]}
-                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge 
@@ -423,13 +375,7 @@ export function UserManagementPanel({
                           <Edit className="h-4 w-4 mr-2" />
                           編集
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => window.open(`mailto:${member.email}`)}
-                        >
-                          <Mail className="h-4 w-4 mr-2" />
-                          メール送信
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => handleRemoveMember(member.id)}
                         >

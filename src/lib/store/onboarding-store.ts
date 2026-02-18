@@ -122,6 +122,7 @@ interface OnboardingActions {
   approveForm: (formType: string, approvedBy: string) => void;
   returnForm: (formType: string, comment: string, returnedBy: string) => void;
   approveAllForms: (approvedBy: string) => void;
+  updateHrNotes: (notes: string) => void;
 
   // Utility actions
   setLoading: (loading: boolean) => void;
@@ -807,7 +808,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
       },
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      returnForm: (formType, comment, _returnedBy) => {
+      returnForm: (formType, comment, returnedBy) => {
         const now = new Date().toISOString();
 
         switch (formType) {
@@ -820,6 +821,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
                   status: 'returned',
                   returnedAt: now,
                   reviewComment: comment,
+                  approvedBy: returnedBy, // 差戻し者を記録
                 },
               });
             }
@@ -833,6 +835,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
                   status: 'returned',
                   returnedAt: now,
                   reviewComment: comment,
+                  approvedBy: returnedBy, // 差戻し者を記録
                 },
               });
             }
@@ -846,6 +849,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
                   status: 'returned',
                   returnedAt: now,
                   reviewComment: comment,
+                  approvedBy: returnedBy, // 差戻し者を記録
                 },
               });
             }
@@ -859,6 +863,7 @@ export const useOnboardingStore = create<OnboardingStore>()(
                   status: 'returned',
                   returnedAt: now,
                   reviewComment: comment,
+                  approvedBy: returnedBy, // 差戻し者を記録
                 },
               });
             }
@@ -931,6 +936,19 @@ export const useOnboardingStore = create<OnboardingStore>()(
               ...state.application,
               status: 'approved',
               updatedAt: now,
+            },
+          });
+        }
+      },
+
+      updateHrNotes: (notes) => {
+        const state = get();
+        if (state.application) {
+          set({
+            application: {
+              ...state.application,
+              hrNotes: notes,
+              updatedAt: new Date().toISOString(),
             },
           });
         }

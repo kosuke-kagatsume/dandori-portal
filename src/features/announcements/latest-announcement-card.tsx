@@ -215,9 +215,9 @@ export function LatestAnnouncementCard() {
               </Button>
             </Link>
             {otherAnnouncementsCount > 0 && (
-              <span className="text-xs text-muted-foreground">
+              <Link href="/ja/announcements" className="text-xs text-muted-foreground hover:text-primary hover:underline cursor-pointer">
                 他 {otherAnnouncementsCount}件のお知らせ
-              </span>
+              </Link>
             )}
           </div>
         </div>

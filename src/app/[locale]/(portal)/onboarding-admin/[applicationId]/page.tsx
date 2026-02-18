@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -49,6 +49,7 @@ export default function OnboardingAdminDetailPage() {
     approveForm,
     returnForm,
     approveAllForms,
+    updateHrNotes,
     basicInfoForm,
     familyInfoForm,
     bankAccountForm,
@@ -59,7 +60,14 @@ export default function OnboardingAdminDetailPage() {
     initializeBankAccountForm,
     initializeCommuteRouteForm,
   } = useOnboardingStore();
-  const { currentUser } = useUserStore();
+  const { currentUser, getUserById } = useUserStore();
+
+  // ユーザーIDから名前を取得するヘルパー関数
+  const getApproverName = useCallback((userId: string | undefined): string => {
+    if (!userId) return '不明';
+    const user = getUserById(userId);
+    return user?.name || userId;
+  }, [getUserById]);
 
   // State
   const [selectedTab, setSelectedTab] = useState<FormType>('basic_info');
@@ -220,19 +228,75 @@ export default function OnboardingAdminDetailPage() {
     commute_route: (commuteRouteForm?.status || 'draft') as FormStatus,
   }), [basicInfoForm, familyInfoForm, bankAccountForm, commuteRouteForm]);
 
-  // 承認履歴（デモデータ）
-  const approvalHistory: ApprovalHistory[] = useMemo(() => [
-    {
-      id: 'history-001',
-      applicationId: applicationId,
-      formType: 'basic_info',
-      action: 'submit',
-      performedBy: '6',
-      performedByName: '新入太郎',
-      performedAt: '2025-10-15T10:00:00Z',
-      comment: '基本情報を提出しました',
-    },
-  ], [applicationId]);
+  // 承認履歴（フォームデータから動的生成）
+  const approvalHistory: ApprovalHistory[] = useMemo(() => {
+    const history: ApprovalHistory[] = [];
+    const formTypeNames: Record<FormType, string> = {
+      basic_info: '基本情報',
+      family_info: '家族情報',
+      bank_account: '給与振込口座',
+      commute_route: '通勤経路',
+    };
+
+    // 各フォームの履歴を収集
+    const formsData = [
+      { type: 'basic_info' as FormType, form: basicInfoForm },
+      { type: 'family_info' as FormType, form: familyInfoForm },
+      { type: 'bank_account' as FormType, form: bankAccountForm },
+      { type: 'commute_route' as FormType, form: commuteRouteForm },
+    ];
+
+    formsData.forEach(({ type, form }) => {
+      if (!form) return;
+
+      // 提出履歴
+      if (form.submittedAt) {
+        history.push({
+          id: `history-submit-${type}-${form.submittedAt}`,
+          applicationId,
+          formType: type,
+          action: 'submit',
+          performedBy: application?.applicantEmail || '',
+          performedByName: application?.applicantName || '申請者',
+          performedAt: form.submittedAt,
+          comment: `${formTypeNames[type]}を提出しました`,
+        });
+      }
+
+      // 差戻し履歴
+      if (form.returnedAt) {
+        history.push({
+          id: `history-return-${type}-${form.returnedAt}`,
+          applicationId,
+          formType: type,
+          action: 'return',
+          performedBy: form.approvedBy || '',
+          performedByName: form.approvedBy ? getApproverName(form.approvedBy) : '人事担当者',
+          performedAt: form.returnedAt,
+          comment: form.reviewComment || `${formTypeNames[type]}を差し戻しました`,
+        });
+      }
+
+      // 承認履歴
+      if (form.approvedAt && form.status === 'approved') {
+        history.push({
+          id: `history-approve-${type}-${form.approvedAt}`,
+          applicationId,
+          formType: type,
+          action: 'approve',
+          performedBy: form.approvedBy || '',
+          performedByName: form.approvedBy ? getApproverName(form.approvedBy) : '人事担当者',
+          performedAt: form.approvedAt,
+          comment: `${formTypeNames[type]}を承認しました`,
+        });
+      }
+    });
+
+    // 日時でソート（新しい順）
+    history.sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
+
+    return history;
+  }, [applicationId, application, basicInfoForm, familyInfoForm, bankAccountForm, commuteRouteForm, getApproverName]);
 
   if (!application) {
     return (
@@ -441,7 +505,7 @@ export default function OnboardingAdminDetailPage() {
                         )}
                         {basicInfoForm?.approvedBy && (
                           <p className="mt-1 text-sm text-green-700">
-                            承認者: {basicInfoForm.approvedBy}
+                            承認者: {getApproverName(basicInfoForm.approvedBy)}
                           </p>
                         )}
                       </div>
@@ -455,6 +519,11 @@ export default function OnboardingAdminDetailPage() {
                           {basicInfoForm?.returnedAt && (
                             <p className="mt-2 text-sm text-yellow-700">
                               差し戻し日時: {new Date(basicInfoForm.returnedAt).toLocaleString('ja-JP')}
+                            </p>
+                          )}
+                          {basicInfoForm?.approvedBy && (
+                            <p className="mt-1 text-sm text-yellow-700">
+                              差戻し者: {getApproverName(basicInfoForm.approvedBy)}
                             </p>
                           )}
                           {basicInfoForm?.reviewComment && (
@@ -474,6 +543,16 @@ export default function OnboardingAdminDetailPage() {
                           >
                             <CheckCircleIcon className="h-5 w-5" />
                             承認する
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedFormType('basic_info');
+                              setShowReturnModal(true);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            <XCircleIcon className="h-5 w-5" />
+                            再差戻し
                           </button>
                         </div>
                       </div>
@@ -527,7 +606,7 @@ export default function OnboardingAdminDetailPage() {
                         )}
                         {familyInfoForm?.approvedBy && (
                           <p className="mt-1 text-sm text-green-700">
-                            承認者: {familyInfoForm.approvedBy}
+                            承認者: {getApproverName(familyInfoForm.approvedBy)}
                           </p>
                         )}
                       </div>
@@ -541,6 +620,11 @@ export default function OnboardingAdminDetailPage() {
                           {familyInfoForm?.returnedAt && (
                             <p className="mt-2 text-sm text-yellow-700">
                               差し戻し日時: {new Date(familyInfoForm.returnedAt).toLocaleString('ja-JP')}
+                            </p>
+                          )}
+                          {familyInfoForm?.approvedBy && (
+                            <p className="mt-1 text-sm text-yellow-700">
+                              差戻し者: {getApproverName(familyInfoForm.approvedBy)}
                             </p>
                           )}
                           {familyInfoForm?.reviewComment && (
@@ -559,6 +643,16 @@ export default function OnboardingAdminDetailPage() {
                           >
                             <CheckCircleIcon className="h-5 w-5" />
                             承認する
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedFormType('family_info');
+                              setShowReturnModal(true);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            <XCircleIcon className="h-5 w-5" />
+                            再差戻し
                           </button>
                         </div>
                       </div>
@@ -612,7 +706,7 @@ export default function OnboardingAdminDetailPage() {
                         )}
                         {bankAccountForm?.approvedBy && (
                           <p className="mt-1 text-sm text-green-700">
-                            承認者: {bankAccountForm.approvedBy}
+                            承認者: {getApproverName(bankAccountForm.approvedBy)}
                           </p>
                         )}
                       </div>
@@ -626,6 +720,11 @@ export default function OnboardingAdminDetailPage() {
                           {bankAccountForm?.returnedAt && (
                             <p className="mt-2 text-sm text-yellow-700">
                               差し戻し日時: {new Date(bankAccountForm.returnedAt).toLocaleString('ja-JP')}
+                            </p>
+                          )}
+                          {bankAccountForm?.approvedBy && (
+                            <p className="mt-1 text-sm text-yellow-700">
+                              差戻し者: {getApproverName(bankAccountForm.approvedBy)}
                             </p>
                           )}
                           {bankAccountForm?.reviewComment && (
@@ -644,6 +743,16 @@ export default function OnboardingAdminDetailPage() {
                           >
                             <CheckCircleIcon className="h-5 w-5" />
                             承認する
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedFormType('bank_account');
+                              setShowReturnModal(true);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            <XCircleIcon className="h-5 w-5" />
+                            再差戻し
                           </button>
                         </div>
                       </div>
@@ -697,7 +806,7 @@ export default function OnboardingAdminDetailPage() {
                         )}
                         {commuteRouteForm?.approvedBy && (
                           <p className="mt-1 text-sm text-green-700">
-                            承認者: {commuteRouteForm.approvedBy}
+                            承認者: {getApproverName(commuteRouteForm.approvedBy)}
                           </p>
                         )}
                       </div>
@@ -711,6 +820,11 @@ export default function OnboardingAdminDetailPage() {
                           {commuteRouteForm?.returnedAt && (
                             <p className="mt-2 text-sm text-yellow-700">
                               差し戻し日時: {new Date(commuteRouteForm.returnedAt).toLocaleString('ja-JP')}
+                            </p>
+                          )}
+                          {commuteRouteForm?.approvedBy && (
+                            <p className="mt-1 text-sm text-yellow-700">
+                              差戻し者: {getApproverName(commuteRouteForm.approvedBy)}
                             </p>
                           )}
                           {commuteRouteForm?.reviewComment && (
@@ -729,6 +843,16 @@ export default function OnboardingAdminDetailPage() {
                           >
                             <CheckCircleIcon className="h-5 w-5" />
                             承認する
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedFormType('commute_route');
+                              setShowReturnModal(true);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            <XCircleIcon className="h-5 w-5" />
+                            再差戻し
                           </button>
                         </div>
                       </div>
@@ -761,12 +885,12 @@ export default function OnboardingAdminDetailPage() {
               </div>
             </div>
 
-            {/* Approval History */}
+            {/* Application History */}
             <div className="rounded-lg bg-white p-6 shadow">
-              <h3 className="mb-4 text-lg font-medium text-gray-900">承認履歴</h3>
+              <h3 className="mb-4 text-lg font-medium text-gray-900">申請履歴</h3>
               <div className="space-y-4">
                 {approvalHistory.length === 0 ? (
-                  <p className="text-sm text-gray-500">承認履歴はまだありません</p>
+                  <p className="text-sm text-gray-500">履歴はまだありません</p>
                 ) : (
                   approvalHistory.map((history) => (
                     <div
@@ -783,17 +907,43 @@ export default function OnboardingAdminDetailPage() {
                         )}
                       </div>
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* アクションラベル */}
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                              history.action === 'approve'
+                                ? 'bg-green-100 text-green-800'
+                                : history.action === 'return'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}
+                          >
+                            {history.action === 'approve'
+                              ? '承認'
+                              : history.action === 'return'
+                              ? '差戻し'
+                              : '提出'}
+                          </span>
+                          {/* 実行者名 */}
                           <span className="text-sm font-medium text-gray-900">
                             {history.performedByName}
                           </span>
+                          {/* 日時 */}
                           <span className="text-xs text-gray-500">
                             {new Date(history.performedAt).toLocaleString('ja-JP')}
                           </span>
                         </div>
-                        <p className="mt-1 text-sm text-gray-600">
-                          {history.comment}
-                        </p>
+                        {/* コメント/理由 */}
+                        {history.comment && (
+                          <div className="mt-2">
+                            <span className="text-xs text-gray-500">
+                              {history.action === 'return' ? '差戻し理由: ' : 'コメント: '}
+                            </span>
+                            <p className="text-sm text-gray-600">
+                              {history.comment}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))
@@ -852,7 +1002,13 @@ export default function OnboardingAdminDetailPage() {
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 placeholder="申請に関するメモを入力..."
               />
-              <button className="mt-3 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              <button
+                onClick={() => {
+                  updateHrNotes(hrNotes);
+                  toast.success('メモを保存しました');
+                }}
+                className="mt-3 w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
                 メモを保存
               </button>
             </div>

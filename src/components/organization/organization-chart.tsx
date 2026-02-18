@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  Users, 
-  Building2, 
+import {
+  ChevronDown,
+  ChevronRight,
+  Users,
+  Building2,
   UserCheck,
-  Mail,
+  // Mail, // メールボタン削除に伴い未使用
   // Calendar, // 日付表示で使用予定
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -59,36 +59,6 @@ export function OrganizationChart({
     }
   };
 
-  const getRoleColor = (role: OrganizationMember['role']) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'hr':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'manager':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'employee':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const formatMemberRole = (role: OrganizationMember['role']) => {
-    switch (role) {
-      case 'admin':
-        return 'システム管理者';
-      case 'hr':
-        return '人事';
-      case 'manager':
-        return 'マネージャー';
-      case 'employee':
-        return '社員';
-      default:
-        return String(role);
-    }
-  };
-
   const renderMember = (member: OrganizationMember) => (
     <div
       key={member.id}
@@ -117,32 +87,16 @@ export function OrganizationChart({
         </div>
         <p className="text-sm text-muted-foreground truncate">{member.position}</p>
         <div className="flex items-center space-x-1 mt-1">
-          <Badge 
-            variant="outline" 
-            className={cn('text-xs', getRoleColor(member.role))}
-          >
-            {formatMemberRole(member.role)}
-          </Badge>
           <span className="text-xs text-muted-foreground">
-            • {new Date(member.joinDate).getFullYear()}年入社
+            {new Date(member.joinDate).getFullYear()}年入社
           </span>
         </div>
       </div>
 
       <div className="flex flex-col items-end space-y-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            window.open(`mailto:${member.email}`);
-          }}
-        >
-          <Mail className="h-3 w-3" />
-        </Button>
         <div className={cn(
           'w-2 h-2 rounded-full',
-          member.status === 'active' ? 'bg-green-500' : 
+          member.status === 'active' ? 'bg-green-500' :
           member.status === 'leave' ? 'bg-red-500' : 'bg-gray-400'
         )} />
       </div>
