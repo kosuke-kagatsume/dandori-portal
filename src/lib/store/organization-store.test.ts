@@ -20,6 +20,7 @@ interface TransferHistory {
   fromRole?: 'employee' | 'manager' | 'hr' | 'admin';
   toRole?: 'employee' | 'manager' | 'hr' | 'admin';
   effectiveDate: string;
+  status: 'scheduled' | 'completed' | 'cancelled';
   reason?: string;
   notes?: string;
   approvedBy?: string;
@@ -988,6 +989,7 @@ describe('OrganizationStore', () => {
         fromPosition: '営業担当',
         toPosition: 'エンジニア',
         effectiveDate: '2024-04-01',
+        status: 'completed',
         reason: '組織再編',
         createdAt: new Date().toISOString(),
         createdBy: 'admin-001',
@@ -1006,6 +1008,7 @@ describe('OrganizationStore', () => {
         fromPosition: 'エンジニア',
         toPosition: '人事担当',
         effectiveDate: '2024-05-01',
+        status: 'completed',
         reason: 'キャリアアップ',
         createdAt: new Date().toISOString(),
         createdBy: 'admin-001',
@@ -1037,6 +1040,7 @@ describe('OrganizationStore', () => {
         fromPosition: '営業担当',
         toPosition: 'エンジニア',
         effectiveDate: `2024-${String(i + 1).padStart(2, '0')}-01`,
+        status: 'completed' as const,
         reason: '組織再編',
         createdAt: new Date().toISOString(),
         createdBy: 'admin-001',
@@ -1062,6 +1066,7 @@ describe('OrganizationStore', () => {
         fromPosition: '営業担当',
         toPosition: 'エンジニア',
         effectiveDate: `2024-${String(i + 1).padStart(2, '0')}-01`,
+        status: 'completed' as const,
         reason: '組織再編',
         createdAt: new Date().toISOString(),
         createdBy: 'admin-001',
