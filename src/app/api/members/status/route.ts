@@ -103,7 +103,20 @@ export async function GET(request: NextRequest) {
 
       if (attendance) {
         // 勤怠レコードがある場合
-        currentStatus = attendance.status;
+        // DBのstatusをフロントエンドの期待値にマッピング
+        const statusMap: Record<string, string> = {
+          'present': 'present',
+          'office': 'present',
+          'remote': 'remote',
+          'wfh': 'remote',
+          'business_trip': 'business_trip',
+          'trip': 'business_trip',
+          'training': 'training',
+          'absent': 'absent',
+          'leave': 'absent',
+          'vacation': 'absent',
+        };
+        currentStatus = statusMap[attendance.status] || attendance.status;
         workLocation = attendance.workLocation || null;
 
         if (attendance.checkIn) {

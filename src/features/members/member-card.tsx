@@ -71,7 +71,26 @@ const statusConfig = {
 };
 
 export function MemberCard({ member }: MemberCardProps) {
-  const config = statusConfig[member.currentStatus];
+  // ステータスのマッピング（DBの値をUIの値に変換）
+  const normalizeStatus = (status: string): keyof typeof statusConfig => {
+    const statusMap: Record<string, keyof typeof statusConfig> = {
+      'present': 'present',
+      'office': 'present',  // officeはpresentとして表示
+      'remote': 'remote',
+      'wfh': 'remote',      // work from home
+      'business_trip': 'business_trip',
+      'trip': 'business_trip',
+      'training': 'training',
+      'absent': 'absent',
+      'leave': 'absent',    // leaveはabsentとして表示
+      'vacation': 'absent',
+      'not_checked_in': 'not_checked_in',
+    };
+    return statusMap[status] || 'not_checked_in';
+  };
+
+  const normalizedStatus = normalizeStatus(member.currentStatus);
+  const config = statusConfig[normalizedStatus];
   const StatusIcon = config.icon;
 
   return (

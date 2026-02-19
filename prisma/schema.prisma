@@ -427,6 +427,7 @@ model daily_attendance_metrics {
 model departments {
   id        String   @id
   tenantId  String
+  code      String?
   name      String
   parentId  String?
   sortOrder Int      @default(0)
@@ -438,6 +439,7 @@ model departments {
   @@index([tenantId])
   @@index([tenantId, isActive])
   @@index([tenantId, sortOrder])
+  @@index([tenantId, code])
 }
 
 model dw_notifications {

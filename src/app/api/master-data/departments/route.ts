@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         tenantId: true,
+        code: true,
         name: true,
         parentId: true,
         sortOrder: true,
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tenantId, name, parentId, sortOrder, isActive } = body;
+    const { tenantId, code, name, parentId, sortOrder, isActive } = body;
 
     if (!tenantId || !name) {
       return NextResponse.json({ error: 'tenantIdとnameは必須です' }, { status: 400 });
@@ -66,6 +67,7 @@ export async function POST(request: NextRequest) {
       data: {
         id: crypto.randomUUID(),
         tenantId,
+        code: code || null,
         name,
         parentId: parentId || null,
         sortOrder: sortOrder || 0,
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, name, parentId, sortOrder, isActive } = body;
+    const { id, code, name, parentId, sortOrder, isActive } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'idは必須です' }, { status: 400 });
@@ -94,6 +96,7 @@ export async function PUT(request: NextRequest) {
     const department = await prisma.departments.update({
       where: { id },
       data: {
+        ...(code !== undefined && { code: code || null }),
         ...(name !== undefined && { name }),
         ...(parentId !== undefined && { parentId }),
         ...(sortOrder !== undefined && { sortOrder }),
