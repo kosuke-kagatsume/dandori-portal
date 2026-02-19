@@ -318,15 +318,20 @@ export default function OnboardingAdminDetailPage() {
 
   // ステータスバッジ
   const getStatusBadge = (status: FormStatus | OnboardingStatus) => {
-    const badges = {
-      draft: { label: '下書き', class: 'bg-gray-100 text-gray-800' },
+    const badges: Record<string, { label: string; class: string }> = {
+      // OnboardingStatus
+      not_invited: { label: '未招待', class: 'bg-gray-100 text-gray-800' },
+      invited: { label: '招待済み', class: 'bg-indigo-100 text-indigo-800' },
+      not_submitted: { label: '未提出', class: 'bg-orange-100 text-orange-800' },
       submitted: { label: '提出済み', class: 'bg-blue-100 text-blue-800' },
       returned: { label: '差し戻し', class: 'bg-yellow-100 text-yellow-800' },
       approved: { label: '承認済み', class: 'bg-green-100 text-green-800' },
       registered: { label: '登録完了', class: 'bg-purple-100 text-purple-800' },
+      // FormStatus
+      draft: { label: '下書き', class: 'bg-gray-100 text-gray-800' },
     };
 
-    const badge = badges[status as keyof typeof badges];
+    const badge = badges[status] || { label: status, class: 'bg-gray-100 text-gray-800' };
     return (
       <span
         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.class}`}

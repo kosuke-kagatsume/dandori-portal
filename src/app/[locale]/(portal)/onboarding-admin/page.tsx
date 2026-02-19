@@ -279,7 +279,7 @@ export default function OnboardingAdminPage() {
 
   // ステータスバッジ
   const getStatusBadge = (status: OnboardingStatus) => {
-    const badges = {
+    const badges: Record<string, { label: string; class: string }> = {
       not_invited: { label: '未招待', class: 'bg-slate-100 text-slate-800' },
       invited: { label: '招待済み', class: 'bg-cyan-100 text-cyan-800' },
       not_submitted: { label: '未提出', class: 'bg-gray-100 text-gray-800' },
@@ -289,7 +289,7 @@ export default function OnboardingAdminPage() {
       registered: { label: '登録完了', class: 'bg-purple-100 text-purple-800' },
     };
 
-    const badge = badges[status];
+    const badge = badges[status] || { label: status, class: 'bg-gray-100 text-gray-800' };
     return (
       <span
         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.class}`}
