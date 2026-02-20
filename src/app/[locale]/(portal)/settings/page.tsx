@@ -26,7 +26,7 @@ import {
   FileUp,
   Megaphone,
 } from 'lucide-react';
-import { useUserStore } from '@/lib/store';
+import { useUserStore, useTenantStore } from '@/lib/store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import type { UserRole } from '@/types';
 import { toast } from 'sonner';
@@ -166,6 +166,7 @@ const settingCategories: SettingCategory[] = [
 export default function SettingsPage() {
   const mounted = useIsMounted();
   const { currentUser } = useUserStore();
+  const { currentTenant } = useTenantStore();
   // 会社設定（将来的に設定画面で使用予定）
   // const {
   //   companyInfo,
@@ -264,7 +265,7 @@ export default function SettingsPage() {
       case 'system':
         return <SystemTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'permissions':
-        return <PermissionManagementPanel />;
+        return <PermissionManagementPanel tenantId={currentTenant?.id || 'tenant-1'} />;
       default:
         return null;
     }
