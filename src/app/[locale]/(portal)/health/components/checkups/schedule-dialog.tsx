@@ -171,14 +171,14 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
           <div className="space-y-2">
             <Label>医療機関</Label>
             <Select
-              value={formData.medicalInstitutionId}
-              onValueChange={(value) => setFormData({ ...formData, medicalInstitutionId: value })}
+              value={formData.medicalInstitutionId || '__none__'}
+              onValueChange={(value) => setFormData({ ...formData, medicalInstitutionId: value === '__none__' ? '' : value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="医療機関を選択（任意）" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">未選択</SelectItem>
+                <SelectItem value="__none__">未選択</SelectItem>
                 {activeInstitutions.length > 0 ? (
                   activeInstitutions.map((inst) => (
                     <SelectItem key={inst.id} value={inst.id}>
