@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -30,26 +29,30 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Users,
   Clock,
   CheckCircle,
-  AlertTriangle,
-  Home,
-  Building2,
+  AlertCircle,
+  XCircle,
+  MinusCircle,
   Search,
   Check,
-  FileCheck,
-  RotateCcw,
   ChevronLeft,
   ChevronRight,
   Loader2,
+  FileText,
+  Eye,
+  Undo2,
+  Lock,
+  Unlock,
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, parseISO } from 'date-fns';
-import { ja } from 'date-fns/locale';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, parseISO, getDay, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store';
+import { useUserStore } from '@/lib/store/user-store';
 
 interface TeamMember {
   id: string;
@@ -69,57 +72,73 @@ interface AttendanceRecord {
   status: string;
 }
 
-interface TeamMemberAttendance {
+interface MemberMonthlyData {
   memberId: string;
   memberName: string;
   department: string;
-  position: string;
-  employeeNumber: string;
-  status: 'present' | 'remote' | 'absent' | 'late' | 'early_leave' | 'weekend' | 'not_checked_in';
-  checkIn: string | null;
-  checkOut: string | null;
-  workLocation?: string;
-  workHours?: number;
-  overtime?: number;
-  closingStatus: 'open' | 'pending' | 'approved';
-  alerts: string[];
+  closingRequested: boolean;
+  managerApproved: boolean;
+  attendanceClosed: boolean;
+  dailyRecords: Map<string, { checkIn: string | null; checkOut: string | null; status: string }>;
+  summary: {
+    workDays: number;
+    presentDays: number;
+    remoteDays: number;
+    absentDays: number;
+    lateDays: number;
+    earlyLeaveDays: number;
+    totalWorkHours: number;
+    totalOvertimeHours: number;
+  };
 }
 
-interface TeamAttendanceSummary {
-  memberId: string;
-  memberName: string;
-  department: string;
-  workDays: number;
-  presentDays: number;
-  remoteDays: number;
-  absentDays: number;
-  lateDays: number;
-  earlyLeaveDays: number;
-  totalWorkHours: number;
-  totalOvertimeHours: number;
-  closingStatus: 'open' | 'pending' | 'approved';
-}
+const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
 export function TeamAttendance() {
   const { currentTenant } = useTenantStore();
+  const { currentUser } = useUserStore();
   const tenantId = currentTenant?.id || 'tenant-1';
+  const currentUserRoles = currentUser?.roles || ['employee'];
+
+  // 権限チェック
+  const isHR = currentUserRoles.some((role: string) => ['hr', 'executive', 'system_admin'].includes(role));
+  const isManager = currentUserRoles.some((role: string) => ['manager', 'hr', 'executive'].includes(role));
+
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [closingFilter, setClosingFilter] = useState<string>('all');
-  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
-  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false);
-  const [bulkActionType, setBulkActionType] = useState<'approve' | 'close' | 'reopen' | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Dialogs
+  const [memberDetailDialogOpen, setMemberDetailDialogOpen] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | 'close' | 'unlock' | 'cancel_approval' | null>(null);
 
   // API data states
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Initialize date on client side
   useEffect(() => {
     setCurrentDate(new Date());
   }, []);
+
+  // Month days
+  const monthDays = useMemo(() => {
+    if (!currentDate) return [];
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    return eachDayOfInterval({ start, end });
+  }, [currentDate]);
+
+  // Period display
+  const periodDisplay = useMemo(() => {
+    if (!currentDate) return '';
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    return `${format(start, 'yyyy/MM/dd')} ～ ${format(end, 'yyyy/MM/dd')}`;
+  }, [currentDate]);
 
   // Fetch team members and attendance data
   const fetchData = useCallback(async () => {
@@ -130,7 +149,6 @@ export function TeamAttendance() {
       const monthStart = startOfMonth(currentDate);
       const monthEnd = endOfMonth(currentDate);
 
-      // Fetch users and attendance in parallel
       const [usersRes, attendanceRes] = await Promise.all([
         fetch(`/api/users?tenantId=${tenantId}`),
         fetch(`/api/attendance?tenantId=${tenantId}&startDate=${format(monthStart, 'yyyy-MM-dd')}&endDate=${format(monthEnd, 'yyyy-MM-dd')}`),
@@ -169,82 +187,16 @@ export function TeamAttendance() {
     }
   }, [tenantId, currentDate, fetchData]);
 
-  const today = new Date();
-
-  // Transform attendance data for today
-  const teamAttendanceData: TeamMemberAttendance[] = useMemo(() => {
-    const todayStr = format(today, 'yyyy-MM-dd');
-
-    return teamMembers.map(member => {
-      const record = attendanceRecords.find(
-        r => r.userId === member.id && r.date === todayStr
-      );
-
-      const alerts: string[] = [];
-      let status: TeamMemberAttendance['status'] = 'not_checked_in';
-
-      if (isWeekend(today)) {
-        status = 'weekend';
-      } else if (record) {
-        if (record.status === 'absent') {
-          status = 'absent';
-        } else if (record.checkIn) {
-          const checkInTime = record.checkIn;
-          const isLate = checkInTime > '09:30';
-          const isRemote = record.workLocation === 'home' || record.workLocation === 'remote';
-
-          if (isLate) {
-            status = 'late';
-            alerts.push('遅刻');
-          } else if (isRemote) {
-            status = 'remote';
-          } else {
-            status = 'present';
-          }
-
-          if (!record.checkOut && record.checkIn) {
-            alerts.push('未退勤');
-          }
-        }
-      }
-
-      // Calculate work hours if both checkIn and checkOut exist
-      let workHours: number | undefined;
-      if (record?.checkIn && record?.checkOut) {
-        const [inH, inM] = record.checkIn.split(':').map(Number);
-        const [outH, outM] = record.checkOut.split(':').map(Number);
-        workHours = (outH * 60 + outM - inH * 60 - inM) / 60;
-      }
-
-      return {
-        memberId: member.id,
-        memberName: member.name,
-        department: member.department || '',
-        position: member.position || '',
-        employeeNumber: member.employeeNumber || '',
-        status,
-        checkIn: record?.checkIn || null,
-        checkOut: record?.checkOut || null,
-        workLocation: record?.workLocation || undefined,
-        workHours,
-        overtime: workHours && workHours > 8 ? workHours - 8 : 0,
-        closingStatus: 'open' as const, // TODO: get from API
-        alerts,
-      };
-    });
-  }, [teamMembers, attendanceRecords, today]);
-
-  // Monthly summary data
-  const teamSummaryData: TeamAttendanceSummary[] = useMemo(() => {
+  // Build monthly data for each member
+  const memberMonthlyData: MemberMonthlyData[] = useMemo(() => {
     if (!currentDate) return [];
 
-    const monthStart = startOfMonth(currentDate);
-    const monthEnd = endOfMonth(currentDate);
-    const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-    const workDays = daysInMonth.filter(d => !isWeekend(d)).length;
+    const workDays = monthDays.filter(d => !isWeekend(d)).length;
+    const today = new Date();
 
     return teamMembers.map(member => {
       const memberRecords = attendanceRecords.filter(r => r.userId === member.id);
+      const dailyRecords = new Map<string, { checkIn: string | null; checkOut: string | null; status: string }>();
 
       let presentDays = 0;
       let remoteDays = 0;
@@ -255,6 +207,12 @@ export function TeamAttendance() {
       let totalOvertimeHours = 0;
 
       memberRecords.forEach(record => {
+        dailyRecords.set(record.date, {
+          checkIn: record.checkIn,
+          checkOut: record.checkOut,
+          status: record.status,
+        });
+
         const recordDate = parseISO(record.date);
         if (isWeekend(recordDate)) return;
 
@@ -279,7 +237,6 @@ export function TeamAttendance() {
             earlyLeaveDays++;
           }
 
-          // Calculate hours
           if (record.checkIn && record.checkOut) {
             const [inH, inM] = record.checkIn.split(':').map(Number);
             const [outH, outM] = record.checkOut.split(':').map(Number);
@@ -292,113 +249,45 @@ export function TeamAttendance() {
         }
       });
 
-      // Calculate absent days for days without records
+      // Calculate absent days
       const workedOrAbsent = presentDays + remoteDays + absentDays;
-      const daysUntilToday = daysInMonth.filter(d => !isWeekend(d) && d <= today).length;
+      const daysUntilToday = monthDays.filter(d => !isWeekend(d) && d <= today).length;
       absentDays = Math.max(0, daysUntilToday - workedOrAbsent);
 
       return {
         memberId: member.id,
         memberName: member.name,
         department: member.department || '',
-        workDays,
-        presentDays,
-        remoteDays,
-        absentDays,
-        lateDays,
-        earlyLeaveDays,
-        totalWorkHours,
-        totalOvertimeHours,
-        closingStatus: 'open' as const, // TODO: get from API
+        closingRequested: false, // TODO: Get from API
+        managerApproved: false, // TODO: Get from API
+        attendanceClosed: false, // TODO: Get from API
+        dailyRecords,
+        summary: {
+          workDays,
+          presentDays,
+          remoteDays,
+          absentDays,
+          lateDays,
+          earlyLeaveDays,
+          totalWorkHours,
+          totalOvertimeHours,
+        },
       };
     });
-  }, [teamMembers, attendanceRecords, currentDate, today]);
+  }, [teamMembers, attendanceRecords, currentDate, monthDays]);
 
-  // Filtering
-  const filteredAttendance = useMemo(() => {
-    return teamAttendanceData.filter(member => {
-      const matchesSearch = member.memberName.includes(searchQuery) ||
-                           member.department.includes(searchQuery) ||
-                           member.employeeNumber.includes(searchQuery);
-      const matchesStatus = statusFilter === 'all' || member.status === statusFilter;
-      const matchesClosing = closingFilter === 'all' || member.closingStatus === closingFilter;
-      return matchesSearch && matchesStatus && matchesClosing;
-    });
-  }, [teamAttendanceData, searchQuery, statusFilter, closingFilter]);
-
-  const filteredSummary = useMemo(() => {
-    return teamSummaryData.filter(member => {
+  // Filtered data
+  const filteredData = useMemo(() => {
+    return memberMonthlyData.filter(member => {
       const matchesSearch = member.memberName.includes(searchQuery) ||
                            member.department.includes(searchQuery);
-      const matchesClosing = closingFilter === 'all' || member.closingStatus === closingFilter;
+      const matchesClosing = closingFilter === 'all' ||
+        (closingFilter === 'open' && !member.closingRequested) ||
+        (closingFilter === 'pending' && member.closingRequested && !member.managerApproved) ||
+        (closingFilter === 'approved' && member.managerApproved);
       return matchesSearch && matchesClosing;
     });
-  }, [teamSummaryData, searchQuery, closingFilter]);
-
-  // Selection controls
-  const toggleMemberSelection = (memberId: string) => {
-    setSelectedMembers(prev =>
-      prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
-  };
-
-  const toggleAllSelection = () => {
-    if (selectedMembers.length === filteredAttendance.length) {
-      setSelectedMembers([]);
-    } else {
-      setSelectedMembers(filteredAttendance.map(m => m.memberId));
-    }
-  };
-
-  // Bulk actions
-  const handleBulkAction = (action: 'approve' | 'close' | 'reopen') => {
-    if (selectedMembers.length === 0) {
-      toast.error('メンバーを選択してください');
-      return;
-    }
-    setBulkActionType(action);
-    setBulkActionDialogOpen(true);
-  };
-
-  const executeBulkAction = () => {
-    const actionLabels = {
-      approve: '承認',
-      close: '勤怠締め',
-      reopen: '勤怠締め解除',
-    };
-
-    toast.success(`${selectedMembers.length}名の${actionLabels[bulkActionType!]}を実行しました`);
-    setBulkActionDialogOpen(false);
-    setSelectedMembers([]);
-    setBulkActionType(null);
-  };
-
-  // Status badge
-  const getStatusBadge = (status: TeamMemberAttendance['status']) => {
-    const config = {
-      present: { label: '出勤', variant: 'default' as const, className: 'bg-green-500' },
-      remote: { label: '在宅', variant: 'secondary' as const, className: 'bg-blue-500 text-white' },
-      absent: { label: '欠勤', variant: 'destructive' as const, className: '' },
-      late: { label: '遅刻', variant: 'outline' as const, className: 'border-orange-500 text-orange-600' },
-      early_leave: { label: '早退', variant: 'outline' as const, className: 'border-yellow-500 text-yellow-600' },
-      weekend: { label: '休日', variant: 'outline' as const, className: '' },
-      not_checked_in: { label: '未出勤', variant: 'outline' as const, className: 'border-gray-400 text-gray-500' },
-    };
-    const { label, variant, className } = config[status];
-    return <Badge variant={variant} className={className}>{label}</Badge>;
-  };
-
-  const getClosingBadge = (status: 'open' | 'pending' | 'approved') => {
-    const config = {
-      open: { label: '未締め', variant: 'outline' as const },
-      pending: { label: '承認待ち', variant: 'secondary' as const },
-      approved: { label: '承認済み', variant: 'default' as const },
-    };
-    const { label, variant } = config[status];
-    return <Badge variant={variant}>{label}</Badge>;
-  };
+  }, [memberMonthlyData, searchQuery, closingFilter]);
 
   // Month navigation
   const goToPreviousMonth = () => {
@@ -415,6 +304,63 @@ export function TeamAttendance() {
     });
   };
 
+  // Action handlers
+  const handleViewMemberDetail = (memberId: string) => {
+    setSelectedMemberId(memberId);
+    setMemberDetailDialogOpen(true);
+  };
+
+  const handleAction = (memberId: string, action: typeof actionType) => {
+    setSelectedMemberId(memberId);
+    setActionType(action);
+    setActionDialogOpen(true);
+  };
+
+  const executeAction = () => {
+    const actionLabels = {
+      approve: '承認',
+      reject: '差し戻し',
+      close: '勤怠締め',
+      unlock: '締め解除',
+      cancel_approval: '承認解除',
+    };
+
+    if (actionType) {
+      toast.success(`${actionLabels[actionType]}を実行しました`);
+    }
+    setActionDialogOpen(false);
+    setSelectedMemberId(null);
+    setActionType(null);
+  };
+
+  // Export handlers
+  const handleExportPDF = () => {
+    toast.info('PDF出力機能は準備中です');
+  };
+
+  // Status icons
+  const getClosingStatusIcon = (member: MemberMonthlyData) => {
+    if (member.attendanceClosed) {
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    } else if (member.managerApproved) {
+      return <CheckCircle className="h-4 w-4 text-blue-500" />;
+    } else if (member.closingRequested) {
+      return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+    }
+    return <MinusCircle className="h-4 w-4 text-gray-300" />;
+  };
+
+  const getClosingBadge = (member: MemberMonthlyData) => {
+    if (member.attendanceClosed) {
+      return <Badge className="bg-green-500">締め済み</Badge>;
+    } else if (member.managerApproved) {
+      return <Badge variant="default">承認済み</Badge>;
+    } else if (member.closingRequested) {
+      return <Badge variant="secondary">承認待ち</Badge>;
+    }
+    return <Badge variant="outline">未締め</Badge>;
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -422,362 +368,511 @@ export function TeamAttendance() {
         <CardContent className="py-12">
           <div className="flex flex-col items-center justify-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <p className="text-muted-foreground">チーム勤怠データを読み込み中...</p>
+            <p className="text-muted-foreground">勤怠承認データを読み込み中...</p>
           </div>
         </CardContent>
       </Card>
     );
   }
 
+  const selectedMember = memberMonthlyData.find(m => m.memberId === selectedMemberId);
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              チーム勤怠
-            </CardTitle>
-            <CardDescription>チームメンバーの勤怠状況を確認・管理</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="min-w-[120px] text-center font-medium">
-              {format(currentDate || new Date(), 'yyyy年M月', { locale: ja })}
-            </span>
-            <Button variant="outline" size="icon" onClick={goToNextMonth}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="名前・部署・社員番号で検索..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="ステータス" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">すべて</SelectItem>
-              <SelectItem value="present">出勤</SelectItem>
-              <SelectItem value="remote">在宅</SelectItem>
-              <SelectItem value="absent">欠勤</SelectItem>
-              <SelectItem value="late">遅刻</SelectItem>
-              <SelectItem value="not_checked_in">未出勤</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={closingFilter} onValueChange={setClosingFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="勤怠締め" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">すべて</SelectItem>
-              <SelectItem value="open">未締め</SelectItem>
-              <SelectItem value="pending">承認待ち</SelectItem>
-              <SelectItem value="approved">承認済み</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Bulk action buttons */}
-        {selectedMembers.length > 0 && (
-          <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-            <span className="text-sm font-medium">{selectedMembers.length}名選択中</span>
-            <div className="flex-1" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkAction('approve')}
-            >
-              <Check className="mr-1 h-4 w-4" />
-              承認
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkAction('close')}
-            >
-              <FileCheck className="mr-1 h-4 w-4" />
-              勤怠締め
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleBulkAction('reopen')}
-            >
-              <RotateCcw className="mr-1 h-4 w-4" />
-              締め解除
-            </Button>
-          </div>
-        )}
-
-        {/* Tabs */}
-        <Tabs defaultValue="punch" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="punch" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              打刻状況
-            </TabsTrigger>
-            <TabsTrigger value="summary" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              勤怠項目別集計
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Punch status tab */}
-          <TabsContent value="punch">
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedMembers.length === filteredAttendance.length && filteredAttendance.length > 0}
-                        onCheckedChange={toggleAllSelection}
-                      />
-                    </TableHead>
-                    <TableHead>社員番号</TableHead>
-                    <TableHead>氏名</TableHead>
-                    <TableHead>部署</TableHead>
-                    <TableHead>ステータス</TableHead>
-                    <TableHead>出勤</TableHead>
-                    <TableHead>退勤</TableHead>
-                    <TableHead>勤務場所</TableHead>
-                    <TableHead>勤怠締め</TableHead>
-                    <TableHead>アラート</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAttendance.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
-                        チームメンバーが見つかりません
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredAttendance.map((member) => (
-                      <TableRow key={member.memberId}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedMembers.includes(member.memberId)}
-                            onCheckedChange={() => toggleMemberSelection(member.memberId)}
-                          />
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{member.employeeNumber}</TableCell>
-                        <TableCell className="font-medium">{member.memberName}</TableCell>
-                        <TableCell>{member.department}</TableCell>
-                        <TableCell>{getStatusBadge(member.status)}</TableCell>
-                        <TableCell>
-                          {member.checkIn ? (
-                            <span className="font-mono">{member.checkIn}</span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {member.checkOut ? (
-                            <span className="font-mono">{member.checkOut}</span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {member.workLocation === 'home' || member.workLocation === 'remote' ? (
-                            <div className="flex items-center gap-1">
-                              <Home className="h-4 w-4 text-blue-500" />
-                              <span className="text-sm">在宅</span>
-                            </div>
-                          ) : member.workLocation === 'office' ? (
-                            <div className="flex items-center gap-1">
-                              <Building2 className="h-4 w-4" />
-                              <span className="text-sm">オフィス</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{getClosingBadge(member.closingStatus)}</TableCell>
-                        <TableCell>
-                          {member.alerts.length > 0 ? (
-                            <div className="flex items-center gap-1">
-                              <AlertTriangle className="h-4 w-4 text-orange-500" />
-                              <span className="text-xs text-orange-600">{member.alerts.join(', ')}</span>
-                            </div>
-                          ) : (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+    <>
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            {/* 期間表示 */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="min-w-[220px] text-center font-medium text-lg">
+                {periodDisplay}
+              </span>
+              <Button variant="outline" size="icon" onClick={goToNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-          </TabsContent>
 
-          {/* Monthly summary tab */}
-          <TabsContent value="summary">
-            <div className="border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
+            {/* アクションボタン */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                <FileText className="h-4 w-4 mr-2" />
+                PDF出力
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="名前・部署で検索..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={closingFilter} onValueChange={setClosingFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="ステータス" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべて</SelectItem>
+                <SelectItem value="open">未締め</SelectItem>
+                <SelectItem value="pending">承認待ち</SelectItem>
+                <SelectItem value="approved">承認済み</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Tabs */}
+          <Tabs defaultValue="punch" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="punch" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                打刻状況
+              </TabsTrigger>
+              <TabsTrigger value="summary" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                勤怠項目別集計
+              </TabsTrigger>
+            </TabsList>
+
+            {/* 打刻状況タブ - 1ヶ月横スクロール表示 */}
+            <TabsContent value="punch">
+              <ScrollArea className="w-full">
+                <div className="min-w-[1600px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-10">氏名</TableHead>
+                        <TableHead className="w-[60px] text-center">一覧</TableHead>
+                        <TableHead className="w-[80px] text-center">承認申請</TableHead>
+                        <TableHead className="w-[80px] text-center">上長承認</TableHead>
+                        <TableHead className="w-[80px] text-center">勤怠締め</TableHead>
+                        {monthDays.map(day => {
+                          const dayOfWeek = getDay(day);
+                          const isSunday = dayOfWeek === 0;
+                          const isSaturday = dayOfWeek === 6;
+                          return (
+                            <TableHead
+                              key={day.toISOString()}
+                              className={cn(
+                                'w-[50px] text-center text-xs p-1',
+                                isSunday && 'text-red-500',
+                                isSaturday && 'text-blue-500',
+                                isToday(day) && 'bg-primary/10'
+                              )}
+                            >
+                              <div>{format(day, 'd')}</div>
+                              <div className="text-[10px]">{WEEKDAY_LABELS[dayOfWeek]}</div>
+                            </TableHead>
+                          );
+                        })}
+                        {/* アクションカラム（人事/マネージャーのみ） */}
+                        {(isHR || isManager) && (
+                          <TableHead className="w-[160px] text-center">アクション</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6 + monthDays.length + (isHR || isManager ? 1 : 0)} className="text-center py-8 text-muted-foreground">
+                            メンバーが見つかりません
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredData.map((member) => (
+                          <TableRow key={member.memberId}>
+                            {/* 氏名 */}
+                            <TableCell className="font-medium sticky left-0 bg-white dark:bg-gray-950 z-10">
+                              <div className="truncate">{member.memberName}</div>
+                              <div className="text-xs text-muted-foreground truncate">{member.department}</div>
+                            </TableCell>
+
+                            {/* 一覧リンク */}
+                            <TableCell className="text-center">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleViewMemberDetail(member.memberId)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+
+                            {/* 承認申請 */}
+                            <TableCell className="text-center">
+                              {member.closingRequested ? (
+                                <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+                              ) : (
+                                <MinusCircle className="h-4 w-4 text-gray-300 mx-auto" />
+                              )}
+                            </TableCell>
+
+                            {/* 上長承認 */}
+                            <TableCell className="text-center">
+                              {member.managerApproved ? (
+                                <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+                              ) : member.closingRequested ? (
+                                <AlertCircle className="h-4 w-4 text-yellow-500 mx-auto" />
+                              ) : (
+                                <MinusCircle className="h-4 w-4 text-gray-300 mx-auto" />
+                              )}
+                            </TableCell>
+
+                            {/* 勤怠締め */}
+                            <TableCell className="text-center">
+                              {getClosingStatusIcon(member)}
+                            </TableCell>
+
+                            {/* 日次打刻（出勤/退勤 2段表示） */}
+                            {monthDays.map(day => {
+                              const dateStr = format(day, 'yyyy-MM-dd');
+                              const record = member.dailyRecords.get(dateStr);
+                              const dayOfWeek = getDay(day);
+                              const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+
+                              return (
+                                <TableCell
+                                  key={day.toISOString()}
+                                  className={cn(
+                                    'text-center p-1 text-[10px] font-mono',
+                                    isWeekendDay && 'bg-gray-50 dark:bg-gray-900',
+                                    isToday(day) && 'bg-primary/10'
+                                  )}
+                                >
+                                  {record && !isWeekendDay ? (
+                                    <div className="space-y-0.5">
+                                      <div className={cn(
+                                        record.checkIn && record.checkIn > '09:30' && 'text-orange-600'
+                                      )}>
+                                        {record.checkIn || '-'}
+                                      </div>
+                                      <div>{record.checkOut || '-'}</div>
+                                    </div>
+                                  ) : isWeekendDay ? (
+                                    <span className="text-gray-400">-</span>
+                                  ) : (
+                                    <span className="text-gray-300">-</span>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+
+                            {/* アクションボタン */}
+                            {(isHR || isManager) && (
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  {/* マネージャー・人事: 差し戻し/承認 */}
+                                  {member.closingRequested && !member.managerApproved && (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => handleAction(member.memberId, 'reject')}
+                                        title="差し戻し"
+                                      >
+                                        <XCircle className="h-4 w-4 text-red-500" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => handleAction(member.memberId, 'approve')}
+                                        title="承認"
+                                      >
+                                        <Check className="h-4 w-4 text-green-500" />
+                                      </Button>
+                                    </>
+                                  )}
+
+                                  {/* 人事のみ: 承認解除/勤怠締め/締め解除 */}
+                                  {isHR && (
+                                    <>
+                                      {member.managerApproved && !member.attendanceClosed && (
+                                        <>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            onClick={() => handleAction(member.memberId, 'cancel_approval')}
+                                            title="承認解除"
+                                          >
+                                            <Undo2 className="h-4 w-4 text-orange-500" />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7"
+                                            onClick={() => handleAction(member.memberId, 'close')}
+                                            title="勤怠締め"
+                                          >
+                                            <Lock className="h-4 w-4 text-blue-500" />
+                                          </Button>
+                                        </>
+                                      )}
+                                      {member.attendanceClosed && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={() => handleAction(member.memberId, 'unlock')}
+                                          title="締め解除"
+                                        >
+                                          <Unlock className="h-4 w-4 text-purple-500" />
+                                        </Button>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </TabsContent>
+
+            {/* 勤怠項目別集計タブ（閲覧のみ） */}
+            <TabsContent value="summary">
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>氏名</TableHead>
+                        <TableHead>部署</TableHead>
+                        <TableHead className="text-right">所定日数</TableHead>
+                        <TableHead className="text-right">出勤日数</TableHead>
+                        <TableHead className="text-right">在宅日数</TableHead>
+                        <TableHead className="text-right">欠勤日数</TableHead>
+                        <TableHead className="text-right">遅刻</TableHead>
+                        <TableHead className="text-right">早退</TableHead>
+                        <TableHead className="text-right">総労働時間</TableHead>
+                        <TableHead className="text-right">残業時間</TableHead>
+                        <TableHead>勤怠締め</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                            メンバーが見つかりません
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredData.map((member) => (
+                          <TableRow key={member.memberId}>
+                            <TableCell className="font-medium">{member.memberName}</TableCell>
+                            <TableCell>{member.department}</TableCell>
+                            <TableCell className="text-right">{member.summary.workDays}日</TableCell>
+                            <TableCell className="text-right">{member.summary.presentDays}日</TableCell>
+                            <TableCell className="text-right">{member.summary.remoteDays}日</TableCell>
+                            <TableCell className="text-right">
+                              {member.summary.absentDays > 0 ? (
+                                <span className="text-red-600 font-medium">{member.summary.absentDays}日</span>
+                              ) : (
+                                '0日'
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {member.summary.lateDays > 0 ? (
+                                <span className="text-orange-600">{member.summary.lateDays}回</span>
+                              ) : (
+                                '0回'
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {member.summary.earlyLeaveDays > 0 ? (
+                                <span className="text-yellow-600">{member.summary.earlyLeaveDays}回</span>
+                              ) : (
+                                '0回'
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {member.summary.totalWorkHours.toFixed(1)}h
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {member.summary.totalOvertimeHours > 0 ? (
+                                <span className={cn(
+                                  member.summary.totalOvertimeHours > 40 ? 'text-red-600 font-medium' :
+                                  member.summary.totalOvertimeHours > 30 ? 'text-orange-600' : ''
+                                )}>
+                                  {member.summary.totalOvertimeHours.toFixed(1)}h
+                                </span>
+                              ) : (
+                                '0h'
+                              )}
+                            </TableCell>
+                            <TableCell>{getClosingBadge(member)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* メンバー勤怠詳細ダイアログ */}
+      <Dialog open={memberDetailDialogOpen} onOpenChange={setMemberDetailDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              {selectedMember?.memberName}さんの勤怠一覧
+            </DialogTitle>
+            <DialogDescription>
+              {periodDisplay}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedMember && (
+            <div className="space-y-4">
+              {/* サマリー */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <div className="text-xs text-muted-foreground mb-1">出勤日数</div>
+                  <div className="text-xl font-bold">{selectedMember.summary.presentDays}日</div>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <div className="text-xs text-muted-foreground mb-1">在宅日数</div>
+                  <div className="text-xl font-bold">{selectedMember.summary.remoteDays}日</div>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <div className="text-xs text-muted-foreground mb-1">総労働時間</div>
+                  <div className="text-xl font-bold">{selectedMember.summary.totalWorkHours.toFixed(1)}h</div>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <div className="text-xs text-muted-foreground mb-1">残業時間</div>
+                  <div className={cn(
+                    'text-xl font-bold',
+                    selectedMember.summary.totalOvertimeHours > 40 && 'text-red-600'
+                  )}>
+                    {selectedMember.summary.totalOvertimeHours.toFixed(1)}h
+                  </div>
+                </div>
+              </div>
+
+              {/* 日次一覧 */}
+              <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">
-                        <Checkbox
-                          checked={selectedMembers.length === filteredSummary.length && filteredSummary.length > 0}
-                          onCheckedChange={toggleAllSelection}
-                        />
-                      </TableHead>
-                      <TableHead>氏名</TableHead>
-                      <TableHead>部署</TableHead>
-                      <TableHead className="text-right">所定日数</TableHead>
-                      <TableHead className="text-right">出勤日数</TableHead>
-                      <TableHead className="text-right">在宅日数</TableHead>
-                      <TableHead className="text-right">欠勤日数</TableHead>
-                      <TableHead className="text-right">遅刻</TableHead>
-                      <TableHead className="text-right">早退</TableHead>
-                      <TableHead className="text-right">総労働時間</TableHead>
-                      <TableHead className="text-right">残業時間</TableHead>
-                      <TableHead>勤怠締め</TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>日付</TableHead>
+                      <TableHead className="text-center">出勤</TableHead>
+                      <TableHead className="text-center">退勤</TableHead>
+                      <TableHead className="text-center">ステータス</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSummary.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
-                          チームメンバーが見つかりません
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredSummary.map((member) => (
-                        <TableRow key={member.memberId}>
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedMembers.includes(member.memberId)}
-                              onCheckedChange={() => toggleMemberSelection(member.memberId)}
-                            />
+                    {monthDays.map(day => {
+                      const dateStr = format(day, 'yyyy-MM-dd');
+                      const record = selectedMember.dailyRecords.get(dateStr);
+                      const dayOfWeek = getDay(day);
+                      const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+
+                      return (
+                        <TableRow
+                          key={day.toISOString()}
+                          className={cn(
+                            isWeekendDay && 'bg-gray-50 dark:bg-gray-900'
+                          )}
+                        >
+                          <TableCell className={cn(
+                            'font-medium',
+                            dayOfWeek === 0 && 'text-red-500',
+                            dayOfWeek === 6 && 'text-blue-500'
+                          )}>
+                            {format(day, 'MM/dd')}（{WEEKDAY_LABELS[dayOfWeek]}）
                           </TableCell>
-                          <TableCell className="font-medium">{member.memberName}</TableCell>
-                          <TableCell>{member.department}</TableCell>
-                          <TableCell className="text-right">{member.workDays}日</TableCell>
-                          <TableCell className="text-right">{member.presentDays}日</TableCell>
-                          <TableCell className="text-right">{member.remoteDays}日</TableCell>
-                          <TableCell className="text-right">
-                            {member.absentDays > 0 ? (
-                              <span className="text-red-600 font-medium">{member.absentDays}日</span>
+                          <TableCell className="text-center font-mono">
+                            {record?.checkIn || '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-mono">
+                            {record?.checkOut || '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {isWeekendDay ? (
+                              <Badge variant="outline">休日</Badge>
+                            ) : record?.status === 'absent' ? (
+                              <Badge variant="destructive">欠勤</Badge>
+                            ) : record?.checkIn ? (
+                              <Badge className="bg-green-500">出勤</Badge>
                             ) : (
-                              '0日'
+                              <Badge variant="outline">未出勤</Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
-                            {member.lateDays > 0 ? (
-                              <span className="text-orange-600">{member.lateDays}回</span>
-                            ) : (
-                              '0回'
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {member.earlyLeaveDays > 0 ? (
-                              <span className="text-yellow-600">{member.earlyLeaveDays}回</span>
-                            ) : (
-                              '0回'
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {member.totalWorkHours.toFixed(1)}h
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {member.totalOvertimeHours > 0 ? (
-                              <span className={cn(
-                                member.totalOvertimeHours > 40 ? 'text-red-600 font-medium' :
-                                member.totalOvertimeHours > 30 ? 'text-orange-600' : ''
-                              )}>
-                                {member.totalOvertimeHours.toFixed(1)}h
-                              </span>
-                            ) : (
-                              '0h'
-                            )}
-                          </TableCell>
-                          <TableCell>{getClosingBadge(member.closingStatus)}</TableCell>
                         </TableRow>
-                      ))
-                    )}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
 
-        {/* Summary */}
-        <div className="flex flex-wrap gap-4 pt-4 border-t">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-500" />
-            <span className="text-sm">出勤: {teamAttendanceData.filter(m => m.status === 'present').length}名</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-sm">在宅: {teamAttendanceData.filter(m => m.status === 'remote').length}名</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-gray-400" />
-            <span className="text-sm">未出勤: {teamAttendanceData.filter(m => m.status === 'not_checked_in').length}名</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span className="text-sm">欠勤: {teamAttendanceData.filter(m => m.status === 'absent').length}名</span>
-          </div>
-        </div>
-      </CardContent>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMemberDetailDialogOpen(false)}>
+              閉じる
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* Bulk action confirmation dialog */}
-      <Dialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
+      {/* アクション確認ダイアログ */}
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {bulkActionType === 'approve' && '一括承認'}
-              {bulkActionType === 'close' && '一括勤怠締め'}
-              {bulkActionType === 'reopen' && '一括勤怠締め解除'}
+              {actionType === 'approve' && '承認の確認'}
+              {actionType === 'reject' && '差し戻しの確認'}
+              {actionType === 'close' && '勤怠締めの確認'}
+              {actionType === 'unlock' && '締め解除の確認'}
+              {actionType === 'cancel_approval' && '承認解除の確認'}
             </DialogTitle>
             <DialogDescription>
-              選択した{selectedMembers.length}名に対して操作を実行します。
+              {selectedMember?.memberName}さんに対して操作を実行します。
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-2">対象メンバー:</p>
-            <div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-1">
-              {selectedMembers.map(id => {
-                const member = teamMembers.find(m => m.id === id);
-                return member ? (
-                  <div key={id} className="text-sm">
-                    {member.name} ({member.department})
-                  </div>
-                ) : null;
-              })}
-            </div>
+            <p className="text-sm">
+              {actionType === 'approve' && 'この勤怠を承認してよろしいですか？'}
+              {actionType === 'reject' && '差し戻しを実行すると、本人に再提出を依頼します。'}
+              {actionType === 'close' && '勤怠を締めると、以降の修正ができなくなります。'}
+              {actionType === 'unlock' && '締めを解除すると、修正が可能になります。'}
+              {actionType === 'cancel_approval' && '承認を取り消して、承認待ち状態に戻します。'}
+            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkActionDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setActionDialogOpen(false)}>
               キャンセル
             </Button>
-            <Button onClick={executeBulkAction}>
+            <Button
+              variant={actionType === 'reject' ? 'destructive' : 'default'}
+              onClick={executeAction}
+            >
               実行する
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }
