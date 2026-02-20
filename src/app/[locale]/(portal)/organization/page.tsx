@@ -32,6 +32,7 @@ import {
 import { OrganizationChart } from '@/components/organization/organization-chart';
 import { UserManagementPanel } from '@/components/organization/user-management-panel';
 import { TransferHistoryPanel } from '@/components/organization/transfer-history-panel';
+import { DepartmentManagementPanel } from '@/components/organization/department-management-panel';
 // import { AddTransferDialog } from '@/components/organization/add-transfer-dialog'; // 異動登録ボタン削除に伴い未使用
 import { useOrganizationStore, type ChartTemplateType } from '@/lib/store/organization-store';
 import html2canvas from 'html2canvas';
@@ -291,8 +292,9 @@ export default function OrganizationPage() {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">組織図</TabsTrigger>
+          <TabsTrigger value="departments">部門管理</TabsTrigger>
           <TabsTrigger value="members">メンバー</TabsTrigger>
           <TabsTrigger value="transfers">異動</TabsTrigger>
         </TabsList>
@@ -436,6 +438,11 @@ export default function OrganizationPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* 部門管理タブ */}
+        <TabsContent value="departments">
+          <DepartmentManagementPanel canEdit={!!canManageOrganization} />
         </TabsContent>
 
         {/* メンバー管理タブ */}
