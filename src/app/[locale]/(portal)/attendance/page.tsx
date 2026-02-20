@@ -5,7 +5,6 @@ import { useState, useEffect, Suspense, lazy, memo, useMemo } from 'react';
 import { useAttendanceStore } from '@/lib/attendance-store';
 import {
   Clock,
-  Calendar as CalendarIcon,
   BarChart3,
   Users,
   Timer,
@@ -15,7 +14,9 @@ import {
   Download,
   FileCheck,
   CalendarClock,
+  CalendarDays,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,11 +35,7 @@ const LazySimplePunchCard = lazy(() =>
   }))
 );
 
-const LazyAttendanceCalendar = lazy(() =>
-  import('@/features/attendance/attendance-calendar').then(module => ({
-    default: module.AttendanceCalendar
-  }))
-);
+// カレンダータブは要件により削除（P.2-3参照）
 
 const LazyMonthlyAttendanceList = lazy(() =>
   import('@/features/attendance/monthly-attendance-list').then(module => ({
@@ -81,9 +78,9 @@ interface AttendanceRecord {
 }
 
 // メモ化された統計カードコンポーネント
-const StatsCards = memo(({ loading }: { loading: boolean }) => {
+const StatsCards = memo(({ loading, onLeaveCardClick }: { loading: boolean; onLeaveCardClick?: () => void }) => {
   if (loading) return <StatCardsLoadingSkeleton />;
-  
+
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -114,15 +111,19 @@ const StatsCards = memo(({ loading }: { loading: boolean }) => {
         </CardContent>
       </Card>
 
-      <Card>
+      {/* 休暇取得カード - クリックで休暇管理へ遷移 */}
+      <Card
+        className="cursor-pointer hover:bg-muted/50 transition-colors"
+        onClick={onLeaveCardClick}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">休暇取得</CardTitle>
-          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">2日</div>
           <p className="text-xs text-muted-foreground">
-            今月取得
+            今月取得 → 休暇管理へ
           </p>
         </CardContent>
       </Card>
@@ -146,6 +147,7 @@ const StatsCards = memo(({ loading }: { loading: boolean }) => {
 StatsCards.displayName = 'StatsCards';
 
 export default function AttendancePage() {
+  const router = useRouter();
   // const t = useTranslations('attendance');
   const t = (key: string) => {
     const translations: Record<string, string> = {
@@ -155,8 +157,9 @@ export default function AttendancePage() {
       'leaveUsed': '休暇取得',
       'remoteDays': '在宅勤務',
       'attendanceList': '勤怠一覧',
-      'teamAttendance': 'チーム勤怠',
-      'calendar': 'カレンダー',
+      'attendanceSummary': '勤怠集計',
+      'attendanceApproval': '勤怠承認',
+      'shift': 'シフト',
       'statistics': '統計',
     };
     return translations[key] || key;
@@ -177,10 +180,15 @@ export default function AttendancePage() {
   const { currentUser } = useUserStore();
   const currentUserRoles = currentUser?.roles || ['employee'];
 
-  // チーム勤怠タブを表示できる権限（人事/マネージャー/経営者/システム管理者）
-  const canViewTeamAttendance = currentUserRoles.some((role: string) =>
-    ['hr', 'manager', 'executive', 'admin', 'system_admin'].includes(role)
+  // 勤怠承認タブを表示できる権限（人事/マネージャー/経営者のみ）
+  const canViewAttendanceApproval = currentUserRoles.some((role: string) =>
+    ['hr', 'manager', 'executive'].includes(role)
   );
+
+  // 休暇管理への遷移ハンドラー
+  const handleLeaveCardClick = () => {
+    router.push('/leave');
+  };
 
   // ストアのデータを表示用に変換
   const records = useMemo(() => {
@@ -268,19 +276,7 @@ export default function AttendancePage() {
     setLoading(false);
   }, []);
 
-  // メモ化されたカレンダーレコード
-  const calendarRecords = useMemo(() => records.map(record => ({
-    date: new Date(record.date),
-    status: record.status === 'present' || record.status === 'late' ? 'present' as const :
-            record.status === 'remote' ? 'remote' as const :
-            record.status === 'absent' ? 'absent' as const : 'present' as const,
-    checkIn: record.checkIn,
-    checkOut: record.checkOut,
-    workHours: record.workHours,
-    overtime: record.overtime,
-    workType: record.workType,
-    note: record.note,
-  })), [records]);
+  // カレンダータブ削除のため calendarRecords は不要
 
   // 月間勤怠一覧用のレコード
   const monthlyListRecords = useMemo(() => {
@@ -337,7 +333,7 @@ export default function AttendancePage() {
       </div>
 
       {/* Monthly Status Cards */}
-      <StatsCards loading={loading} />
+      <StatsCards loading={loading} onLeaveCardClick={handleLeaveCardClick} />
 
       {/* Check-in Section */}
       <div className="flex justify-center">
@@ -356,8 +352,13 @@ export default function AttendancePage() {
       </div>
 
       {/* Tabs Content */}
+      {/*
+        タブ構成（Phase 1 リファクタリング）:
+        - 一般/システム管理者: 勤怠一覧 / 勤怠集計 / シフト
+        - 人事/マネージャー/経営者: 勤怠一覧 / 勤怠集計 / 勤怠承認 / シフト
+      */}
       <Tabs defaultValue="list" className="space-y-4 w-full">
-        <TabsList className={`grid w-full ${canViewTeamAttendance ? 'grid-cols-3 md:grid-cols-5' : 'grid-cols-4'}`}>
+        <TabsList className={`grid w-full ${canViewAttendanceApproval ? 'grid-cols-4' : 'grid-cols-3'}`}>
           <TabsTrigger value="list" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">{t('attendanceList')}</span>
@@ -365,27 +366,20 @@ export default function AttendancePage() {
           </TabsTrigger>
           <TabsTrigger value="summary" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">勤務表</span>
-            <span className="sm:hidden">勤務表</span>
+            <span className="hidden sm:inline">{t('attendanceSummary')}</span>
+            <span className="sm:hidden">集計</span>
           </TabsTrigger>
-          {canViewTeamAttendance && (
-            <TabsTrigger value="team" className="flex items-center gap-2">
+          {canViewAttendanceApproval && (
+            <TabsTrigger value="approval" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('teamAttendance')}</span>
-              <span className="sm:hidden">チーム</span>
+              <span className="hidden sm:inline">{t('attendanceApproval')}</span>
+              <span className="sm:hidden">承認</span>
             </TabsTrigger>
           )}
-          {canViewTeamAttendance && (
-            <TabsTrigger value="shift" className="flex items-center gap-2">
-              <CalendarClock className="h-4 w-4" />
-              <span className="hidden sm:inline">シフト</span>
-              <span className="sm:hidden">シフト</span>
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('calendar')}</span>
-            <span className="sm:hidden">カレンダー</span>
+          <TabsTrigger value="shift" className="flex items-center gap-2">
+            <CalendarClock className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('shift')}</span>
+            <span className="sm:hidden">シフト</span>
           </TabsTrigger>
         </TabsList>
 
@@ -398,25 +392,19 @@ export default function AttendancePage() {
           </Suspense>
         </TabsContent>
 
-        {canViewTeamAttendance && (
-          <TabsContent value="team" className="space-y-4">
+        {/* 勤怠承認タブ（人事/マネージャー/経営者のみ） */}
+        {canViewAttendanceApproval && (
+          <TabsContent value="approval" className="space-y-4">
             <Suspense fallback={<TableLoadingSkeleton />}>
               <LazyTeamAttendance />
             </Suspense>
           </TabsContent>
         )}
 
-        {canViewTeamAttendance && (
-          <TabsContent value="shift" className="space-y-4">
-            <Suspense fallback={<TableLoadingSkeleton />}>
-              <LazyShiftManagement />
-            </Suspense>
-          </TabsContent>
-        )}
-
-        <TabsContent value="calendar" className="space-y-4">
+        {/* シフトタブ（全員表示可能） */}
+        <TabsContent value="shift" className="space-y-4">
           <Suspense fallback={<TableLoadingSkeleton />}>
-            <LazyAttendanceCalendar records={calendarRecords} />
+            <LazyShiftManagement />
           </Suspense>
         </TabsContent>
 
@@ -427,9 +415,9 @@ export default function AttendancePage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5" />
-                    勤務表
+                    勤怠集計
                   </CardTitle>
-                  <CardDescription>月間勤怠の集計と締め申請</CardDescription>
+                  <CardDescription>月間勤怠の集計</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
