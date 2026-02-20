@@ -13,7 +13,13 @@ import { useTenantStore } from './tenant-store';
 
 // REST API helper functions
 const API_BASE = '/api/users';
-const getTenantId = () => 'tenant-1';
+
+// CookieからテナントIDを取得（ミドルウェアで設定される x-tenant-id を使用）
+const getTenantId = (): string => {
+  if (typeof document === 'undefined') return 'tenant-1'; // SSR時のフォールバック
+  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
+  return match ? match[1] : 'tenant-1';
+};
 
 async function apiFetchUsers(tenantId: string): Promise<User[]> {
   const params = new URLSearchParams({ tenantId });

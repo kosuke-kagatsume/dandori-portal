@@ -3,7 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 // REST API helper functions
 const API_BASE = '/api/attendance';
-const getTenantId = () => 'tenant-1';
+
+// CookieからテナントIDを取得（ミドルウェアで設定される x-tenant-id を使用）
+const getTenantId = (): string => {
+  if (typeof document === 'undefined') return 'tenant-1'; // SSR時のフォールバック
+  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
+  return match ? match[1] : 'tenant-1';
+};
 
 async function apiFetchAttendanceRecords(userId: string, startDate?: string, endDate?: string) {
   const params = new URLSearchParams({ tenantId: getTenantId(), userId });
