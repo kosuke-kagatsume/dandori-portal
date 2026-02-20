@@ -1,5 +1,6 @@
 'use client';
 
+import { useTheme } from 'next-themes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -11,6 +12,17 @@ import { Sun, Moon, Globe, Bell } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
 
 export function AppearanceTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
+  // next-themesのuseThemeフックを使用してテーマを永続化
+  const { theme: currentTheme, setTheme } = useTheme();
+
+  // テーマ変更ハンドラー（next-themesとローカル設定の両方を更新）
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme); // next-themesで永続化
+    updateSettings({ theme: newTheme }); // ローカル設定も更新
+  };
+
+  // 現在のテーマを取得（next-themesの値を優先）
+  const activeTheme = currentTheme || settings.theme;
   const testBrowserNotification = () => {
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification('テスト通知', {
@@ -39,25 +51,25 @@ export function AppearanceTab({ settings, updateSettings, saveSettings }: Settin
         <CardContent className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
             <Button
-              variant={settings.theme === 'light' ? 'default' : 'outline'}
+              variant={activeTheme === 'light' ? 'default' : 'outline'}
               className="justify-start"
-              onClick={() => updateSettings({ theme: 'light' })}
+              onClick={() => handleThemeChange('light')}
             >
               <Sun className="w-4 h-4 mr-2" />
               ライト
             </Button>
             <Button
-              variant={settings.theme === 'dark' ? 'default' : 'outline'}
+              variant={activeTheme === 'dark' ? 'default' : 'outline'}
               className="justify-start"
-              onClick={() => updateSettings({ theme: 'dark' })}
+              onClick={() => handleThemeChange('dark')}
             >
               <Moon className="w-4 h-4 mr-2" />
               ダーク
             </Button>
             <Button
-              variant={settings.theme === 'system' ? 'default' : 'outline'}
+              variant={activeTheme === 'system' ? 'default' : 'outline'}
               className="justify-start"
-              onClick={() => updateSettings({ theme: 'system' })}
+              onClick={() => handleThemeChange('system')}
             >
               <Globe className="w-4 h-4 mr-2" />
               システム

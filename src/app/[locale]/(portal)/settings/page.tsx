@@ -198,7 +198,7 @@ export default function SettingsPage() {
         try {
           const parsed = JSON.parse(stored);
           setSettings({ ...defaultSettings, ...parsed });
-          applyTheme(parsed.theme || 'light');
+          // テーマはnext-themesが自動的に適用するため、ここでは何もしない
         } catch {
           // Ignore error
         }
@@ -206,27 +206,10 @@ export default function SettingsPage() {
     }
   }, []);
 
-  // Apply theme
-  const applyTheme = (theme: 'light' | 'dark' | 'system') => {
-    if (typeof window === 'undefined') return;
-
-    const root = document.documentElement;
-    if (theme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.toggle('dark', prefersDark);
-    } else {
-      root.classList.toggle('dark', theme === 'dark');
-    }
-  };
-
-  // Update settings
+  // Update settings（テーマはnext-themesが管理するため、ここでは適用しない）
   const updateSettings = (updates: Partial<SimpleSettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
     setHasChanges(true);
-
-    if (updates.theme) {
-      applyTheme(updates.theme);
-    }
   };
 
   // Save settings
