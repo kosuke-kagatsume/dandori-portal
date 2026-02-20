@@ -43,6 +43,23 @@ async function apiDeleteAttendanceRecord(id: string) {
   return true;
 }
 
+// 打刻種別
+export type PunchType = 'check_in' | 'check_out' | 'break_start' | 'break_end';
+
+// 打刻方法
+export type PunchMethod = 'manual' | 'web' | 'mobile' | 'ic_card' | 'biometric';
+
+// 打刻履歴レコード（P.2 複数打刻の履歴保存）
+export interface PunchRecord {
+  id: string;
+  type: PunchType;
+  time: string; // HH:mm形式
+  method: PunchMethod;
+  location?: 'office' | 'home' | 'client' | 'other';
+  note?: string;
+  createdAt: string;
+}
+
 export interface AttendanceRecord {
   id: string;
   userId: string;
@@ -60,6 +77,8 @@ export interface AttendanceRecord {
   memo?: string;
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   approvalReason?: string;
+  // 打刻履歴（P.2 複数打刻の履歴保存）
+  punchHistory?: PunchRecord[];
   createdAt: string;
   updatedAt: string;
 }
@@ -185,6 +204,11 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             r => r.userId === userId && r.date === date
           );
 
+          // 打刻履歴のマージ（既存 + 新規）
+          const existingPunchHistory = existingRecord?.punchHistory || [];
+          const newPunchHistory = record.punchHistory || [];
+          const mergedPunchHistory = [...existingPunchHistory, ...newPunchHistory];
+
           const recordToUpsert = {
             userId,
             date,
@@ -200,6 +224,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             memo: record.memo,
             approvalStatus: record.approvalStatus,
             approvalReason: record.approvalReason,
+            punchHistory: mergedPunchHistory.length > 0 ? mergedPunchHistory : undefined,
           };
 
           const upsertedRecord = await apiUpsertAttendanceRecord(recordToUpsert);
@@ -259,6 +284,16 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
         // 遅刻判定（9:30以降）
         const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 30);
 
+        // 打刻履歴レコード作成
+        const punchRecord: PunchRecord = {
+          id: `punch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'check_in',
+          time: timeString,
+          method: 'web',
+          location: workLocation,
+          createdAt: now.toISOString(),
+        };
+
         set({
           currentCheckIn: {
             checkInTime: timeString,
@@ -276,6 +311,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           status: isLate ? 'late' : 'present',
           approvalStatus: isLate ? 'pending' : undefined,
           approvalReason: isLate ? '遅刻のため承認が必要です' : undefined,
+          punchHistory: [punchRecord],
         });
       },
 
@@ -300,6 +336,17 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           // 早退判定（18:00前）
           const isEarly = now.getHours() < 18;
 
+          // 打刻履歴レコード作成
+          const punchRecord: PunchRecord = {
+            id: `punch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'check_out',
+            time: timeString,
+            method: 'web',
+            location: todayRecord.workLocation,
+            note: memo,
+            createdAt: now.toISOString(),
+          };
+
           await get().addOrUpdateRecord({
             userId: targetUserId,
             date,
@@ -310,6 +357,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             status: isEarly ? 'early' : todayRecord.status,
             approvalStatus: isEarly ? 'pending' : todayRecord.approvalStatus,
             approvalReason: isEarly ? '早退のため承認が必要です' : todayRecord.approvalReason,
+            punchHistory: [punchRecord],
           });
 
           set({ currentCheckIn: null });
@@ -325,6 +373,17 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
         });
 
         const targetUserId = userId || getCurrentUserId();
+        const todayRecord = get().getRecordByDate(date, targetUserId);
+
+        // 打刻履歴レコード作成
+        const punchRecord: PunchRecord = {
+          id: `punch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'break_start',
+          time: timeString,
+          method: 'web',
+          location: todayRecord?.workLocation,
+          createdAt: now.toISOString(),
+        };
 
         set((state) => ({
           currentCheckIn: state.currentCheckIn ? {
@@ -337,6 +396,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           userId: targetUserId,
           date,
           breakStart: timeString,
+          punchHistory: [punchRecord],
         });
       },
 
@@ -357,6 +417,16 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           const breakEndTime = new Date(`${date} ${timeString}`);
           const breakMinutes = Math.floor((breakEndTime.getTime() - breakStartTime.getTime()) / 60000);
 
+          // 打刻履歴レコード作成
+          const punchRecord: PunchRecord = {
+            id: `punch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            type: 'break_end',
+            time: timeString,
+            method: 'web',
+            location: todayRecord.workLocation,
+            createdAt: now.toISOString(),
+          };
+
           set((state) => ({
             currentCheckIn: state.currentCheckIn ? {
               ...state.currentCheckIn,
@@ -369,6 +439,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             date,
             breakEnd: timeString,
             totalBreakMinutes: (todayRecord.totalBreakMinutes || 0) + breakMinutes,
+            punchHistory: [punchRecord],
           });
         }
       },

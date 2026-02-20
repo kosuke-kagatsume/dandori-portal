@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Languages, Globe, Calendar } from 'lucide-react';
-import type { SettingsTabProps } from '../types';
+import { Languages, Globe, Calendar, FileDown } from 'lucide-react';
+import type { SettingsTabProps, ExportTimeFormat } from '../types';
 
 export function RegionalTab({ settings, updateSettings, saveSettings }: SettingsTabProps) {
   return (
@@ -122,6 +122,107 @@ export function RegionalTab({ settings, updateSettings, saveSettings }: Settings
                   .replace('月', '月')
                   .replace('日', '日')
               }
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* エクスポート設定（P.22） */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <FileDown className="w-5 h-5" />
+            <CardTitle>エクスポート設定</CardTitle>
+          </div>
+          <CardDescription>CSVエクスポート時のフォーマットを設定します</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="exportTimeFormat">時間フォーマット *</Label>
+            <Select
+              value={settings.export?.timeFormat || 'time'}
+              onValueChange={(value: ExportTimeFormat) =>
+                updateSettings({
+                  export: { ...settings.export, timeFormat: value }
+                })
+              }
+            >
+              <SelectTrigger id="exportTimeFormat">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="time">時刻表示（1:30）</SelectItem>
+                <SelectItem value="hour_minute">時間+分表示（1.30）</SelectItem>
+                <SelectItem value="decimal">小数点表示（1.50）</SelectItem>
+                <SelectItem value="minutes">分表示（90）</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              勤怠データのCSVエクスポート時に使用する時間の表示形式
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="exportEncoding">文字エンコーディング</Label>
+            <Select
+              value={settings.export?.encoding || 'utf-8'}
+              onValueChange={(value: 'utf-8' | 'shift_jis') =>
+                updateSettings({
+                  export: { ...settings.export, encoding: value }
+                })
+              }
+            >
+              <SelectTrigger id="exportEncoding">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="utf-8">UTF-8（推奨）</SelectItem>
+                <SelectItem value="shift_jis">Shift_JIS（Excel互換）</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              CSVファイルの文字エンコーディング
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label htmlFor="exportDateFormat">エクスポート日付フォーマット</Label>
+            <Select
+              value={settings.export?.dateFormat || 'YYYY-MM-DD'}
+              onValueChange={(value: 'YYYY-MM-DD' | 'YYYY/MM/DD' | 'MM/DD/YYYY') =>
+                updateSettings({
+                  export: { ...settings.export, dateFormat: value }
+                })
+              }
+            >
+              <SelectTrigger id="exportDateFormat">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="YYYY-MM-DD">2025-01-31 (ISO 8601)</SelectItem>
+                <SelectItem value="YYYY/MM/DD">2025/01/31</SelectItem>
+                <SelectItem value="MM/DD/YYYY">01/31/2025 (米国式)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              CSVエクスポート時の日付フォーマット
+            </p>
+          </div>
+
+          <Separator />
+
+          <div className="p-4 bg-muted rounded-lg">
+            <p className="text-sm font-medium mb-2">時間フォーマット プレビュー（1時間30分の場合）</p>
+            <p className="text-sm text-muted-foreground">
+              {settings.export?.timeFormat === 'time' && '1:30'}
+              {settings.export?.timeFormat === 'hour_minute' && '1.30'}
+              {settings.export?.timeFormat === 'decimal' && '1.50'}
+              {settings.export?.timeFormat === 'minutes' && '90'}
+              {!settings.export?.timeFormat && '1:30'}
             </p>
           </div>
         </CardContent>

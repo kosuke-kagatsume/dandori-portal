@@ -2,6 +2,9 @@
  * Settings 共通型定義
  */
 
+// エクスポート時間フォーマット（P.22）
+export type ExportTimeFormat = 'time' | 'hour_minute' | 'decimal' | 'minutes';
+
 export interface SimpleSettings {
   theme: 'light' | 'dark' | 'system';
   language: string;
@@ -13,6 +16,15 @@ export interface SimpleSettings {
     email: boolean;
     emailAddress: string;
     emailTiming: 'instant' | 'daily' | 'weekly';
+  };
+  // エクスポート設定
+  export: {
+    // 時間フォーマット: time=1:30, hour_minute=1.30, decimal=1.50, minutes=90
+    timeFormat: ExportTimeFormat;
+    // CSVエンコーディング
+    encoding: 'utf-8' | 'shift_jis';
+    // 日付フォーマット
+    dateFormat: 'YYYY-MM-DD' | 'YYYY/MM/DD' | 'MM/DD/YYYY';
   };
   saas: {
     monthlyBudget: number;
@@ -75,6 +87,11 @@ export const defaultSettings: SimpleSettings = {
     email: false,
     emailAddress: '',
     emailTiming: 'daily',
+  },
+  export: {
+    timeFormat: 'time', // デフォルト: 時刻表示（1:30）
+    encoding: 'utf-8',
+    dateFormat: 'YYYY-MM-DD',
   },
   saas: {
     monthlyBudget: 500000,
