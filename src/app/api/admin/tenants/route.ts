@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { seedTenantPermissions } from '@/lib/permissions/seed-tenant-permissions';
 
 /**
  * テナント一覧取得API
@@ -148,6 +149,9 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         },
       });
+
+      // 新規テナントにデフォルト権限データを投入
+      await seedTenantPermissions(tx, newTenant.id);
 
       // 作成したテナントを取得（設定込み）
       return tx.tenants.findUnique({

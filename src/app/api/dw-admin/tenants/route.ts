@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { seedTenantPermissions } from '@/lib/permissions/seed-tenant-permissions';
 
 // DW管理API用の独立したPrismaクライアント
 const prisma = new PrismaClient();
@@ -228,6 +229,9 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date(),
         },
       });
+
+      // 新規テナントにデフォルト権限データを投入
+      await seedTenantPermissions(tx, newTenant.id);
 
       return tx.tenants.findUnique({
         where: { id: newTenant.id },
