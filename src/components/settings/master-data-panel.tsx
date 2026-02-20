@@ -47,7 +47,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMasterDataStore, Department, Position, EmploymentType } from '@/lib/store/master-data-store';
-import { useUserStore } from '@/lib/store';
+
+// CookieからテナントIDを取得するヘルパー
+const getTenantIdFromCookie = (): string => {
+  if (typeof document === 'undefined') return 'tenant-1';
+  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
+  return match ? match[1] : 'tenant-1';
+};
 
 export function MasterDataPanel() {
   const [activeTab, setActiveTab] = useState('departments');
@@ -57,9 +63,6 @@ export function MasterDataPanel() {
   const [editingType, setEditingType] = useState<'department' | 'position' | 'employmentType'>('department');
   const [editingItem, setEditingItem] = useState<Department | Position | EmploymentType | null>(null);
   const [formData, setFormData] = useState({ name: '', code: '', parentId: '', level: 1, order: 0 });
-
-  // user-storeからtenantIdを取得（currentUserではなく、ストア直接のtenantId）
-  const userStoreTenantId = useUserStore((state) => state.tenantId);
 
   const {
     departments,
@@ -83,12 +86,12 @@ export function MasterDataPanel() {
 
   // テナントIDの設定とデータの取得
   useEffect(() => {
-    // user-storeからtenantIdを取得、なければデフォルト値を使用
-    const storeTenantId = userStoreTenantId || 'tenant-1';
-    if (storeTenantId !== tenantId) {
-      setTenantId(storeTenantId);
+    // Cookieから正しいテナントIDを取得
+    const cookieTenantId = getTenantIdFromCookie();
+    if (cookieTenantId !== tenantId) {
+      setTenantId(cookieTenantId);
     }
-  }, [userStoreTenantId, tenantId, setTenantId]);
+  }, [tenantId, setTenantId]);
 
   // tenantIdが設定されたらデータを取得
   useEffect(() => {
@@ -287,7 +290,7 @@ export function MasterDataPanel() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-12" />
                   <TableHead className="w-24">コード</TableHead>
                   <TableHead>部署名</TableHead>
                   <TableHead className="w-32">親部署</TableHead>
@@ -364,7 +367,7 @@ export function MasterDataPanel() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-12" />
                   <TableHead>役職名</TableHead>
                   <TableHead className="w-24">レベル</TableHead>
                   <TableHead className="w-24">状態</TableHead>
@@ -424,7 +427,7 @@ export function MasterDataPanel() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-12" />
                   <TableHead>雇用形態</TableHead>
                   <TableHead className="w-24">状態</TableHead>
                   <TableHead className="w-32 text-right">操作</TableHead>

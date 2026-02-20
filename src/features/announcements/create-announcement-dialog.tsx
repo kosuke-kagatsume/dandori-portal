@@ -23,41 +23,72 @@ import {
 import { Switch } from '@/components/ui/switch';
 import {
   useAnnouncementsStore,
+  type Announcement,
   type AnnouncementPriority,
   type AnnouncementType,
   type AnnouncementTarget,
 } from '@/lib/store/announcements-store';
 import { useUserStore } from '@/lib/store';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 interface CreateAnnouncementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editingAnnouncement?: Announcement | null; // 編集モード用
 }
+
+const defaultFormData = {
+  title: '',
+  content: '',
+  type: 'general' as AnnouncementType,
+  priority: 'normal' as AnnouncementPriority,
+  target: 'all' as AnnouncementTarget,
+  startDate: new Date().toISOString().split('T')[0],
+  endDate: '',
+  actionDeadline: '',
+  requiresAction: false,
+  actionLabel: '',
+  actionUrl: '',
+  published: true,
+};
 
 export function CreateAnnouncementDialog({
   open,
   onOpenChange,
+  editingAnnouncement,
 }: CreateAnnouncementDialogProps) {
   const currentUser = useUserStore((state) => state.currentUser);
-  const { createAnnouncement } = useAnnouncementsStore();
+  const { createAnnouncement, updateAnnouncement } = useAnnouncementsStore();
 
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    type: 'general' as AnnouncementType,
-    priority: 'normal' as AnnouncementPriority,
-    target: 'all' as AnnouncementTarget,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: '',
-    actionDeadline: '',
-    requiresAction: false,
-    actionLabel: '',
-    actionUrl: '',
-    published: true,
-  });
+  const [formData, setFormData] = useState(defaultFormData);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 編集モードの場合、既存データで初期化
+  useEffect(() => {
+    if (editingAnnouncement && open) {
+      setFormData({
+        title: editingAnnouncement.title,
+        content: editingAnnouncement.content,
+        type: editingAnnouncement.type,
+        priority: editingAnnouncement.priority,
+        target: editingAnnouncement.target,
+        startDate: editingAnnouncement.startDate,
+        endDate: editingAnnouncement.endDate || '',
+        actionDeadline: editingAnnouncement.actionDeadline || '',
+        requiresAction: editingAnnouncement.requiresAction,
+        actionLabel: editingAnnouncement.actionLabel || '',
+        actionUrl: editingAnnouncement.actionUrl || '',
+        published: editingAnnouncement.published,
+      });
+    } else if (!editingAnnouncement && open) {
+      setFormData({
+        ...defaultFormData,
+        startDate: new Date().toISOString().split('T')[0],
+      });
+    }
+  }, [editingAnnouncement, open]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // バリデーション
@@ -70,8 +101,7 @@ export function CreateAnnouncementDialog({
       return;
     }
 
-    // アナウンス作成
-    createAnnouncement({
+    const announcementData = {
       title: formData.title,
       content: formData.content,
       type: formData.type,
@@ -84,28 +114,26 @@ export function CreateAnnouncementDialog({
       actionLabel: formData.actionLabel || undefined,
       actionUrl: formData.actionUrl || undefined,
       published: formData.published,
-      createdBy: currentUser?.id || 'system',
-      createdByName: currentUser?.name || 'システム',
-    });
+    };
 
-    toast.success('アナウンスを作成しました');
-    onOpenChange(false);
-
-    // フォームリセット
-    setFormData({
-      title: '',
-      content: '',
-      type: 'general',
-      priority: 'normal',
-      target: 'all',
-      startDate: new Date().toISOString().split('T')[0],
-      endDate: '',
-      actionDeadline: '',
-      requiresAction: false,
-      actionLabel: '',
-      actionUrl: '',
-      published: true,
-    });
+    try {
+      if (editingAnnouncement) {
+        // 編集モード
+        await updateAnnouncement(editingAnnouncement.id, announcementData);
+        toast.success('アナウンスを更新しました');
+      } else {
+        // 新規作成モード
+        await createAnnouncement({
+          ...announcementData,
+          createdBy: currentUser?.id || 'system',
+          createdByName: currentUser?.name || 'システム',
+        });
+        toast.success('アナウンスを作成しました');
+      }
+      onOpenChange(false);
+    } catch {
+      toast.error(editingAnnouncement ? 'アナウンスの更新に失敗しました' : 'アナウンスの作成に失敗しました');
+    }
   };
 
   return (
@@ -113,9 +141,9 @@ export function CreateAnnouncementDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>新規アナウンス作成</DialogTitle>
+            <DialogTitle>{editingAnnouncement ? 'アナウンス編集' : '新規アナウンス作成'}</DialogTitle>
             <DialogDescription>
-              全社員またはグループ向けのお知らせを作成します。
+              {editingAnnouncement ? 'アナウンスの内容を編集します。' : '全社員またはグループ向けのお知らせを作成します。'}
             </DialogDescription>
           </DialogHeader>
 
@@ -299,7 +327,7 @@ export function CreateAnnouncementDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               キャンセル
             </Button>
-            <Button type="submit">作成</Button>
+            <Button type="submit">{editingAnnouncement ? '更新' : '作成'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

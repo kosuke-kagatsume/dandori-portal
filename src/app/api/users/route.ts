@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         email,
         name,
         phone,
-        hireDate: new Date(hireDate),
+        hireDate: new Date(`${hireDate.split('T')[0]}T12:00:00Z`),
         unitId,
         tenantId,
         roles,

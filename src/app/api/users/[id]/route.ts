@@ -98,12 +98,14 @@ export async function PATCH(
     // 更新データの準備
     const updateData: Record<string, unknown> = { ...body };
 
-    // 日付フィールドの変換
+    // 日付フィールドの変換（タイムゾーン問題を回避：UTCの正午として設定）
     if (body.hireDate) {
-      updateData.hireDate = new Date(body.hireDate);
+      const dateStr = body.hireDate.split('T')[0]; // "YYYY-MM-DD" 形式を取得
+      updateData.hireDate = new Date(`${dateStr}T12:00:00Z`);
     }
     if (body.retiredDate) {
-      updateData.retiredDate = new Date(body.retiredDate);
+      const dateStr = body.retiredDate.split('T')[0];
+      updateData.retiredDate = new Date(`${dateStr}T12:00:00Z`);
     }
 
     // roles配列からrole（単数）への同期

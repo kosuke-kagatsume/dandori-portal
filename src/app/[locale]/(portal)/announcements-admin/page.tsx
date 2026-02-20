@@ -36,6 +36,7 @@ import {
   typeLabels,
   priorityColors,
   typeColors,
+  type Announcement,
   type AnnouncementPriority,
   type AnnouncementType,
 } from '@/lib/store/announcements-store';
@@ -46,12 +47,27 @@ import { CreateAnnouncementDialog } from '@/features/announcements/create-announ
 export default function AnnouncementsAdminPage() {
   const currentUser = useUserStore((state) => state.currentUser);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const {
     getAnnouncements,
     publishAnnouncement,
     unpublishAnnouncement,
     deleteAnnouncement,
   } = useAnnouncementsStore();
+
+  // 編集ダイアログを開く
+  const handleEdit = (announcement: Announcement) => {
+    setEditingAnnouncement(announcement);
+    setCreateDialogOpen(true);
+  };
+
+  // ダイアログを閉じる
+  const handleDialogClose = (open: boolean) => {
+    setCreateDialogOpen(open);
+    if (!open) {
+      setEditingAnnouncement(null);
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<AnnouncementType | 'all'>('all');
@@ -152,7 +168,7 @@ export default function AnnouncementsAdminPage() {
             全社員向けのお知らせを作成・管理します
           </p>
         </div>
-        <Button className="gap-2" onClick={() => setCreateDialogOpen(true)}>
+        <Button className="gap-2" onClick={() => { setEditingAnnouncement(null); setCreateDialogOpen(true); }}>
           <Plus className="h-4 w-4" />
           新規作成
         </Button>
@@ -397,6 +413,7 @@ export default function AnnouncementsAdminPage() {
                             variant="outline"
                             size="icon"
                             title="編集"
+                            onClick={() => handleEdit(announcement)}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -420,8 +437,12 @@ export default function AnnouncementsAdminPage() {
         </CardContent>
       </Card>
 
-      {/* 作成ダイアログ */}
-      <CreateAnnouncementDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      {/* 作成・編集ダイアログ */}
+      <CreateAnnouncementDialog
+        open={createDialogOpen}
+        onOpenChange={handleDialogClose}
+        editingAnnouncement={editingAnnouncement}
+      />
     </div>
   );
 }
