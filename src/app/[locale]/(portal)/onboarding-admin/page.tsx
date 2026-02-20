@@ -237,22 +237,55 @@ export default function OnboardingAdminPage() {
     setShowNewDialog(false);
   };
 
-  // 招待メール送信処理（デモ用）
-  const handleSendInvite = (applicationId: string) => {
+  // 招待メール送信処理
+  const handleSendInvite = async (applicationId: string) => {
+    const application = localApplications.find(app => app.id === applicationId);
+    if (!application) {
+      alert('申請が見つかりません');
+      return;
+    }
+
     setSendingInvite(applicationId);
 
-    // デモ用: 1秒後にステータス更新
-    setTimeout(() => {
-      setLocalApplications(prev =>
-        prev.map(app =>
-          app.id === applicationId
-            ? { ...app, status: 'invited' as OnboardingStatus, invitedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-            : app
-        )
-      );
+    try {
+      const response = await fetch('/api/onboarding/send-invitation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          applicationId: application.id,
+          applicantEmail: application.applicantEmail,
+          applicantName: application.applicantName,
+          companyName: 'Dandori株式会社', // TODO: テナント情報から取得
+          hireDate: application.hireDate,
+          department: application.department || '未設定',
+          position: application.position || '未設定',
+          deadline: application.deadline,
+          accessToken: application.accessToken,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setLocalApplications(prev =>
+          prev.map(app =>
+            app.id === applicationId
+              ? { ...app, status: 'invited' as OnboardingStatus, invitedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+              : app
+          )
+        );
+        alert(`招待メールを ${application.applicantEmail} に送信しました`);
+      } else {
+        alert(`メール送信に失敗しました: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('招待メール送信エラー:', error);
+      alert('メール送信中にエラーが発生しました');
+    } finally {
       setSendingInvite(null);
-      alert('招待メールを送信しました（デモ）');
-    }, 1000);
+    }
   };
 
 
