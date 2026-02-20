@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense, lazy, memo, useMemo } from 'react';
-// generateRealisticAttendanceData は削除されました
-import { useAttendanceStore } from '@/lib/attendance-store';
+// 勤怠ストアはlazyロードされた子コンポーネントで使用
 import {
   Clock,
   BarChart3,
@@ -10,21 +9,15 @@ import {
   Timer,
   Home,
   AlertTriangle,
-  TrendingUp,
-  Download,
-  FileCheck,
   CalendarClock,
   CalendarDays,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatCardsLoadingSkeleton, TableLoadingSkeleton } from '@/components/ui/loading-skeleton';
-import { toast } from 'sonner';
-import { exportAttendanceToCSV } from '@/lib/csv/csv-export';
+// CSV出力は勤怠一覧/勤怠集計の各コンポーネントに移動済み
 import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
 import { useUserStore } from '@/lib/store/user-store';
 
@@ -61,21 +54,11 @@ const LazyShiftManagement = lazy(() =>
   }))
 );
 
-interface AttendanceRecord {
-  id: string;
-  userId: string;
-  userName: string;
-  date: string;
-  dayOfWeek: string;
-  checkIn?: string;
-  checkOut?: string;
-  breakTime: string;
-  workHours: number;
-  overtime: number;
-  status: 'present' | 'absent' | 'remote' | 'late' | 'early_leave';
-  workType: 'office' | 'remote' | 'hybrid';
-  note?: string;
-}
+const LazyAttendanceSummaryTab = lazy(() =>
+  import('@/features/attendance/attendance-summary-tab').then(module => ({
+    default: module.AttendanceSummaryTab
+  }))
+);
 
 // メモ化された統計カードコンポーネント
 const StatsCards = memo(({ loading, onLeaveCardClick }: { loading: boolean; onLeaveCardClick?: () => void }) => {
@@ -173,7 +156,7 @@ export default function AttendancePage() {
   const closingMonth = currentDate.getMonth() + 1;
 
   // Attendance store integration
-  const { getTodayRecord } = useAttendanceStore();
+  // getTodayRecord は勤怠一覧コンポーネントに移動済み
   const { records: allHistoryRecords, addOrUpdateRecord } = useAttendanceHistoryStore();
 
   // ユーザー権限の確認
@@ -190,83 +173,7 @@ export default function AttendancePage() {
     router.push('/leave');
   };
 
-  // ストアのデータを表示用に変換
-  const records = useMemo(() => {
-    const mappedRecords: AttendanceRecord[] = allHistoryRecords.map((record) => {
-      const date = new Date(record.date);
-      const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][date.getDay()];
-
-      // 休憩時間を時間:分形式に変換
-      const breakHours = Math.floor((record.totalBreakMinutes || 0) / 60);
-      const breakMinutes = (record.totalBreakMinutes || 0) % 60;
-      const breakTime = breakHours > 0 || breakMinutes > 0
-        ? `${breakHours}時間${breakMinutes}分`
-        : '-';
-
-      // ステータスのマッピング
-      const statusMap: Record<string, AttendanceRecord['status']> = {
-        'present': 'present',
-        'absent': 'absent',
-        'holiday': 'absent',
-        'leave': 'absent',
-        'late': 'late',
-        'early': 'early_leave',
-      };
-
-      // 勤務場所のマッピング
-      const workTypeMap: Record<string, AttendanceRecord['workType']> = {
-        'office': 'office',
-        'home': 'remote',
-        'client': 'office',
-        'other': 'hybrid',
-      };
-
-      return {
-        id: record.id,
-        userId: record.userId,
-        userName: record.userName || '',
-        date: record.date,
-        dayOfWeek,
-        checkIn: record.checkIn || undefined,
-        checkOut: record.checkOut || undefined,
-        breakTime,
-        workHours: (record.workMinutes || 0) / 60,
-        overtime: (record.overtimeMinutes || 0) / 60,
-        status: statusMap[record.status] || 'present',
-        workType: workTypeMap[record.workLocation] || 'office',
-        note: record.memo || '',
-      };
-    });
-
-    // 今日の打刻データがあれば一覧に追加
-    const todayRecord = getTodayRecord();
-    return todayRecord ? [todayRecord, ...mappedRecords] : mappedRecords;
-  }, [allHistoryRecords, getTodayRecord]);
-
-  // CSV出力ハンドラー
-  const handleExportCSV = () => {
-    try {
-      // 勤怠履歴ストアから全データを取得
-      const allRecords = allHistoryRecords;
-
-      if (allRecords.length === 0) {
-        toast.error('データがありません', {
-          description: 'エクスポートする勤怠データがありません',
-        });
-        return;
-      }
-
-      exportAttendanceToCSV(allRecords);
-      toast.success('CSV出力完了', {
-        description: `${allRecords.length}件の勤怠データをエクスポートしました`,
-      });
-    } catch (error) {
-      console.error('CSV export error:', error);
-      toast.error('エラー', {
-        description: 'CSVの出力に失敗しました',
-      });
-    }
-  };
+  // NOTE: records と handleExportCSV は勤怠集計タブの専用コンポーネントに移動済み
 
 
   // デモデータ生成機能は削除されました
@@ -408,155 +315,11 @@ export default function AttendancePage() {
           </Suspense>
         </TabsContent>
 
+        {/* 勤怠集計タブ */}
         <TabsContent value="summary" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    勤怠集計
-                  </CardTitle>
-                  <CardDescription>月間勤怠の集計</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleExportCSV}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    CSV出力
-                  </Button>
-                  <Button
-                    onClick={() => setClosingDialogOpen(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <FileCheck className="h-4 w-4" />
-                    締め申請
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* 月間サマリー */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-xs text-muted-foreground mb-1">所定労働時間</div>
-                  <div className="text-2xl font-bold">160h</div>
-                  <div className="text-xs text-muted-foreground">20日 × 8h</div>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-xs text-muted-foreground mb-1">総実働時間</div>
-                  <div className="text-2xl font-bold">162.5h</div>
-                  <Progress value={101.5} className="mt-2 h-1" />
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-xs text-muted-foreground mb-1">残業時間</div>
-                  <div className="text-2xl font-bold text-orange-600">28.5h</div>
-                  <div className="text-xs text-muted-foreground">36協定上限: 45h</div>
-                </div>
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="text-xs text-muted-foreground mb-1">深夜労働</div>
-                  <div className="text-2xl font-bold">2.5h</div>
-                  <div className="text-xs text-muted-foreground">22:00-05:00</div>
-                </div>
-              </div>
-
-              {/* 詳細データテーブル */}
-              <div className="border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-medium">日付</th>
-                        <th className="px-4 py-3 text-left font-medium">曜日</th>
-                        <th className="px-4 py-3 text-left font-medium">出勤</th>
-                        <th className="px-4 py-3 text-left font-medium">退勤</th>
-                        <th className="px-4 py-3 text-left font-medium">休憩</th>
-                        <th className="px-4 py-3 text-left font-medium">実働</th>
-                        <th className="px-4 py-3 text-left font-medium">残業</th>
-                        <th className="px-4 py-3 text-left font-medium">勤務形態</th>
-                        <th className="px-4 py-3 text-left font-medium">備考</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {records.slice(0, 10).map((record) => (
-                        <tr key={record.id} className="hover:bg-muted/30">
-                          <td className="px-4 py-2">{new Date(record.date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}</td>
-                          <td className="px-4 py-2">{record.dayOfWeek}</td>
-                          <td className="px-4 py-2">{record.checkIn || '-'}</td>
-                          <td className="px-4 py-2">{record.checkOut || '-'}</td>
-                          <td className="px-4 py-2">{record.breakTime}</td>
-                          <td className="px-4 py-2">{record.workHours > 0 ? `${record.workHours.toFixed(1)}h` : '-'}</td>
-                          <td className="px-4 py-2">
-                            {record.overtime > 0 ? (
-                              <span className="text-orange-600 font-medium">{record.overtime.toFixed(1)}h</span>
-                            ) : '-'}
-                          </td>
-                          <td className="px-4 py-2">
-                            <Badge variant="outline" className="text-xs">
-                              {record.workType === 'office' ? 'オフィス' : record.workType === 'remote' ? 'リモート' : 'ハイブリッド'}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-2 text-muted-foreground truncate max-w-[150px]">{record.note || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 36協定状況 */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">36協定状況</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>月間残業時間</span>
-                        <span>28.5h / 45h</span>
-                      </div>
-                      <Progress value={63.3} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>年間残業時間</span>
-                        <span>180h / 360h</span>
-                      </div>
-                      <Progress value={50} className="h-2" />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">勤務統計</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>平均出勤時刻</span>
-                      <span className="font-medium">09:12</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>平均退勤時刻</span>
-                      <span className="font-medium">18:34</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>残業日数</span>
-                      <span className="font-medium">12日</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>在宅勤務日数</span>
-                      <span className="font-medium">8日</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
+          <Suspense fallback={<TableLoadingSkeleton />}>
+            <LazyAttendanceSummaryTab />
+          </Suspense>
         </TabsContent>
       </Tabs>
 
