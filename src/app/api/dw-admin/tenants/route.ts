@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { seedTenantPermissions } from '@/lib/permissions/seed-tenant-permissions';
 import { withDWAdminAuth } from '@/lib/auth/api-auth';
+import { createSuccessResponse, handleError, badRequestError, conflictError } from '@/lib/api/response';
 
 // DW管理API用の独立したPrismaクライアント
 const prisma = new PrismaClient();
@@ -150,43 +151,23 @@ export async function GET(request: NextRequest) {
       _count: true,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        tenants: tenantsWithStats,
-        summary: {
-          total,
-          byStatus: statusCounts.reduce(
-            (acc, item) => {
-              acc[item.status] = item._count;
-              return acc;
-            },
-            {} as Record<string, number>
-          ),
-        },
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages: Math.ceil(total / limit),
-        },
+    return createSuccessResponse({
+      tenants: tenantsWithStats,
+      summary: {
+        total,
+        byStatus: statusCounts.reduce(
+          (acc, item) => {
+            acc[item.status] = item._count;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
       },
+    }, {
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    console.error('[API] DW Admin - Get tenants error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'テナント一覧の取得に失敗しました',
-        details:
-          process.env.NODE_ENV === 'development'
-            ? error instanceof Error
-              ? error.message
-              : String(error)
-            : undefined,
-      },
-      { status: 500 }
-    );
+    return handleError(error, 'テナント一覧の取得');
   }
 }
 
@@ -219,10 +200,7 @@ export async function POST(request: NextRequest) {
 
     // バリデーション
     if (!name) {
-      return NextResponse.json(
-        { success: false, error: 'テナント名は必須です' },
-        { status: 400 }
-      );
+      return badRequestError('テナント名は必須です');
     }
 
     // サブドメインの重複チェック
@@ -231,10 +209,7 @@ export async function POST(request: NextRequest) {
         where: { subdomain },
       });
       if (existing) {
-        return NextResponse.json(
-          { success: false, error: 'このサブドメインは既に使用されています' },
-          { status: 400 }
-        );
+        return conflictError('このサブドメインは既に使用されています');
       }
     }
 
@@ -271,28 +246,11 @@ export async function POST(request: NextRequest) {
       });
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: tenant,
-        message: 'テナントを作成しました',
-      },
-      { status: 201 }
-    );
+    return createSuccessResponse(tenant, {
+      message: 'テナントを作成しました',
+      status: 201,
+    });
   } catch (error) {
-    console.error('[API] DW Admin - Create tenant error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'テナントの作成に失敗しました',
-        details:
-          process.env.NODE_ENV === 'development'
-            ? error instanceof Error
-              ? error.message
-              : String(error)
-            : undefined,
-      },
-      { status: 500 }
-    );
+    return handleError(error, 'テナントの作成');
   }
 }

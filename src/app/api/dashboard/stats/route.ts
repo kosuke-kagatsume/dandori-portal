@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
+import { createSuccessResponse, handleError } from '@/lib/api/response';
 
 // GET /api/dashboard/stats - ダッシュボード統計データ取得
 export async function GET(request: NextRequest) {
@@ -89,35 +90,25 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // 6. PC資産
-      prisma.pc_assets.findMany({
+      // 6. PC資産統計（groupByで集計）
+      prisma.pc_assets.groupBy({
+        by: ['status'],
         where: { tenantId },
-        select: {
-          id: true,
-          status: true,
-          assignedUserId: true,
-        },
+        _count: true,
       }),
 
-      // 7. 一般資産
-      prisma.general_assets.findMany({
+      // 7. 一般資産統計（カテゴリ・ステータス別）
+      prisma.general_assets.groupBy({
+        by: ['category', 'status'],
         where: { tenantId },
-        select: {
-          id: true,
-          category: true,
-          status: true,
-          assignedUserId: true,
-        },
+        _count: true,
       }),
 
-      // 8. 車両
-      prisma.vehicles.findMany({
+      // 8. 車両統計（groupByで集計）
+      prisma.vehicles.groupBy({
+        by: ['status'],
         where: { tenantId },
-        select: {
-          id: true,
-          status: true,
-          assignedUserId: true,
-        },
+        _count: true,
       }),
     ]);
 
@@ -201,26 +192,46 @@ export async function GET(request: NextRequest) {
       return data;
     });
 
-    // 資産利用状況集計
-    const allAssets = [
-      ...pcAssets.map((a) => ({ ...a, type: 'PC' })),
-      ...generalAssets.map((a) => ({ ...a, type: a.category })),
-      ...vehicles.map((a) => ({ ...a, type: '車両' })),
-    ];
-
+    // 資産利用状況集計（groupBy結果から計算）
     const assetUtilization: Record<string, { total: number; inUse: number; available: number }> = {};
 
-    allAssets.forEach((asset) => {
-      const type = asset.type;
-      if (!assetUtilization[type]) {
-        assetUtilization[type] = { total: 0, inUse: 0, available: 0 };
+    // PC資産の集計
+    pcAssets.forEach((stat) => {
+      if (!assetUtilization['PC']) {
+        assetUtilization['PC'] = { total: 0, inUse: 0, available: 0 };
       }
-      assetUtilization[type].total++;
+      assetUtilization['PC'].total += stat._count;
+      if (stat.status === 'in_use') {
+        assetUtilization['PC'].inUse += stat._count;
+      } else if (stat.status === 'available' || stat.status === 'active') {
+        assetUtilization['PC'].available += stat._count;
+      }
+    });
 
-      if (asset.assignedUserId && asset.status === 'active') {
-        assetUtilization[type].inUse++;
-      } else if (asset.status === 'active') {
-        assetUtilization[type].available++;
+    // 一般資産の集計（カテゴリ別）
+    generalAssets.forEach((stat) => {
+      const category = stat.category || 'その他';
+      if (!assetUtilization[category]) {
+        assetUtilization[category] = { total: 0, inUse: 0, available: 0 };
+      }
+      assetUtilization[category].total += stat._count;
+      if (stat.status === 'in_use') {
+        assetUtilization[category].inUse += stat._count;
+      } else if (stat.status === 'available' || stat.status === 'active') {
+        assetUtilization[category].available += stat._count;
+      }
+    });
+
+    // 車両の集計
+    vehicles.forEach((stat) => {
+      if (!assetUtilization['車両']) {
+        assetUtilization['車両'] = { total: 0, inUse: 0, available: 0 };
+      }
+      assetUtilization['車両'].total += stat._count;
+      if (stat.status === 'in_use') {
+        assetUtilization['車両'].inUse += stat._count;
+      } else if (stat.status === 'available' || stat.status === 'active') {
+        assetUtilization['車両'].available += stat._count;
       }
     });
 
@@ -232,35 +243,24 @@ export async function GET(request: NextRequest) {
       utilizationRate: data.total > 0 ? Math.round((data.inUse / data.total) * 100) : 0,
     }));
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        // 全社統計（上部4カード）
-        kpiCards: {
-          totalEmployees,
-          todayAttendance,
-          attendanceRate,
-          pendingApprovals,
-          urgentApprovals,
-        },
-        // SaaSコスト（カテゴリ別）
-        saasCostByCategory,
-        // SaaSコスト（月別推移）
-        saasMonthlyTrend,
-        saasCategories: categories,
-        // 資産利用状況
-        assetUtilization: assetUtilizationData,
+    return createSuccessResponse({
+      // 全社統計（上部4カード）
+      kpiCards: {
+        totalEmployees,
+        todayAttendance,
+        attendanceRate,
+        pendingApprovals,
+        urgentApprovals,
       },
-    });
+      // SaaSコスト（カテゴリ別）
+      saasCostByCategory,
+      // SaaSコスト（月別推移）
+      saasMonthlyTrend,
+      saasCategories: categories,
+      // 資産利用状況
+      assetUtilization: assetUtilizationData,
+    }, { cacheSeconds: 60 });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch dashboard stats',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return handleError(error, 'ダッシュボード統計の取得');
   }
 }
