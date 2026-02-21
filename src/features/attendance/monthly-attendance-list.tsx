@@ -290,13 +290,13 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             {/* 期間表示 */}
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+              <Button variant="outline" size="icon" onClick={goToPreviousMonth} aria-label="前月を表示">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="min-w-[220px] text-center font-medium text-lg">
                 {periodDisplay}
               </span>
-              <Button variant="outline" size="icon" onClick={goToNextMonth}>
+              <Button variant="outline" size="icon" onClick={goToNextMonth} aria-label="次月を表示">
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -332,31 +332,31 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="w-[60px] text-center sticky left-0 bg-muted/50 z-10">詳細</TableHead>
-                    <TableHead className="w-[60px] text-center">編集</TableHead>
-                    <TableHead className="w-[60px] text-center">申請</TableHead>
-                    <TableHead className="w-[100px]">日付</TableHead>
-                    <TableHead className="w-[80px]">勤怠区分</TableHead>
-                    <TableHead className="w-[80px] text-center">申請状況</TableHead>
-                    <TableHead className="w-[100px]">勤務パターン</TableHead>
-                    <TableHead className="w-[60px] text-center">出勤</TableHead>
-                    <TableHead className="w-[60px] text-center">退勤</TableHead>
-                    <TableHead className="w-[60px] text-center">休憩入り</TableHead>
-                    <TableHead className="w-[60px] text-center">休憩戻り</TableHead>
-                    <TableHead className="w-[60px] text-right">総労働</TableHead>
-                    <TableHead className="w-[60px] text-right">所定</TableHead>
-                    <TableHead className="w-[60px] text-right">所定外</TableHead>
-                    <TableHead className="w-[60px] text-right">法定外</TableHead>
-                    <TableHead className="w-[70px] text-right">深夜所定</TableHead>
-                    <TableHead className="w-[80px] text-right">深夜所定外</TableHead>
-                    <TableHead className="w-[80px] text-right">深夜法定外</TableHead>
-                    <TableHead className="w-[60px] text-right">遅刻</TableHead>
-                    <TableHead className="w-[60px] text-right">早退</TableHead>
-                    <TableHead className="w-[60px] text-right">休憩</TableHead>
-                    <TableHead className="w-[90px] text-right">休憩みなし所定</TableHead>
-                    <TableHead className="w-[100px] text-right">休憩みなし所定外</TableHead>
-                    <TableHead className="w-[100px] text-right">休憩みなし法定外</TableHead>
-                    <TableHead className="w-[150px]">備考</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center sticky left-0 bg-muted/50 z-10">詳細</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center">編集</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center">申請</TableHead>
+                    <TableHead scope="col" className="w-[100px]">日付</TableHead>
+                    <TableHead scope="col" className="w-[80px]">勤怠区分</TableHead>
+                    <TableHead scope="col" className="w-[80px] text-center">申請状況</TableHead>
+                    <TableHead scope="col" className="w-[100px]">勤務パターン</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center">出勤</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center">退勤</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center">休憩入り</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center">休憩戻り</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-right">総労働</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-right">所定</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-right">所定外</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-right">法定外</TableHead>
+                    <TableHead scope="col" className="w-[70px] text-right">深夜所定</TableHead>
+                    <TableHead scope="col" className="w-[80px] text-right">深夜所定外</TableHead>
+                    <TableHead scope="col" className="w-[80px] text-right">深夜法定外</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-right">遅刻</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-right">早退</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-right">休憩</TableHead>
+                    <TableHead scope="col" className="w-[90px] text-right">休憩みなし所定</TableHead>
+                    <TableHead scope="col" className="w-[100px] text-right">休憩みなし所定外</TableHead>
+                    <TableHead scope="col" className="w-[100px] text-right">休憩みなし法定外</TableHead>
+                    <TableHead scope="col" className="w-[150px]">備考</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -384,6 +384,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                             size="icon"
                             className="h-7 w-7"
                             onClick={() => handleDetailClick(day)}
+                            aria-label={`${format(day, 'M月d日')}の詳細を表示`}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -396,6 +397,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                             size="icon"
                             className="h-7 w-7"
                             onClick={() => handleEditClick(day)}
+                            aria-label={`${format(day, 'M月d日')}を編集`}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -405,7 +407,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         <TableCell className="text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`${format(day, 'M月d日')}の申請メニュー`}>
                                 <ChevronDown className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>

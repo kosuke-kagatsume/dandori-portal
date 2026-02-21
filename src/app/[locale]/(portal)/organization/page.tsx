@@ -39,6 +39,7 @@ import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { useUserStore } from '@/lib/store';
 import { hasPermission as hasRbacPermission, type UserRole } from '@/lib/rbac';
+import { toast } from 'sonner';
 import type { OrganizationNode, OrganizationMember } from '@/types';
 import { Loader2 } from 'lucide-react';
 
@@ -117,8 +118,12 @@ export default function OrganizationPage() {
       // ダウンロード
       const fileName = `組織図_${now.toISOString().slice(0, 10)}.pdf`;
       pdf.save(fileName);
+      toast.success('PDFを出力しました', {
+        description: fileName,
+      });
     } catch (error) {
       console.error('PDF出力エラー:', error);
+      toast.error('PDF出力に失敗しました');
     } finally {
       setIsExporting(false);
     }

@@ -2,7 +2,17 @@
  * Demo Onboarding Data
  *
  * サンプルの入社申請データ（新入社員「新入太郎」さん用）
+ *
+ * 注意: このファイルはデモモード（NEXT_PUBLIC_DEMO_MODE=true）でのみ使用されます。
+ * 本番環境では無効化されます。
  */
+
+/**
+ * デモモードが有効かどうかを確認
+ */
+export const isDemoMode = (): boolean => {
+  return process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+};
 
 import type {
   OnboardingApplication,
@@ -240,9 +250,16 @@ export function getDemoOnboardingData() {
 
 /**
  * デモデータをローカルストレージに保存
+ * 注意: デモモードでのみ動作します
  */
 export function saveDemoOnboardingDataToLocalStorage() {
   if (typeof window === 'undefined') return;
+
+  // 本番環境ではデモデータを保存しない
+  if (!isDemoMode()) {
+    console.warn('[Demo] Demo mode is disabled. Skipping demo data initialization.');
+    return;
+  }
 
   const data = getDemoOnboardingData();
 

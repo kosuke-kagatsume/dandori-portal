@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePCAssetsAPI, type PCAssetFromAPI } from '@/hooks/use-pc-assets-api';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PCFormDialogProps {
@@ -385,7 +386,12 @@ export function PCFormDialog({
               キャンセル
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? '保存中...' : isEdit ? '更新' : '登録'}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  保存中...
+                </>
+              ) : isEdit ? '更新' : '登録'}
             </Button>
           </div>
         </form>

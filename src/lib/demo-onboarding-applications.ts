@@ -2,7 +2,17 @@
  * Demo Onboarding Applications
  *
  * 5人の申請者のデモデータ（HR管理画面用）
+ *
+ * 注意: このファイルはデモモード（NEXT_PUBLIC_DEMO_MODE=true）でのみ使用されます。
+ * 本番環境では無効化されます。
  */
+
+/**
+ * デモモードが有効かどうかを確認
+ */
+export const isDemoMode = (): boolean => {
+  return process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+};
 
 import type {
   OnboardingApplication,
@@ -574,7 +584,7 @@ export const commuteRouteForm005: CommuteRouteForm = {
 // 全申請一覧
 // ============================================================================
 
-export const allApplications: OnboardingApplication[] = [
+const _allApplications: OnboardingApplication[] = [
   application001,
   application002,
   application003,
@@ -582,11 +592,35 @@ export const allApplications: OnboardingApplication[] = [
   application005,
 ];
 
+/**
+ * 全申請一覧を取得
+ * 注意: デモモードでない場合は空配列を返します
+ */
+export const getAllDemoApplications = (): OnboardingApplication[] => {
+  if (!isDemoMode()) {
+    return [];
+  }
+  return _allApplications;
+};
+
+// 後方互換性のためにエクスポート（非推奨）
+// @deprecated getAllDemoApplications() を使用してください
+export const allApplications = _allApplications;
+
 // ============================================================================
 // データ取得関数
 // ============================================================================
 
+/**
+ * 指定されたIDの申請データを取得
+ * 注意: デモモードでない場合は常にnullを返します
+ */
 export function getApplicationData(applicationId: string) {
+  // 本番環境ではデモデータを返さない
+  if (!isDemoMode()) {
+    return null;
+  }
+
   switch (applicationId) {
     case 'demo-onboarding-001':
       return {
