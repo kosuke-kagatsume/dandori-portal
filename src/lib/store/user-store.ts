@@ -588,12 +588,12 @@ const createUserStore = () => {
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => {
         // 永続化する状態を選択
+        // 注意: accessToken, refreshTokenは httpOnly Cookie で管理するため、
+        // localStorageには保存しない（XSS対策）
         return {
           currentUser: state.currentUser,
           users: state.users,
           tenantId: state.tenantId,
-          accessToken: state.accessToken,
-          refreshToken: state.refreshToken,
         };
       },
       onRehydrateStorage: () => (state) => {

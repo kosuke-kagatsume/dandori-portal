@@ -124,8 +124,6 @@ export async function POST(request: NextRequest) {
       maxAge: TOKEN_EXPIRY * 7,
     });
 
-    console.log('Password changed successfully for user:', user.email);
-
     return NextResponse.json({
       success: true,
       message: 'パスワードを変更しました',

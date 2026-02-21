@@ -12,10 +12,7 @@ const TOKEN_EXPIRY = 60 * 60 * 24; // 24 hours in seconds
 
 export async function POST(request: NextRequest) {
   try {
-    // デバッグ：リクエストボディの生テキストを取得
     const rawText = await request.text();
-    console.log('Login request raw body length:', rawText.length);
-    console.log('Login request raw body (first 100 chars):', rawText.substring(0, 100));
 
     // JSONパース
     let body;
@@ -23,7 +20,6 @@ export async function POST(request: NextRequest) {
       body = JSON.parse(rawText);
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      console.error('Raw body causing error:', rawText);
       return NextResponse.json(
         {
           success: false,
@@ -44,7 +40,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Prismaでユーザーを検索（テナント情報も取得）
-    console.log('Searching for user with email:', email);
     const user = await prisma.users.findFirst({
       where: { email },
       include: {
@@ -60,12 +55,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('User found:', user ? 'YES' : 'NO');
-    if (user) {
-      console.log('User ID:', user.id);
-      console.log('User has passwordHash:', user.passwordHash ? 'YES' : 'NO');
-    }
-
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'メールアドレスまたはパスワードが正しくありません' },
@@ -75,17 +64,13 @@ export async function POST(request: NextRequest) {
 
     // パスワードの検証（passwordHashがある場合）
     if (user.passwordHash) {
-      console.log('Comparing password with hash...');
       const isValid = await bcrypt.compare(password, user.passwordHash);
-      console.log('Password valid:', isValid ? 'YES' : 'NO');
       if (!isValid) {
         return NextResponse.json(
           { success: false, error: 'メールアドレスまたはパスワードが正しくありません' },
           { status: 401 }
         );
       }
-    } else {
-      console.log('No passwordHash set for user, allowing login');
     }
 
     // JWTトークン生成

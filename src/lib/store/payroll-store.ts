@@ -518,6 +518,8 @@ const createPayrollStore = () => {
   }
 
   // クライアントサイドではpersistを使用
+  // セキュリティ: 給与データは機密情報のため sessionStorage を使用
+  // （ブラウザを閉じるとデータが消去される）
   return create<PayrollState>()(
     persist(storeCreator, {
       name: 'payroll-store',
@@ -534,7 +536,7 @@ const createPayrollStore = () => {
         }
         return { ...safe } as PayrollState;
       },
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (s) => ({
         _version: s._version,
         salaryMasters: s.salaryMasters,
