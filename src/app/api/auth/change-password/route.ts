@@ -156,7 +156,11 @@ export async function POST(request: NextRequest) {
     console.error('Change password error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'パスワードの変更に失敗しました', debug: errorMessage },
+      {
+        success: false,
+        error: 'パスワードの変更に失敗しました',
+        ...(process.env.NODE_ENV === 'development' && { debug: errorMessage }),
+      },
       { status: 500 }
     );
   }

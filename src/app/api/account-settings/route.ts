@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, tenantId, ...data } = body;
+    const { userId, tenantId: _tenantId, ...data } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -61,6 +61,9 @@ export async function PUT(request: NextRequest) {
     const existing = await prisma.user_account_settings.findUnique({
       where: { userId },
     });
+
+    // tenantIdはCookieから取得（リクエストボディのtenantIdは無視）
+    const resolvedTenantId = await getTenantIdFromRequest(request);
 
     let settings;
     if (existing) {
@@ -77,7 +80,7 @@ export async function PUT(request: NextRequest) {
       settings = await prisma.user_account_settings.create({
         data: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: tenantId || 'tenant-1',
+          tenantId: resolvedTenantId,
           userId,
           ...data,
           updatedAt: new Date(),
@@ -117,7 +120,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-1',
+          tenantId: await getTenantIdFromRequest(request),
           userId,
           passwordChangedAt: new Date(),
           updatedAt: new Date(),
@@ -145,7 +148,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-1',
+          tenantId: await getTenantIdFromRequest(request),
           userId,
           twoFactorEnabled: true,
           twoFactorSecret: data.twoFactorSecret,
@@ -176,7 +179,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-1',
+          tenantId: await getTenantIdFromRequest(request),
           userId,
           ...data,
           updatedAt: new Date(),
@@ -203,7 +206,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-1',
+          tenantId: await getTenantIdFromRequest(request),
           userId,
           theme: data.theme,
           language: data.language,
@@ -230,7 +233,7 @@ export async function PATCH(request: NextRequest) {
         },
         create: {
           id: `uas-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          tenantId: data.tenantId || 'tenant-1',
+          tenantId: await getTenantIdFromRequest(request),
           userId,
           quickActionSettings: JSON.stringify(data.quickActionSettings),
           updatedAt: new Date(),

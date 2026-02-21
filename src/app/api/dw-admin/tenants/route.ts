@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { seedTenantPermissions } from '@/lib/permissions/seed-tenant-permissions';
+import { withDWAdminAuth } from '@/lib/auth/api-auth';
 
 // DW管理API用の独立したPrismaクライアント
 const prisma = new PrismaClient();
@@ -14,6 +15,12 @@ const prisma = new PrismaClient();
  * - search: テナント名で検索
  */
 export async function GET(request: NextRequest) {
+  // DW管理者認証チェック
+  const { errorResponse } = await withDWAdminAuth();
+  if (errorResponse) {
+    return errorResponse;
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -79,46 +86,63 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // 各テナントの請求情報を集計
-    const tenantsWithStats = await Promise.all(
-      tenants.map(async (tenant) => {
-        const invoiceStats = await prisma.invoices.aggregate({
-          where: { tenantId: tenant.id },
-          _sum: { total: true },
-          _count: true,
-        });
+    // N+1回避: テナントIDリストで一括集計
+    const tenantIds = tenants.map((t) => t.id);
 
-        const unpaidStats = await prisma.invoices.aggregate({
-          where: {
-            tenantId: tenant.id,
-            status: { notIn: ['paid', 'cancelled'] },
-          },
-          _sum: { total: true },
-          _count: true,
-        });
+    // 全請求の集計（テナントごと）
+    const invoiceStatsByTenant = await prisma.invoices.groupBy({
+      by: ['tenantId'],
+      _sum: { total: true },
+      _count: true,
+      where: { tenantId: { in: tenantIds } },
+    });
 
-        const overdueCount = await prisma.invoices.count({
-          where: {
-            tenantId: tenant.id,
-            status: 'overdue',
-          },
-        });
+    // 未払い請求の集計（テナントごと）
+    const unpaidStatsByTenant = await prisma.invoices.groupBy({
+      by: ['tenantId'],
+      _sum: { total: true },
+      _count: true,
+      where: {
+        tenantId: { in: tenantIds },
+        status: { notIn: ['paid', 'cancelled'] },
+      },
+    });
 
-        return {
-          id: tenant.id,
-          name: tenant.name,
-          subdomain: tenant.subdomain,
-          settings: tenant.tenant_settings,
-          userCount: tenant._count.users,
-          invoiceCount: tenant._count.invoices,
-          totalAmount: invoiceStats._sum.total || 0,
-          unpaidAmount: unpaidStats._sum.total || 0,
-          overdueCount,
-          createdAt: tenant.createdAt,
-          updatedAt: tenant.updatedAt,
-        };
-      })
+    // 延滞請求の件数（テナントごと）
+    const overdueCountByTenant = await prisma.invoices.groupBy({
+      by: ['tenantId'],
+      _count: true,
+      where: {
+        tenantId: { in: tenantIds },
+        status: 'overdue',
+      },
+    });
+
+    // マップに変換して高速ルックアップ
+    const invoiceStatsMap = new Map(
+      invoiceStatsByTenant.map((s) => [s.tenantId, { total: s._sum.total || 0, count: s._count }])
     );
+    const unpaidStatsMap = new Map(
+      unpaidStatsByTenant.map((s) => [s.tenantId, { total: s._sum.total || 0, count: s._count }])
+    );
+    const overdueCountMap = new Map(
+      overdueCountByTenant.map((s) => [s.tenantId, s._count])
+    );
+
+    // テナントデータとマージ
+    const tenantsWithStats = tenants.map((tenant) => ({
+      id: tenant.id,
+      name: tenant.name,
+      subdomain: tenant.subdomain,
+      settings: tenant.tenant_settings,
+      userCount: tenant._count.users,
+      invoiceCount: tenant._count.invoices,
+      totalAmount: invoiceStatsMap.get(tenant.id)?.total || 0,
+      unpaidAmount: unpaidStatsMap.get(tenant.id)?.total || 0,
+      overdueCount: overdueCountMap.get(tenant.id) || 0,
+      createdAt: tenant.createdAt,
+      updatedAt: tenant.updatedAt,
+    }));
 
     // ステータス別集計
     const statusCounts = await prisma.tenant_settings.groupBy({
@@ -171,6 +195,12 @@ export async function GET(request: NextRequest) {
  * POST /api/dw-admin/tenants
  */
 export async function POST(request: NextRequest) {
+  // DW管理者認証チェック
+  const { errorResponse } = await withDWAdminAuth();
+  if (errorResponse) {
+    return errorResponse;
+  }
+
   try {
     const body = await request.json();
 

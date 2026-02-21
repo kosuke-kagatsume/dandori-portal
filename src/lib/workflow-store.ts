@@ -10,19 +10,13 @@ import { useOrganizationStore } from './store/organization-store';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { workflowTypeToDocumentType, generateApprovalStepsFromFlow } from './integrations/approval-flow-integration'; // workflowTypeToDocumentTypeは将来的に使用予定
 import { workflowAudit } from '@/lib/audit/audit-logger';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 
 // REST API helper functions
 const API_BASE = '/api/workflows';
 
-// CookieからテナントIDを取得（ミドルウェアで設定される x-tenant-id を使用）
-const getTenantId = (): string => {
-  if (typeof document === 'undefined') return 'tenant-1'; // SSR時のフォールバック
-  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
-  return match ? match[1] : 'tenant-1';
-};
-
 async function apiFetchWorkflows(filters?: { status?: string; type?: string; requesterId?: string; approverId?: string }) {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   if (filters?.status) params.set('status', filters.status);
   if (filters?.type) params.set('type', filters.type);
   if (filters?.requesterId) params.set('requesterId', filters.requesterId);
@@ -451,7 +445,7 @@ export const useWorkflowStore = create<WorkflowStore>()(
           }
 
           // REST APIに保存
-          const tenantId = getTenantId();
+          const tenantId = getTenantIdFromCookie();
           const approvalStepsForApi = (generatedApprovalSteps || request.approvalSteps).map((step) => ({
             approverRole: step.approverRole,
             approverId: step.approverId,

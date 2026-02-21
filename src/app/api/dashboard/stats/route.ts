@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 // GET /api/dashboard/stats - ダッシュボード統計データ取得
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-1';
+    const tenantId = await getTenantIdFromRequest(request);
 
     // 今日の日付
     const today = new Date();

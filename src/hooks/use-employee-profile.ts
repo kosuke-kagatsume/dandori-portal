@@ -82,12 +82,12 @@ export function useEmployeeProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const tenantId = currentTenant?.id || 'tenant-1';
+  const tenantId = currentTenant?.id;
   const userId = currentUser?.id;
 
   // プロフィール取得
   const fetchProfile = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !tenantId) return;
 
     try {
       setLoading(true);
@@ -217,11 +217,11 @@ export function useChangeRequests() {
   const [requests, setRequests] = useState<ChangeRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const tenantId = currentTenant?.id || 'tenant-1';
+  const tenantId = currentTenant?.id;
   const userId = currentUser?.id;
 
   const fetchRequests = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !tenantId) return;
 
     try {
       setLoading(true);

@@ -310,6 +310,42 @@ class CacheService {
     });
   }
 
+  /**
+   * 特定キーのキャッシュを無効化（エイリアス）
+   */
+  invalidateCache(key: string): void {
+    this.invalidate(key);
+  }
+
+  /**
+   * すべてのキャッシュを無効化（エイリアス）
+   */
+  invalidateAllCache(): void {
+    this.clear();
+  }
+
+  /**
+   * ユーザー関連のキャッシュを無効化
+   */
+  invalidateUserCache(userId?: string): void {
+    if (userId) {
+      this.invalidatePattern(new RegExp(`user[_-]?${userId}`, 'i'));
+    } else {
+      this.invalidatePattern(/user/i);
+    }
+  }
+
+  /**
+   * テナント関連のキャッシュを無効化
+   */
+  invalidateTenantCache(tenantId?: string): void {
+    if (tenantId) {
+      this.invalidatePattern(new RegExp(`tenant[_-]?${tenantId}`, 'i'));
+    } else {
+      this.invalidatePattern(/tenant/i);
+    }
+  }
+
   // キャッシュ統計を取得
   getStats(): {
     memoryCount: number;

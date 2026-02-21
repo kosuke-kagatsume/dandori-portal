@@ -10,16 +10,10 @@ import {
 } from '@/lib/auth/token-manager';
 import { userAudit, authAudit } from '@/lib/audit/audit-logger';
 import { useTenantStore } from './tenant-store';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 
 // REST API helper functions
 const API_BASE = '/api/users';
-
-// CookieからテナントIDを取得（ミドルウェアで設定される x-tenant-id を使用）
-const getTenantId = (): string => {
-  if (typeof document === 'undefined') return 'tenant-1'; // SSR時のフォールバック
-  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
-  return match ? match[1] : 'tenant-1';
-};
 
 async function apiFetchUsers(tenantId: string): Promise<User[]> {
   const params = new URLSearchParams({ tenantId });
@@ -46,7 +40,7 @@ async function apiCreateUser(user: User, tenantId: string): Promise<User> {
 }
 
 async function apiUpdateUser(id: string, updates: Partial<User>): Promise<User> {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   const response = await fetch(`${API_BASE}/${id}?${params}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -60,7 +54,7 @@ async function apiUpdateUser(id: string, updates: Partial<User>): Promise<User> 
 }
 
 async function apiDeleteUser(id: string): Promise<void> {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   const response = await fetch(`${API_BASE}/${id}?${params}`, {
     method: 'DELETE',
   });
@@ -70,7 +64,7 @@ async function apiDeleteUser(id: string): Promise<void> {
 }
 
 async function apiRetireUser(id: string, retiredDate: string, reason: string): Promise<User> {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   const response = await fetch(`${API_BASE}/${id}?${params}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -182,7 +176,7 @@ const createUserStore = () => {
 
           const user: User = {
             id: apiUser.id,
-            tenantId: apiUser.tenantId || 'tenant-1',
+            tenantId: apiUser.tenantId || '',
             name: apiUser.name || apiUser.email?.split('@')[0] || 'ユーザー',
             email: apiUser.email || '',
             phone: apiUser.phone || '',
@@ -350,7 +344,7 @@ const createUserStore = () => {
 
           const user: User = {
             id: apiUser.id,
-            tenantId: apiUser.tenantId || 'tenant-1',
+            tenantId: apiUser.tenantId || '',
             name: apiUser.name || apiUser.email?.split('@')[0] || 'ユーザー',
             email: apiUser.email || '',
             phone: apiUser.phone || '',

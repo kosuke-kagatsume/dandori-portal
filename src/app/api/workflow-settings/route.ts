@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 // GET /api/workflow-settings - ワークフロー設定取得
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-1';
+    const tenantId = await getTenantIdFromRequest(request);
 
     const settings = await prisma.workflow_settings.findUnique({
       where: { tenantId },
@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
 // PUT /api/workflow-settings - ワークフロー設定更新（upsert）
 export async function PUT(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId = 'tenant-1',
       defaultApprovalDeadlineDays,
       enableAutoEscalation,
       escalationReminderDays,

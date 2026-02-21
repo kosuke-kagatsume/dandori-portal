@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 
 export type LeaveType = 'paid' | 'sick' | 'special' | 'compensatory' | 'half_day_am' | 'half_day_pm';
 export type LeaveStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'cancelled';
@@ -7,15 +8,8 @@ export type LeaveStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'cance
 // REST API helper functions
 const API_BASE = '/api/leave';
 
-// CookieからテナントIDを取得（ミドルウェアで設定される x-tenant-id を使用）
-const getTenantId = (): string => {
-  if (typeof document === 'undefined') return 'tenant-1'; // SSR時のフォールバック
-  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
-  return match ? match[1] : 'tenant-1';
-};
-
 async function apiFetchLeaveRequests(userId?: string, status?: string) {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   if (userId) params.set('userId', userId);
   if (status) params.set('status', status);
 
@@ -31,7 +25,7 @@ async function apiCreateLeaveRequest(request: Record<string, unknown>) {
   const response = await fetch(`${API_BASE}/requests`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...request, tenantId: getTenantId() }),
+    body: JSON.stringify({ ...request, tenantId: getTenantIdFromCookie() }),
   });
   if (!response.ok) {
     throw new Error('休暇申請の作成に失敗しました');
@@ -90,7 +84,7 @@ async function apiRejectLeaveRequest(id: string, approver: string, reason: strin
 }
 
 async function apiFetchLeaveBalances(userId?: string, year?: number) {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   if (userId) params.set('userId', userId);
   if (year) params.set('year', String(year));
 
@@ -106,7 +100,7 @@ async function apiCreateLeaveBalance(data: Record<string, unknown>) {
   const response = await fetch(`${API_BASE}/balances`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...data, tenantId: getTenantId() }),
+    body: JSON.stringify({ ...data, tenantId: getTenantIdFromCookie() }),
   });
   if (!response.ok) {
     throw new Error('休暇残数の作成に失敗しました');

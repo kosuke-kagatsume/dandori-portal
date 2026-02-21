@@ -39,7 +39,7 @@ interface ScheduleDialogProps {
 
 export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialogProps) {
   const currentUser = useUserStore((state) => state.currentUser);
-  const tenantId = currentUser?.tenantId || 'tenant-1';
+  const tenantId = currentUser?.tenantId;
 
   const { checkupTypes, medicalInstitutions, fetchAll, setTenantId } = useHealthMasterStore();
   const { addSchedule } = useHealthStore();

@@ -127,7 +127,17 @@ function DataTableComponent<TData>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead
+                      key={header.id}
+                      scope="col"
+                      aria-sort={
+                        header.column.getIsSorted()
+                          ? header.column.getIsSorted() === 'asc'
+                            ? 'ascending'
+                            : 'descending'
+                          : undefined
+                      }
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(

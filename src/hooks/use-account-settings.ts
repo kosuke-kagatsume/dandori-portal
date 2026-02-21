@@ -35,12 +35,12 @@ export function useAccountSettings() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const tenantId = currentTenant?.id || 'tenant-1';
+  const tenantId = currentTenant?.id;
   const userId = currentUser?.id;
 
   // 設定取得
   const fetchSettings = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !tenantId) return;
 
     try {
       setLoading(true);

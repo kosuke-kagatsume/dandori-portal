@@ -124,17 +124,19 @@ export async function getTenantIdFromRequest(request: NextRequest): Promise<stri
     return tenantIdFromParams;
   }
 
-  // 3. フォールバック（デモモード用）
-  // 本番では空の場合エラーにすべきだが、既存コードの後方互換性のため
-  console.warn('[API] No tenant ID found in cookie or params, using fallback');
-  return 'tenant-1';
+  // 3. テナントIDが見つからない場合はエラーをスロー
+  throw new Error('テナントIDが設定されていません');
 }
 
 // 同期版（後方互換性のため維持、非推奨）
 // @deprecated 代わりに getTenantIdFromRequest を使用
 export function getTenantId(searchParams: URLSearchParams): string {
   console.warn('[API] getTenantId is deprecated, use getTenantIdFromRequest instead');
-  return searchParams.get('tenantId') || 'tenant-1';
+  const tenantId = searchParams.get('tenantId');
+  if (!tenantId) {
+    throw new Error('テナントIDが設定されていません');
+  }
+  return tenantId;
 }
 
 // バリデーションヘルパー

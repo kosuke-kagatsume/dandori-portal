@@ -34,14 +34,14 @@ import { cn } from '@/lib/utils';
 import type { User } from '@/types';
 
 const userSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email format'),
+  name: z.string().min(1, '氏名を入力してください'),
+  email: z.string().email('有効なメールアドレスを入力してください'),
   phone: z.string().optional(),
-  department: z.string().min(1, 'Department is required'),
-  position: z.string().min(1, 'Position is required'),
-  hireDate: z.date(),
+  department: z.string().min(1, '部署を選択してください'),
+  position: z.string().min(1, '役職を選択してください'),
+  hireDate: z.date({ required_error: '入社日を選択してください' }),
   status: z.enum(['active', 'inactive', 'suspended', 'retired']),
-  roles: z.array(z.string()).min(1, 'At least one role is required'),
+  roles: z.array(z.string()).min(1, '少なくとも1つのロールを選択してください'),
 });
 
 type UserFormData = z.infer<typeof userSchema>;

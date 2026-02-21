@@ -182,10 +182,10 @@ export async function GET(request: NextRequest) {
 // POST /api/approval-flows - 承認フロー作成
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     const {
-      tenantId = 'tenant-1',
       name,
       description,
       documentType,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { randomBytes } from 'crypto';
+import { withAuth } from '@/lib/auth/api-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,8 +12,17 @@ export const dynamic = 'force-dynamic';
  * 招待トークンを生成してユーザーを仮登録
  */
 export async function POST(request: NextRequest) {
+  // 認証チェック（adminまたはhr権限が必要）
+  const { auth, errorResponse } = await withAuth(request, ['admin', 'hr']);
+  if (errorResponse) {
+    return errorResponse;
+  }
+
   try {
-    const { email, name, role, tenantId } = await request.json();
+    const { email, name, role, tenantId: requestedTenantId } = await request.json();
+
+    // 認証ユーザーのテナントIDを使用（リクエストのtenantIdより優先）
+    const tenantId = auth.user?.tenantId || requestedTenantId;
 
     // バリデーション
     if (!email || !name) {
@@ -24,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     if (!tenantId) {
       return NextResponse.json(
-        { error: 'テナントIDは必須です' },
+        { error: 'テナントIDを取得できません' },
         { status: 400 }
       );
     }

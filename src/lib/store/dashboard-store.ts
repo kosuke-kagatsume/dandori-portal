@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 
 export interface KpiData {
   totalEmployees: number;
@@ -65,7 +66,8 @@ const initialState = {
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   ...initialState,
 
-  fetchDashboardStats: async (tenantId = 'tenant-1') => {
+  fetchDashboardStats: async (tenantId?: string) => {
+    const effectiveTenantId = tenantId ?? getTenantIdFromCookie();
     // 5分以内に取得済みならキャッシュを使用
     const lastFetched = get().lastFetched;
     if (lastFetched && Date.now() - lastFetched.getTime() < 5 * 60 * 1000) {
@@ -75,7 +77,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await fetch(`/api/dashboard/stats?tenantId=${tenantId}`);
+      const response = await fetch(`/api/dashboard/stats?tenantId=${effectiveTenantId}`);
       const json = await response.json();
 
       if (!response.ok || !json.success) {

@@ -73,7 +73,7 @@ const ATTENDANCE_TYPES = [
 export function ShiftManagement() {
   const { currentUser } = useUserStore();
   const { currentTenant } = useTenantStore();
-  const tenantId = currentTenant?.id || 'tenant-1';
+  const tenantId = currentTenant?.id;
   const currentUserRoles = currentUser?.roles || ['employee'];
 
   // 権限チェック

@@ -265,7 +265,7 @@ export default function SettingsPage() {
       case 'system':
         return <SystemTab settings={settings} updateSettings={updateSettings} saveSettings={saveSettings} />;
       case 'permissions':
-        return <PermissionManagementPanel tenantId={currentTenant?.id || 'tenant-1'} />;
+        return currentTenant?.id ? <PermissionManagementPanel tenantId={currentTenant.id} /> : null;
       default:
         return null;
     }

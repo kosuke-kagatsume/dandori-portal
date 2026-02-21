@@ -26,7 +26,7 @@ export function useApi<T>(
 }
 
 // ユーザー一覧取得
-export function useUsers(tenantId: string = 'tenant-1') {
+export function useUsers(tenantId: string) {
   return useApi(`/api/users?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.USERS * 1000,
   });
@@ -40,7 +40,7 @@ export function useUser(userId: string | null) {
 }
 
 // 勤怠データ取得
-export function useAttendance(tenantId: string = 'tenant-1', params?: {
+export function useAttendance(tenantId: string, params?: {
   userId?: string;
   startDate?: string;
   endDate?: string;
@@ -56,7 +56,7 @@ export function useAttendance(tenantId: string = 'tenant-1', params?: {
 }
 
 // SaaSサービス一覧取得
-export function useSaaSServices(tenantId: string = 'tenant-1', includeDetails: boolean = false) {
+export function useSaaSServices(tenantId: string, includeDetails: boolean = false) {
   const url = `/api/saas/services?tenantId=${tenantId}${includeDetails ? '&include=details' : ''}`;
   return useApi(url, {
     refreshInterval: CACHE_TIME.SAAS * 1000,
@@ -64,7 +64,7 @@ export function useSaaSServices(tenantId: string = 'tenant-1', includeDetails: b
 }
 
 // SaaSプラン一覧取得
-export function useSaaSPlans(tenantId: string = 'tenant-1', serviceId?: string) {
+export function useSaaSPlans(tenantId: string, serviceId?: string) {
   const searchParams = new URLSearchParams({ tenantId });
   if (serviceId) searchParams.set('serviceId', serviceId);
 
@@ -74,7 +74,7 @@ export function useSaaSPlans(tenantId: string = 'tenant-1', serviceId?: string) 
 }
 
 // SaaSライセンス割り当て取得
-export function useSaaSAssignments(tenantId: string = 'tenant-1', serviceId?: string) {
+export function useSaaSAssignments(tenantId: string, serviceId?: string) {
   const searchParams = new URLSearchParams({ tenantId });
   if (serviceId) searchParams.set('serviceId', serviceId);
 
@@ -84,21 +84,21 @@ export function useSaaSAssignments(tenantId: string = 'tenant-1', serviceId?: st
 }
 
 // 車両一覧取得
-export function useVehicles(tenantId: string = 'tenant-1') {
+export function useVehicles(tenantId: string) {
   return useApi(`/api/assets/vehicles?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.ASSETS * 1000,
   });
 }
 
 // PC資産一覧取得
-export function usePCAssets(tenantId: string = 'tenant-1') {
+export function usePCAssets(tenantId: string) {
   return useApi(`/api/assets/pc?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.ASSETS * 1000,
   });
 }
 
 // メンテナンス記録取得
-export function useMaintenanceRecords(tenantId: string = 'tenant-1', vehicleId?: string) {
+export function useMaintenanceRecords(tenantId: string, vehicleId?: string) {
   const searchParams = new URLSearchParams({ tenantId });
   if (vehicleId) searchParams.set('vehicleId', vehicleId);
 
@@ -108,42 +108,42 @@ export function useMaintenanceRecords(tenantId: string = 'tenant-1', vehicleId?:
 }
 
 // 業者一覧取得
-export function useVendors(tenantId: string = 'tenant-1') {
+export function useVendors(tenantId: string) {
   return useApi(`/api/assets/vendors?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.MASTER_DATA * 1000,
   });
 }
 
 // 法令更新一覧取得
-export function useLegalUpdates(tenantId: string = 'tenant-1') {
+export function useLegalUpdates(tenantId: string) {
   return useApi(`/api/legal-updates?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.LEGAL_UPDATES * 1000,
   });
 }
 
 // マスターデータ（部署）取得
-export function useDepartments(tenantId: string = 'tenant-1') {
+export function useDepartments(tenantId: string) {
   return useApi(`/api/master-data/departments?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.MASTER_DATA * 1000,
   });
 }
 
 // マスターデータ（役職）取得
-export function usePositions(tenantId: string = 'tenant-1') {
+export function usePositions(tenantId: string) {
   return useApi(`/api/master-data/positions?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.MASTER_DATA * 1000,
   });
 }
 
 // マスターデータ（雇用形態）取得
-export function useEmploymentTypes(tenantId: string = 'tenant-1') {
+export function useEmploymentTypes(tenantId: string) {
   return useApi(`/api/master-data/employment-types?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.MASTER_DATA * 1000,
   });
 }
 
 // ワークフロー一覧取得
-export function useWorkflows(tenantId: string = 'tenant-1', status?: string) {
+export function useWorkflows(tenantId: string, status?: string) {
   const searchParams = new URLSearchParams({ tenantId });
   if (status) searchParams.set('status', status);
 
@@ -153,7 +153,7 @@ export function useWorkflows(tenantId: string = 'tenant-1', status?: string) {
 }
 
 // 承認フロー一覧取得
-export function useApprovalFlows(tenantId: string = 'tenant-1') {
+export function useApprovalFlows(tenantId: string) {
   return useApi(`/api/approval-flows?tenantId=${tenantId}`, {
     refreshInterval: CACHE_TIME.MASTER_DATA * 1000,
   });

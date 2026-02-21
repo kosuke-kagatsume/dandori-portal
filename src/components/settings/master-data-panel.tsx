@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,13 +48,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useMasterDataStore, Department, Position, EmploymentType } from '@/lib/store/master-data-store';
-
-// CookieからテナントIDを取得するヘルパー
-const getTenantIdFromCookie = (): string => {
-  if (typeof document === 'undefined') return 'tenant-1';
-  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
-  return match ? match[1] : 'tenant-1';
-};
 
 export function MasterDataPanel() {
   const [activeTab, setActiveTab] = useState('departments');

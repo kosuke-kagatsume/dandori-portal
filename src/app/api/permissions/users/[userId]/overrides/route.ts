@@ -6,12 +6,19 @@ import {
   getTenantIdFromRequest,
   errorResponse,
 } from '@/lib/api/api-helpers';
+import { withAuth } from '@/lib/auth/api-auth';
 
 // GET /api/permissions/users/[userId]/overrides - オーバーライド取得
 export async function GET(
   request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
+  // 認証チェック（admin権限が必要）
+  const { errorResponse: authError } = await withAuth(request, ['admin']);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const tenantId = await getTenantIdFromRequest(request);
 
@@ -35,6 +42,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { userId: string } }
 ) {
+  // 認証チェック（admin権限が必要）
+  const { errorResponse: authError } = await withAuth(request, ['admin']);
+  if (authError) {
+    return authError;
+  }
+
   try {
     const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();

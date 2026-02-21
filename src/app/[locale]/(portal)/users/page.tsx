@@ -256,7 +256,7 @@ export default function UsersPage() {
 
             const user: User = {
               id: id || `imported-${Date.now()}-${index}`,
-              tenantId: 'tenant-1',
+              tenantId: currentUser?.tenantId || '',
               name: name || '',
               email: email || '',
               phone: phone || '',

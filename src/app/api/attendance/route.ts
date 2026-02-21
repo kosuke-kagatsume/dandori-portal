@@ -132,58 +132,89 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 同日の勤怠レコード存在チェック
-    const existingAttendance = await prisma.attendance.findUnique({
-      where: {
-        userId_date: {
-          userId,
-          date: new Date(date),
-        },
-      },
-    });
-
-    if (existingAttendance) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Attendance record already exists for this date',
-        },
-        { status: 409 }
-      );
-    }
-
-    // 勤怠レコード作成
-    const attendance = await prisma.attendance.create({
-      data: {
-        id: crypto.randomUUID(),
-        userId,
-        tenantId,
-        date: new Date(date),
-        checkIn: checkIn ? new Date(checkIn) : null,
-        checkOut: checkOut ? new Date(checkOut) : null,
-        breakStart: breakStart ? new Date(breakStart) : null,
-        breakEnd: breakEnd ? new Date(breakEnd) : null,
-        totalBreakMinutes,
-        workMinutes,
-        overtimeMinutes,
-        workLocation,
-        status,
-        memo,
-        approvalStatus,
-        approvalReason,
-        updatedAt: new Date(),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            position: true,
-            department: true,
+    // トランザクションで存在チェック＆作成（Race Condition回避）
+    const attendance = await prisma.$transaction(async (tx) => {
+      // 同日の勤怠レコード存在チェック
+      const existingAttendance = await tx.attendance.findUnique({
+        where: {
+          userId_date: {
+            userId,
+            date: new Date(date),
           },
         },
-      },
+      });
+
+      if (existingAttendance) {
+        // 既存レコードがある場合は更新
+        return tx.attendance.update({
+          where: {
+            userId_date: {
+              userId,
+              date: new Date(date),
+            },
+          },
+          data: {
+            checkIn: checkIn ? new Date(checkIn) : existingAttendance.checkIn,
+            checkOut: checkOut ? new Date(checkOut) : existingAttendance.checkOut,
+            breakStart: breakStart ? new Date(breakStart) : existingAttendance.breakStart,
+            breakEnd: breakEnd ? new Date(breakEnd) : existingAttendance.breakEnd,
+            totalBreakMinutes: totalBreakMinutes || existingAttendance.totalBreakMinutes,
+            workMinutes: workMinutes || existingAttendance.workMinutes,
+            overtimeMinutes: overtimeMinutes || existingAttendance.overtimeMinutes,
+            workLocation: workLocation || existingAttendance.workLocation,
+            status: status || existingAttendance.status,
+            memo: memo ?? existingAttendance.memo,
+            approvalStatus: approvalStatus ?? existingAttendance.approvalStatus,
+            approvalReason: approvalReason ?? existingAttendance.approvalReason,
+            updatedAt: new Date(),
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                position: true,
+                department: true,
+              },
+            },
+          },
+        });
+      }
+
+      // 新規作成
+      return tx.attendance.create({
+        data: {
+          id: crypto.randomUUID(),
+          userId,
+          tenantId,
+          date: new Date(date),
+          checkIn: checkIn ? new Date(checkIn) : null,
+          checkOut: checkOut ? new Date(checkOut) : null,
+          breakStart: breakStart ? new Date(breakStart) : null,
+          breakEnd: breakEnd ? new Date(breakEnd) : null,
+          totalBreakMinutes,
+          workMinutes,
+          overtimeMinutes,
+          workLocation,
+          status,
+          memo,
+          approvalStatus,
+          approvalReason,
+          updatedAt: new Date(),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              position: true,
+              department: true,
+            },
+          },
+        },
+      });
     });
 
     return NextResponse.json(

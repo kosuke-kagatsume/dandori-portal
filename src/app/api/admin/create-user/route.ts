@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendEmail, getTenantWelcomeEmail } from '@/lib/email';
+import { withDWAdminAuth } from '@/lib/auth/api-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,12 @@ export const dynamic = 'force-dynamic';
  * DW管理画面からテナント作成時に呼び出される
  */
 export async function POST(request: NextRequest) {
+  // DW管理者認証チェック
+  const { errorResponse } = await withDWAdminAuth();
+  if (errorResponse) {
+    return errorResponse;
+  }
+
   try {
     const {
       email,

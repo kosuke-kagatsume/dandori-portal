@@ -136,14 +136,24 @@ export function FileUpload({
     <div className={cn('space-y-4', className)}>
       {/* アップロードエリア */}
       <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label={`ファイルをアップロード（最大${maxFiles}個、${maxSize}MBまで）`}
+        aria-disabled={disabled}
         className={cn(
           'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
           disabled
             ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
-            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50',
+            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
           error && 'border-red-300'
         )}
         onClick={!disabled ? handleClick : undefined}
+        onKeyDown={(e) => {
+          if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
       >
         <input
           ref={fileInputRef}
@@ -153,6 +163,7 @@ export function FileUpload({
           accept={accept}
           onChange={handleFileSelect}
           disabled={disabled}
+          aria-label="ファイルを選択"
         />
 
         <Upload className="mx-auto h-12 w-12 text-gray-400" />
@@ -209,6 +220,7 @@ export function FileUpload({
                 onClick={() => handleRemove(file)}
                 disabled={disabled}
                 className="flex-shrink-0"
+                aria-label={`${file.name}を削除`}
               >
                 <X className="h-4 w-4" />
               </Button>

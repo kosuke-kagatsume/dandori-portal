@@ -13,6 +13,7 @@ import type {
   ResolvedApprovalStep,
 } from '@/types/approval-flow';
 import type { OrganizationMember } from '@/types';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 
 /**
  * 承認フローストアの状態
@@ -106,7 +107,8 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
       fetchFlows: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await fetch('/api/approval-flows?tenantId=tenant-1');
+          const tenantId = getTenantIdFromCookie();
+          const response = await fetch(`/api/approval-flows?tenantId=${tenantId}`);
           const result = await response.json();
 
           if (result.success) {
@@ -129,7 +131,7 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ...request,
-              tenantId: 'tenant-1',
+              tenantId: getTenantIdFromCookie(),
             }),
           });
           const result = await response.json();
@@ -154,7 +156,7 @@ export const useApprovalFlowStore = create<ApprovalFlowStore>()(
             createdBy: 'user',
             createdAt: now,
             updatedAt: now,
-            companyId: 'tenant-1',
+            companyId: getTenantIdFromCookie(),
           };
           set((state) => ({
             flows: [...state.flows, newFlow],

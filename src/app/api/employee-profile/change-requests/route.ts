@@ -62,9 +62,9 @@ export async function GET(request: NextRequest) {
 // POST /api/employee-profile/change-requests - 変更申請作成
 export async function POST(request: NextRequest) {
   try {
+    const resolvedTenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId,
       userId,
       requestType,
       fieldName,
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const changeRequest = await prisma.employee_change_requests.create({
       data: {
         id: crypto.randomUUID(),
-        tenantId: tenantId || 'tenant-1',
+        tenantId: resolvedTenantId,
         userId,
         requestType,
         fieldName,

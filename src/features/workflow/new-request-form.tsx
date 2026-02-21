@@ -46,6 +46,7 @@ import {
   Package,
   Calendar,
   UserCheck,
+  Loader2,
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 // ja from date-fns/locale - 将来使用予定
@@ -135,6 +136,7 @@ export function NewRequestForm({
   currentUserName,
 }: NewRequestFormProps) {
   const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [approvalFlow, setApprovalFlow] = useState<Array<{
     role: ApproverRole;
@@ -356,21 +358,27 @@ export function NewRequestForm({
         timeline: [],
       };
 
-      onSubmit(request);
+      setIsSubmitting(true);
+      try {
+        onSubmit(request);
 
-      // 申請作成完了後に通知を表示
-      setTimeout(() => {
-        toast.success('申請を作成しました', {
-          description: '承認者に通知が送信されました'
-        });
-      }, 100);
+        // 申請作成完了後に通知を表示
+        setTimeout(() => {
+          toast.success('申請を作成しました', {
+            description: '承認者に通知が送信されました'
+          });
+        }, 100);
 
-      onOpenChange(false);
+        onOpenChange(false);
+      } finally {
+        setIsSubmitting(false);
+      }
     } catch (error) {
       console.error('Failed to create request:', error);
       toast.error('申請の作成に失敗しました', {
         description: 'もう一度お試しください'
       });
+      setIsSubmitting(false);
     }
   };
 
@@ -632,9 +640,16 @@ export function NewRequestForm({
           ) : (
             <Button
               onClick={form.handleSubmit(handleSubmit)}
-              disabled={approvalFlow.length === 0}
+              disabled={approvalFlow.length === 0 || isSubmitting}
             >
-              申請を作成
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  作成中...
+                </>
+              ) : (
+                '申請を作成'
+              )}
             </Button>
           )}
         </DialogFooter>

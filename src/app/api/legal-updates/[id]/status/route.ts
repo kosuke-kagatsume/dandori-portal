@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 // PUT /api/legal-updates/[id]/status - テナントの対応状況を更新
 export async function PUT(
@@ -7,9 +8,9 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId = 'tenant-1',
       status,
       notes,
       completedBy,
@@ -99,8 +100,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-1';
+    const tenantId = await getTenantIdFromRequest(request);
 
     const tenantStatus = await prisma.tenant_legal_statuses.findUnique({
       where: {

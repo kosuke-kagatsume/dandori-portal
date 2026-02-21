@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 
 // API呼び出し関数
 const API_BASE = '/api/announcements';
@@ -159,7 +160,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
           const response = await apiFetch<{
             success: boolean;
             data: Announcement[];
-          }>(`${API_BASE}?tenantId=tenant-1`);
+          }>(`${API_BASE}?tenantId=${getTenantIdFromCookie()}`);
 
           // APIレスポンスをストア形式に変換（既存のuserStatesとマージ）
           const announcements = response.data.map((item) => {
@@ -208,7 +209,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}?tenantId=tenant-1`, {
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}?tenantId=${getTenantIdFromCookie()}`, {
             method: 'POST',
             body: JSON.stringify(announcement),
           });
@@ -240,7 +241,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=${getTenantIdFromCookie()}`, {
             method: 'PUT',
             body: JSON.stringify(updates),
           });
@@ -275,7 +276,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          await apiFetch<{ success: boolean }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
+          await apiFetch<{ success: boolean }>(`${API_BASE}/${id}?tenantId=${getTenantIdFromCookie()}`, {
             method: 'DELETE',
           });
 
@@ -301,7 +302,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=${getTenantIdFromCookie()}`, {
             method: 'PUT',
             body: JSON.stringify({ published: true }),
           });
@@ -336,7 +337,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=tenant-1`, {
+          const response = await apiFetch<{ success: boolean; data: Announcement }>(`${API_BASE}/${id}?tenantId=${getTenantIdFromCookie()}`, {
             method: 'PUT',
             body: JSON.stringify({ published: false }),
           });
@@ -415,7 +416,7 @@ export const useAnnouncementsStore = create<AnnouncementsState>()(
 
         try {
           // APIを呼び出す
-          await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=tenant-1`, {
+          await apiFetch<{ success: boolean }>(`${API_BASE}/${announcementId}/read?tenantId=${getTenantIdFromCookie()}`, {
             method: 'POST',
             body: JSON.stringify({ userId }),
           });

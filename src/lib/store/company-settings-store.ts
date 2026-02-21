@@ -275,7 +275,7 @@ const createCompanySettingsStore = () => {
     fetchCompanySettings: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await fetch('/api/company-settings?tenantId=tenant-1');
+        const response = await fetch('/api/company-settings');
         const result = await response.json();
 
         if (result.success) {
@@ -318,7 +318,6 @@ const createCompanySettingsStore = () => {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tenantId: 'tenant-1',
             ...state.companyInfo,
           }),
         });
@@ -341,7 +340,7 @@ const createCompanySettingsStore = () => {
     fetchPayrollSettings: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await fetch('/api/payroll-settings?tenantId=tenant-1');
+        const response = await fetch('/api/payroll-settings');
         const result = await response.json();
 
         if (result.success) {
@@ -381,7 +380,6 @@ const createCompanySettingsStore = () => {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tenantId: 'tenant-1',
             ...state.payrollSettings,
           }),
         });
@@ -404,7 +402,7 @@ const createCompanySettingsStore = () => {
     fetchAttendanceSettings: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await fetch('/api/attendance-settings?tenantId=tenant-1');
+        const response = await fetch('/api/attendance-settings');
         const result = await response.json();
 
         if (result.success) {
@@ -448,7 +446,6 @@ const createCompanySettingsStore = () => {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tenantId: 'tenant-1',
             ...state.attendanceSettings,
           }),
         });
@@ -471,7 +468,7 @@ const createCompanySettingsStore = () => {
     fetchYearEndSettings: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await fetch('/api/year-end-settings?tenantId=tenant-1');
+        const response = await fetch('/api/year-end-settings');
         const result = await response.json();
 
         if (result.success) {
@@ -509,7 +506,6 @@ const createCompanySettingsStore = () => {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tenantId: 'tenant-1',
             ...state.yearEndAdjustmentSettings,
           }),
         });
@@ -532,7 +528,7 @@ const createCompanySettingsStore = () => {
     fetchWorkflowSettings: async () => {
       set({ isLoading: true, error: null });
       try {
-        const response = await fetch('/api/workflow-settings?tenantId=tenant-1');
+        const response = await fetch('/api/workflow-settings');
         const result = await response.json();
 
         if (result.success) {
@@ -569,7 +565,6 @@ const createCompanySettingsStore = () => {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tenantId: 'tenant-1',
             ...state.workflowSettings,
           }),
         });

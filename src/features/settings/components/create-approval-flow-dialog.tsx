@@ -23,7 +23,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, Building2, GitBranch } from 'lucide-react';
+import { Plus, Trash2, Building2, GitBranch, Loader2 } from 'lucide-react';
 import { useApprovalFlowStore } from '@/lib/store/approval-flow-store';
 import type {
   DocumentType,
@@ -75,6 +75,9 @@ export function CreateApprovalFlowDialog({
   const [isDefault, setIsDefault] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [priority, setPriority] = useState<number>(1);
+
+  // 送信状態
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // カスタムステップ（カスタム型の場合）
   const [steps, setSteps] = useState<Partial<ApprovalStep>[]>([
@@ -157,7 +160,7 @@ export function CreateApprovalFlowDialog({
   };
 
   // フォーム送信
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // バリデーション
     if (!name.trim()) {
       toast.error('フロー名を入力してください');
@@ -173,26 +176,34 @@ export function CreateApprovalFlowDialog({
       }
     }
 
-    // フロー作成
-    createFlow({
-      name: name.trim(),
-      description: description.trim() || undefined,
-      type: flowType,
-      documentType,
-      useOrganizationHierarchy: flowType === 'organization',
-      organizationLevels: flowType === 'organization' ? organizationLevels : undefined,
-      steps: flowType === 'custom' ? (steps as ApprovalStep[]) : undefined,
-      conditions: conditions.length > 0 ? (conditions as ApprovalCondition[]) : undefined,
-      isActive,
-      isDefault,
-      priority,
-    });
+    setIsSubmitting(true);
+    try {
+      // フロー作成
+      await createFlow({
+        name: name.trim(),
+        description: description.trim() || undefined,
+        type: flowType,
+        documentType,
+        useOrganizationHierarchy: flowType === 'organization',
+        organizationLevels: flowType === 'organization' ? organizationLevels : undefined,
+        steps: flowType === 'custom' ? (steps as ApprovalStep[]) : undefined,
+        conditions: conditions.length > 0 ? (conditions as ApprovalCondition[]) : undefined,
+        isActive,
+        isDefault,
+        priority,
+      });
 
-    toast.success(`承認フロー「${name}」を作成しました`);
+      toast.success(`承認フロー「${name}」を作成しました`);
 
-    // フォームリセット
-    resetForm();
-    onOpenChange(false);
+      // フォームリセット
+      resetForm();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating approval flow:', error);
+      toast.error('承認フローの作成に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // フォームリセット
@@ -538,11 +549,18 @@ export function CreateApprovalFlowDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             キャンセル
           </Button>
-          <Button onClick={handleSubmit}>
-            作成
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                作成中...
+              </>
+            ) : (
+              '作成'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

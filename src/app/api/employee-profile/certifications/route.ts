@@ -63,9 +63,9 @@ export async function GET(request: NextRequest) {
 // POST /api/employee-profile/certifications - 資格追加
 export async function POST(request: NextRequest) {
   try {
+    const resolvedTenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId,
       // profileId, // 将来的にプロファイルIDでの紐付けで使用予定
       userId,
       name,
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       profile = await prisma.employee_profiles.create({
         data: {
           id: crypto.randomUUID(),
-          tenantId: tenantId || 'tenant-1',
+          tenantId: resolvedTenantId,
           userId,
           updatedAt: new Date(),
         },
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     const certification = await prisma.certifications.create({
       data: {
         id: crypto.randomUUID(),
-        tenantId: tenantId || profile.tenantId,
+        tenantId: resolvedTenantId,
         profileId: profile.id,
         userId,
         name,

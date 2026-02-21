@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 // GET /api/assets/monthly-mileages - 月間走行距離一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-1';
+    const tenantId = await getTenantIdFromRequest(request);
     const vehicleId = searchParams.get('vehicleId');
     const month = searchParams.get('month'); // YYYY-MM形式
 
@@ -50,9 +51,9 @@ export async function GET(request: NextRequest) {
 // POST /api/assets/monthly-mileages - 月間走行距離登録
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId = 'tenant-1',
       vehicleId,
       month,
       distance,

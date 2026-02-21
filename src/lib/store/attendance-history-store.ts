@@ -1,18 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 
 // REST API helper functions
 const API_BASE = '/api/attendance';
 
-// CookieからテナントIDを取得（ミドルウェアで設定される x-tenant-id を使用）
-const getTenantId = (): string => {
-  if (typeof document === 'undefined') return 'tenant-1'; // SSR時のフォールバック
-  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
-  return match ? match[1] : 'tenant-1';
-};
-
 async function apiFetchAttendanceRecords(userId: string, startDate?: string, endDate?: string) {
-  const params = new URLSearchParams({ tenantId: getTenantId(), userId });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie(), userId });
   if (startDate) params.set('startDate', startDate);
   if (endDate) params.set('endDate', endDate);
 
@@ -25,7 +19,7 @@ async function apiFetchAttendanceRecords(userId: string, startDate?: string, end
 }
 
 async function apiUpsertAttendanceRecord(record: Record<string, unknown>) {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   const response = await fetch(`${API_BASE}/upsert?${params}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -39,7 +33,7 @@ async function apiUpsertAttendanceRecord(record: Record<string, unknown>) {
 }
 
 async function apiDeleteAttendanceRecord(id: string) {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   const response = await fetch(`${API_BASE}/${id}?${params}`, {
     method: 'DELETE',
   });

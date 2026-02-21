@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
 // POST /api/employee-profile/experiences - 経歴追加
 export async function POST(request: NextRequest) {
   try {
+    const resolvedTenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId,
       userId,
       position,
       company,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       profile = await prisma.employee_profiles.create({
         data: {
           id: crypto.randomUUID(),
-          tenantId: tenantId || 'tenant-1',
+          tenantId: resolvedTenantId,
           userId,
           updatedAt: new Date(),
         },
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     const experience = await prisma.work_experiences.create({
       data: {
         id: crypto.randomUUID(),
-        tenantId: tenantId || profile.tenantId,
+        tenantId: resolvedTenantId,
         profileId: profile.id,
         userId,
         position,

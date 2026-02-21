@@ -1,15 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getTenantIdFromCookie } from '@/lib/utils/tenant';
 
 // REST API helper functions
 const API_BASE = '/api/audit-logs';
-
-// CookieからテナントIDを取得（ミドルウェアで設定される x-tenant-id を使用）
-const getTenantId = (): string => {
-  if (typeof document === 'undefined') return 'tenant-1'; // SSR時のフォールバック
-  const match = document.cookie.match(/x-tenant-id=([^;]+)/);
-  return match ? match[1] : 'tenant-1';
-};
 
 interface ApiFetchLogsParams {
   userId?: string;
@@ -24,7 +18,7 @@ interface ApiFetchLogsParams {
 }
 
 async function apiFetchLogs(filters?: ApiFetchLogsParams) {
-  const params = new URLSearchParams({ tenantId: getTenantId() });
+  const params = new URLSearchParams({ tenantId: getTenantIdFromCookie() });
   if (filters?.userId) params.set('userId', filters.userId);
   if (filters?.category) params.set('category', filters.category);
   if (filters?.action) params.set('action', filters.action);
@@ -44,7 +38,7 @@ async function apiFetchLogs(filters?: ApiFetchLogsParams) {
 }
 
 async function apiCreateLog(log: Omit<AuditLog, 'id' | 'timestamp'>) {
-  const response = await fetch(`${API_BASE}?tenantId=${getTenantId()}`, {
+  const response = await fetch(`${API_BASE}?tenantId=${getTenantIdFromCookie()}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(log),

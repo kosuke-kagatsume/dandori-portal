@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 // GET: 汎用資産の詳細を取得
 export async function GET(
@@ -7,8 +8,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-1';
+    const tenantId = await getTenantIdFromRequest(request);
 
     const asset = await prisma.general_assets.findFirst({
       where: {
@@ -45,9 +45,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-1';
-
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
 
     // 存在確認
@@ -107,8 +105,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-1';
+    const tenantId = await getTenantIdFromRequest(request);
 
     // 存在確認
     const existing = await prisma.general_assets.findFirst({

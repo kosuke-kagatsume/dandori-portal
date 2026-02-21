@@ -97,7 +97,7 @@ const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 export function TeamAttendance() {
   const { currentTenant } = useTenantStore();
   const { currentUser } = useUserStore();
-  const tenantId = currentTenant?.id || 'tenant-1';
+  const tenantId = currentTenant?.id;
   const currentUserRoles = currentUser?.roles || ['employee'];
 
   // 権限チェック

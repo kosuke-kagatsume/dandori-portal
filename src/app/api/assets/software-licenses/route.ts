@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 // GET /api/assets/software-licenses - ソフトウェアライセンス一覧取得
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId') || 'tenant-1';
+    const tenantId = await getTenantIdFromRequest(request);
     const pcAssetId = searchParams.get('pcAssetId');
 
     const where: Record<string, unknown> = { tenantId };
@@ -48,9 +49,9 @@ export async function GET(request: NextRequest) {
 // POST /api/assets/software-licenses - ソフトウェアライセンス登録
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId = 'tenant-1',
       pcAssetId,
       softwareName,
       licenseKey,

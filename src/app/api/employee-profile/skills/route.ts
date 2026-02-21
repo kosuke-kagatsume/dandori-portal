@@ -35,9 +35,9 @@ export async function GET(request: NextRequest) {
 // POST /api/employee-profile/skills - スキル追加
 export async function POST(request: NextRequest) {
   try {
+    const resolvedTenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId,
       userId,
       name,
       category,
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       profile = await prisma.employee_profiles.create({
         data: {
           id: crypto.randomUUID(),
-          tenantId: tenantId || 'tenant-1',
+          tenantId: resolvedTenantId,
           userId,
           updatedAt: new Date(),
         },
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const skill = await prisma.employee_skills.create({
       data: {
         id: crypto.randomUUID(),
-        tenantId: tenantId || profile.tenantId,
+        tenantId: resolvedTenantId,
         profileId: profile.id,
         userId,
         name,

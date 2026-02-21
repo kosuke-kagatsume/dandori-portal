@@ -25,7 +25,11 @@ export async function POST(request: NextRequest) {
       console.error('JSON parse error:', parseError);
       console.error('Raw body causing error:', rawText);
       return NextResponse.json(
-        { success: false, error: 'Invalid JSON in request body', debug: String(parseError) },
+        {
+          success: false,
+          error: 'リクエストの形式が正しくありません',
+          ...(process.env.NODE_ENV === 'development' && { debug: String(parseError) }),
+        },
         { status: 400 }
       );
     }
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'メールアドレスまたはパスワードが正しくありません', debug: 'user_not_found' },
+        { success: false, error: 'メールアドレスまたはパスワードが正しくありません' },
         { status: 401 }
       );
     }
@@ -76,7 +80,7 @@ export async function POST(request: NextRequest) {
       console.log('Password valid:', isValid ? 'YES' : 'NO');
       if (!isValid) {
         return NextResponse.json(
-          { success: false, error: 'メールアドレスまたはパスワードが正しくありません', debug: 'password_mismatch' },
+          { success: false, error: 'メールアドレスまたはパスワードが正しくありません' },
           { status: 401 }
         );
       }
@@ -149,10 +153,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Login error:', error);
-    // デバッグ用：エラー詳細を返す（本番ではコメントアウト）
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'ログインに失敗しました', debug: errorMessage },
+      {
+        success: false,
+        error: 'ログインに失敗しました',
+        ...(process.env.NODE_ENV === 'development' && { debug: errorMessage }),
+      },
       { status: 500 }
     );
   }

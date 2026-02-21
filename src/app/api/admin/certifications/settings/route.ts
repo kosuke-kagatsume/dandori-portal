@@ -35,9 +35,9 @@ export async function GET(request: NextRequest) {
 // PUT /api/admin/certifications/settings - 通知設定更新
 export async function PUT(request: NextRequest) {
   try {
+    const finalTenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId,
       notificationDays,
       enableEmailNotification,
       enablePushNotification,
@@ -47,8 +47,6 @@ export async function PUT(request: NextRequest) {
       autoUpdateStatus,
       warningThresholdDays,
     } = body;
-
-    const finalTenantId = tenantId || 'tenant-1';
 
     const settings = await prisma.certification_notification_settings.upsert({
       where: { tenantId: finalTenantId },

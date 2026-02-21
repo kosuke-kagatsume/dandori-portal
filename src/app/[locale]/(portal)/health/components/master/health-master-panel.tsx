@@ -33,7 +33,7 @@ import {
 
 export function HealthMasterPanel() {
   const currentUser = useUserStore((state) => state.currentUser);
-  const tenantId = currentUser?.tenantId || 'tenant-1';
+  const tenantId = currentUser?.tenantId;
 
   const {
     checkupTypes,

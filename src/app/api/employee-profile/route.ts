@@ -87,8 +87,9 @@ export async function GET(request: NextRequest) {
 // PUT /api/employee-profile - 従業員プロフィール更新（管理者用）
 export async function PUT(request: NextRequest) {
   try {
+    const resolvedTenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
-    const { userId, tenantId, ...data } = body;
+    const { userId, ...data } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -123,7 +124,7 @@ export async function PUT(request: NextRequest) {
       profile = await prisma.employee_profiles.create({
         data: {
           id: crypto.randomUUID(),
-          tenantId: tenantId || 'tenant-1',
+          tenantId: resolvedTenantId,
           userId,
           ...data,
           updatedAt: new Date(),

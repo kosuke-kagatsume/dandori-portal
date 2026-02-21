@@ -125,13 +125,13 @@ export default function ProfilePage() {
     expiryDate: '',
   });
 
-  const tenantId = currentTenant?.id || 'tenant-1';
+  const tenantId = currentTenant?.id;
   const userId = currentUser?.id;
 
   // プロフィール取得
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!userId) return;
+      if (!userId || !tenantId) return;
 
       try {
         setLoading(true);
