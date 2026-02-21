@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePCAssetsAPI, type PCAssetFromAPI } from '@/hooks/use-pc-assets-api';
+import { toast } from 'sonner';
 
 interface PCFormDialogProps {
   open: boolean;
@@ -126,9 +127,10 @@ export function PCFormDialog({
     setLoading(false);
 
     if (result.success) {
+      toast.success(isEdit ? 'PC情報を更新しました' : 'PCを登録しました');
       onOpenChange(false);
     } else {
-      alert(result.error || '保存に失敗しました');
+      toast.error(result.error || '保存に失敗しました');
     }
   };
 

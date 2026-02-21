@@ -184,6 +184,9 @@ const leaveRequestSchema = z.object({
   reason: z.string().min(1, '申請理由を入力してください'),
   emergencyContact: z.string().optional(),
   hours: z.number().optional(),
+}).refine((data) => data.endDate >= data.startDate, {
+  message: '終了日は開始日以降を指定してください',
+  path: ['endDate'],
 });
 
 type LeaveRequestData = z.infer<typeof leaveRequestSchema>;

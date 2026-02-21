@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useVendorsAPI, type VendorFromAPI } from '@/hooks/use-vehicles-api';
+import { toast } from 'sonner';
 
 interface VendorFormDialogProps {
   open: boolean;
@@ -90,10 +91,11 @@ export function VendorFormDialog({
     setLoading(false);
 
     if (result.success) {
+      toast.success(isEdit ? '業者情報を更新しました' : '業者を登録しました');
       onSuccess?.();
       onOpenChange(false);
     } else {
-      alert(result.error || '保存に失敗しました');
+      toast.error(result.error || '保存に失敗しました');
     }
   };
 

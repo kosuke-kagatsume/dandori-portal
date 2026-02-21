@@ -129,11 +129,11 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
     setIsSubmitting(true);
     try {
       await onSubmit(data);
-      toast.success(user ? 'User updated successfully' : 'User created successfully');
+      toast.success(user ? 'ユーザー情報を更新しました' : 'ユーザーを作成しました');
       reset();
       onOpenChange(false);
     } catch {
-      toast.error(user ? 'Failed to update user' : 'Failed to create user');
+      toast.error(user ? 'ユーザー情報の更新に失敗しました' : 'ユーザーの作成に失敗しました');
     } finally {
       setIsSubmitting(false);
     }

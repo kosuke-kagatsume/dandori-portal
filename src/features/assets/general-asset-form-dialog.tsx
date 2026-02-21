@@ -21,6 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGeneralAssetsAPI, ASSET_CATEGORIES, type GeneralAssetFromAPI } from '@/hooks/use-general-assets-api';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface GeneralAssetFormDialogProps {
   open: boolean;
@@ -107,9 +108,10 @@ export function GeneralAssetFormDialog({
     setLoading(false);
 
     if (result.success) {
+      toast.success(isEdit ? '備品を更新しました' : '備品を登録しました');
       onOpenChange(false);
     } else {
-      alert(result.error || '保存に失敗しました');
+      toast.error(result.error || '保存に失敗しました');
     }
   };
 

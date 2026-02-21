@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useVehiclesAPI, type VehicleFromAPI } from '@/hooks/use-vehicles-api';
+import { toast } from 'sonner';
 
 interface VehicleFormDialogProps {
   open: boolean;
@@ -121,9 +122,10 @@ export function VehicleFormDialog({
     setLoading(false);
 
     if (result.success) {
+      toast.success(isEdit ? '車両情報を更新しました' : '車両を登録しました');
       onOpenChange(false);
     } else {
-      alert(result.error || '保存に失敗しました');
+      toast.error(result.error || '保存に失敗しました');
     }
   };
 
