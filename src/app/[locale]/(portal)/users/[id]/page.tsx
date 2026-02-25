@@ -582,6 +582,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
             attendanceRecords={userAttendanceRecords}
             attendanceStats={attendanceStats}
             transferHistory={[]}
+            workRule={undefined}  // TODO: 就業ルールマスタから取得
             isReadOnly={isReadOnly}
             onEdit={() => setEditDialogOpen(true)}
           />

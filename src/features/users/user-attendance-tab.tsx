@@ -5,9 +5,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar, Clock, TrendingUp, Edit, ArrowRightLeft, PauseCircle } from 'lucide-react';
+import { Calendar, Clock, TrendingUp, Edit, ArrowRightLeft, PauseCircle, Briefcase, CalendarOff } from 'lucide-react';
 import type { User, TransferHistory } from '@/types';
 import type { AttendanceRecord } from '@/lib/store/attendance-history-store';
+
+// 就業ルールタイプ（MFと同等）
+export type WorkRuleType =
+  | 'standard'        // 基本勤務制
+  | 'shift'           // シフト制
+  | 'manager'         // 管理監督者
+  | 'discretionary'   // 裁量労働制
+  | 'flextime'        // フレックスタイム制
+  | 'monthly_variable' // 1ヶ月単位変形労働制
+  | 'yearly_variable'; // 1年単位変形労働制
+
+export interface WorkRule {
+  type: WorkRuleType;
+  name: string;
+  standardWorkHours: number;      // 所定労働時間（分）
+  breakMinutes: number;           // 休憩時間（分）
+  // フレックス用
+  coreTimeStart?: string;         // コアタイム開始
+  coreTimeEnd?: string;           // コアタイム終了
+  flexTimeStart?: string;         // フレキシブルタイム開始
+  flexTimeEnd?: string;           // フレキシブルタイム終了
+  // 通常勤務用
+  workStartTime?: string;         // 始業時刻
+  workEndTime?: string;           // 終業時刻
+}
 
 interface UserAttendanceTabProps {
   user: User;
@@ -19,6 +44,7 @@ interface UserAttendanceTabProps {
     avgWorkHoursPerDay: string;
   };
   transferHistory?: TransferHistory[];
+  workRule?: WorkRule;
   isReadOnly: boolean;
   onEdit?: () => void;
 }
@@ -30,11 +56,31 @@ const punchMethodLabels: Record<string, string> = {
   face: '顔認証',
 };
 
+const workRuleTypeLabels: Record<WorkRuleType, string> = {
+  standard: '基本勤務制',
+  shift: 'シフト制',
+  manager: '管理監督者',
+  discretionary: '裁量労働制',
+  flextime: 'フレックスタイム制',
+  monthly_variable: '1ヶ月単位変形労働制',
+  yearly_variable: '1年単位変形労働制',
+};
+
+const employmentTypeLabels: Record<string, string> = {
+  regular: '正社員',
+  contract: '契約社員',
+  part_time: 'パートタイム',
+  temporary: '派遣社員',
+  intern: 'インターン',
+  executive: '役員',
+};
+
 export function UserAttendanceTab({
   user,
   attendanceRecords,
   attendanceStats,
   transferHistory = [],
+  workRule,
   isReadOnly,
   onEdit,
 }: UserAttendanceTabProps) {
@@ -49,7 +95,7 @@ export function UserAttendanceTab({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base">勤怠設定</CardTitle>
-              <CardDescription>有給起算日・打刻方法</CardDescription>
+              <CardDescription>有給起算日・打刻方法・退職日</CardDescription>
             </div>
             {!isReadOnly && onEdit && (
               <Button variant="outline" size="sm" onClick={onEdit}>
@@ -79,7 +125,11 @@ export function UserAttendanceTab({
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">雇用形態</p>
-              <p className="text-sm mt-1">{user.employmentType || '未設定'}</p>
+              <p className="text-sm mt-1">
+                {user.employmentType
+                  ? employmentTypeLabels[user.employmentType] || user.employmentType
+                  : '未設定'}
+              </p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">入社日</p>
@@ -87,7 +137,77 @@ export function UserAttendanceTab({
                 {user.hireDate ? new Date(user.hireDate).toLocaleDateString('ja-JP') : '未設定'}
               </p>
             </div>
+            {user.status === 'retired' && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <CalendarOff className="h-3 w-3" />
+                  退職日
+                </p>
+                <p className="text-sm mt-1 text-destructive font-medium">
+                  {user.retiredDate
+                    ? new Date(user.retiredDate).toLocaleDateString('ja-JP')
+                    : '未設定'}
+                </p>
+              </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 就業ルールカード */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Briefcase className="h-4 w-4" />
+            <CardTitle className="text-base">就業ルール</CardTitle>
+          </div>
+          <CardDescription>適用されている勤務制度</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {workRule ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Badge variant="default" className="text-sm">
+                  {workRuleTypeLabels[workRule.type]}
+                </Badge>
+                <span className="text-sm font-medium">{workRule.name}</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">所定労働時間</p>
+                  <p className="font-medium">
+                    {Math.floor(workRule.standardWorkHours / 60)}時間{workRule.standardWorkHours % 60}分
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">休憩時間</p>
+                  <p className="font-medium">{workRule.breakMinutes}分</p>
+                </div>
+                {workRule.type === 'flextime' && workRule.coreTimeStart && workRule.coreTimeEnd && (
+                  <>
+                    <div>
+                      <p className="text-muted-foreground">コアタイム</p>
+                      <p className="font-medium">{workRule.coreTimeStart} - {workRule.coreTimeEnd}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">フレキシブルタイム</p>
+                      <p className="font-medium">{workRule.flexTimeStart} - {workRule.flexTimeEnd}</p>
+                    </div>
+                  </>
+                )}
+                {(workRule.type === 'standard' || workRule.type === 'shift') && workRule.workStartTime && workRule.workEndTime && (
+                  <div>
+                    <p className="text-muted-foreground">勤務時間</p>
+                    <p className="font-medium">{workRule.workStartTime} - {workRule.workEndTime}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              就業ルールが設定されていません
+            </p>
+          )}
         </CardContent>
       </Card>
 
