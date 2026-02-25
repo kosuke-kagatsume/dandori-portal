@@ -110,8 +110,15 @@ export async function PATCH(
 
     // roles配列からrole（単数）への同期
     // フロントエンドはroles配列を送信するが、認証システムはroleフィールドを使用
-    if (body.roles && Array.isArray(body.roles) && body.roles.length > 0) {
+    if (body.roles && Array.isArray(body.roles)) {
+      if (body.roles.length === 0) {
+        return NextResponse.json(
+          { success: false, error: '少なくとも1つの権限が必要です' },
+          { status: 400 }
+        );
+      }
       updateData.role = body.roles[0]; // 最初の権限をプライマリ権限として設定
+      updateData.roles = body.roles; // roles配列も更新
     }
 
     // ユーザー更新

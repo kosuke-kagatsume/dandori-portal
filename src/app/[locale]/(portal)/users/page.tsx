@@ -133,6 +133,12 @@ export default function UsersPage() {
         }),
       });
 
+      // HTTPステータスコードをチェック
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || `HTTP ${response.status}: Failed to retire user`);
+      }
+
       const result = await response.json();
 
       if (!result.success) {
@@ -152,7 +158,7 @@ export default function UsersPage() {
       toast.success('退職処理が完了しました');
     } catch (error) {
       console.error('Error retiring user:', error);
-      toast.error('退職処理に失敗しました');
+      toast.error(error instanceof Error ? error.message : '退職処理に失敗しました');
       throw error;
     }
   };
@@ -171,6 +177,9 @@ export default function UsersPage() {
     if (!editingUser) return;
 
     try {
+      // 日付をローカルタイムゾーンで YYYY-MM-DD 形式に変換（UTCへの変換を回避）
+      const hireDateStr = `${data.hireDate.getFullYear()}-${String(data.hireDate.getMonth() + 1).padStart(2, '0')}-${String(data.hireDate.getDate()).padStart(2, '0')}`;
+
       const response = await fetch(`/api/users/${editingUser.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -180,11 +189,17 @@ export default function UsersPage() {
           phone: data.phone,
           department: data.department,
           position: data.position,
-          hireDate: data.hireDate.toISOString().split('T')[0],
+          hireDate: hireDateStr,
           status: data.status,
           roles: data.roles,
         }),
       });
+
+      // HTTPステータスコードをチェック
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || `HTTP ${response.status}: Failed to update user`);
+      }
 
       const result = await response.json();
 
@@ -197,7 +212,7 @@ export default function UsersPage() {
       toast.success('ユーザー情報を更新しました');
     } catch (error) {
       console.error('Error updating user:', error);
-      toast.error('ユーザー情報の更新に失敗しました');
+      toast.error(error instanceof Error ? error.message : 'ユーザー情報の更新に失敗しました');
       throw error;
     }
   };

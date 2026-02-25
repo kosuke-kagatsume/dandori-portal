@@ -128,6 +128,9 @@ export function InviteUserDialog({
     setErrorMessage('');
 
     try {
+      // 日付をローカルタイムゾーンで YYYY-MM-DD 形式に変換（UTCへの変換を回避）
+      const hireDateStr = format(data.hireDate, 'yyyy-MM-dd');
+
       const response = await fetch('/api/admin/invite-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,7 +143,7 @@ export function InviteUserDialog({
           department: data.department,
           position: data.position,
           employmentType: data.employmentType,
-          hireDate: data.hireDate.toISOString(),
+          hireDate: hireDateStr,
           phone: data.phone,
           tenantId,
           tenantName,

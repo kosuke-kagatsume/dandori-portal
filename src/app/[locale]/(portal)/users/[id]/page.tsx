@@ -183,6 +183,9 @@ export default function UserDetailPage({ params }: { params: { id: string; local
     if (!user) return;
 
     try {
+      // 日付をローカルタイムゾーンで YYYY-MM-DD 形式に変換（UTCへの変換を回避）
+      const hireDateStr = `${data.hireDate.getFullYear()}-${String(data.hireDate.getMonth() + 1).padStart(2, '0')}-${String(data.hireDate.getDate()).padStart(2, '0')}`;
+
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -192,11 +195,17 @@ export default function UserDetailPage({ params }: { params: { id: string; local
           phone: data.phone,
           department: data.department,
           position: data.position,
-          hireDate: data.hireDate.toISOString().split('T')[0],
+          hireDate: hireDateStr,
           status: data.status,
           roles: data.roles,
         }),
       });
+
+      // HTTPステータスコードをチェック
+      if (!response.ok) {
+        const errorResult = await response.json();
+        throw new Error(errorResult.error || `HTTP ${response.status}: Failed to update user`);
+      }
 
       const result = await response.json();
 
@@ -209,7 +218,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
       toast.success('ユーザー情報を更新しました');
     } catch (error) {
       console.error('Error updating user:', error);
-      toast.error('ユーザー情報の更新に失敗しました');
+      toast.error(error instanceof Error ? error.message : 'ユーザー情報の更新に失敗しました');
       throw error;
     }
   };
