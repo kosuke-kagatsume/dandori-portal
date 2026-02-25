@@ -1692,6 +1692,7 @@ model users {
   name             String
   nameKana         String?      // 氏名（フリガナ）
   employeeNumber   String?      // 社員番号
+  employmentType   String?      // 雇用形態
   phone            String?
   hireDate         DateTime?
   unitId           String?

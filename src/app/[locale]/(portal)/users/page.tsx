@@ -44,7 +44,6 @@ import { exportUsersToCSV } from '@/lib/csv/csv-export';
 
 // ダイアログの遅延読み込み
 const RetireUserDialog = dynamic(() => import('@/features/users/retire-user-dialog').then(mod => ({ default: mod.RetireUserDialog })), { ssr: false });
-const InviteUserDialog = dynamic(() => import('@/features/users/invite-user-dialog').then(mod => ({ default: mod.InviteUserDialog })), { ssr: false });
 const UserFormDialog = dynamic(() => import('@/features/users/user-form-dialog').then(mod => ({ default: mod.UserFormDialog })), { ssr: false });
 
 export default function UsersPage() {
@@ -60,14 +59,13 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [retireDialogOpen, setRetireDialogOpen] = useState(false);
   const [retiringUser, setRetiringUser] = useState<User | undefined>();
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [importInputRef, setImportInputRef] = useState<HTMLInputElement | null>(null);
 
   const router = useRouter();
-  const { users, setUsers, addUser, retireUser } = useUserStore();
+  const { users, setUsers, retireUser } = useUserStore();
 
   // フィルタリングされたユーザー一覧（useMemoでメモ化）
   const filteredUsers = useMemo(() => {
@@ -166,10 +164,13 @@ export default function UsersPage() {
   // ユーザー編集ハンドラー
   const handleEditUser = async (data: {
     name: string;
+    nameKana?: string;
+    employeeNumber?: string;
     email: string;
     phone?: string;
     department: string;
     position: string;
+    employmentType?: string;
     hireDate: Date;
     status: 'active' | 'inactive' | 'suspended' | 'retired';
     roles: string[];
@@ -185,10 +186,13 @@ export default function UsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
+          nameKana: data.nameKana,
+          employeeNumber: data.employeeNumber,
           email: data.email,
           phone: data.phone,
           department: data.department,
           position: data.position,
+          employmentType: data.employmentType,
           hireDate: hireDateStr,
           status: data.status,
           roles: data.roles,
@@ -567,13 +571,6 @@ export default function UsersPage() {
                 onChange={handleImportCSV}
                 style={{ display: 'none' }}
               />
-              <Button
-                onClick={() => setInviteDialogOpen(true)}
-                className="w-full sm:w-auto"
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                ユーザー招待
-              </Button>
             </>
           )}
         </div>
@@ -654,29 +651,6 @@ export default function UsersPage() {
         onOpenChange={setRetireDialogOpen}
         user={retiringUser}
         onConfirm={handleRetireUser}
-      />
-
-      {/* Invite User Dialog */}
-      <InviteUserDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
-        onInviteSuccess={(user) => {
-          // 招待されたユーザーをリストに追加
-          addUser({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            status: 'active',
-            roles: ['user'],
-            department: user.department || '',
-            position: user.position || '',
-            hireDate: new Date().toISOString().split('T')[0],
-            phone: '',
-            unitId: '1',
-            timezone: 'Asia/Tokyo',
-            avatar: '',
-          });
-        }}
       />
 
       {/* Edit User Dialog */}

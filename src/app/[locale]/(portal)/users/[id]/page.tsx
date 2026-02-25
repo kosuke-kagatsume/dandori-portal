@@ -172,10 +172,13 @@ export default function UserDetailPage({ params }: { params: { id: string; local
   // ユーザー編集ハンドラー
   const handleEditUser = async (data: {
     name: string;
+    nameKana?: string;
+    employeeNumber?: string;
     email: string;
     phone?: string;
     department: string;
     position: string;
+    employmentType?: string;
     hireDate: Date;
     status: 'active' | 'inactive' | 'suspended' | 'retired';
     roles: string[];
@@ -191,10 +194,13 @@ export default function UserDetailPage({ params }: { params: { id: string; local
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
+          nameKana: data.nameKana,
+          employeeNumber: data.employeeNumber,
           email: data.email,
           phone: data.phone,
           department: data.department,
           position: data.position,
+          employmentType: data.employmentType,
           hireDate: hireDateStr,
           status: data.status,
           roles: data.roles,

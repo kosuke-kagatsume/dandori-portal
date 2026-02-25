@@ -35,10 +35,13 @@ import type { User } from '@/types';
 
 const userSchema = z.object({
   name: z.string().min(1, '氏名を入力してください'),
+  nameKana: z.string().optional(),
+  employeeNumber: z.string().optional(),
   email: z.string().email('有効なメールアドレスを入力してください'),
   phone: z.string().optional(),
   department: z.string().min(1, '部署を選択してください'),
   position: z.string().min(1, '役職を選択してください'),
+  employmentType: z.string().optional(),
   hireDate: z.date({ required_error: '入社日を選択してください' }),
   status: z.enum(['active', 'inactive', 'suspended', 'retired']),
   roles: z.array(z.string()).min(1, '少なくとも1つのロールを選択してください'),
@@ -71,6 +74,15 @@ const positions = [
   'スペシャリスト',
 ];
 
+const employmentTypes = [
+  { value: 'regular', label: '正社員' },
+  { value: 'contract', label: '契約社員' },
+  { value: 'part_time', label: 'パートタイム' },
+  { value: 'temporary', label: '派遣社員' },
+  { value: 'intern', label: 'インターン' },
+  { value: 'executive', label: '役員' },
+];
+
 // 役職オプション (UserRole型を使用)
 const roleOptions: Array<{ value: UserRole; label: string }> = [
   { value: 'employee', label: ROLE_LABELS.employee },
@@ -93,10 +105,13 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
     resolver: zodResolver(userSchema),
     defaultValues: {
       name: user?.name || '',
+      nameKana: user?.nameKana || '',
+      employeeNumber: user?.employeeNumber || '',
       email: user?.email || '',
       phone: user?.phone || '',
       department: user?.department || '',
       position: user?.position || '',
+      employmentType: user?.employmentType || '',
       hireDate: user?.hireDate ? new Date(user.hireDate) : new Date(),
       status: user?.status || 'active',
       roles: user?.roles || ['employee'],
@@ -106,6 +121,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
   const hireDate = watch('hireDate');
   const watchDepartment = watch('department');
   const watchPosition = watch('position');
+  const watchEmploymentType = watch('employmentType');
   const watchStatus = watch('status');
   const watchRoles = watch('roles');
 
@@ -114,10 +130,13 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
     if (open) {
       reset({
         name: user?.name || '',
+        nameKana: user?.nameKana || '',
+        employeeNumber: user?.employeeNumber || '',
         email: user?.email || '',
         phone: user?.phone || '',
         department: user?.department || '',
         position: user?.position || '',
+        employmentType: user?.employmentType || '',
         hireDate: user?.hireDate ? new Date(user.hireDate) : new Date(),
         status: user?.status || 'active',
         roles: user?.roles || ['employee'],
@@ -167,6 +186,30 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
                   <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>
                 )}
               </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="nameKana" className="text-right">
+                フリガナ
+              </Label>
+              <Input
+                id="nameKana"
+                {...register('nameKana')}
+                placeholder="ヤマダ タロウ"
+                className="col-span-3"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="employeeNumber" className="text-right">
+                社員番号
+              </Label>
+              <Input
+                id="employeeNumber"
+                {...register('employeeNumber')}
+                placeholder="EMP001"
+                className="col-span-3"
+              />
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">
@@ -246,6 +289,29 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
                 {errors.position && (
                   <p className="text-sm text-red-500 mt-1">{errors.position.message}</p>
                 )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="employmentType" className="text-right">
+                雇用形態
+              </Label>
+              <div className="col-span-3">
+                <Select
+                  onValueChange={(value) => setValue('employmentType', value)}
+                  value={watchEmploymentType}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="雇用形態を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employmentTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
