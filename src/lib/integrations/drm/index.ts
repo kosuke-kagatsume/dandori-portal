@@ -47,3 +47,13 @@ export {
   type IntegrationAuditLog,
   type IntegrationAuditAction,
 } from './audit';
+
+// 従業員同期
+export {
+  pushEmployeesToDrm,
+  notifyEmployeeChange,
+  getEmployeesForSync,
+  receiveEmployeesFromDrm,
+  getLastSyncTime,
+  updateLastSyncTime,
+} from './employee-sync';
