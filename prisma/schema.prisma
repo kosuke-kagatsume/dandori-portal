@@ -1690,6 +1690,8 @@ model users {
   tenantId         String
   email            String       @unique
   name             String
+  nameKana         String?      // 氏名（フリガナ）
+  employeeNumber   String?      // 社員番号
   phone            String?
   hireDate         DateTime?
   unitId           String?

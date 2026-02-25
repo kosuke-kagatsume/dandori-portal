@@ -53,6 +53,7 @@ type Member = User & {
   workingTime?: string;
   checkedInAt?: string;
   employeeNumber?: string;  // 社員番号
+  nameKana?: string;        // フリガナ
 };
 
 export default function MembersPage() {
@@ -101,6 +102,8 @@ export default function MembersPage() {
           id: string;
           email: string;
           name: string;
+          nameKana: string | null;
+          employeeNumber: string | null;
           department: string | null;
           position: string | null;
           role: string;
@@ -110,11 +113,12 @@ export default function MembersPage() {
           checkedInAt: string | null;
           workingTime: string | null;
           lastActivity: string | null;
-          employeeNumber: string | null;
         }) => ({
           id: member.id,
           email: member.email,
           name: member.name,
+          nameKana: member.nameKana || undefined,
+          employeeNumber: member.employeeNumber || undefined,
           department: member.department || '',
           position: member.position || '',
           role: member.role,
@@ -126,7 +130,6 @@ export default function MembersPage() {
           checkedInAt: member.checkedInAt || undefined,
           workingTime: member.workingTime || undefined,
           lastActivity: member.lastActivity || undefined,
-          employeeNumber: member.employeeNumber || undefined,
         }));
 
         setMembers(apiMembers);
@@ -253,16 +256,36 @@ export default function MembersPage() {
             />
             <div>
               <div className="font-medium">{member.name}</div>
-              <div className="text-xs text-muted-foreground">{member.department}</div>
+              {member.nameKana && (
+                <div className="text-xs text-muted-foreground">{member.nameKana}</div>
+              )}
             </div>
           </div>
         );
       },
     },
     {
-      accessorKey: 'position',
-      header: '役職',
+      accessorKey: 'employeeNumber',
+      header: '社員番号',
       enableSorting: false,
+      cell: ({ row }) => {
+        const num = row.original.employeeNumber;
+        return num ? <span className="text-sm">{num}</span> : <span className="text-muted-foreground">-</span>;
+      },
+    },
+    {
+      accessorKey: 'department',
+      header: '部署・役職',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const member = row.original;
+        return (
+          <div>
+            <div className="text-sm">{member.department}</div>
+            <div className="text-xs text-muted-foreground">{member.position}</div>
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'currentStatus',
@@ -505,6 +528,7 @@ export default function MembersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="name">名前順</SelectItem>
+              <SelectItem value="employeeNumber">社員番号順</SelectItem>
               <SelectItem value="department">部署順</SelectItem>
               <SelectItem value="checkedInAt">出勤時刻順</SelectItem>
             </SelectContent>

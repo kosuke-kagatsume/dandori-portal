@@ -22,6 +22,7 @@ interface MemberCardProps {
     lastActivity?: string;
     workingTime?: string;
     employeeNumber?: string;
+    nameKana?: string;  // フリガナ
   };
 }
 
@@ -116,19 +117,23 @@ export function MemberCard({ member }: MemberCardProps) {
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="font-medium text-sm truncate">{member.name}</h3>
-              <Badge variant={config.variant} className="ml-2">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-medium text-sm truncate">{member.name}</h3>
+                {member.nameKana && (
+                  <p className="text-xs text-muted-foreground truncate">{member.nameKana}</p>
+                )}
+              </div>
+              <Badge variant={config.variant} className="ml-2 flex-shrink-0">
                 <StatusIcon className="h-3 w-3 mr-1" />
                 {config.label}
               </Badge>
             </div>
 
-            <div className="space-y-1 text-xs text-muted-foreground">
+            <div className="space-y-0.5 text-xs text-muted-foreground">
               {member.employeeNumber && (
-                <p>社員番号：{member.employeeNumber}</p>
+                <p>{member.employeeNumber}</p>
               )}
-              <p>{member.department}</p>
-              <p>{member.position}</p>
+              <p>{member.department} / {member.position}</p>
             </div>
           </div>
         </div>

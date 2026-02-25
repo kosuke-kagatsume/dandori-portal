@@ -37,6 +37,8 @@ export async function GET(request: NextRequest) {
         id: true,
         email: true,
         name: true,
+        nameKana: true,        // フリガナ
+        employeeNumber: true,  // 社員番号
         department: true,
         position: true,
         role: true,
@@ -166,6 +168,8 @@ export async function GET(request: NextRequest) {
         id: user.id,
         email: user.email,
         name: user.name,
+        nameKana: user.nameKana,           // フリガナ
+        employeeNumber: user.employeeNumber, // 社員番号
         department: user.department,
         position: user.position,
         role: user.role,
