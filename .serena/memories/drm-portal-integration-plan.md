@@ -196,3 +196,5 @@ PORTAL_ALLOWED_IPS=x.x.x.x,y.y.y.y
 | ---------- | ---------------------------------------------------- |
 | 2026-02-26 | 計画策定、Phase 1開始                                |
 | 2026-02-26 | Phase 1完了（認証・Webhook・クライアント・監査ログ） |
+| 2026-02-26 | Phase 2完了（従業員同期 push/pull/receive API）      |
+| 2026-02-26 | Phase 3完了（組織同期 departments/positions API）    |
