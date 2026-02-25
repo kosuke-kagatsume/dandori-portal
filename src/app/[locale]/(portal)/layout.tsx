@@ -6,7 +6,6 @@ import { useOnboardingStore } from '@/lib/store/onboarding-store';
 import { useLegalUpdatesStore } from '@/lib/store/legal-updates-store';
 import { useNotificationHistoryStore } from '@/lib/store/notification-history-store';
 import { useInvoiceStore } from '@/lib/store/invoice-store';
-import { useAdminTenantStore as useBillingTenantStore } from '@/lib/store/admin-tenant-store';
 import { useTenantContextInit } from '@/lib/store/tenant-context-store';
 import { Sidebar } from '@/features/navigation/sidebar';
 import { Header } from '@/features/navigation/header';
@@ -44,7 +43,6 @@ export default function PortalLayout({
   const { fetchLegalUpdates } = useLegalUpdatesStore();
   const { initializeNotifications } = useNotificationHistoryStore();
   const { initializeInvoices } = useInvoiceStore();
-  const { initializeTenants } = useBillingTenantStore();
 
   // マルチテナントコンテキストを初期化
   useTenantContextInit();
@@ -90,12 +88,11 @@ export default function PortalLayout({
     fetchLegalUpdates();
   }, [fetchLegalUpdates]);
 
-  // Initialize billing data (invoices, tenants, notification history)
+  // Initialize billing data (invoices, notification history)
   useEffect(() => {
-    initializeTenants();
     initializeInvoices();
     initializeNotifications();
-  }, [initializeTenants, initializeInvoices, initializeNotifications]);
+  }, [initializeInvoices, initializeNotifications]);
 
   // Initialize offline storage and background sync (PWA)
   useEffect(() => {
