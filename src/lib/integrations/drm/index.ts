@@ -57,3 +57,15 @@ export {
   getLastSyncTime,
   updateLastSyncTime,
 } from './employee-sync';
+
+// 組織同期（部署・役職）
+export {
+  getDepartmentsForSync,
+  pushDepartmentsToDrm,
+  receiveDepartmentsFromDrm,
+  notifyDepartmentChange,
+  getPositionsForSync,
+  pushPositionsToDrm,
+  receivePositionsFromDrm,
+  notifyPositionChange,
+} from './organization-sync';
