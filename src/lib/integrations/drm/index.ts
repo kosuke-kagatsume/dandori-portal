@@ -69,3 +69,16 @@ export {
   receivePositionsFromDrm,
   notifyPositionChange,
 } from './organization-sync';
+
+// SSO認証
+export {
+  generateSsoToken,
+  validateSsoToken,
+  consumeSsoToken,
+  createDrmSsoRedirectUrl,
+  acceptDrmSsoToken,
+  type SsoTokenPayload,
+  type SsoTokenRequest,
+  type SsoTokenResponse,
+  type SsoValidationResult,
+} from './sso';
