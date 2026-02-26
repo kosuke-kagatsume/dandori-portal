@@ -286,7 +286,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   // 1. パブリックルート（認証不要）
-  const publicPaths = ['/auth/login', '/auth/register', '/'];
+  const publicPaths = ['/auth/login', '/auth/register', '/auth/change-password', '/'];
   const isPublicPath = publicPaths.some(path => pathname.includes(path));
 
   if (isPublicPath) {
