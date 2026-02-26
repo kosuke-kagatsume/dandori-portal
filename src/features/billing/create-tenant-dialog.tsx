@@ -248,6 +248,10 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
         throw new Error(authData.error || '管理者アカウントの作成に失敗しました');
       }
 
+      // メール送信結果を取得
+      const emailWasSent = authData.emailSent === true;
+      const emailError = authData.emailError;
+
       // 3. ローカルストア（UI用）にもテナントを追加
       addTenant({
         id: tenantId,
@@ -282,7 +286,13 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
       });
 
       if (formData.sendInviteEmail) {
-        toast.success(`テナント「${formData.companyName}」を作成し、招待メールを送信しました`);
+        if (emailWasSent) {
+          toast.success(`テナント「${formData.companyName}」を作成し、招待メールを送信しました`);
+        } else {
+          toast.warning(`テナント「${formData.companyName}」を作成しましたが、招待メールの送信に失敗しました`, {
+            description: emailError || 'メール設定を確認してください',
+          });
+        }
       } else {
         toast.success(`テナント「${formData.companyName}」を作成しました`);
       }

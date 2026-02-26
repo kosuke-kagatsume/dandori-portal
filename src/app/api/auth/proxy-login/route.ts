@@ -146,6 +146,15 @@ export async function POST(request: NextRequest) {
       maxAge: TOKEN_EXPIRY,
     });
 
+    // テナントIDをCookieに設定（API呼び出し用）
+    cookieStore.set('x-tenant-id', user.tenantId, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: TOKEN_EXPIRY,
+    });
+
     // 監査ログを記録
     console.log('[Proxy Login] Session created', {
       dwAdminEmail: payload.dwAdminEmail,

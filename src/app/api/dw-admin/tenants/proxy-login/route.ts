@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     const cookieStore = await cookies();
 
     // DW管理者の認証確認
-    const dwAccessToken = cookieStore.get('dw_access_token')?.value;
+    const dwAccessToken = cookieStore.get('dw_admin_token')?.value;
     const dwUserEmail = cookieStore.get('dw_user_email')?.value;
 
     if (!dwAccessToken || !dwUserEmail) {

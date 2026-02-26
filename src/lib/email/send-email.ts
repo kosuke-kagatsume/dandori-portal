@@ -7,17 +7,24 @@ interface SendEmailOptions {
   text?: string;
 }
 
-export async function sendEmail(options: SendEmailOptions): Promise<void> {
+interface SendEmailResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const fromEmail = process.env.SENDGRID_FROM_EMAIL;
 
   if (!fromEmail) {
-    console.warn('[Email] SENDGRID_FROM_EMAIL is not configured. Skipping email send.');
-    return;
+    const error = 'SENDGRID_FROM_EMAIL is not configured';
+    console.warn(`[Email] ${error}. Skipping email send.`);
+    return { success: false, error };
   }
 
   if (!process.env.SENDGRID_API_KEY) {
-    console.warn('[Email] SENDGRID_API_KEY is not configured. Skipping email send.');
-    return;
+    const error = 'SENDGRID_API_KEY is not configured';
+    console.warn(`[Email] ${error}. Skipping email send.`);
+    return { success: false, error };
   }
 
   try {
@@ -29,8 +36,10 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
       text: options.text,
     });
     console.log(`[Email] Successfully sent email to ${options.to}`);
+    return { success: true };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[Email] Failed to send email:', error);
-    throw error;
+    return { success: false, error: errorMessage };
   }
 }

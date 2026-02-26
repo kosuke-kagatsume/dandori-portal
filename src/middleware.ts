@@ -247,7 +247,7 @@ export default async function middleware(request: NextRequest) {
   // 0-1. DW社管理画面（locale不要、テナント識別スキップ）
   if (pathname.startsWith('/dw-admin')) {
     // DW社管理画面はDW社専用の認証チェックを実施
-    const dwAccessToken = request.cookies.get('dw_access_token')?.value;
+    const dwAccessToken = request.cookies.get('dw_admin_token')?.value;
     const dwUserEmail = request.cookies.get('dw_user_email')?.value;
 
     // DW管理者ログインページは認証不要
@@ -272,7 +272,7 @@ export default async function middleware(request: NextRequest) {
       // 権限がない場合、ログインページにリダイレクト
       const response = NextResponse.redirect(new URL('/dw-admin/login', request.url));
       // 不正なCookieを削除
-      response.cookies.delete('dw_access_token');
+      response.cookies.delete('dw_admin_token');
       response.cookies.delete('dw_user_email');
       return response;
     }

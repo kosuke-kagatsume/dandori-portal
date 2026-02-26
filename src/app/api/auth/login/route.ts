@@ -113,6 +113,17 @@ export async function POST(request: NextRequest) {
       maxAge: TOKEN_EXPIRY,
     });
 
+    // テナントIDをCookieに設定（API呼び出し用）
+    if (user.tenantId) {
+      cookieStore.set('x-tenant-id', user.tenantId, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: TOKEN_EXPIRY,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: {

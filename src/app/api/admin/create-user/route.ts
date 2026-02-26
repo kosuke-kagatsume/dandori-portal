@@ -98,30 +98,30 @@ export async function POST(request: NextRequest) {
     console.log('User created successfully:', email);
 
     // 招待メール送信
+    let emailResult: { success: boolean; error?: string } = { success: false };
     if (sendInviteEmail) {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com';
-        const loginUrl = `${baseUrl}/ja/auth/login`;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com';
+      const loginUrl = `${baseUrl}/ja/auth/login`;
 
-        const emailContent = getTenantWelcomeEmail({
-          tenantName: tenantName || '新しいテナント',
-          ownerName: name,
-          email,
-          password,
-          loginUrl,
-        });
+      const emailContent = getTenantWelcomeEmail({
+        tenantName: tenantName || '新しいテナント',
+        ownerName: name,
+        email,
+        password,
+        loginUrl,
+      });
 
-        await sendEmail({
-          to: email,
-          subject: emailContent.subject,
-          html: emailContent.html,
-          text: emailContent.text,
-        });
+      emailResult = await sendEmail({
+        to: email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
 
+      if (emailResult.success) {
         console.log('Invite email sent successfully to:', email);
-      } catch (emailError) {
-        console.error('Failed to send invite email:', emailError);
-        // メール送信失敗してもユーザー作成は成功とする
+      } else {
+        console.error('Failed to send invite email:', emailResult.error);
       }
     }
 
@@ -134,7 +134,8 @@ export async function POST(request: NextRequest) {
         role: user.role,
         tenantId: user.tenantId,
       },
-      emailSent: sendInviteEmail,
+      emailSent: emailResult.success,
+      emailError: emailResult.error,
     });
   } catch (error) {
     console.error('Create user error:', error);
