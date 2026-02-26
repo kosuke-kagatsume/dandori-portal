@@ -45,9 +45,18 @@ export default function ProxyLoginPage() {
         setUserName(result.data.user.name || result.data.user.email);
         setStatus('success');
 
-        // 少し待ってからダッシュボードへリダイレクト
+        // 少し待ってからテナントのダッシュボードへリダイレクト
         setTimeout(() => {
-          router.push(`/${locale}/dashboard`);
+          const subdomain = result.data.tenant?.subdomain;
+          if (subdomain) {
+            // テナントのサブドメインにリダイレクト
+            const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'dandori-portal.com';
+            const protocol = window.location.protocol;
+            window.location.href = `${protocol}//${subdomain}.${mainDomain}/${locale}/dashboard`;
+          } else {
+            // サブドメインがない場合はメインドメインのダッシュボードへ
+            router.push(`/${locale}/dashboard`);
+          }
         }, 1500);
       } catch (err) {
         console.error('Proxy login error:', err);

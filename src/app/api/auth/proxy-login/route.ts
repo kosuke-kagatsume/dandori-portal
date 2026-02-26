@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             name: true,
+            subdomain: true,
             timezone: true,
             closingDay: true,
             weekStartDay: true,
@@ -181,6 +182,7 @@ export async function POST(request: NextRequest) {
         tenant: user.tenants ? {
           id: user.tenants.id,
           name: user.tenants.name,
+          subdomain: user.tenants.subdomain,
           timezone: user.tenants.timezone,
           closingDay: user.tenants.closingDay,
           weekStartDay: user.tenants.weekStartDay,

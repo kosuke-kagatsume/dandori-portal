@@ -18,6 +18,33 @@ frontend:
         - 'echo "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}" >> .env.production'
         - 'echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}" >> .env.production'
 
+        # SendGrid設定
+        - 'echo "SENDGRID_API_KEY=${SENDGRID_API_KEY}" >> .env.production'
+        - 'echo "SENDGRID_FROM_EMAIL=${SENDGRID_FROM_EMAIL}" >> .env.production'
+        - 'echo "SENDGRID_FROM_NAME=${SENDGRID_FROM_NAME}" >> .env.production'
+
+        # JWT設定
+        - 'echo "JWT_SECRET=${JWT_SECRET}" >> .env.production'
+        - 'echo "DW_ADMIN_JWT_SECRET=${DW_ADMIN_JWT_SECRET}" >> .env.production'
+        - 'echo "PROXY_LOGIN_SECRET=${PROXY_LOGIN_SECRET}" >> .env.production'
+
+        # DW管理者設定
+        - 'echo "DW_ADMIN_EMAILS=${DW_ADMIN_EMAILS}" >> .env.production'
+        - 'echo "DW_ADMIN_EMAIL_1=${DW_ADMIN_EMAIL_1}" >> .env.production'
+        - 'echo "DW_ADMIN_EMAIL_2=${DW_ADMIN_EMAIL_2}" >> .env.production'
+        - 'echo "DW_ADMIN_PASSWORD_HASH_1=${DW_ADMIN_PASSWORD_HASH_1}" >> .env.production'
+        - 'echo "DW_ADMIN_PASSWORD_HASH_2=${DW_ADMIN_PASSWORD_HASH_2}" >> .env.production'
+
+        # S3設定
+        - 'echo "S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}" >> .env.production'
+        - 'echo "S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}" >> .env.production'
+        - 'echo "S3_BUCKET=${S3_BUCKET}" >> .env.production'
+        - 'echo "S3_REGION=${S3_REGION}" >> .env.production'
+
+        # アプリURL
+        - 'echo "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}" >> .env.production'
+        - 'echo "NEXT_PUBLIC_MAIN_DOMAIN=${NEXT_PUBLIC_MAIN_DOMAIN}" >> .env.production'
+
         # 環境変数が正しく書き出されたか確認（DATABASE_URLは先頭のみ表示）
         - 'echo "=== .env.production created ==="'
         - cat .env.production | grep -v DATABASE_URL

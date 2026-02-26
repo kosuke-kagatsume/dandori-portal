@@ -237,16 +237,32 @@ export const useAttendanceStore = create<AttendanceStore>()(
       // APIから今日の勤怠を取得してストアを同期
       syncTodayFromApi: async (userId: string, tenantId: string) => {
         try {
-          const attendance = await attendanceApi.getTodayAttendance(userId, tenantId);
+          // 勤怠サマリーと打刻履歴を並行取得
+          const [attendance, punchesData] = await Promise.all([
+            attendanceApi.getTodayAttendance(userId, tenantId),
+            attendanceApi.getTodayPunches(userId),
+          ]);
+
+          // 打刻ペアを取得
+          const punchPairs: PunchPair[] = punchesData.punchPairs || [];
+          const latestPunchOrder = punchPairs.length > 0
+            ? Math.max(...punchPairs.map((p: PunchPair) => p.order))
+            : 0;
+
           if (attendance) {
             // APIのデータからストアの状態を復元
+            // 最新の打刻ペアを基に状態を判定
+            const latestPair = punchPairs.find((p: PunchPair) => p.order === latestPunchOrder);
             let status: TodayAttendanceStatus['status'] = 'notStarted';
-            if (attendance.checkOut) {
-              status = 'finished';
-            } else if (attendance.breakStart && !attendance.breakEnd) {
-              status = 'onBreak';
-            } else if (attendance.checkIn) {
-              status = 'working';
+
+            if (latestPair) {
+              if (latestPair.checkOut) {
+                status = 'finished';
+              } else if (latestPair.breakStart && !latestPair.breakEnd) {
+                status = 'onBreak';
+              } else if (latestPair.checkIn) {
+                status = 'working';
+              }
             }
 
             set({
@@ -284,6 +300,33 @@ export const useAttendanceStore = create<AttendanceStore>()(
                 recordDate: getTodayDateString(),
                 userId,
                 attendanceRecordId: attendance.id,
+                // 複数打刻対応
+                punchPairs,
+                currentPunchOrder: latestPunchOrder,
+              },
+            });
+          } else if (punchPairs.length > 0) {
+            // 勤怠サマリーがなくても打刻がある場合
+            const latestPair = punchPairs.find((p: PunchPair) => p.order === latestPunchOrder);
+            let status: TodayAttendanceStatus['status'] = 'notStarted';
+
+            if (latestPair) {
+              if (latestPair.checkOut) {
+                status = 'finished';
+              } else if (latestPair.breakStart && !latestPair.breakEnd) {
+                status = 'onBreak';
+              } else if (latestPair.checkIn) {
+                status = 'working';
+              }
+            }
+
+            set({
+              todayStatus: {
+                ...getInitialTodayStatus(),
+                status,
+                userId,
+                punchPairs,
+                currentPunchOrder: latestPunchOrder,
               },
             });
           } else {
