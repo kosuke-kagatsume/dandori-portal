@@ -14,7 +14,7 @@ export async function POST() {
   });
 
   // Cookieを削除
-  response.cookies.delete('dw_access_token');
+  response.cookies.delete('dw_admin_token');
   response.cookies.delete('dw_user_email');
 
   return response;

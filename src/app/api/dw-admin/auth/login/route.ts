@@ -95,19 +95,19 @@ export async function POST(request: NextRequest) {
     });
 
     // Cookieを設定
-    response.cookies.set('dw_access_token', token, {
+    response.cookies.set('dw_admin_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict', // CSRF対策: strictに設定
-      path: '/dw-admin',
+      sameSite: 'lax',
+      path: '/',
       maxAge: 8 * 60 * 60, // 8時間
     });
 
     response.cookies.set('dw_user_email', email, {
       httpOnly: false, // クライアントサイドで読み取り可能
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/dw-admin',
+      sameSite: 'lax',
+      path: '/',
       maxAge: 8 * 60 * 60,
     });
 
