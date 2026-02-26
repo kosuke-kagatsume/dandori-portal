@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/',
       maxAge: TOKEN_EXPIRY,
     });
 
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/',
       maxAge: TOKEN_EXPIRY * 7,
     });
 
@@ -131,6 +133,7 @@ export async function POST(request: NextRequest) {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/',
       maxAge: TOKEN_EXPIRY,
     });
 
@@ -139,6 +142,7 @@ export async function POST(request: NextRequest) {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
+      path: '/',
       maxAge: TOKEN_EXPIRY,
     });
 
