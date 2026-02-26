@@ -299,6 +299,24 @@ export default async function middleware(request: NextRequest) {
 
   // 2. 認証チェック（Cookie）
   const accessToken = request.cookies.get('access_token')?.value;
+  const existingTenantId = request.cookies.get('x-tenant-id')?.value;
+
+  // テナントが変わった場合（別のサブドメインにアクセスした場合）
+  // 既存のセッションをクリアしてログインを要求
+  if (accessToken && tenantId && existingTenantId && existingTenantId !== tenantId) {
+    console.log(`[Middleware] Tenant mismatch detected: cookie=${existingTenantId}, subdomain=${tenantId}`);
+    const locale = pathname.match(/^\/(ja|en)/)?.[1] || 'ja';
+    const loginUrl = new URL(`/${locale}/auth/login`, request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    const redirectResponse = NextResponse.redirect(loginUrl);
+    // 古いセッションCookieを削除
+    redirectResponse.cookies.delete('access_token');
+    redirectResponse.cookies.delete('refresh_token');
+    redirectResponse.cookies.delete('user_role');
+    redirectResponse.cookies.delete('x-tenant-id');
+    redirectResponse.cookies.delete('proxy_login');
+    return addTenantHeaders(redirectResponse, tenantId, subdomain);
+  }
 
   if (!accessToken) {
     // 未認証の場合、ログインページにリダイレクト

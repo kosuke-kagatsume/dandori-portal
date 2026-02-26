@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, lazy, memo, useMemo } from 'react';
+import { useState, useEffect, Suspense, lazy, memo, useMemo, useCallback } from 'react';
 // 勤怠ストアはlazyロードされた子コンポーネントで使用
 import {
   Clock,
@@ -20,6 +20,7 @@ import { StatCardsLoadingSkeleton, TableLoadingSkeleton } from '@/components/ui/
 // CSV出力は勤怠一覧/勤怠集計の各コンポーネントに移動済み
 import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
 import { useUserStore } from '@/lib/store/user-store';
+import { useAttendanceStore } from '@/lib/attendance-store';
 
 // 重いコンポーネントをlazyロード
 const LazySimplePunchCard = lazy(() =>
@@ -175,8 +176,53 @@ export default function AttendancePage() {
 
   // NOTE: records と handleExportCSV は勤怠集計タブの専用コンポーネントに移動済み
 
+  // 打刻ストアの今日の状態を監視
+  const { todayStatus } = useAttendanceStore();
 
-  // デモデータ生成機能は削除されました
+  // 打刻ストアの変更を勤怠一覧ストアに同期
+  const syncPunchToHistory = useCallback(() => {
+    if (!currentUser?.id || !todayStatus.recordDate) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    if (todayStatus.recordDate !== today) return;
+
+    // 最新の打刻ペアから checkIn/checkOut を取得
+    const punchPairs = todayStatus.punchPairs || [];
+    const latestPair = punchPairs.length > 0
+      ? punchPairs.reduce((latest, pair) => pair.order > latest.order ? pair : latest, punchPairs[0])
+      : null;
+
+    // 全打刻ペアの休憩時間を合計
+    const totalBreakMinutes = todayStatus.totalBreakTime || 0;
+
+    // checkIn/checkOut を決定（最初の出勤、最後の退勤）
+    const firstCheckIn = punchPairs.length > 0 ? punchPairs[0].checkIn?.time : todayStatus.checkIn;
+    const lastCheckOut = latestPair?.checkOut?.time || todayStatus.checkOut;
+
+    // 勤怠一覧ストアに同期
+    addOrUpdateRecord({
+      userId: currentUser.id,
+      userName: currentUser.name || '',
+      date: today,
+      checkIn: firstCheckIn || null,
+      checkOut: lastCheckOut || null,
+      breakStart: latestPair?.breakStart?.time || todayStatus.breakStart || null,
+      breakEnd: latestPair?.breakEnd?.time || todayStatus.breakEnd || null,
+      totalBreakMinutes,
+      workLocation: todayStatus.workLocation || 'office',
+      status: todayStatus.status === 'finished' ? 'present' :
+              todayStatus.status === 'working' ? 'present' :
+              todayStatus.status === 'onBreak' ? 'present' : 'absent',
+      memo: todayStatus.memo,
+    });
+  }, [currentUser, todayStatus, addOrUpdateRecord]);
+
+  // 打刻状態が変わったら勤怠一覧を同期
+  useEffect(() => {
+    if (todayStatus.status !== 'notStarted') {
+      syncPunchToHistory();
+    }
+  }, [todayStatus.status, todayStatus.checkIn, todayStatus.checkOut, todayStatus.punchPairs, syncPunchToHistory]);
 
   // 初期ローディング状態の管理
   useEffect(() => {

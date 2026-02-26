@@ -330,9 +330,9 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
           <ScrollArea className="w-full">
             <div className="min-w-[1800px]">
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 z-20 bg-background">
                   <TableRow className="bg-muted/50">
-                    <TableHead scope="col" className="w-[60px] text-center sticky left-0 bg-muted/50 z-10">詳細</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center sticky left-0 bg-muted/50 z-30">詳細</TableHead>
                     <TableHead scope="col" className="w-[60px] text-center">編集</TableHead>
                     <TableHead scope="col" className="w-[60px] text-center">申請</TableHead>
                     <TableHead scope="col" className="w-[100px]">日付</TableHead>
@@ -809,7 +809,22 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                   </div>
                 </div>
 
-                <Button variant="outline" size="sm" className="w-full">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    // 新しい打刻行を追加
+                    if (editingRecord) {
+                      setEditingRecord({
+                        ...editingRecord,
+                        // 2番目の打刻として追加（簡易実装）
+                        note: (editingRecord.note || '') + '\n[追加打刻]',
+                      });
+                      toast.info('複数打刻の管理は打刻カードから行ってください');
+                    }
+                  }}
+                >
                   + 打刻を追加
                 </Button>
               </div>
