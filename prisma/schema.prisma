@@ -220,28 +220,29 @@ model approval_steps {
 }
 
 model attendance {
-  id                String    @id
+  id                String              @id
   tenantId          String
   userId            String
-  date              DateTime  @db.Date
+  date              DateTime            @db.Date
   checkIn           DateTime?
   checkOut          DateTime?
   breakStart        DateTime?
   breakEnd          DateTime?
-  totalBreakMinutes Int       @default(0)
-  workMinutes       Int       @default(0)
-  overtimeMinutes   Int       @default(0)
-  workLocation      String    @default("office")
-  status            String    @default("present")
+  totalBreakMinutes Int                 @default(0)
+  workMinutes       Int                 @default(0)
+  overtimeMinutes   Int                 @default(0)
+  workLocation      String              @default("office")
+  status            String              @default("present")
   memo              String?
   approvalStatus    String?
   approvalReason    String?
-  createdAt         DateTime  @default(now())
+  createdAt         DateTime            @default(now())
   updatedAt         DateTime
   checkInLocation   Json?
   checkOutLocation  Json?
-  tenants           tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user              users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenants           tenants             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user              users               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  punches           attendance_punches[]
 
   @@unique([userId, date])
   @@index([date])
@@ -250,6 +251,31 @@ model attendance {
   @@index([tenantId])
   @@index([tenantId, userId])
   @@index([userId])
+}
+
+// 打刻履歴テーブル（同日複数打刻対応）
+model attendance_punches {
+  id           String     @id
+  tenantId     String
+  userId       String
+  attendanceId String
+  date         DateTime   @db.Date
+  punchType    String     // 'check_in' | 'check_out' | 'break_start' | 'break_end'
+  punchTime    DateTime
+  punchOrder   Int        @default(1) // 同日内の打刻順序（1組目、2組目...）
+  workLocation String?    // 'office' | 'home' | 'client' | 'other'
+  location     Json?      // GPS座標
+  memo         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime
+  attendance   attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  tenants      tenants    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         users      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([attendanceId])
+  @@index([tenantId, date])
+  @@index([tenantId, userId, date])
+  @@index([userId, date])
 }
 
 model attendance_settings {
@@ -1597,22 +1623,23 @@ model tenant_settings {
 }
 
 model tenants {
-  id              String           @id
-  name            String
-  logo            String?
-  timezone        String           @default("Asia/Tokyo")
-  closingDay      String           @default("末")
-  weekStartDay    Int              @default(1)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime
-  subdomain       String?          @unique
-  attendance      attendance[]
-  invoices        invoices[]
-  org_units       org_units[]
-  pricing_tiers   pricing_tiers[]
-  tenant_settings tenant_settings?
-  user_histories  user_histories[]
-  users           users[]
+  id                  String               @id
+  name                String
+  logo                String?
+  timezone            String               @default("Asia/Tokyo")
+  closingDay          String               @default("末")
+  weekStartDay        Int                  @default(1)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime
+  subdomain           String?              @unique
+  attendance          attendance[]
+  attendance_punches  attendance_punches[]
+  invoices            invoices[]
+  org_units           org_units[]
+  pricing_tiers       pricing_tiers[]
+  tenant_settings     tenant_settings?
+  user_histories      user_histories[]
+  users               users[]
 
   @@index([subdomain])
 }
@@ -1686,35 +1713,36 @@ model user_histories {
 }
 
 model users {
-  id               String       @id
-  tenantId         String
-  email            String       @unique
-  name             String
-  nameKana         String?      // 氏名（フリガナ）
-  employeeNumber   String?      // 社員番号
-  employmentType   String?      // 雇用形態
-  phone            String?
-  hireDate         DateTime?
-  unitId           String?
-  roles            String[]
-  status           String       @default("active")
-  retiredDate      DateTime?
-  retirementReason String?
-  timezone         String       @default("Asia/Tokyo")
-  avatar           String?
-  position         String?
-  department       String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime
+  id                    String               @id
+  tenantId              String
+  email                 String               @unique
+  name                  String
+  nameKana              String?              // 氏名（フリガナ）
+  employeeNumber        String?              // 社員番号
+  employmentType        String?              // 雇用形態
+  phone                 String?
+  hireDate              DateTime?
+  unitId                String?
+  roles                 String[]
+  status                String               @default("active")
+  retiredDate           DateTime?
+  retirementReason      String?
+  timezone              String               @default("Asia/Tokyo")
+  avatar                String?
+  position              String?
+  department            String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime
   passwordHash          String?
-  role                  String?      @default("employee")
-  passwordResetRequired Boolean      @default(false)
+  role                  String?              @default("employee")
+  passwordResetRequired Boolean              @default(false)
   invitedAt             DateTime?
   inviteToken           String?
   inviteTokenExpiry     DateTime?
   attendance            attendance[]
-  tenants          tenants      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  org_units        org_units?   @relation(fields: [unitId], references: [id])
+  attendance_punches    attendance_punches[]
+  tenants               tenants              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  org_units             org_units?           @relation(fields: [unitId], references: [id])
 
   @@index([email])
   @@index([tenantId])

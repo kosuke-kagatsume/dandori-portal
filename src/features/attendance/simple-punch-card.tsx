@@ -234,32 +234,68 @@ export function SimplePunchCard() {
             </Button>
           </div>
 
-          {/* Status Display */}
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="p-3 rounded-lg bg-muted/50">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-muted-foreground">出勤</span>
-                {todayStatus.checkInLocation && (
-                  <LocationBadge location={todayStatus.checkInLocation} label="GPS" />
-                )}
-              </div>
-              <div className="text-xl font-semibold">
-                {todayStatus.checkIn || '--:--'}
-              </div>
-            </div>
+          {/* Status Display - 複数打刻対応 */}
+          {todayStatus.punchPairs && todayStatus.punchPairs.length > 0 ? (
+            <div className="space-y-2">
+              {todayStatus.punchPairs.map((pair, index) => (
+                <div key={pair.order} className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-muted-foreground">
+                        出勤{todayStatus.punchPairs!.length > 1 ? ` ${index + 1}` : ''}
+                      </span>
+                      {pair.checkIn?.location && (
+                        <LocationBadge location={pair.checkIn.location} label="GPS" />
+                      )}
+                    </div>
+                    <div className="text-xl font-semibold">
+                      {pair.checkIn?.time || '--:--'}
+                    </div>
+                  </div>
 
-            <div className="p-3 rounded-lg bg-muted/50">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-muted-foreground">退勤</span>
-                {todayStatus.checkOutLocation && (
-                  <LocationBadge location={todayStatus.checkOutLocation} label="GPS" />
-                )}
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-muted-foreground">
+                        退勤{todayStatus.punchPairs!.length > 1 ? ` ${index + 1}` : ''}
+                      </span>
+                      {pair.checkOut?.location && (
+                        <LocationBadge location={pair.checkOut.location} label="GPS" />
+                      )}
+                    </div>
+                    <div className="text-xl font-semibold">
+                      {pair.checkOut?.time || '--:--'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-muted-foreground">出勤</span>
+                  {todayStatus.checkInLocation && (
+                    <LocationBadge location={todayStatus.checkInLocation} label="GPS" />
+                  )}
+                </div>
+                <div className="text-xl font-semibold">
+                  {todayStatus.checkIn || '--:--'}
+                </div>
               </div>
-              <div className="text-xl font-semibold">
-                {todayStatus.checkOut || '--:--'}
+
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-muted-foreground">退勤</span>
+                  {todayStatus.checkOutLocation && (
+                    <LocationBadge location={todayStatus.checkOutLocation} label="GPS" />
+                  )}
+                </div>
+                <div className="text-xl font-semibold">
+                  {todayStatus.checkOut || '--:--'}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Additional Info */}
           <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-4">

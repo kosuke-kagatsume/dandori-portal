@@ -31,6 +31,15 @@ export interface AttendanceRecord {
   approvalReason?: string;
 }
 
+// 打刻ペア（出勤-退勤の1組）
+export interface PunchPair {
+  order: number;
+  checkIn?: { time: string; location?: LocationData };
+  checkOut?: { time: string; location?: LocationData };
+  breakStart?: { time: string };
+  breakEnd?: { time: string };
+}
+
 export interface TodayAttendanceStatus {
   status: 'notStarted' | 'working' | 'onBreak' | 'finished';
   checkIn?: string;
@@ -50,6 +59,10 @@ export interface TodayAttendanceStatus {
   userId?: string;
   // APIから取得したレコードID
   attendanceRecordId?: string;
+  // 複数打刻対応: 打刻ペアの配列
+  punchPairs?: PunchPair[];
+  // 現在の打刻組番号
+  currentPunchOrder?: number;
 }
 
 interface AttendanceStore {
@@ -126,7 +139,49 @@ const attendanceApi = {
     return result.data?.[0] || null;
   },
 
-  // 出勤打刻（新規作成）
+  // 今日の打刻履歴を取得
+  async getTodayPunches(userId: string) {
+    const today = getTodayDateString();
+    const response = await fetch(
+      `/api/attendance/punches?userId=${userId}&date=${today}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch punches');
+    }
+    const result = await response.json();
+    return result.data || { punches: [], punchPairs: [] };
+  },
+
+  // 打刻登録（新しいAPI）
+  async punch(params: {
+    userId: string;
+    punchType: 'check_in' | 'check_out' | 'break_start' | 'break_end';
+    punchTime?: string;
+    workLocation?: string;
+    location?: LocationData;
+    memo?: string;
+  }) {
+    const response = await fetch('/api/attendance/punches', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(params),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to punch');
+    }
+    return response.json();
+  },
+
+  // 出勤打刻（新規作成）- 後方互換性のため残す
   async checkIn(params: {
     userId: string;
     tenantId: string;
@@ -151,7 +206,7 @@ const attendanceApi = {
     return response.json();
   },
 
-  // 勤怠更新（休憩開始/終了、退勤）
+  // 勤怠更新（休憩開始/終了、退勤）- 後方互換性のため残す
   async updateAttendance(id: string, data: Record<string, unknown>) {
     const response = await fetch(`/api/attendance/${id}`, {
       method: 'PATCH',
@@ -307,26 +362,38 @@ export const useAttendanceStore = create<AttendanceStore>()(
 
         const { todayStatus } = get();
         const userId = todayStatus.userId;
-        const tenantId = 'tenant-006'; // TODO: 動的に取得
 
-        // APIに出勤を記録
+        // 新しい打刻APIを使用
         let attendanceRecordId: string | undefined;
+        let currentPunchOrder = 1;
+        const punchPairs: PunchPair[] = todayStatus.punchPairs || [];
+
         if (userId) {
           try {
-            const today = getTodayDateString();
-            const checkInDateTime = new Date(`${today}T${timeString}:00`);
-
-            const result = await attendanceApi.checkIn({
+            const result = await attendanceApi.punch({
               userId,
-              tenantId,
-              date: today,
-              checkIn: checkInDateTime.toISOString(),
+              punchType: 'check_in',
+              punchTime: now.toISOString(),
               workLocation,
-              status: isLate ? 'late' : (workLocation === 'home' ? 'remote' : 'present'),
-              approvalStatus: isLate ? 'pending' : undefined,
-              approvalReason: isLate ? '遅刻のため承認が必要です' : undefined,
+              location: locationData,
             });
-            attendanceRecordId = result.data?.id;
+            attendanceRecordId = result.data?.attendance?.id;
+
+            // 打刻ペアを更新
+            const punchData = result.data?.punch;
+            if (punchData) {
+              currentPunchOrder = punchData.punchOrder;
+              // 新しい打刻ペアを追加
+              const existingPairIndex = punchPairs.findIndex(p => p.order === currentPunchOrder);
+              if (existingPairIndex >= 0) {
+                punchPairs[existingPairIndex].checkIn = { time: timeString, location: locationData };
+              } else {
+                punchPairs.push({
+                  order: currentPunchOrder,
+                  checkIn: { time: timeString, location: locationData },
+                });
+              }
+            }
           } catch (error) {
             console.error('[AttendanceStore] Failed to check in via API:', error);
             // APIエラーでも状態は更新（オフライン対応のため）
@@ -344,6 +411,8 @@ export const useAttendanceStore = create<AttendanceStore>()(
             approvalReason: isLate ? '遅刻のため承認が必要です' : undefined,
             recordDate: getTodayDateString(),
             attendanceRecordId,
+            punchPairs,
+            currentPunchOrder,
           }
         }));
 
@@ -366,16 +435,24 @@ export const useAttendanceStore = create<AttendanceStore>()(
         });
 
         const { todayStatus } = get();
-        const attendanceRecordId = todayStatus.attendanceRecordId;
+        const userId = todayStatus.userId;
+        const punchPairs = todayStatus.punchPairs || [];
+        const currentPunchOrder = todayStatus.currentPunchOrder || 1;
 
-        // APIに休憩開始を記録
-        if (attendanceRecordId) {
+        // 新しい打刻APIを使用
+        if (userId) {
           try {
-            const today = getTodayDateString();
-            const breakStartDateTime = new Date(`${today}T${timeString}:00`);
-            await attendanceApi.updateAttendance(attendanceRecordId, {
-              breakStart: breakStartDateTime.toISOString(),
+            await attendanceApi.punch({
+              userId,
+              punchType: 'break_start',
+              punchTime: now.toISOString(),
             });
+
+            // 打刻ペアを更新
+            const pairIndex = punchPairs.findIndex(p => p.order === currentPunchOrder);
+            if (pairIndex >= 0) {
+              punchPairs[pairIndex].breakStart = { time: timeString };
+            }
           } catch (error) {
             console.error('[AttendanceStore] Failed to start break via API:', error);
           }
@@ -386,6 +463,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             ...state.todayStatus,
             status: 'onBreak',
             breakStart: timeString,
+            punchPairs,
           }
         }));
       },
@@ -407,17 +485,24 @@ export const useAttendanceStore = create<AttendanceStore>()(
         }
 
         const totalBreakTime = state.todayStatus.totalBreakTime + additionalBreakTime;
-        const attendanceRecordId = state.todayStatus.attendanceRecordId;
+        const userId = state.todayStatus.userId;
+        const punchPairs = state.todayStatus.punchPairs || [];
+        const currentPunchOrder = state.todayStatus.currentPunchOrder || 1;
 
-        // APIに休憩終了を記録
-        if (attendanceRecordId) {
+        // 新しい打刻APIを使用
+        if (userId) {
           try {
-            const today = getTodayDateString();
-            const breakEndDateTime = new Date(`${today}T${timeString}:00`);
-            await attendanceApi.updateAttendance(attendanceRecordId, {
-              breakEnd: breakEndDateTime.toISOString(),
-              totalBreakMinutes: Math.floor(totalBreakTime),
+            await attendanceApi.punch({
+              userId,
+              punchType: 'break_end',
+              punchTime: now.toISOString(),
             });
+
+            // 打刻ペアを更新
+            const pairIndex = punchPairs.findIndex(p => p.order === currentPunchOrder);
+            if (pairIndex >= 0) {
+              punchPairs[pairIndex].breakEnd = { time: timeString };
+            }
           } catch (error) {
             console.error('[AttendanceStore] Failed to end break via API:', error);
           }
@@ -429,6 +514,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             status: 'working',
             breakEnd: timeString,
             totalBreakTime,
+            punchPairs,
           }
         }));
       },
@@ -455,33 +541,26 @@ export const useAttendanceStore = create<AttendanceStore>()(
         }
 
         const state = get();
-        const attendanceRecordId = state.todayStatus.attendanceRecordId;
+        const userId = state.todayStatus.userId;
+        const punchPairs = state.todayStatus.punchPairs || [];
+        const currentPunchOrder = state.todayStatus.currentPunchOrder || 1;
 
-        // 勤務時間計算
-        let workMinutes = 0;
-        let overtimeMinutes = 0;
-        if (state.todayStatus.checkIn) {
-          const checkIn = new Date(`2024-01-01 ${state.todayStatus.checkIn}`);
-          const checkOut = new Date(`2024-01-01 ${timeString}`);
-          const totalMinutes = (checkOut.getTime() - checkIn.getTime()) / 1000 / 60;
-          workMinutes = Math.floor(totalMinutes - state.todayStatus.totalBreakTime);
-          overtimeMinutes = Math.max(0, workMinutes - 480); // 8時間 = 480分
-        }
-
-        // APIに退勤を記録
-        if (attendanceRecordId) {
+        // 新しい打刻APIを使用
+        if (userId) {
           try {
-            const today = getTodayDateString();
-            const checkOutDateTime = new Date(`${today}T${timeString}:00`);
-            await attendanceApi.updateAttendance(attendanceRecordId, {
-              checkOut: checkOutDateTime.toISOString(),
-              workMinutes,
-              overtimeMinutes,
+            await attendanceApi.punch({
+              userId,
+              punchType: 'check_out',
+              punchTime: now.toISOString(),
+              location: locationData,
               memo,
-              status: isEarlyLeave ? 'early_leave' : undefined,
-              approvalStatus: isEarlyLeave ? 'pending' : undefined,
-              approvalReason: isEarlyLeave ? '早退のため承認が必要です' : undefined,
             });
+
+            // 打刻ペアを更新
+            const pairIndex = punchPairs.findIndex(p => p.order === currentPunchOrder);
+            if (pairIndex >= 0) {
+              punchPairs[pairIndex].checkOut = { time: timeString, location: locationData };
+            }
           } catch (error) {
             console.error('[AttendanceStore] Failed to check out via API:', error);
           }
@@ -496,6 +575,7 @@ export const useAttendanceStore = create<AttendanceStore>()(
             memo,
             needsApproval: prevState.todayStatus.needsApproval || isEarlyLeave,
             approvalReason: isEarlyLeave ? '早退のため承認が必要です' : prevState.todayStatus.approvalReason,
+            punchPairs,
           }
         }));
 
