@@ -43,6 +43,50 @@ async function apiDeleteAttendanceRecord(id: string) {
   return true;
 }
 
+/**
+ * ISO日時文字列をHH:mm形式に変換
+ * すでにHH:mm形式ならそのまま返す
+ */
+function formatTimeToHHmm(value: string | null | undefined): string | null {
+  if (!value) return null;
+  // すでにHH:mm形式の場合はそのまま
+  if (/^\d{1,2}:\d{2}$/.test(value)) return value;
+  // ISO形式の場合は変換
+  try {
+    return new Date(value).toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * ISO日付文字列をYYYY-MM-DD形式に変換
+ */
+function formatDateToYMD(value: string | null | undefined): string {
+  if (!value) return new Date().toISOString().split('T')[0];
+  // すでにYYYY-MM-DD形式の場合はそのまま
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  // ISO形式の場合は変換
+  return value.split('T')[0];
+}
+
+/**
+ * APIレスポンスのレコードを正規化（日付・時刻フォーマット統一）
+ */
+function normalizeApiRecord(record: Record<string, unknown>): Record<string, unknown> {
+  return {
+    ...record,
+    date: formatDateToYMD(record.date as string),
+    checkIn: formatTimeToHHmm(record.checkIn as string | null),
+    checkOut: formatTimeToHHmm(record.checkOut as string | null),
+    breakStart: formatTimeToHHmm(record.breakStart as string | null),
+    breakEnd: formatTimeToHHmm(record.breakEnd as string | null),
+  };
+}
+
 // 打刻種別
 export type PunchType = 'check_in' | 'check_out' | 'break_start' | 'break_end';
 
@@ -185,7 +229,9 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
         set({ isLoading: true, error: null });
         try {
           const records = await apiFetchAttendanceRecords(userId, startDate, endDate);
-          set({ records, isLoading: false });
+          // APIレスポンスの日時フォーマットを正規化
+          const normalizedRecords = records.map((r: Record<string, unknown>) => normalizeApiRecord(r));
+          set({ records: normalizedRecords, isLoading: false });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '勤怠記録の取得に失敗しました';
           set({ error: errorMessage, isLoading: false });
@@ -228,6 +274,8 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           };
 
           const upsertedRecord = await apiUpsertAttendanceRecord(recordToUpsert);
+          // APIレスポンスの日時フォーマットを正規化
+          const normalizedRecord = normalizeApiRecord(upsertedRecord);
 
           // ローカルステートも更新
           set((state) => {
@@ -237,10 +285,10 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
 
             if (existingIndex >= 0) {
               const updatedRecords = [...state.records];
-              updatedRecords[existingIndex] = upsertedRecord;
+              updatedRecords[existingIndex] = normalizedRecord as unknown as AttendanceRecord;
               return { records: updatedRecords, isLoading: false };
             } else {
-              return { records: [...state.records, upsertedRecord], isLoading: false };
+              return { records: [...state.records, normalizedRecord as unknown as AttendanceRecord], isLoading: false };
             }
           });
         } catch (error) {
