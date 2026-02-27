@@ -7,7 +7,7 @@ import { cookies } from 'next/headers';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'dandori-portal-secret-key-change-in-production';
 const TOKEN_EXPIRY = 60 * 60 * 24; // 24 hours
 
 interface TokenPayload extends JwtPayload {

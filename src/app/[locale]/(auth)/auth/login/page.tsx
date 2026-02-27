@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/lib/store/user-store';
+import { saveTokenData } from '@/lib/auth/token-manager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +54,10 @@ function ActualLoginForm() {
 
       // passwordResetRequiredがtrueの場合はパスワード変更ページへリダイレクト
       if (result.data.user.passwordResetRequired) {
+        // トークンをクライアント側にも保存（change-password APIが認証に使用）
+        if (result.data.accessToken && result.data.refreshToken) {
+          saveTokenData(result.data.accessToken, result.data.refreshToken, result.data.expiresIn);
+        }
         toast.info('初回ログインのため、パスワードの変更が必要です');
         router.push(`/${locale}/auth/change-password`);
         return;

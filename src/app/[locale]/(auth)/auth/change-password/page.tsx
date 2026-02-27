@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useUserStore } from '@/lib/store/user-store';
+import { saveTokenData } from '@/lib/auth/token-manager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +16,8 @@ export default function ChangePasswordPage() {
   const router = useRouter();
   const params = useParams();
   const locale = (params?.locale as string) || 'ja';
+  const setCurrentUser = useUserStore((state) => state.setCurrentUser);
+  const setTokens = useUserStore((state) => state.setTokens);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -53,6 +57,26 @@ export default function ChangePasswordPage() {
 
       if (!response.ok) {
         throw new Error(data.error || 'パスワードの変更に失敗しました');
+      }
+
+      // ユーザーストアとトークンを初期化（セッション確立）
+      if (data.data) {
+        const { user, accessToken, refreshToken, expiresIn } = data.data;
+        if (accessToken && refreshToken) {
+          saveTokenData(accessToken, refreshToken, expiresIn);
+          setTokens(accessToken, refreshToken);
+        }
+        if (user) {
+          setCurrentUser({
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            roles: user.roles || [user.role || 'employee'],
+            department: user.department,
+            position: user.position,
+            tenantId: user.tenantId,
+          } as import('@/types').User);
+        }
       }
 
       toast.success('パスワードを変更しました');
