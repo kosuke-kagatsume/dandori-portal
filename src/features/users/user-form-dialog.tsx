@@ -43,6 +43,10 @@ const userSchema = z.object({
   position: z.string().min(1, '役職を選択してください'),
   employmentType: z.string().optional(),
   hireDate: z.date({ required_error: '入社日を選択してください' }),
+  birthDate: z.date().optional().nullable(),
+  gender: z.string().optional(),
+  postalCode: z.string().optional(),
+  address: z.string().optional(),
   status: z.enum(['active', 'inactive', 'suspended', 'retired']),
   roles: z.array(z.string()).min(1, '少なくとも1つのロールを選択してください'),
 });
@@ -113,15 +117,21 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
       position: user?.position || '',
       employmentType: user?.employmentType || '',
       hireDate: user?.hireDate ? new Date(user.hireDate) : new Date(),
+      birthDate: user?.birthDate ? new Date(user.birthDate) : null,
+      gender: user?.gender || '',
+      postalCode: user?.postalCode || '',
+      address: user?.address || '',
       status: user?.status || 'active',
       roles: user?.roles || ['employee'],
     },
   });
 
   const hireDate = watch('hireDate');
+  const birthDate = watch('birthDate');
   const watchDepartment = watch('department');
   const watchPosition = watch('position');
   const watchEmploymentType = watch('employmentType');
+  const watchGender = watch('gender');
   const watchStatus = watch('status');
   const watchRoles = watch('roles');
 
@@ -138,6 +148,10 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
         position: user?.position || '',
         employmentType: user?.employmentType || '',
         hireDate: user?.hireDate ? new Date(user.hireDate) : new Date(),
+        birthDate: user?.birthDate ? new Date(user.birthDate) : null,
+        gender: user?.gender || '',
+        postalCode: user?.postalCode || '',
+        address: user?.address || '',
         status: user?.status || 'active',
         roles: user?.roles || ['employee'],
       });
@@ -348,6 +362,87 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
                   <p className="text-sm text-red-500 mt-1">{errors.hireDate.message}</p>
                 )}
               </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">生年月日</Label>
+              <div className="col-span-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !birthDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {birthDate ? (
+                        format(birthDate, "PPP", { locale: ja })
+                      ) : (
+                        <span>生年月日を選択</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={birthDate || undefined}
+                      onSelect={(date) => setValue('birthDate', date || null)}
+                      initialFocus
+                      captionLayout="dropdown"
+                      fromYear={1940}
+                      toYear={new Date().getFullYear()}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="gender" className="text-right">
+                性別
+              </Label>
+              <div className="col-span-3">
+                <Select
+                  onValueChange={(value) => setValue('gender', value)}
+                  value={watchGender}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="性別を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">男性</SelectItem>
+                    <SelectItem value="female">女性</SelectItem>
+                    <SelectItem value="other">その他</SelectItem>
+                    <SelectItem value="prefer_not_to_say">回答しない</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="postalCode" className="text-right">
+                郵便番号
+              </Label>
+              <Input
+                id="postalCode"
+                {...register('postalCode')}
+                placeholder="123-4567"
+                className="col-span-3"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="address" className="text-right">
+                住所
+              </Label>
+              <Input
+                id="address"
+                {...register('address')}
+                placeholder="東京都渋谷区..."
+                className="col-span-3"
+              />
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">

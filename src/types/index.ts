@@ -23,6 +23,10 @@ export const UserSchema = z.object({
   paidLeaveStartDate: z.string().optional(), // 有給起算日
   punchMethod: z.enum(['web', 'ic_card', 'mobile', 'face']).optional(), // 打刻方法
   employmentType: z.string().optional(), // 雇用形態
+  birthDate: z.string().optional(), // 生年月日
+  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(), // 性別
+  postalCode: z.string().optional(), // 郵便番号
+  address: z.string().optional(), // 住所
   // 休職履歴
   leaveOfAbsenceHistory: z.array(z.object({
     id: z.string(),

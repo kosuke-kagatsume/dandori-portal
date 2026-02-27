@@ -1731,6 +1731,10 @@ model users {
   avatar                String?
   position              String?
   department            String?
+  birthDate             DateTime?            @db.Date
+  gender                String?
+  postalCode            String?
+  address               String?
   createdAt             DateTime             @default(now())
   updatedAt             DateTime
   passwordHash          String?

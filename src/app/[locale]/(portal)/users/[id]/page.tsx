@@ -180,6 +180,10 @@ export default function UserDetailPage({ params }: { params: { id: string; local
     position: string;
     employmentType?: string;
     hireDate: Date;
+    birthDate?: Date | null;
+    gender?: string;
+    postalCode?: string;
+    address?: string;
     status: 'active' | 'inactive' | 'suspended' | 'retired';
     roles: string[];
   }) => {
@@ -188,6 +192,9 @@ export default function UserDetailPage({ params }: { params: { id: string; local
     try {
       // 日付をローカルタイムゾーンで YYYY-MM-DD 形式に変換（UTCへの変換を回避）
       const hireDateStr = `${data.hireDate.getFullYear()}-${String(data.hireDate.getMonth() + 1).padStart(2, '0')}-${String(data.hireDate.getDate()).padStart(2, '0')}`;
+      const birthDateStr = data.birthDate
+        ? `${data.birthDate.getFullYear()}-${String(data.birthDate.getMonth() + 1).padStart(2, '0')}-${String(data.birthDate.getDate()).padStart(2, '0')}`
+        : undefined;
 
       const response = await fetch(`/api/users/${user.id}`, {
         method: 'PATCH',
@@ -202,6 +209,10 @@ export default function UserDetailPage({ params }: { params: { id: string; local
           position: data.position,
           employmentType: data.employmentType,
           hireDate: hireDateStr,
+          birthDate: birthDateStr,
+          gender: data.gender || undefined,
+          postalCode: data.postalCode || undefined,
+          address: data.address || undefined,
           status: data.status,
           roles: data.roles,
         }),
@@ -328,15 +339,20 @@ export default function UserDetailPage({ params }: { params: { id: string; local
       {/* タブコンテンツ */}
       {(() => {
         // 権限ベースのタブ表示制御
-        const canViewPayroll = currentUser?.roles?.some(r => ['hr', 'admin'].includes(r));
+        const userRoles = currentUser?.roles || [];
+        const isHRRole = userRoles.includes('hr');
+        const isExecutive = userRoles.includes('executive');
         const visibleTabs = [
           { value: 'basic', label: '基本情報' },
           { value: 'saas', label: 'SaaS利用' },
-          { value: 'attendance', label: '勤怠' },
-          { value: 'qualification', label: '資格情報' },
-          ...(canViewPayroll ? [{ value: 'payroll', label: '給与' }] : []),
+          // 勤怠: 人事のみ
+          ...(isHRRole ? [{ value: 'attendance', label: '勤怠' }] : []),
+          // 資格情報: 経営者・人事のみ
+          ...(isExecutive || isHRRole ? [{ value: 'qualification', label: '資格情報' }] : []),
+          // 給与: 人事のみ
+          ...(isHRRole ? [{ value: 'payroll', label: '給与' }] : []),
         ];
-        const gridColsMap: Record<number, string> = { 3: 'grid-cols-3', 4: 'grid-cols-4', 5: 'grid-cols-5' };
+        const gridColsMap: Record<number, string> = { 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4', 5: 'grid-cols-5' };
         const gridCols = gridColsMap[visibleTabs.length] || `grid-cols-${visibleTabs.length}`;
 
         return (
@@ -421,6 +437,38 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                     <p className="text-sm font-medium text-muted-foreground">入社日</p>
                     <p className="text-sm mt-1">
                       {new Date(user.hireDate).toLocaleDateString('ja-JP')}
+                    </p>
+                  </div>
+                )}
+                {user.employmentType && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">雇用形態</p>
+                    <p className="text-sm mt-1">
+                      {{ regular: '正社員', contract: '契約社員', part_time: 'パートタイム', temporary: '派遣社員', intern: 'インターン', executive: '役員' }[user.employmentType] || user.employmentType}
+                    </p>
+                  </div>
+                )}
+                {user.birthDate && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">生年月日</p>
+                    <p className="text-sm mt-1">
+                      {new Date(user.birthDate).toLocaleDateString('ja-JP')}
+                    </p>
+                  </div>
+                )}
+                {user.gender && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">性別</p>
+                    <p className="text-sm mt-1">
+                      {{ male: '男性', female: '女性', other: 'その他', prefer_not_to_say: '回答しない' }[user.gender] || user.gender}
+                    </p>
+                  </div>
+                )}
+                {(user.postalCode || user.address) && (
+                  <div className="col-span-2">
+                    <p className="text-sm font-medium text-muted-foreground">住所</p>
+                    <p className="text-sm mt-1">
+                      {user.postalCode && `〒${user.postalCode} `}{user.address}
                     </p>
                   </div>
                 )}
@@ -597,8 +645,8 @@ export default function UserDetailPage({ params }: { params: { id: string; local
           />
         </TabsContent>
 
-        {/* 給与タブ（HR・管理者のみ） */}
-        {canViewPayroll && <TabsContent value="payroll" className="space-y-4">
+        {/* 給与タブ（HRのみ） */}
+        {isHRRole && <TabsContent value="payroll" className="space-y-4">
           <UserPayrollTab
             user={user}
             isReadOnly={isReadOnly}

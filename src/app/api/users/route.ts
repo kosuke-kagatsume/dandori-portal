@@ -38,6 +38,11 @@ export async function GET(request: NextRequest) {
         avatar: true,
         roles: true,
         hireDate: true,
+        employmentType: true,
+        birthDate: true,
+        gender: true,
+        postalCode: true,
+        address: true,
         createdAt: true,
         updatedAt: true,
         org_units: {
