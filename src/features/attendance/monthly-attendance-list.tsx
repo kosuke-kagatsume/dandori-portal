@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Fragment } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +60,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/store/user-store';
 import { useRouter } from 'next/navigation';
+import type { PunchRecord, PunchMethod } from '@/lib/store/attendance-history-store';
 
 interface AttendanceRecord {
   date: string;
@@ -87,6 +88,7 @@ interface AttendanceRecord {
   deemedScheduled?: number; // 休憩みなし所定
   deemedOvertime?: number; // 休憩みなし所定外
   deemedLegalOvertime?: number; // 休憩みなし法定外
+  punchHistory?: PunchRecord[];
 }
 
 interface MonthlyAttendanceListProps {
@@ -116,6 +118,54 @@ const APPLICATION_TYPES = [
   { value: 'holiday_work', label: '休日出勤', icon: '📅' },
 ];
 
+// 打刻方法のラベル変換
+const PUNCH_METHOD_LABELS: Record<PunchMethod, string> = {
+  manual: '手動',
+  web: 'PC',
+  mobile: 'GPS',
+  ic_card: 'IC',
+  biometric: '生体',
+};
+
+// 打刻ペア表示用の型
+interface PunchPairDisplay {
+  checkIn?: { time: string; method: string };
+  checkOut?: { time: string; method: string };
+  breakStart?: { time: string; method: string };
+  breakEnd?: { time: string; method: string };
+}
+
+// punchHistoryから打刻ペアを抽出
+function extractPunchPairs(punchHistory?: PunchRecord[]): PunchPairDisplay[] {
+  if (!punchHistory || punchHistory.length === 0) return [];
+
+  const sorted = [...punchHistory].sort((a, b) =>
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  const pairs: PunchPairDisplay[] = [];
+  let currentPair: PunchPairDisplay | null = null;
+
+  for (const punch of sorted) {
+    const label = PUNCH_METHOD_LABELS[punch.method] || punch.method;
+    if (punch.type === 'check_in') {
+      if (currentPair) pairs.push(currentPair);
+      currentPair = { checkIn: { time: punch.time, method: label } };
+    } else if (currentPair) {
+      if (punch.type === 'check_out') {
+        currentPair.checkOut = { time: punch.time, method: label };
+      } else if (punch.type === 'break_start') {
+        currentPair.breakStart = { time: punch.time, method: label };
+      } else if (punch.type === 'break_end') {
+        currentPair.breakEnd = { time: punch.time, method: label };
+      }
+    }
+  }
+
+  if (currentPair) pairs.push(currentPair);
+  return pairs;
+}
+
 export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttendanceListProps) {
   const router = useRouter();
   const { currentUser } = useUserStore();
@@ -136,6 +186,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [closingDialogOpen, setClosingDialogOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
+  const [editPunchPairs, setEditPunchPairs] = useState<Array<{checkIn: string; checkOut: string; breakStart: string; breakEnd: string}>>([]);
 
   // Generate days for the current month
   const monthDays = useMemo(() => {
@@ -195,11 +246,28 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
     const record = getRecordForDate(date);
     if (record) {
       setEditingRecord(record);
+      const pairs = extractPunchPairs(record.punchHistory);
+      if (pairs.length > 0) {
+        setEditPunchPairs(pairs.map(p => ({
+          checkIn: p.checkIn?.time || '',
+          checkOut: p.checkOut?.time || '',
+          breakStart: p.breakStart?.time || '',
+          breakEnd: p.breakEnd?.time || '',
+        })));
+      } else {
+        setEditPunchPairs([{
+          checkIn: record.checkIn || '',
+          checkOut: record.checkOut || '',
+          breakStart: record.breakStart || '',
+          breakEnd: record.breakEnd || '',
+        }]);
+      }
     } else {
       setEditingRecord({
         date: format(date, 'yyyy-MM-dd'),
         status: isWeekend(date) ? 'weekend' : 'absent',
       });
+      setEditPunchPairs([{ checkIn: '', checkOut: '', breakStart: '', breakEnd: '' }]);
     }
     setEditDialogOpen(true);
   };
@@ -214,7 +282,25 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
   // Save edits
   const handleSaveEdit = () => {
     if (editingRecord && onRecordUpdate) {
-      onRecordUpdate(editingRecord.date, editingRecord);
+      // 打刻ペアをpunchHistory形式に変換
+      const punchHistory: PunchRecord[] = editPunchPairs.flatMap((pair, idx) => {
+        const punchRecords: PunchRecord[] = [];
+        const now = new Date().toISOString();
+        if (pair.checkIn) punchRecords.push({ id: `edit-${Date.now()}-ci-${idx}`, type: 'check_in', time: pair.checkIn, method: 'manual', createdAt: now });
+        if (pair.checkOut) punchRecords.push({ id: `edit-${Date.now()}-co-${idx}`, type: 'check_out', time: pair.checkOut, method: 'manual', createdAt: now });
+        if (pair.breakStart) punchRecords.push({ id: `edit-${Date.now()}-bs-${idx}`, type: 'break_start', time: pair.breakStart, method: 'manual', createdAt: now });
+        if (pair.breakEnd) punchRecords.push({ id: `edit-${Date.now()}-be-${idx}`, type: 'break_end', time: pair.breakEnd, method: 'manual', createdAt: now });
+        return punchRecords;
+      });
+
+      onRecordUpdate(editingRecord.date, {
+        ...editingRecord,
+        checkIn: editPunchPairs[0]?.checkIn || undefined,
+        checkOut: editPunchPairs[0]?.checkOut || undefined,
+        breakStart: editPunchPairs[0]?.breakStart || undefined,
+        breakEnd: editPunchPairs[0]?.breakEnd || undefined,
+        punchHistory,
+      });
       toast.success('勤怠記録を更新しました');
     }
     setEditDialogOpen(false);
@@ -327,7 +413,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="w-full">
+          <ScrollArea className="w-full max-h-[calc(100vh-280px)]">
             <div className="min-w-[1800px]">
               <Table>
                 <TableHeader className="sticky top-0 z-20 bg-background">
@@ -366,10 +452,12 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                     const isSunday = dayOfWeek === 0;
                     const isSaturday = dayOfWeek === 6;
                     const isWeekendDay = isSunday || isSaturday;
+                    const punchPairs = extractPunchPairs(record?.punchHistory);
+                    const hasPunchPairs = punchPairs.length > 0;
 
                     return (
+                      <Fragment key={day.toISOString()}>
                       <TableRow
-                        key={day.toISOString()}
                         className={cn(
                           'hover:bg-muted/30',
                           isToday(day) && 'bg-primary/5',
@@ -467,12 +555,20 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
 
                         {/* 出勤 */}
                         <TableCell className="text-center font-mono text-sm">
-                          {record?.checkIn || '-'}
+                          {hasPunchPairs ? (
+                            <span><span className="text-xs text-muted-foreground">{punchPairs[0].checkIn?.method}</span> {punchPairs[0].checkIn?.time || '-'}</span>
+                          ) : (
+                            record?.checkIn || '-'
+                          )}
                         </TableCell>
 
                         {/* 退勤 */}
                         <TableCell className="text-center font-mono text-sm">
-                          {record?.checkOut || '-'}
+                          {hasPunchPairs ? (
+                            <span><span className="text-xs text-muted-foreground">{punchPairs[0].checkOut?.method}</span> {punchPairs[0].checkOut?.time || '-'}</span>
+                          ) : (
+                            record?.checkOut || '-'
+                          )}
                         </TableCell>
 
                         {/* 休憩入り */}
@@ -555,6 +651,45 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                           {record?.note || '-'}
                         </TableCell>
                       </TableRow>
+                      {/* 複数打刻の追加行 */}
+                      {punchPairs.slice(1).map((pair, idx) => (
+                        <TableRow
+                          key={`${day.toISOString()}-pair-${idx}`}
+                          className={cn(
+                            'hover:bg-muted/30',
+                            (isSunday || record?.status === 'holiday') && 'bg-red-50 dark:bg-red-950/20',
+                            isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
+                          )}
+                        >
+                          <TableCell className="sticky left-0 bg-inherit z-10" />
+                          <TableCell />
+                          <TableCell />
+                          <TableCell />
+                          <TableCell />
+                          <TableCell />
+                          <TableCell />
+                          <TableCell className="text-center font-mono text-sm">
+                            {pair.checkIn ? (
+                              <span><span className="text-xs text-muted-foreground">{pair.checkIn.method}</span> {pair.checkIn.time}</span>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm">
+                            {pair.checkOut ? (
+                              <span><span className="text-xs text-muted-foreground">{pair.checkOut.method}</span> {pair.checkOut.time}</span>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm">
+                            {pair.breakStart?.time || '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm">
+                            {pair.breakEnd?.time || '-'}
+                          </TableCell>
+                          {Array.from({ length: 14 }, (_, i) => (
+                            <TableCell key={i} />
+                          ))}
+                        </TableRow>
+                      ))}
+                      </Fragment>
                     );
                   })}
                 </TableBody>
@@ -771,59 +906,82 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
               {/* 打刻時刻 */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">打刻時刻</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>出勤時刻</Label>
-                    <Input
-                      type="time"
-                      value={editingRecord.checkIn || ''}
-                      onChange={(e) => setEditingRecord({ ...editingRecord, checkIn: e.target.value })}
-                    />
+                {editPunchPairs.map((pair, idx) => (
+                  <div key={idx} className="space-y-3">
+                    {idx > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Separator className="flex-1" />
+                        <span className="text-xs text-muted-foreground">打刻 {idx + 1}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setEditPunchPairs(prev => prev.filter((_, i) => i !== idx))}
+                        >
+                          <XCircle className="h-3 w-3" />
+                        </Button>
+                        <Separator className="flex-1" />
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>{idx === 0 ? '出勤時刻' : `出勤時刻 ${idx + 1}`}</Label>
+                        <Input
+                          type="time"
+                          value={pair.checkIn}
+                          onChange={(e) => {
+                            const updated = [...editPunchPairs];
+                            updated[idx] = { ...updated[idx], checkIn: e.target.value };
+                            setEditPunchPairs(updated);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{idx === 0 ? '退勤時刻' : `退勤時刻 ${idx + 1}`}</Label>
+                        <Input
+                          type="time"
+                          value={pair.checkOut}
+                          onChange={(e) => {
+                            const updated = [...editPunchPairs];
+                            updated[idx] = { ...updated[idx], checkOut: e.target.value };
+                            setEditPunchPairs(updated);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>休憩開始</Label>
+                        <Input
+                          type="time"
+                          value={pair.breakStart}
+                          onChange={(e) => {
+                            const updated = [...editPunchPairs];
+                            updated[idx] = { ...updated[idx], breakStart: e.target.value };
+                            setEditPunchPairs(updated);
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>休憩終了</Label>
+                        <Input
+                          type="time"
+                          value={pair.breakEnd}
+                          onChange={(e) => {
+                            const updated = [...editPunchPairs];
+                            updated[idx] = { ...updated[idx], breakEnd: e.target.value };
+                            setEditPunchPairs(updated);
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>退勤時刻</Label>
-                    <Input
-                      type="time"
-                      value={editingRecord.checkOut || ''}
-                      onChange={(e) => setEditingRecord({ ...editingRecord, checkOut: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>休憩開始</Label>
-                    <Input
-                      type="time"
-                      value={editingRecord.breakStart || ''}
-                      onChange={(e) => setEditingRecord({ ...editingRecord, breakStart: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>休憩終了</Label>
-                    <Input
-                      type="time"
-                      value={editingRecord.breakEnd || ''}
-                      onChange={(e) => setEditingRecord({ ...editingRecord, breakEnd: e.target.value })}
-                    />
-                  </div>
-                </div>
-
+                ))}
                 <Button
                   variant="outline"
                   size="sm"
                   className="w-full"
-                  onClick={() => {
-                    // 新しい打刻行を追加
-                    if (editingRecord) {
-                      setEditingRecord({
-                        ...editingRecord,
-                        // 2番目の打刻として追加（簡易実装）
-                        note: (editingRecord.note || '') + '\n[追加打刻]',
-                      });
-                      toast.info('複数打刻の管理は打刻カードから行ってください');
-                    }
-                  }}
+                  onClick={() => setEditPunchPairs(prev => [...prev, { checkIn: '', checkOut: '', breakStart: '', breakEnd: '' }])}
                 >
                   + 打刻を追加
                 </Button>

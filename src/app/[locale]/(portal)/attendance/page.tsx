@@ -250,19 +250,19 @@ export default function AttendancePage() {
       workLocation: record.workLocation as 'office' | 'home' | 'client' | 'other' | undefined,
       note: record.memo || undefined,
       approvalStatus: record.approvalStatus as 'pending' | 'approved' | 'rejected' | undefined,
+      punchHistory: record.punchHistory,
     }));
   }, [allHistoryRecords]);
 
   // 勤怠記録更新ハンドラー
   const handleRecordUpdate = (date: string, updates: Record<string, unknown>) => {
     const existingRecord = allHistoryRecords.find(r => r.date === date);
-    if (existingRecord) {
-      addOrUpdateRecord({
-        ...existingRecord,
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      });
-    }
+    addOrUpdateRecord({
+      ...(existingRecord || {}),
+      ...updates,
+      date,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   if (loading) {

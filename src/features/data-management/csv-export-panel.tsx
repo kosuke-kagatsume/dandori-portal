@@ -95,7 +95,7 @@ export function CSVExportPanel() {
   const [includeRetired, setIncludeRetired] = useState(false);
   const [includePreHire, setIncludePreHire] = useState(false);
   const [includeActualPunch, setIncludeActualPunch] = useState(true);
-  const [timeFormat, setTimeFormat] = useState<'hhmm' | 'decimal'>('hhmm');
+  const [timeFormat, setTimeFormat] = useState<'time' | 'hour_minute' | 'decimal' | 'minutes'>('time');
 
   // Stores
   const { users } = useUserStore();
@@ -332,14 +332,16 @@ export function CSVExportPanel() {
                   <Label className="text-sm">時間フォーマット</Label>
                   <Select
                     value={timeFormat}
-                    onValueChange={(v) => setTimeFormat(v as 'hhmm' | 'decimal')}
+                    onValueChange={(v) => setTimeFormat(v as 'time' | 'hour_minute' | 'decimal' | 'minutes')}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="hhmm">時間:分（例: 8:30）</SelectItem>
-                      <SelectItem value="decimal">小数点（例: 8.5）</SelectItem>
+                      <SelectItem value="time">時間:分（例: 1:30）</SelectItem>
+                      <SelectItem value="hour_minute">時間+分（例: 1.30）</SelectItem>
+                      <SelectItem value="decimal">小数点（例: 1.50）</SelectItem>
+                      <SelectItem value="minutes">分（例: 90）</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

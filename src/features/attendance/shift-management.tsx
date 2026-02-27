@@ -45,6 +45,7 @@ import { ja } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useTenantStore } from '@/lib/store';
+import { useOrganizationStore } from '@/lib/store/organization-store';
 
 interface TeamMember {
   id: string;
@@ -80,6 +81,9 @@ export function ShiftManagement() {
   const isHR = currentUserRoles.some((role: string) => ['hr', 'executive', 'system_admin'].includes(role));
   const isManager = currentUserRoles.some((role: string) => ['manager', 'hr', 'executive'].includes(role));
   const canEdit = isHR || isManager;
+
+  // 組織階層ベースのフィルタ
+  const { getTeamMembersForManager } = useOrganizationStore();
 
   const {
     getActiveWorkPatterns,
@@ -156,11 +160,22 @@ export function ShiftManagement() {
     [getTeamShifts, currentYear, currentMonth]
   );
 
+  // 権限に応じたメンバー表示フィルタ
+  const roleFilteredMembers = useMemo(() => {
+    if (isHR) return teamMembers;
+    if (isManager && currentUser) {
+      const subordinateIds = getTeamMembersForManager(currentUser.id).map(m => m.id);
+      return teamMembers.filter(m => subordinateIds.includes(m.id));
+    }
+    // 一般: 自部署のみ
+    return teamMembers.filter(m => m.department === (currentUser as { department?: string } | null)?.department);
+  }, [teamMembers, isHR, isManager, currentUser, getTeamMembersForManager]);
+
   // フィルタリングされたメンバー
   const filteredMembers = useMemo(() => {
-    if (departmentFilter === 'all') return teamMembers;
-    return teamMembers.filter(m => m.department === DEPARTMENTS.find(d => d.value === departmentFilter)?.label);
-  }, [teamMembers, departmentFilter]);
+    if (departmentFilter === 'all') return roleFilteredMembers;
+    return roleFilteredMembers.filter(m => m.department === DEPARTMENTS.find(d => d.value === departmentFilter)?.label);
+  }, [roleFilteredMembers, departmentFilter]);
 
   // シフトをマップに変換
   const shiftMap = useMemo(() => {
@@ -317,12 +332,12 @@ export function ShiftManagement() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="w-full">
+              <ScrollArea className="w-full max-h-[calc(100vh-320px)]">
                 <div className="min-w-[1600px]">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-20">
                       <TableRow className="bg-muted/50">
-                        <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-10">氏名</TableHead>
+                        <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
                         {monthDays.map(day => {
                           const dayOfWeek = getDay(day);
                           const isSunday = dayOfWeek === 0;
@@ -515,11 +530,11 @@ export function ShiftManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="w-full">
+              <ScrollArea className="w-full max-h-[calc(100vh-320px)]">
                 <div className="min-w-[1200px]">
                   {/* タイムライン軸 */}
-                  <div className="flex border-b mb-2">
-                    <div className="w-[120px] flex-shrink-0 px-2 py-1 font-medium text-sm">
+                  <div className="flex border-b mb-2 sticky top-0 z-20 bg-background">
+                    <div className="w-[120px] flex-shrink-0 px-2 py-1 font-medium text-sm sticky left-0 bg-background z-30">
                       氏名
                     </div>
                     <div className="flex-1 flex relative">
@@ -547,7 +562,7 @@ export function ShiftManagement() {
 
                     return (
                       <div key={member.id} className="flex border-b hover:bg-muted/30">
-                        <div className="w-[120px] flex-shrink-0 px-2 py-2">
+                        <div className="w-[120px] flex-shrink-0 px-2 py-2 sticky left-0 bg-background z-10">
                           <div className="text-sm font-medium truncate">{member.name}</div>
                           <div className="text-xs text-muted-foreground truncate">{member.department}</div>
                         </div>

@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store';
 import { useUserStore } from '@/lib/store/user-store';
+import { useOrganizationStore } from '@/lib/store/organization-store';
 
 interface TeamMember {
   id: string;
@@ -103,6 +104,9 @@ export function TeamAttendance() {
   // 権限チェック
   const isHR = currentUserRoles.some((role: string) => ['hr', 'executive', 'system_admin'].includes(role));
   const isManager = currentUserRoles.some((role: string) => ['manager', 'hr', 'executive'].includes(role));
+
+  // 組織階層ベースのフィルタ
+  const { getTeamMembersForManager } = useOrganizationStore();
 
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -276,9 +280,19 @@ export function TeamAttendance() {
     });
   }, [teamMembers, attendanceRecords, currentDate, monthDays]);
 
+  // 権限に応じたメンバー表示フィルタ
+  const displayMembers = useMemo(() => {
+    if (isHR) return memberMonthlyData;
+    if (isManager && currentUser) {
+      const subordinateIds = getTeamMembersForManager(currentUser.id).map(m => m.id);
+      return memberMonthlyData.filter(m => subordinateIds.includes(m.memberId));
+    }
+    return [];
+  }, [memberMonthlyData, isHR, isManager, currentUser, getTeamMembersForManager]);
+
   // Filtered data
   const filteredData = useMemo(() => {
-    return memberMonthlyData.filter(member => {
+    return displayMembers.filter(member => {
       const matchesSearch = member.memberName.includes(searchQuery) ||
                            member.department.includes(searchQuery);
       const matchesClosing = closingFilter === 'all' ||
@@ -287,7 +301,7 @@ export function TeamAttendance() {
         (closingFilter === 'approved' && member.managerApproved);
       return matchesSearch && matchesClosing;
     });
-  }, [memberMonthlyData, searchQuery, closingFilter]);
+  }, [displayMembers, searchQuery, closingFilter]);
 
   // Month navigation
   const goToPreviousMonth = () => {
@@ -336,18 +350,6 @@ export function TeamAttendance() {
   // Export handlers
   const handleExportPDF = () => {
     toast.info('PDF出力機能は準備中です');
-  };
-
-  // Status icons
-  const getClosingStatusIcon = (member: MemberMonthlyData) => {
-    if (member.attendanceClosed) {
-      return <CheckCircle className="h-4 w-4 text-green-500" />;
-    } else if (member.managerApproved) {
-      return <CheckCircle className="h-4 w-4 text-blue-500" />;
-    } else if (member.closingRequested) {
-      return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-    }
-    return <MinusCircle className="h-4 w-4 text-gray-300" />;
   };
 
   const getClosingBadge = (member: MemberMonthlyData) => {
@@ -511,7 +513,7 @@ export function TeamAttendance() {
                             {/* 承認申請 */}
                             <TableCell className="text-center">
                               {member.closingRequested ? (
-                                <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
+                                <CheckCircle className="h-4 w-4 text-yellow-500 mx-auto" />
                               ) : (
                                 <MinusCircle className="h-4 w-4 text-gray-300 mx-auto" />
                               )}
@@ -530,7 +532,13 @@ export function TeamAttendance() {
 
                             {/* 勤怠締め */}
                             <TableCell className="text-center">
-                              {getClosingStatusIcon(member)}
+                              {member.attendanceClosed ? (
+                                <CheckCircle className="h-4 w-4 text-blue-500 mx-auto" />
+                              ) : member.managerApproved ? (
+                                <AlertCircle className="h-4 w-4 text-green-500 mx-auto" />
+                              ) : (
+                                <MinusCircle className="h-4 w-4 text-gray-300 mx-auto" />
+                              )}
                             </TableCell>
 
                             {/* 日次打刻（出勤/退勤 2段表示） */}
