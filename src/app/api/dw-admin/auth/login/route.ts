@@ -10,14 +10,23 @@ export const dynamic = 'force-dynamic';
 // デフォルトパスワード: "DwAdmin2025!" (開発・緊急用のみ)
 const DEFAULT_PASSWORD_HASH = '$2b$10$cYqBgoWXcW763BOTj5olDuVsqzxKOXY3fqaf.LvGirObCAndm2.1G';
 
+// 環境変数のbcryptハッシュを検証（dotenv-expandによる$展開で壊れていないか）
+function getValidHash(envVar: string | undefined): string {
+  if (!envVar) return DEFAULT_PASSWORD_HASH;
+  // 正常なbcryptハッシュは $2b$, $2a$, $2y$ で始まる
+  if (/^\$2[aby]\$\d{2}\$.{53}$/.test(envVar)) return envVar;
+  console.warn('[DW Admin Auth] Invalid bcrypt hash detected (likely dotenv-expand corruption), using default');
+  return DEFAULT_PASSWORD_HASH;
+}
+
 const DW_ADMIN_CREDENTIALS = [
   {
     email: process.env.DW_ADMIN_EMAIL_1 || 'admin@dw-inc.co.jp',
-    passwordHash: process.env.DW_ADMIN_PASSWORD_HASH_1 || DEFAULT_PASSWORD_HASH,
+    passwordHash: getValidHash(process.env.DW_ADMIN_PASSWORD_HASH_1),
   },
   {
     email: process.env.DW_ADMIN_EMAIL_2 || 'super@dw-inc.co.jp',
-    passwordHash: process.env.DW_ADMIN_PASSWORD_HASH_2 || DEFAULT_PASSWORD_HASH,
+    passwordHash: getValidHash(process.env.DW_ADMIN_PASSWORD_HASH_2),
   },
 ];
 
@@ -26,8 +35,10 @@ if (typeof window === 'undefined') {
   console.log('[DW Admin Auth] Environment check:', {
     hasEmail1: !!process.env.DW_ADMIN_EMAIL_1,
     hasHash1: !!process.env.DW_ADMIN_PASSWORD_HASH_1,
+    hash1Valid: /^\$2[aby]\$/.test(process.env.DW_ADMIN_PASSWORD_HASH_1 || ''),
     hasEmail2: !!process.env.DW_ADMIN_EMAIL_2,
     hasHash2: !!process.env.DW_ADMIN_PASSWORD_HASH_2,
+    hash2Valid: /^\$2[aby]\$/.test(process.env.DW_ADMIN_PASSWORD_HASH_2 || ''),
     hasJwtSecret: !!process.env.DW_ADMIN_JWT_SECRET,
   });
 }
