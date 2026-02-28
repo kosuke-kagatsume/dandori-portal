@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/lib/store/user-store';
-import { saveTokenData } from '@/lib/auth/token-manager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,32 +38,15 @@ function ActualLoginForm() {
     setLocalError(null);
 
     try {
-      // APIを直接呼び出してpasswordResetRequiredをチェック
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'ログインに失敗しました');
-      }
+      // Zustand login（1回だけ /api/auth/login を呼ぶ）
+      const result = await login(email, password);
 
       // passwordResetRequiredがtrueの場合はパスワード変更ページへリダイレクト
-      if (result.data.user.passwordResetRequired) {
-        // トークンをクライアント側にも保存（change-password APIが認証に使用）
-        if (result.data.accessToken && result.data.refreshToken) {
-          saveTokenData(result.data.accessToken, result.data.refreshToken, result.data.expiresIn);
-        }
+      if (result.passwordResetRequired) {
         toast.info('初回ログインのため、パスワードの変更が必要です');
         router.push(`/${locale}/auth/change-password`);
         return;
       }
-
-      // 通常のログイン処理を続行
-      await login(email, password);
 
       toast.success('ログインしました');
       router.push(`/${locale}/dashboard`);

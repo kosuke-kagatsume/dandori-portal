@@ -93,7 +93,7 @@ interface UserState {
   setTokens: (accessToken: string | null, refreshToken: string | null) => void;
 
   // 認証アクション
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ passwordResetRequired?: boolean }>;
   logout: () => Promise<void>;
   fetchCurrentUser: () => Promise<void>;
   isAuthenticated: () => boolean;
@@ -248,6 +248,8 @@ const createUserStore = () => {
 
           // 監査ログ記録
           authAudit.login();
+
+          return { passwordResetRequired: apiUser.passwordResetRequired === true };
         } catch (error) {
           const errorMessage = error instanceof APIError
             ? error.message

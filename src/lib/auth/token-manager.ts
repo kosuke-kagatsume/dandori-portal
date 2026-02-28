@@ -52,10 +52,8 @@ export function saveTokenData(accessToken: string, refreshToken: string, expires
     // localStorageに保存
     localStorage.setItem('token_data', JSON.stringify(tokenData));
 
-    // Cookieにも保存（middleware用）
-    const expiresDate = new Date(Date.now() + expiresIn * 1000);
-    document.cookie = `access_token=${accessToken}; path=/; expires=${expiresDate.toUTCString()}; SameSite=Lax; Secure`;
-    document.cookie = `refresh_token=${refreshToken}; path=/; expires=${expiresDate.toUTCString()}; SameSite=Lax; Secure`;
+    // 注意: access_token / refresh_token のCookieはサーバー側で httpOnly として設定済み
+    // document.cookie で非httpOnly cookieを重複設定すると、サーバーが誤ったcookieを読む原因になるため、ここでは設定しない
   }
 
   return tokenData;
