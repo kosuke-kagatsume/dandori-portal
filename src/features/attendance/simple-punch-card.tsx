@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAttendanceStore } from '@/lib/attendance-store';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { useUserStore } from '@/lib/store/user-store';
+import { useDailyReportStore, type TemplateForClockOut, type ReportFieldValue } from '@/lib/store/daily-report-store';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +30,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { DailyReportFormDialog } from '@/features/daily-report/daily-report-form';
 
 type WorkLocation = 'office' | 'home' | 'client' | 'other';
 
@@ -58,6 +60,12 @@ export function SimplePunchCard() {
   // ユーザー情報を取得（同一PC複数ユーザー対応）
   const { currentUser } = useUserStore();
   const currentUserId = currentUser?.id;
+  const tenantId = currentUser?.tenantId;
+
+  // 日報連動
+  const { setTenantId: setReportTenantId, getTemplateForEmployee, createReport } = useDailyReportStore();
+  const [reportTemplate, setReportTemplate] = useState<TemplateForClockOut | null>(null);
+  const [showReportForm, setShowReportForm] = useState(false);
 
   // Check for day change on mount and every minute
   useEffect(() => {
@@ -74,6 +82,14 @@ export function SimplePunchCard() {
       checkAndResetForUserChange(currentUserId);
     }
   }, [currentUserId, checkAndResetForUserChange]);
+
+  // 日報テンプレート取得
+  useEffect(() => {
+    if (tenantId && currentUserId) {
+      setReportTenantId(tenantId);
+      getTemplateForEmployee(currentUserId).then(setReportTemplate);
+    }
+  }, [tenantId, currentUserId, setReportTenantId, getTemplateForEmployee]);
 
   // Update clock every second（マウント後に初期化）
   useEffect(() => {
@@ -124,7 +140,14 @@ export function SimplePunchCard() {
   };
 
   const handleCheckOut = () => {
-    setShowMemoDialog(true);
+    // 日報テンプレートの提出ルールに応じて分岐
+    if (reportTemplate?.submissionRule === 'required_on_clockout') {
+      // 退勤時必須: 日報フォームを先に表示
+      setShowReportForm(true);
+    } else {
+      // その他: 通常のメモダイアログ
+      setShowMemoDialog(true);
+    }
   };
 
   const confirmCheckOut = async () => {
@@ -133,6 +156,44 @@ export function SimplePunchCard() {
     setMemo('');
     const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     toast.success(`退勤打刻完了: ${time}`);
+
+    // 退勤後催促: 日報記入を促す
+    if (reportTemplate?.submissionRule === 'prompt_after_clockout') {
+      toast.info('日報を記入してください', {
+        description: 'サイドメニューの「日報」から記入できます',
+        duration: 8000,
+      });
+    }
+  };
+
+  // 日報提出後に退勤を実行（required_on_clockout用）
+  const handleReportSubmitThenCheckOut = async (values: ReportFieldValue[]) => {
+    if (!currentUserId || !reportTemplate) return;
+    const today = new Date().toISOString().split('T')[0];
+    await createReport({
+      employeeId: currentUserId,
+      date: today,
+      templateId: reportTemplate.id,
+      status: 'submitted',
+      values,
+    });
+    // 日報提出後に退勤実行
+    await checkOut('');
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    toast.success(`退勤打刻完了: ${time}`);
+  };
+
+  // 日報下書き保存（required_on_clockoutモードではキャンセル扱い、退勤しない）
+  const handleReportDraft = async (values: ReportFieldValue[]) => {
+    if (!currentUserId || !reportTemplate) return;
+    const today = new Date().toISOString().split('T')[0];
+    await createReport({
+      employeeId: currentUserId,
+      date: today,
+      templateId: reportTemplate.id,
+      status: 'draft',
+      values,
+    });
   };
 
   const getLocationLabel = (location: WorkLocation) => {
@@ -421,6 +482,22 @@ export function SimplePunchCard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 日報フォーム（退勤時必須モード） */}
+      {reportTemplate && (
+        <DailyReportFormDialog
+          open={showReportForm}
+          onOpenChange={(open) => {
+            setShowReportForm(open);
+          }}
+          templateName={`${reportTemplate.name} - 退勤時日報`}
+          fields={reportTemplate.fields}
+          onSaveDraft={handleReportDraft}
+          onSubmit={handleReportSubmitThenCheckOut}
+          submitOnly={reportTemplate.submissionRule === 'required_on_clockout'}
+          description="日報を提出すると退勤が確定します"
+        />
+      )}
     </>
   );
 }

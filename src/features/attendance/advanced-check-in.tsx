@@ -31,6 +31,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { useUserStore } from '@/lib/store/user-store';
+import { useDailyReportStore, type TemplateForClockOut, type ReportFieldValue } from '@/lib/store/daily-report-store';
+import { DailyReportFormDialog } from '@/features/daily-report/daily-report-form';
 
 interface TimeRecord {
   checkIn?: string;
@@ -60,6 +63,22 @@ export function AdvancedCheckIn() {
     checkOut,
     checkAndResetForNewDay
   } = useAttendanceStore();
+
+  // ユーザー情報・日報連動
+  const { currentUser } = useUserStore();
+  const currentUserId = currentUser?.id;
+  const tenantId = currentUser?.tenantId;
+  const { setTenantId: setReportTenantId, getTemplateForEmployee, createReport } = useDailyReportStore();
+  const [reportTemplate, setReportTemplate] = useState<TemplateForClockOut | null>(null);
+  const [showReportForm, setShowReportForm] = useState(false);
+
+  // 日報テンプレート取得
+  useEffect(() => {
+    if (tenantId && currentUserId) {
+      setReportTenantId(tenantId);
+      getTemplateForEmployee(currentUserId).then(setReportTemplate);
+    }
+  }, [tenantId, currentUserId, setReportTenantId, getTemplateForEmployee]);
 
   // 初回マウント時と1分ごとに日付変更をチェック
   useEffect(() => {
@@ -117,13 +136,51 @@ export function AdvancedCheckIn() {
   };
 
   const handleCheckOut = () => {
-    setShowMemoDialog(true);
+    if (reportTemplate?.submissionRule === 'required_on_clockout') {
+      setShowReportForm(true);
+    } else {
+      setShowMemoDialog(true);
+    }
+  };
+
+  // 日報提出後に退勤（required_on_clockout用）
+  const handleReportSubmitThenCheckOut = async (values: ReportFieldValue[]) => {
+    if (!currentUserId || !reportTemplate) return;
+    const today = new Date().toISOString().split('T')[0];
+    await createReport({
+      employeeId: currentUserId,
+      date: today,
+      templateId: reportTemplate.id,
+      status: 'submitted',
+      values,
+    });
+    await checkOut('');
+    const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    toast.success(`退勤打刻完了: ${time}`);
+  };
+
+  const handleReportDraft = async (values: ReportFieldValue[]) => {
+    if (!currentUserId || !reportTemplate) return;
+    const today = new Date().toISOString().split('T')[0];
+    await createReport({
+      employeeId: currentUserId,
+      date: today,
+      templateId: reportTemplate.id,
+      status: 'draft',
+      values,
+    });
   };
 
   const confirmCheckOut = async () => {
     await checkOut(memo);
     setShowMemoDialog(false);
     const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    if (reportTemplate?.submissionRule === 'prompt_after_clockout') {
+      toast.info('日報を記入してください', {
+        description: 'サイドメニューの「日報」から記入できます',
+        duration: 8000,
+      });
+    }
     toast.success(`退勤打刻完了: ${time}`, {
       description: '今日もお疲れ様でした！'
     });
@@ -427,6 +484,20 @@ export function AdvancedCheckIn() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 日報フォーム（退勤時必須モード） */}
+      {reportTemplate && (
+        <DailyReportFormDialog
+          open={showReportForm}
+          onOpenChange={setShowReportForm}
+          templateName={`${reportTemplate.name} - 退勤時日報`}
+          fields={reportTemplate.fields}
+          onSaveDraft={handleReportDraft}
+          onSubmit={handleReportSubmitThenCheckOut}
+          submitOnly={reportTemplate.submissionRule === 'required_on_clockout'}
+          description="日報を提出すると退勤が確定します"
+        />
+      )}
     </>
   );
 }

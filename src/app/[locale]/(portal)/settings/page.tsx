@@ -46,6 +46,7 @@ import { MasterDataPanel } from '@/components/settings/master-data-panel';
 import { AttendanceMasterPanel } from '@/features/attendance/attendance-master-panel';
 import { DataManagementPanel } from '@/features/data-management/data-management-panel';
 import { AnnouncementTypeMasterPanel } from '@/features/announcements/announcement-type-master-panel';
+import { DailyReportTemplateMasterPanel } from '@/features/daily-report/daily-report-template-panel';
 import { DashboardSettingsPanel } from '@/features/dashboard/dashboard-settings-panel';
 import { PermissionManagementPanel } from '@/components/organization/permission-management-panel';
 import { cn } from '@/lib/utils';
@@ -104,6 +105,14 @@ const settingCategories: SettingCategory[] = [
     title: '勤怠マスタ',
     description: '就業ルール、休暇・休日、打刻丸め、アラート・36協定',
     icon: Clock,
+    badge: '人事',
+    requiresRole: ['hr', 'admin'],
+  },
+  {
+    id: 'daily-report',
+    title: '日報マスタ',
+    description: '日報テンプレート、提出ルール、フィールド定義',
+    icon: FileText,
     badge: '人事',
     requiresRole: ['hr', 'admin'],
   },
@@ -260,6 +269,8 @@ export default function SettingsPage() {
         return <DataManagementPanel />;
       case 'announcement-types':
         return <AnnouncementTypeMasterPanel />;
+      case 'daily-report':
+        return <DailyReportTemplateMasterPanel />;
       case 'billing':
         return <BillingTab />;
       case 'system':

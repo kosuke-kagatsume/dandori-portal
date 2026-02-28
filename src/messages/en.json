@@ -34,6 +34,7 @@
     "users": "User Management",
     "members": "Member Status",
     "attendance": "Attendance",
+    "dailyReport": "Daily Report",
     "leave": "Leave Management",
     "workflows": "Workflows",
     "payroll": "Payroll",
@@ -164,7 +165,7 @@
     "saveError": "Save failed. Please try again later.",
     "deleteConfirm": "Are you sure you want to delete this?",
     "approveSuccess": "Approved successfully",
-    "rejectSuccess": "Rejected successfully", 
+    "rejectSuccess": "Rejected successfully",
     "warning36Agreement": "Approaching overtime limit (80%)"
   }
 }
