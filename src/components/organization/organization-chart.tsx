@@ -149,8 +149,8 @@ export function OrganizationChart({
 
     return (
       <div key={node.id} className={cn(
-        "w-full",
         // ピラミッド型は左マージン、横並びは上マージン
+        // w-full は ml-6 と併用すると右に飛び出すため使用しない
         depth > 0 && (isHorizontal ? "mt-0" : "ml-6")
       )}>
         {/* Node Header */}
