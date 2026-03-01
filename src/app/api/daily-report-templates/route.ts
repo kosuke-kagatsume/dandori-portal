@@ -5,41 +5,7 @@ import {
   handleApiError,
   getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
-
-// インメモリストア（Phase 2 で Prisma に移行予定）
-interface StoredTemplate {
-  id: string;
-  tenantId: string;
-  name: string;
-  description: string;
-  departmentIds: string[];
-  submissionRule: string;
-  reminderHours: number;
-  approvalRequired: boolean;
-  approverType: 'direct_manager' | 'specific_person';
-  approverIds: string[];
-  isActive: boolean;
-  fields: Array<{
-    id: string;
-    label: string;
-    fieldType: string;
-    required: boolean;
-    placeholder?: string;
-    options?: string[];
-    order: number;
-  }>;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const templateStore = new Map<string, StoredTemplate[]>();
-
-function getTemplatesForTenant(tenantId: string): StoredTemplate[] {
-  if (!templateStore.has(tenantId)) {
-    templateStore.set(tenantId, []);
-  }
-  return templateStore.get(tenantId)!;
-}
+import { type StoredTemplate, getTemplatesForTenant } from './_store';
 
 // GET - テンプレート一覧取得
 export async function GET(request: NextRequest) {

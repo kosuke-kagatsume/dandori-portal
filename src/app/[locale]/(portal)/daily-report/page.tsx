@@ -25,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, FileText, Pencil, Trash2, Send, Loader2, Check, X, Eye } from 'lucide-react';
+import { Plus, FileText, Pencil, Trash2, Send, Loader2, Check, X, Eye, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/store/user-store';
 import { useDailyReportTemplateStore } from '@/lib/store/daily-report-template-store';
@@ -36,6 +36,7 @@ import {
   type TemplateForClockOut,
 } from '@/lib/store/daily-report-store';
 import { DailyReportFormDialog } from '@/features/daily-report/daily-report-form';
+import { DailyReportAnalyticsTab } from '@/features/daily-report/analytics/daily-report-analytics-tab';
 
 // === 定数 ===
 
@@ -268,8 +269,9 @@ export default function DailyReportPage() {
   const todayDate = new Date().toISOString().split('T')[0];
   const todayReport = reports.find((r) => r.date === todayDate);
 
-  // 承認タブを表示するか
+  // 承認タブ・集計タブを表示するか
   const showApprovalTab = isApprover || pendingApprovals.length > 0;
+  const showTabs = showApprovalTab || isApprover;
 
   // === 自分の日報コンテンツ ===
   const MyReportsContent = (
@@ -421,6 +423,7 @@ export default function DailyReportPage() {
 
   // === 承認待ちコンテンツ ===
   const PendingApprovalsContent = (
+    // eslint-disable-next-line react/jsx-no-useless-fragment
     <>
       {pendingApprovals.length > 0 ? (
         <Card>
@@ -525,27 +528,43 @@ export default function DailyReportPage() {
       </div>
 
       {/* タブまたは直接コンテンツ */}
-      {showApprovalTab ? (
+      {showTabs ? (
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="my-reports">自分の日報</TabsTrigger>
-            <TabsTrigger value="approvals" className="gap-2">
-              承認待ち
-              {pendingApprovals.length > 0 && (
-                <Badge variant="destructive" className="text-xs px-1.5 py-0 min-w-[20px] h-5">
-                  {pendingApprovals.length}
-                </Badge>
-              )}
-            </TabsTrigger>
+            {showApprovalTab && (
+              <TabsTrigger value="approvals" className="gap-2">
+                承認待ち
+                {pendingApprovals.length > 0 && (
+                  <Badge variant="destructive" className="text-xs px-1.5 py-0 min-w-[20px] h-5">
+                    {pendingApprovals.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
+            {isApprover && (
+              <TabsTrigger value="analytics" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                集計・分析
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="my-reports" className="space-y-6 mt-4">
             {MyReportsContent}
           </TabsContent>
 
-          <TabsContent value="approvals" className="space-y-6 mt-4">
-            {PendingApprovalsContent}
-          </TabsContent>
+          {showApprovalTab && (
+            <TabsContent value="approvals" className="space-y-6 mt-4">
+              {PendingApprovalsContent}
+            </TabsContent>
+          )}
+
+          {isApprover && (
+            <TabsContent value="analytics" className="space-y-6 mt-4">
+              <DailyReportAnalyticsTab />
+            </TabsContent>
+          )}
         </Tabs>
       ) : (
         <div className="space-y-6">
