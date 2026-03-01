@@ -4,7 +4,7 @@ import {
   errorResponse,
   handleApiError,
 } from '@/lib/api/api-helpers';
-import { reportsByTenant } from '../../route';
+import { reportsByTenant } from '../../_store';
 
 // POST /api/daily-reports/[id]/reject - 日報差戻し
 export async function POST(

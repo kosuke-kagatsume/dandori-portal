@@ -5,40 +5,7 @@ import {
   handleApiError,
   getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
-
-// インメモリストア（Phase 2 で Prisma に移行予定）
-export interface StoredReport {
-  id: string;
-  tenantId: string;
-  employeeId: string;
-  employeeName?: string;
-  date: string;
-  templateId: string;
-  templateName?: string;
-  status: string;
-  values: Array<{
-    fieldId: string;
-    value: string | string[] | number | null;
-  }>;
-  submittedAt: string | null;
-  targetApproverId: string | null;
-  targetApproverName: string | null;
-  approverId: string | null;
-  approverName: string | null;
-  approvedAt: string | null;
-  rejectionReason: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export const reportsByTenant = new Map<string, StoredReport[]>();
-
-function getReportsForTenant(tenantId: string): StoredReport[] {
-  if (!reportsByTenant.has(tenantId)) {
-    reportsByTenant.set(tenantId, []);
-  }
-  return reportsByTenant.get(tenantId)!;
-}
+import { type StoredReport, getReportsForTenant } from './_store';
 
 // GET - 日報一覧取得
 export async function GET(request: NextRequest) {
