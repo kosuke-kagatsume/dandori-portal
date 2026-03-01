@@ -16,6 +16,8 @@ interface StoredTemplate {
   submissionRule: string;
   reminderHours: number;
   approvalRequired: boolean;
+  approverType: 'direct_manager' | 'specific_person';
+  approverIds: string[];
   isActive: boolean;
   fields: Array<{
     id: string;
@@ -78,6 +80,8 @@ export async function POST(request: NextRequest) {
       submissionRule: body.submissionRule || 'optional',
       reminderHours: body.reminderHours || 0,
       approvalRequired: body.approvalRequired ?? false,
+      approverType: body.approverType || 'direct_manager',
+      approverIds: body.approverIds || [],
       isActive: body.isActive ?? true,
       fields: body.fields || [],
       createdAt: now,
@@ -126,6 +130,8 @@ export async function PATCH(request: NextRequest) {
       submissionRule: body.submissionRule ?? templates[index].submissionRule,
       reminderHours: body.reminderHours ?? templates[index].reminderHours,
       approvalRequired: body.approvalRequired ?? templates[index].approvalRequired,
+      approverType: body.approverType ?? templates[index].approverType,
+      approverIds: body.approverIds ?? templates[index].approverIds,
       isActive: body.isActive ?? templates[index].isActive,
       fields: body.fields ?? templates[index].fields,
       updatedAt: new Date().toISOString(),

@@ -161,6 +161,27 @@
     "businessTripTemplate": "出張申請",
     "trainingTemplate": "研修申請"
   },
+  "dailyReportApproval": {
+    "myReports": "自分の日報",
+    "pendingApprovals": "承認待ち",
+    "approve": "承認",
+    "reject": "差戻し",
+    "approveConfirm": "この日報を承認しますか？",
+    "rejectReason": "差戻し理由",
+    "rejectReasonPlaceholder": "差戻し理由を入力してください",
+    "approveSuccess": "承認しました",
+    "rejectSuccess": "差し戻しました",
+    "submitter": "提出者",
+    "submittedAt": "提出日時",
+    "approver": "承認者",
+    "approvedAt": "承認日時",
+    "approverType": "承認者タイプ",
+    "directManager": "直属マネージャー",
+    "specificPerson": "特定の個人を指名",
+    "selectApprovers": "承認者を選択",
+    "viewDetails": "内容確認",
+    "rejectionReasonLabel": "差戻し理由"
+  },
   "messages": {
     "saveSuccess": "保存しました",
     "saveError": "保存に失敗しました。しばらくしてから再度お試しください",

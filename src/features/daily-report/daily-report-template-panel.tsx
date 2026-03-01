@@ -63,7 +63,9 @@ import {
   type TemplateField,
   type FieldType,
   type SubmissionRule,
+  type ApproverType,
 } from '@/lib/store/daily-report-template-store';
+import { useOrganizationStore } from '@/lib/store/organization-store';
 
 // === 定数 ===
 
@@ -100,6 +102,8 @@ interface TemplateFormData {
   submissionRule: SubmissionRule;
   reminderHours: number;
   approvalRequired: boolean;
+  approverType: ApproverType;
+  approverIds: string[];
   isActive: boolean;
   fields: TemplateField[];
 }
@@ -119,6 +123,8 @@ const defaultTemplateForm: TemplateFormData = {
   submissionRule: 'optional',
   reminderHours: 2,
   approvalRequired: false,
+  approverType: 'direct_manager',
+  approverIds: [],
   isActive: true,
   fields: [],
 };
@@ -291,6 +297,9 @@ export function DailyReportTemplateMasterPanel() {
     fetchDepartments,
   } = useMasterDataStore();
 
+  // 組織ストア（承認者選択用）
+  const allMembers = useOrganizationStore((state) => state.allMembers);
+
   // ダイアログ状態
   const [showFormDialog, setShowFormDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<DailyReportTemplate | null>(null);
@@ -329,6 +338,8 @@ export function DailyReportTemplateMasterPanel() {
       submissionRule: template.submissionRule,
       reminderHours: template.reminderHours,
       approvalRequired: template.approvalRequired,
+      approverType: template.approverType || 'direct_manager',
+      approverIds: template.approverIds || [],
       isActive: template.isActive,
       fields: template.fields,
     });
@@ -349,6 +360,8 @@ export function DailyReportTemplateMasterPanel() {
       submissionRule: formData.submissionRule,
       reminderHours: formData.submissionRule === 'prompt_after_clockout' ? formData.reminderHours : 0,
       approvalRequired: formData.approvalRequired,
+      approverType: formData.approverType,
+      approverIds: formData.approverType === 'specific_person' ? formData.approverIds : [],
       isActive: formData.isActive,
       fields: formData.fields,
     };
@@ -749,6 +762,97 @@ export function DailyReportTemplateMasterPanel() {
                   </div>
                 </RadioGroup>
               </div>
+
+              {/* 承認者設定（承認が必要な場合のみ） */}
+              {formData.approvalRequired && (
+                <div className="space-y-3">
+                  <Label>承認者タイプ</Label>
+                  <RadioGroup
+                    value={formData.approverType}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, approverType: v as ApproverType })
+                    }
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <RadioGroupItem value="direct_manager" id="approver-manager" className="mt-0.5" />
+                      <div>
+                        <label htmlFor="approver-manager" className="text-sm font-medium cursor-pointer">
+                          直属マネージャー
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          組織ツリーに基づく直属上位者が承認します
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <RadioGroupItem value="specific_person" id="approver-specific" className="mt-0.5" />
+                      <div>
+                        <label htmlFor="approver-specific" className="text-sm font-medium cursor-pointer">
+                          特定の個人を指名
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          指定した社員が承認者になります
+                        </p>
+                      </div>
+                    </div>
+                  </RadioGroup>
+
+                  {/* 特定の個人を選択 */}
+                  {formData.approverType === 'specific_person' && (
+                    <div className="space-y-2">
+                      <Label>承認者を選択</Label>
+                      {allMembers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          組織メンバーが登録されていません。組織管理からメンバーを追加してください。
+                        </p>
+                      ) : (
+                        <div className="border rounded-md p-3 max-h-[150px] overflow-y-auto space-y-2">
+                          {allMembers
+                            .filter((m) => m.status === 'active')
+                            .map((member) => (
+                              <div key={member.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`approver-${member.id}`}
+                                  checked={formData.approverIds.includes(member.id)}
+                                  onCheckedChange={(checked) => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      approverIds: checked
+                                        ? [...prev.approverIds, member.id]
+                                        : prev.approverIds.filter((id) => id !== member.id),
+                                    }));
+                                  }}
+                                />
+                                <label
+                                  htmlFor={`approver-${member.id}`}
+                                  className="text-sm cursor-pointer"
+                                >
+                                  {member.name}
+                                  {member.isManager && (
+                                    <span className="text-xs text-muted-foreground ml-1">(管理者)</span>
+                                  )}
+                                </label>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                      {formData.approverIds.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {formData.approverIds.map((approverId) => {
+                            const member = allMembers.find((m) => m.id === approverId);
+                            return (
+                              <Badge key={approverId} variant="secondary" className="text-xs">
+                                {member?.name || approverId}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* セクション3: フィールド定義 */}
               <SectionHeader title="フィールド定義" />

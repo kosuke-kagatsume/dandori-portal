@@ -7,7 +7,7 @@ import {
 } from '@/lib/api/api-helpers';
 
 // インメモリストア（Phase 2 で Prisma に移行予定）
-interface StoredReport {
+export interface StoredReport {
   id: string;
   tenantId: string;
   employeeId: string;
@@ -21,17 +21,23 @@ interface StoredReport {
     value: string | string[] | number | null;
   }>;
   submittedAt: string | null;
+  targetApproverId: string | null;
+  targetApproverName: string | null;
+  approverId: string | null;
+  approverName: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-const reportStore = new Map<string, StoredReport[]>();
+export const reportsByTenant = new Map<string, StoredReport[]>();
 
 function getReportsForTenant(tenantId: string): StoredReport[] {
-  if (!reportStore.has(tenantId)) {
-    reportStore.set(tenantId, []);
+  if (!reportsByTenant.has(tenantId)) {
+    reportsByTenant.set(tenantId, []);
   }
-  return reportStore.get(tenantId)!;
+  return reportsByTenant.get(tenantId)!;
 }
 
 // GET - 日報一覧取得
@@ -42,6 +48,8 @@ export async function GET(request: NextRequest) {
     const employeeId = searchParams.get('employeeId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const status = searchParams.get('status');
+    const targetApproverId = searchParams.get('targetApproverId');
 
     let reports = getReportsForTenant(tenantId);
 
@@ -54,6 +62,12 @@ export async function GET(request: NextRequest) {
     }
     if (endDate) {
       reports = reports.filter((r) => r.date <= endDate);
+    }
+    if (status) {
+      reports = reports.filter((r) => r.status === status);
+    }
+    if (targetApproverId) {
+      reports = reports.filter((r) => r.targetApproverId === targetApproverId);
     }
 
     // 日付降順でソート
@@ -97,6 +111,12 @@ export async function POST(request: NextRequest) {
       status: body.status || 'draft',
       values: body.values || [],
       submittedAt: body.status === 'submitted' ? now : null,
+      targetApproverId: body.targetApproverId || null,
+      targetApproverName: body.targetApproverName || null,
+      approverId: null,
+      approverName: null,
+      approvedAt: null,
+      rejectionReason: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -133,6 +153,8 @@ export async function PATCH(request: NextRequest) {
       status: body.status ?? reports[index].status,
       values: body.values ?? reports[index].values,
       submittedAt: body.submittedAt ?? reports[index].submittedAt,
+      targetApproverId: body.targetApproverId ?? reports[index].targetApproverId,
+      targetApproverName: body.targetApproverName ?? reports[index].targetApproverName,
       updatedAt: now,
     };
 

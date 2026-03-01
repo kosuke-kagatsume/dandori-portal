@@ -160,6 +160,27 @@
     "businessTripTemplate": "Business Trip",
     "trainingTemplate": "Training Request"
   },
+  "dailyReportApproval": {
+    "myReports": "My Reports",
+    "pendingApprovals": "Pending Approvals",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveConfirm": "Approve this daily report?",
+    "rejectReason": "Rejection Reason",
+    "rejectReasonPlaceholder": "Enter the reason for rejection",
+    "approveSuccess": "Approved successfully",
+    "rejectSuccess": "Rejected successfully",
+    "submitter": "Submitter",
+    "submittedAt": "Submitted At",
+    "approver": "Approver",
+    "approvedAt": "Approved At",
+    "approverType": "Approver Type",
+    "directManager": "Direct Manager",
+    "specificPerson": "Specific Person",
+    "selectApprovers": "Select Approvers",
+    "viewDetails": "View Details",
+    "rejectionReasonLabel": "Rejection Reason"
+  },
   "messages": {
     "saveSuccess": "Saved successfully",
     "saveError": "Save failed. Please try again later.",

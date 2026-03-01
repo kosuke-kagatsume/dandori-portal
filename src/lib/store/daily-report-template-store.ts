@@ -19,6 +19,8 @@ export interface TemplateField {
   order: number;
 }
 
+export type ApproverType = 'direct_manager' | 'specific_person';
+
 export interface DailyReportTemplate {
   id: string;
   tenantId: string;
@@ -28,6 +30,8 @@ export interface DailyReportTemplate {
   submissionRule: SubmissionRule;
   reminderHours: number;
   approvalRequired: boolean;
+  approverType: ApproverType;
+  approverIds: string[];
   isActive: boolean;
   fields: TemplateField[];
   createdAt: string;

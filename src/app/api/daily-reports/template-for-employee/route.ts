@@ -56,6 +56,8 @@ interface TemplateData {
   submissionRule: string;
   reminderHours: number;
   approvalRequired: boolean;
+  approverType: string;
+  approverIds: string[];
   isActive: boolean;
   fields: Array<{
     id: string;
@@ -111,6 +113,8 @@ export async function GET(request: NextRequest) {
         submissionRule: matched.submissionRule,
         reminderHours: matched.reminderHours,
         approvalRequired: matched.approvalRequired,
+        approverType: matched.approverType || 'direct_manager',
+        approverIds: matched.approverIds || [],
         fields: matched.fields,
       },
     });

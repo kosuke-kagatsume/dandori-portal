@@ -1,5 +1,7 @@
 import { create } from 'zustand';
-import type { TemplateField, SubmissionRule } from './daily-report-template-store';
+import type { TemplateField, SubmissionRule, ApproverType } from './daily-report-template-store';
+import { useOrganizationStore } from './organization-store';
+import { useDailyReportTemplateStore } from './daily-report-template-store';
 
 // === 型定義 ===
 
@@ -21,6 +23,12 @@ export interface DailyReport {
   status: ReportStatus;
   values: ReportFieldValue[];
   submittedAt: string | null;
+  targetApproverId: string | null;
+  targetApproverName: string | null;
+  approverId: string | null;
+  approverName: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +48,8 @@ export interface TemplateForClockOut {
   submissionRule: SubmissionRule;
   reminderHours: number;
   approvalRequired: boolean;
+  approverType: ApproverType;
+  approverIds: string[];
   fields: TemplateField[];
 }
 
@@ -47,6 +57,7 @@ export interface TemplateForClockOut {
 
 interface DailyReportState {
   reports: DailyReport[];
+  pendingApprovals: DailyReport[];
   tenantId: string | null;
   isLoading: boolean;
   error: string | null;
@@ -59,10 +70,14 @@ interface DailyReportState {
   submitReport: (id: string) => Promise<void>;
   deleteReport: (id: string) => Promise<void>;
   getTemplateForEmployee: (employeeId: string) => Promise<TemplateForClockOut | null>;
+  fetchPendingApprovals: (approverId: string) => Promise<void>;
+  approveReport: (id: string, approverId: string, approverName: string) => Promise<void>;
+  rejectReport: (id: string, approverId: string, approverName: string, reason: string) => Promise<void>;
 }
 
 export const useDailyReportStore = create<DailyReportState>()((set, get) => ({
   reports: [],
+  pendingApprovals: [],
   tenantId: null,
   isLoading: false,
   error: null,
@@ -140,20 +155,63 @@ export const useDailyReportStore = create<DailyReportState>()((set, get) => ({
   },
 
   submitReport: async (id: string) => {
-    const { tenantId } = get();
+    const { tenantId, reports } = get();
     if (!tenantId) return;
     set({ isLoading: true, error: null });
     try {
+      // 承認者を解決
+      const report = reports.find((r) => r.id === id);
+      let targetApproverId: string | null = null;
+      let targetApproverName: string | null = null;
+
+      if (report) {
+        const templates = useDailyReportTemplateStore.getState().templates;
+        const template = templates.find((t) => t.id === report.templateId);
+
+        if (template?.approvalRequired) {
+          if (template.approverType === 'direct_manager') {
+            const managers = useOrganizationStore.getState().getManagersForMember(report.employeeId);
+            if (managers.length > 0) {
+              targetApproverId = managers[0].id;
+              targetApproverName = managers[0].name;
+            }
+          } else if (template.approverType === 'specific_person' && template.approverIds.length > 0) {
+            targetApproverId = template.approverIds[0];
+            const allMembers = useOrganizationStore.getState().allMembers;
+            const approver = allMembers.find((m) => m.id === targetApproverId);
+            targetApproverName = approver?.name || null;
+          }
+        }
+      }
+
+      const patchBody: Record<string, unknown> = {
+        tenantId,
+        status: 'submitted',
+        submittedAt: new Date().toISOString(),
+      };
+      if (targetApproverId) {
+        patchBody.targetApproverId = targetApproverId;
+        patchBody.targetApproverName = targetApproverName;
+      }
+
       const res = await fetch(`/api/daily-reports?id=${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId, status: 'submitted', submittedAt: new Date().toISOString() }),
+        body: JSON.stringify(patchBody),
       });
       if (!res.ok) throw new Error('日報の提出に失敗しました');
       // 現在のreportsを更新
       set((state) => ({
         reports: state.reports.map((r) =>
-          r.id === id ? { ...r, status: 'submitted' as ReportStatus, submittedAt: new Date().toISOString() } : r
+          r.id === id
+            ? {
+                ...r,
+                status: 'submitted' as ReportStatus,
+                submittedAt: new Date().toISOString(),
+                targetApproverId,
+                targetApproverName,
+              }
+            : r
         ),
         isLoading: false,
       }));
@@ -195,6 +253,78 @@ export const useDailyReportStore = create<DailyReportState>()((set, get) => ({
       return json.data?.template || null;
     } catch {
       return null;
+    }
+  },
+
+  // 承認待ち日報を取得
+  fetchPendingApprovals: async (approverId: string) => {
+    const { tenantId } = get();
+    if (!tenantId) return;
+    try {
+      const searchParams = new URLSearchParams({
+        tenantId,
+        status: 'submitted',
+        targetApproverId: approverId,
+      });
+      const res = await fetch(`/api/daily-reports?${searchParams.toString()}`);
+      if (!res.ok) throw new Error('承認待ち日報の取得に失敗しました');
+      const json = await res.json();
+      const data = json.data?.items || json.data || [];
+      set({ pendingApprovals: Array.isArray(data) ? data : [] });
+    } catch (error) {
+      set({ error: (error as Error).message });
+    }
+  },
+
+  // 日報を承認
+  approveReport: async (id: string, approverId: string, approverName: string) => {
+    const { tenantId } = get();
+    if (!tenantId) return;
+    set({ isLoading: true, error: null });
+    try {
+      const res = await fetch(`/api/daily-reports/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, approverId, approverName }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || '承認に失敗しました');
+      }
+      // pendingApprovalsから削除
+      set((state) => ({
+        pendingApprovals: state.pendingApprovals.filter((r) => r.id !== id),
+        isLoading: false,
+      }));
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+      throw error;
+    }
+  },
+
+  // 日報を差戻し
+  rejectReport: async (id: string, approverId: string, approverName: string, reason: string) => {
+    const { tenantId } = get();
+    if (!tenantId) return;
+    set({ isLoading: true, error: null });
+    try {
+      const res = await fetch(`/api/daily-reports/${id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, approverId, approverName, reason }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || '差戻しに失敗しました');
+      }
+      // pendingApprovalsから削除
+      set((state) => ({
+        pendingApprovals: state.pendingApprovals.filter((r) => r.id !== id),
+        isLoading: false,
+      }));
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 }));

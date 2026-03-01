@@ -43,6 +43,10 @@ interface DailyReportFormProps {
   /** ダイアログの説明文 */
   description?: string;
   isLoading?: boolean;
+  /** 読み取り専用モード（レビュー表示用） */
+  readOnly?: boolean;
+  /** フッターカスタムコンテンツ（readOnly時に承認/差戻しボタンなど） */
+  footerContent?: React.ReactNode;
 }
 
 // フィールド型ラベル
@@ -64,10 +68,12 @@ function FieldRenderer({
   field,
   value,
   onChange,
+  disabled = false,
 }: {
   field: TemplateField;
   value: string | string[] | number | null;
   onChange: (value: string | string[] | number | null) => void;
+  disabled?: boolean;
 }) {
   switch (field.fieldType) {
     case 'text':
@@ -76,6 +82,7 @@ function FieldRenderer({
           value={(value as string) || ''}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder || ''}
+          disabled={disabled}
         />
       );
 
@@ -86,6 +93,7 @@ function FieldRenderer({
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder || ''}
           rows={3}
+          disabled={disabled}
         />
       );
 
@@ -96,6 +104,7 @@ function FieldRenderer({
           value={value !== null && value !== undefined ? String(value) : ''}
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
           placeholder={field.placeholder || ''}
+          disabled={disabled}
         />
       );
 
@@ -104,6 +113,7 @@ function FieldRenderer({
         <Select
           value={(value as string) || ''}
           onValueChange={(v) => onChange(v)}
+          disabled={disabled}
         >
           <SelectTrigger>
             <SelectValue placeholder={field.placeholder || '選択してください'} />
@@ -127,6 +137,7 @@ function FieldRenderer({
               <Checkbox
                 id={`${field.id}-${opt}`}
                 checked={selectedValues.includes(opt)}
+                disabled={disabled}
                 onCheckedChange={(checked) => {
                   if (checked) {
                     onChange([...selectedValues, opt]);
@@ -150,6 +161,7 @@ function FieldRenderer({
           type="date"
           value={(value as string) || ''}
           onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
         />
       );
 
@@ -159,6 +171,7 @@ function FieldRenderer({
           type="time"
           value={(value as string) || ''}
           onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
         />
       );
 
@@ -173,6 +186,7 @@ function FieldRenderer({
             value={startTime}
             onChange={(e) => onChange(`${e.target.value}~${endTime}`)}
             className="w-[140px]"
+            disabled={disabled}
           />
           <span className="text-sm text-muted-foreground">〜</span>
           <Input
@@ -180,6 +194,7 @@ function FieldRenderer({
             value={endTime}
             onChange={(e) => onChange(`${startTime}~${e.target.value}`)}
             className="w-[140px]"
+            disabled={disabled}
           />
         </div>
       );
@@ -196,6 +211,7 @@ function FieldRenderer({
             onChange={(e) => onChange(e.target.value)}
             placeholder="ファイル名をメモとして入力"
             className="mt-2"
+            disabled={disabled}
           />
         </div>
       );
@@ -218,6 +234,8 @@ export function DailyReportFormDialog({
   submitOnly = false,
   description,
   isLoading = false,
+  readOnly = false,
+  footerContent,
 }: DailyReportFormProps) {
   const [values, setValues] = useState<Map<string, string | string[] | number | null>>(new Map());
   const [saving, setSaving] = useState(false);
@@ -330,6 +348,7 @@ export function DailyReportFormDialog({
                   field={field}
                   value={values.get(field.id) ?? null}
                   onChange={(v) => updateValue(field.id, v)}
+                  disabled={readOnly}
                 />
               </div>
             ))}
@@ -343,21 +362,33 @@ export function DailyReportFormDialog({
         </ScrollArea>
 
         <DialogFooter className="px-6 pb-6 pt-2 border-t gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={disabled}>
-            キャンセル
-          </Button>
-          {!submitOnly && (
-            <Button variant="secondary" onClick={handleSaveDraft} disabled={disabled}>
-              {disabled && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <Save className="mr-2 h-4 w-4" />
-              下書き保存
-            </Button>
+          {readOnly ? (
+            <>
+              {footerContent || (
+                <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  閉じる
+                </Button>
+              )}
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={disabled}>
+                キャンセル
+              </Button>
+              {!submitOnly && (
+                <Button variant="secondary" onClick={handleSaveDraft} disabled={disabled}>
+                  {disabled && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Save className="mr-2 h-4 w-4" />
+                  下書き保存
+                </Button>
+              )}
+              <Button onClick={handleSubmit} disabled={disabled}>
+                {disabled && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Send className="mr-2 h-4 w-4" />
+                提出
+              </Button>
+            </>
           )}
-          <Button onClick={handleSubmit} disabled={disabled}>
-            {disabled && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            <Send className="mr-2 h-4 w-4" />
-            提出
-          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
