@@ -11,14 +11,10 @@
 
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { generateSignature, verifySignature } from './auth';
 
 // ============================================================
 // 定数
 // ============================================================
-
-/** SSOトークン有効期限（5分） */
-const SSO_TOKEN_EXPIRY_MS = 5 * 60 * 1000;
 
 /** SSOトークンのプレフィックス */
 const SSO_TOKEN_PREFIX = 'sso_';
@@ -85,7 +81,7 @@ const tokenStore = new Map<string, SsoTokenPayload>();
  * 期限切れトークンをクリーンアップ
  */
 function cleanupExpiredTokens(): void {
-  const now = Date.now();
+  const now = Math.floor(Date.now() / 1000);
   const entries = Array.from(tokenStore.entries());
   for (const [tokenId, payload] of entries) {
     if (payload.expiresAt < now) {
@@ -121,10 +117,15 @@ export async function generateSsoToken(
       return { success: false, error: 'User not found' };
     }
 
+    const secret = process.env.DRM_SSO_SECRET || '';
+    if (!secret) {
+      return { success: false, error: 'DRM_SSO_SECRET not configured' };
+    }
+
     // トークンIDを生成
     const tokenId = `${SSO_TOKEN_PREFIX}${crypto.randomUUID()}`;
-    const now = Date.now();
-    const expiresAt = now + SSO_TOKEN_EXPIRY_MS;
+    const now = Math.floor(Date.now() / 1000); // 秒単位
+    const expiresAt = now + 300; // 5分
 
     // ペイロード作成
     const payload: SsoTokenPayload = {
@@ -143,20 +144,18 @@ export async function generateSsoToken(
     // トークンストアに保存
     tokenStore.set(tokenId, payload);
 
-    // トークン文字列を生成（署名付き）
-    const payloadString = JSON.stringify(payload);
-    const secret = process.env.DRM_SSO_SECRET || process.env.DRM_API_SECRET || '';
-    const signature = generateSignature(payloadString, now.toString(), secret);
-
-    // Base64エンコード
-    const token = Buffer.from(
-      JSON.stringify({ payload, signature })
-    ).toString('base64url');
+    // DRM互換トークン形式: Base64URL(payload).Base64URL(HMAC署名)
+    const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const signature = crypto
+      .createHmac('sha256', secret)
+      .update(payloadBase64)
+      .digest('base64url');
+    const token = `${payloadBase64}.${signature}`;
 
     return {
       success: true,
       token,
-      expiresAt,
+      expiresAt: expiresAt * 1000, // APIレスポンスではミリ秒に戻す
       redirectUrl,
     };
   } catch (error) {
@@ -171,40 +170,52 @@ export async function generateSsoToken(
  */
 export function validateSsoToken(token: string): SsoValidationResult {
   try {
-    // Base64デコード
-    const decoded = Buffer.from(token, 'base64url').toString('utf-8');
-    const { payload, signature } = JSON.parse(decoded) as {
-      payload: SsoTokenPayload;
-      signature: string;
-    };
+    const secret = process.env.DRM_SSO_SECRET || '';
+    if (!secret) {
+      return { valid: false, error: 'DRM_SSO_SECRET not configured' };
+    }
 
-    // 有効期限チェック
-    if (payload.expiresAt < Date.now()) {
+    // ドット区切りで分割
+    const parts = token.split('.');
+    if (parts.length !== 2) {
+      return { valid: false, error: 'Invalid token format' };
+    }
+
+    const [payloadBase64, signature] = parts;
+
+    // 署名検証: Base64URLペイロードに対してHMAC
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(payloadBase64)
+      .digest('base64url');
+
+    try {
+      const isValid = crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expectedSignature),
+      );
+      if (!isValid) {
+        return { valid: false, error: 'Invalid signature' };
+      }
+    } catch {
+      return { valid: false, error: 'Signature verification failed' };
+    }
+
+    // ペイロードデコード
+    const payloadStr = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
+    const payload: SsoTokenPayload = JSON.parse(payloadStr);
+
+    // 有効期限チェック（秒単位）
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.expiresAt < now) {
       return { valid: false, error: 'Token expired' };
     }
 
-    // 署名検証
-    const secret = process.env.DRM_SSO_SECRET || process.env.DRM_API_SECRET || '';
-    const payloadString = JSON.stringify(payload);
-    const isValid = verifySignature(
-      payloadString,
-      payload.issuedAt.toString(),
-      signature,
-      secret
-    );
-
-    if (!isValid) {
-      return { valid: false, error: 'Invalid signature' };
-    }
-
-    // トークンストアで確認（使い回し防止）
+    // ワンタイム使用チェック
     const storedPayload = tokenStore.get(payload.tokenId);
-    if (!storedPayload) {
-      return { valid: false, error: 'Token not found or already used' };
+    if (storedPayload) {
+      tokenStore.delete(payload.tokenId); // 消費
     }
-
-    // トークンを無効化（ワンタイム使用）
-    tokenStore.delete(payload.tokenId);
 
     return { valid: true, payload };
   } catch (error) {
@@ -267,7 +278,7 @@ export async function createDrmSsoRedirectUrl(
   }
 
   const drmBaseUrl =
-    process.env.DRM_BASE_URL ||
+    process.env.DRM_API_URL?.replace('/api/integration', '') ||
     'https://www.dandori-relationship-management.com';
 
   const params = new URLSearchParams({
@@ -275,7 +286,7 @@ export async function createDrmSsoRedirectUrl(
     ...(returnPath && { return_path: returnPath }),
   });
 
-  const url = `${drmBaseUrl}/auth/sso?${params.toString()}`;
+  const url = `${drmBaseUrl}/api/integration/auth/callback?${params.toString()}`;
 
   return { success: true, url };
 }
