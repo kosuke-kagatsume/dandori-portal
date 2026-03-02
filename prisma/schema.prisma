@@ -461,11 +461,11 @@ model departments {
   createdAt DateTime @default(now())
   updatedAt DateTime
 
-  @@unique([tenantId, name])
+  @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, isActive])
   @@index([tenantId, sortOrder])
-  @@index([tenantId, code])
+  @@index([tenantId, name])
 }
 
 model dw_notifications {

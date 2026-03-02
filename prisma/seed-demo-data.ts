@@ -93,12 +93,7 @@ async function main() {
   console.log('📁 部門データを投入中...');
   for (const dept of departments) {
     await prisma.departments.upsert({
-      where: {
-        tenantId_name: {
-          tenantId: TENANT_ID,
-          name: dept.name,
-        },
-      },
+      where: { id: dept.id },
       update: {},
       create: {
         id: dept.id,
