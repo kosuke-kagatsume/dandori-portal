@@ -1212,10 +1212,10 @@ export function WorkRuleMasterPanel() {
                               </Select>
                             </TableCell>
                             <TableCell>
-                              <Select value={row.patternId} onValueChange={(v) => updateScheduleRow(i, 'patternId', v)}>
+                              <Select value={row.patternId || "__none__"} onValueChange={(v) => updateScheduleRow(i, 'patternId', v === "__none__" ? "" : v)}>
                                 <SelectTrigger className="h-8"><SelectValue placeholder="なし" /></SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">なし</SelectItem>
+                                  <SelectItem value="__none__">なし</SelectItem>
                                   {formData.workPatterns.map(wp => (
                                     <SelectItem key={wp.id} value={wp.id}>{wp.name}</SelectItem>
                                   ))}
@@ -1260,10 +1260,10 @@ export function WorkRuleMasterPanel() {
                     </div>
                   </FormField>
                   <FormField label="有給パターン">
-                    <Select value={formData.paidLeavePattern} onValueChange={(v) => updateForm({ paidLeavePattern: v })}>
+                    <Select value={formData.paidLeavePattern || "__none__"} onValueChange={(v) => updateForm({ paidLeavePattern: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">未設定</SelectItem>
+                        <SelectItem value="__none__">未設定</SelectItem>
                         <SelectItem value="standard">標準</SelectItem>
                         <SelectItem value="proportional">比例付与</SelectItem>
                       </SelectContent>
@@ -1307,28 +1307,28 @@ export function WorkRuleMasterPanel() {
                     </div>
                   </FormField>
                   <FormField label="祝日パターン">
-                    <Select value={formData.holidayPattern} onValueChange={(v) => updateForm({ holidayPattern: v })}>
+                    <Select value={formData.holidayPattern || "__none__"} onValueChange={(v) => updateForm({ holidayPattern: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">未設定</SelectItem>
+                        <SelectItem value="__none__">未設定</SelectItem>
                         <SelectItem value="japan_standard">日本の祝日</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
                   <FormField label="振替休日パターン">
-                    <Select value={formData.substituteHolidayPattern} onValueChange={(v) => updateForm({ substituteHolidayPattern: v })}>
+                    <Select value={formData.substituteHolidayPattern || "__none__"} onValueChange={(v) => updateForm({ substituteHolidayPattern: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">未設定</SelectItem>
+                        <SelectItem value="__none__">未設定</SelectItem>
                         <SelectItem value="auto">自動</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
                   <FormField label="代休パターン">
-                    <Select value={formData.compensatoryDayOffPattern} onValueChange={(v) => updateForm({ compensatoryDayOffPattern: v })}>
+                    <Select value={formData.compensatoryDayOffPattern || "__none__"} onValueChange={(v) => updateForm({ compensatoryDayOffPattern: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">未設定</SelectItem>
+                        <SelectItem value="__none__">未設定</SelectItem>
                         <SelectItem value="standard">標準</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1353,10 +1353,10 @@ export function WorkRuleMasterPanel() {
                 <>
                   <SectionHeader title="36協定" />
                   <FormField label="36協定名">
-                    <Select value={formData.agreement36Name} onValueChange={(v) => updateForm({ agreement36Name: v })}>
+                    <Select value={formData.agreement36Name || "__none__"} onValueChange={(v) => updateForm({ agreement36Name: v === "__none__" ? "" : v })}>
                       <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">未設定</SelectItem>
+                        <SelectItem value="__none__">未設定</SelectItem>
                         <SelectItem value="standard_36">標準36協定</SelectItem>
                         <SelectItem value="special_36">特別条項付き36協定</SelectItem>
                       </SelectContent>

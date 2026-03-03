@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ArrowLeft, Mail, Phone, Calendar, Building, Shield, CreditCard, Download, Edit, Loader2 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { useSaaSStore } from '@/lib/store/saas-store';
-import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
+import { useOrganizationStore } from '@/lib/store/organization-store';
 import { UserFormDialog } from '@/features/users/user-form-dialog';
 import { UserAttendanceTab } from '@/features/users/user-attendance-tab';
 import { UserQualificationTab } from '@/features/users/user-qualification-tab';
@@ -24,7 +24,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
   const router = useRouter();
   const { users, setUsers } = useUserStore();
   const { getUserSaaSDetails, getUserTotalCost } = useSaaSStore();
-  const { records: attendanceRecords } = useAttendanceHistoryStore();
+  const { getTransferHistoriesByUser } = useOrganizationStore();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -95,35 +95,14 @@ export default function UserDetailPage({ params }: { params: { id: string; local
     return getUserTotalCost(user.id);
   }, [user, getUserTotalCost]);
 
-  // 勤怠データを取得（直近6ヶ月）
-  const userAttendanceRecords = useMemo(() => {
+  // 異動履歴を組織ストアから取得
+  const userTransferHistory = useMemo(() => {
     if (!user) return [];
+    return getTransferHistoriesByUser(user.id);
+  }, [user, getTransferHistoriesByUser]);
 
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    return attendanceRecords
-      .filter((record) => {
-        if (record.userId !== user.id) return false;
-        const recordDate = new Date(record.date);
-        return recordDate >= sixMonthsAgo;
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [user, attendanceRecords]);
 
-  // 勤怠統計を計算
-  const attendanceStats = useMemo(() => {
-    const totalDays = userAttendanceRecords.filter(r => r.status === 'present' || r.status === 'late' || r.status === 'early').length;
-    const totalWorkMinutes = userAttendanceRecords.reduce((sum, r) => sum + r.workMinutes, 0);
-    const totalOvertimeMinutes = userAttendanceRecords.reduce((sum, r) => sum + r.overtimeMinutes, 0);
-
-    return {
-      totalDays,
-      totalWorkHours: Math.floor(totalWorkMinutes / 60),
-      totalOvertimeHours: Math.floor(totalOvertimeMinutes / 60),
-      avgWorkHoursPerDay: totalDays > 0 ? (totalWorkMinutes / 60 / totalDays).toFixed(1) : '0.0',
-    };
-  }, [userAttendanceRecords]);
 
   // ローディング中
   if (loading) {
@@ -282,12 +261,20 @@ export default function UserDetailPage({ params }: { params: { id: string; local
             </Avatar>
             <div className="flex-1 space-y-4">
               <div>
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-1">
                   <h2 className="text-2xl font-bold">{user.name}</h2>
+                  {user.employeeNumber && (
+                    <span className="text-sm text-muted-foreground">({user.employeeNumber})</span>
+                  )}
                   <Badge variant={statusColors[user.status]}>
                     {statusLabels[user.status]}
                   </Badge>
                 </div>
+                {(user.position || user.employmentType) && (
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {[user.position, user.employmentType && ({ regular: '正社員', contract: '契約社員', part_time: 'パートタイム', temporary: '派遣社員', intern: 'インターン', executive: '役員' } as Record<string, string>)[user.employmentType]].filter(Boolean).join(' / ')}
+                  </p>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Mail className="h-4 w-4" />
@@ -345,10 +332,10 @@ export default function UserDetailPage({ params }: { params: { id: string; local
         const visibleTabs = [
           { value: 'basic', label: '基本情報' },
           { value: 'saas', label: 'SaaS利用' },
+          // 資格情報: 経営者・人事のみ（SaaSの横に配置）
+          ...(isExecutive || isHRRole ? [{ value: 'qualification', label: '資格情報' }] : []),
           // 勤怠: 人事のみ
           ...(isHRRole ? [{ value: 'attendance', label: '勤怠' }] : []),
-          // 資格情報: 経営者・人事のみ
-          ...(isExecutive || isHRRole ? [{ value: 'qualification', label: '資格情報' }] : []),
           // 給与: 人事のみ
           ...(isHRRole ? [{ value: 'payroll', label: '給与' }] : []),
         ];
@@ -445,30 +432,6 @@ export default function UserDetailPage({ params }: { params: { id: string; local
                     <p className="text-sm font-medium text-muted-foreground">雇用形態</p>
                     <p className="text-sm mt-1">
                       {{ regular: '正社員', contract: '契約社員', part_time: 'パートタイム', temporary: '派遣社員', intern: 'インターン', executive: '役員' }[user.employmentType] || user.employmentType}
-                    </p>
-                  </div>
-                )}
-                {user.birthDate && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">生年月日</p>
-                    <p className="text-sm mt-1">
-                      {new Date(user.birthDate).toLocaleDateString('ja-JP')}
-                    </p>
-                  </div>
-                )}
-                {user.gender && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">性別</p>
-                    <p className="text-sm mt-1">
-                      {{ male: '男性', female: '女性', other: 'その他', prefer_not_to_say: '回答しない' }[user.gender] || user.gender}
-                    </p>
-                  </div>
-                )}
-                {(user.postalCode || user.address) && (
-                  <div className="col-span-2">
-                    <p className="text-sm font-medium text-muted-foreground">住所</p>
-                    <p className="text-sm mt-1">
-                      {user.postalCode && `〒${user.postalCode} `}{user.address}
                     </p>
                   </div>
                 )}
@@ -627,9 +590,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
         <TabsContent value="attendance" className="space-y-4">
           <UserAttendanceTab
             user={user}
-            attendanceRecords={userAttendanceRecords}
-            attendanceStats={attendanceStats}
-            transferHistory={[]}
+            transferHistory={userTransferHistory}
             workRule={undefined}  // TODO: 就業ルールマスタから取得
             isReadOnly={isReadOnly}
             onEdit={() => setEditDialogOpen(true)}

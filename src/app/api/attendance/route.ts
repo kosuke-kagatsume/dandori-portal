@@ -76,6 +76,17 @@ export async function GET(request: NextRequest) {
             department: true,
           },
         },
+        punches: {
+          select: {
+            id: true,
+            punchType: true,
+            punchTime: true,
+            punchOrder: true,
+            workLocation: true,
+            memo: true,
+          },
+          orderBy: { punchTime: 'asc' },
+        },
       },
       orderBy: { date: 'desc' },
       skip,

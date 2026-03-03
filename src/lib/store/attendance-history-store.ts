@@ -51,11 +51,12 @@ function formatTimeToHHmm(value: string | null | undefined): string | null {
   if (!value) return null;
   // すでにHH:mm形式の場合はそのまま
   if (/^\d{1,2}:\d{2}$/.test(value)) return value;
-  // ISO形式の場合は変換
+  // ISO形式の場合は変換（タイムゾーンを明示的にJSTに指定）
   try {
     return new Date(value).toLocaleTimeString('ja-JP', {
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Asia/Tokyo',
     });
   } catch {
     return value;
@@ -77,6 +78,24 @@ function formatDateToYMD(value: string | null | undefined): string {
  * APIレスポンスのレコードを正規化（日付・時刻フォーマット統一）
  */
 function normalizeApiRecord(record: Record<string, unknown>): Record<string, unknown> {
+  // API側のpunchesをフロントのpunchHistory形式に変換
+  const punches = record.punches as Array<{
+    id: string;
+    punchType: string;
+    punchTime: string;
+    punchOrder: number;
+    workLocation?: string;
+    memo?: string;
+  }> | undefined;
+
+  const punchHistory: PunchRecord[] | undefined = punches?.map(p => ({
+    id: p.id,
+    type: p.punchType as PunchType,
+    time: formatTimeToHHmm(p.punchTime) || '',
+    method: 'manual' as PunchMethod,
+    createdAt: p.punchTime,
+  }));
+
   return {
     ...record,
     date: formatDateToYMD(record.date as string),
@@ -84,6 +103,7 @@ function normalizeApiRecord(record: Record<string, unknown>): Record<string, unk
     checkOut: formatTimeToHHmm(record.checkOut as string | null),
     breakStart: formatTimeToHHmm(record.breakStart as string | null),
     breakEnd: formatTimeToHHmm(record.breakEnd as string | null),
+    ...(punchHistory && punchHistory.length > 0 && { punchHistory }),
   };
 }
 

@@ -271,19 +271,27 @@ export default function UsersPage() {
               return;
             }
 
-            const [id, name, email, phone, department, position, hireDate, status, roles] = cleanValues;
+            // 新しいCSV形式: 従業員ID,社員番号,氏名,フリガナ,メール,電話,部署,役職,雇用形態,入社日,生年月日,性別,郵便番号,住所,ステータス,退職日,退職理由,役割
+            const [id, employeeNumber, name, nameKana, email, phone, department, position, employmentType, hireDate, birthDate, gender, postalCode, address, status, , , roles] = cleanValues;
 
             const user: User = {
               id: id || `imported-${Date.now()}-${index}`,
               tenantId: currentUser?.tenantId || '',
               name: name || '',
+              nameKana: nameKana || '',
+              employeeNumber: employeeNumber || '',
               email: email || '',
               phone: phone || '',
               department: department || '',
               position: position || '',
+              employmentType: employmentType || '',
               hireDate: hireDate || new Date().toISOString().split('T')[0],
+              birthDate: birthDate || undefined,
+              gender: (gender as 'male' | 'female' | 'other' | 'prefer_not_to_say') || undefined,
+              postalCode: postalCode || '',
+              address: address || '',
               status: (status as 'active' | 'inactive' | 'suspended' | 'retired') || 'active',
-              roles: roles ? roles.split(';') : ['user'],
+              roles: roles ? roles.split(';').map(r => r.trim()) : ['employee'],
               unitId: '1',
               timezone: 'Asia/Tokyo',
               avatar: '',
@@ -302,15 +310,41 @@ export default function UsersPage() {
         });
 
         if (importedUsers.length > 0) {
-          // 既存のユーザーと重複チェック（メールアドレスで）
-          const existingEmails = new Set(users.map(u => u.email));
-          const newUsers = importedUsers.filter(u => !existingEmails.has(u.email));
+          // 社員番号またはメールアドレスで既存ユーザーとマッチング
+          const existingByEmail = new Map(users.map(u => [u.email, u]));
+          const existingByEmpNo = new Map(
+            users.filter(u => u.employeeNumber).map(u => [u.employeeNumber!, u])
+          );
 
-          if (newUsers.length > 0) {
-            setUsers([...users, ...newUsers]);
-            toast.success(`${newUsers.length}件のユーザーをインポートしました${errorCount > 0 ? ` (${errorCount}件のエラーをスキップ)` : ''}`);
+          const newUsers: User[] = [];
+          const updatedUsers: User[] = [];
+
+          importedUsers.forEach(imported => {
+            // 社員番号一致 → メール一致の順で既存ユーザーを検索
+            const existing = (imported.employeeNumber && existingByEmpNo.get(imported.employeeNumber))
+              || existingByEmail.get(imported.email);
+
+            if (existing) {
+              // 既存ユーザーを上書き更新
+              updatedUsers.push({ ...existing, ...imported, id: existing.id });
+            } else {
+              newUsers.push(imported);
+            }
+          });
+
+          if (newUsers.length > 0 || updatedUsers.length > 0) {
+            // 既存ユーザーリストに反映（更新分は上書き、新規分は追加）
+            const updatedIds = new Set(updatedUsers.map(u => u.id));
+            const mergedUsers = users.map(u => updatedIds.has(u.id) ? updatedUsers.find(uu => uu.id === u.id)! : u);
+            setUsers([...mergedUsers, ...newUsers]);
+
+            const parts: string[] = [];
+            if (newUsers.length > 0) parts.push(`${newUsers.length}件を新規追加`);
+            if (updatedUsers.length > 0) parts.push(`${updatedUsers.length}件を更新`);
+            if (errorCount > 0) parts.push(`${errorCount}件のエラーをスキップ`);
+            toast.success(`インポート完了: ${parts.join('、')}`);
           } else {
-            toast.warning('すべてのユーザーが既に登録されています');
+            toast.warning('インポート対象のデータがありません');
           }
         } else {
           toast.error(`インポートに失敗しました (${errorCount}件のエラー)`);

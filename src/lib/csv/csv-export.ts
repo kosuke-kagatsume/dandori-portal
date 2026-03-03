@@ -490,32 +490,44 @@ export const exportUsersToCSV = (
 
     const headers = [
       '従業員ID',
+      '社員番号',
       '氏名',
+      'フリガナ',
       'メールアドレス',
       '電話番号',
       '部署',
       '役職',
+      '雇用形態',
       '入社日',
+      '生年月日',
+      '性別',
+      '郵便番号',
+      '住所',
       'ステータス',
       '退職日',
       '退職理由',
       '役割',
-      'タイムゾーン',
     ];
 
     const rows = users.map((user) => [
       user.id,
+      user.employeeNumber || '',
       user.name,
+      user.nameKana || '',
       user.email,
       user.phone || '',
       user.department || '',
       user.position || '',
+      user.employmentType || '',
       user.hireDate,
+      user.birthDate || '',
+      user.gender || '',
+      user.postalCode || '',
+      user.address || '',
       getUserStatusLabel(user.status),
       user.retiredDate || '',
       getRetirementReasonLabel(user.retirementReason),
       user.roles.join(', '),
-      user.timezone || 'Asia/Tokyo',
     ]);
 
     const csvString = generateCSVString(headers, rows);

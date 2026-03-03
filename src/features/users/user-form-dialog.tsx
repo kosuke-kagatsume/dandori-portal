@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ROLE_LABELS } from '@/lib/rbac';
 import type { UserRole } from '@/types';
+import { useTenantStore } from '@/lib/store';
 import { 
   Dialog,
   DialogContent,
@@ -60,25 +61,10 @@ interface UserFormDialogProps {
   onSubmit: (data: UserFormData) => Promise<void>;
 }
 
-const departments = [
-  '営業部',
-  '開発部',
-  '人事部',
-  '総務部',
-  '経理部',
-  'マーケティング部',
-];
-
-const positions = [
-  'エンジニア',
-  'マネージャー',
-  'アナリスト',
-  'アシスタント',
-  'ディレクター',
-  'スペシャリスト',
-];
-
-const employmentTypes = [
+// フォールバック用ハードコード値（API取得失敗時に使用）
+const FALLBACK_DEPARTMENTS = ['営業部', '開発部', '人事部', '総務部', '経理部', 'マーケティング部'];
+const FALLBACK_POSITIONS = ['エンジニア', 'マネージャー', 'アナリスト', 'アシスタント', 'ディレクター', 'スペシャリスト'];
+const FALLBACK_EMPLOYMENT_TYPES = [
   { value: 'regular', label: '正社員' },
   { value: 'contract', label: '契約社員' },
   { value: 'part_time', label: 'パートタイム' },
@@ -97,6 +83,55 @@ const roleOptions: Array<{ value: UserRole; label: string }> = [
 
 export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currentTenant } = useTenantStore();
+  const tenantId = currentTenant?.id;
+
+  // マスタデータをAPIから取得
+  const [departments, setDepartments] = useState<string[]>(FALLBACK_DEPARTMENTS);
+  const [positions, setPositions] = useState<string[]>(FALLBACK_POSITIONS);
+  const [employmentTypes, setEmploymentTypes] = useState<{ value: string; label: string }[]>(FALLBACK_EMPLOYMENT_TYPES);
+
+  const fetchMasterData = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const [deptRes, posRes, etRes] = await Promise.all([
+        fetch(`/api/master-data/departments?tenantId=${tenantId}&limit=100`),
+        fetch(`/api/master-data/positions?tenantId=${tenantId}&limit=100`),
+        fetch(`/api/master-data/employment-types?tenantId=${tenantId}&limit=100`),
+      ]);
+
+      if (deptRes.ok) {
+        const data = await deptRes.json();
+        if (data.success && data.data?.length > 0) {
+          setDepartments(data.data.filter((d: { isActive: boolean }) => d.isActive !== false).map((d: { name: string }) => d.name));
+        }
+      }
+      if (posRes.ok) {
+        const data = await posRes.json();
+        if (data.success && data.data?.length > 0) {
+          setPositions(data.data.filter((p: { isActive: boolean }) => p.isActive !== false).map((p: { name: string }) => p.name));
+        }
+      }
+      if (etRes.ok) {
+        const data = await etRes.json();
+        if (data.success && data.data?.length > 0) {
+          setEmploymentTypes(
+            data.data
+              .filter((e: { isActive: boolean }) => e.isActive !== false)
+              .map((e: { id: string; name: string }) => ({ value: e.name, label: e.name }))
+          );
+        }
+      }
+    } catch {
+      // フォールバック値をそのまま使用
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (open) {
+      fetchMasterData();
+    }
+  }, [open, fetchMasterData]);
 
   const {
     register,

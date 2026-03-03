@@ -95,6 +95,21 @@ interface MemberMonthlyData {
 
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
+// ISO文字列をJST HH:mm形式に変換
+function toHHmm(value: string | null): string | null {
+  if (!value) return null;
+  if (/^\d{1,2}:\d{2}$/.test(value)) return value;
+  try {
+    return new Date(value).toLocaleTimeString('ja-JP', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Asia/Tokyo',
+    });
+  } catch {
+    return value;
+  }
+}
+
 export function TeamAttendance() {
   const { currentTenant } = useTenantStore();
   const { currentUser } = useUserStore();
@@ -122,6 +137,13 @@ export function TeamAttendance() {
   // API data states
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+
+  // 承認/締め状態のローカル管理
+  const [approvalState, setApprovalState] = useState<Record<string, {
+    closingRequested: boolean;
+    managerApproved: boolean;
+    attendanceClosed: boolean;
+  }>>({});
 
   // Initialize date on client side
   useEffect(() => {
@@ -175,6 +197,27 @@ export function TeamAttendance() {
         const attendanceData = await attendanceRes.json();
         if (attendanceData.success) {
           setAttendanceRecords(attendanceData.data);
+
+          // 出勤記録があるメンバーを承認申請済みとして初期化
+          const memberIdsWithRecords = new Set<string>(
+            attendanceData.data.map((r: AttendanceRecord) => r.userId)
+          );
+          const initialApproval: Record<string, { closingRequested: boolean; managerApproved: boolean; attendanceClosed: boolean }> = {};
+          memberIdsWithRecords.forEach((id: string) => {
+            initialApproval[id] = {
+              closingRequested: true,
+              managerApproved: false,
+              attendanceClosed: false,
+            };
+          });
+          setApprovalState(prev => {
+            // 既にローカルで操作済みならそちらを優先
+            const merged = { ...initialApproval };
+            for (const [key, val] of Object.entries(prev)) {
+              if (val) merged[key] = val;
+            }
+            return merged;
+          });
         }
       }
     } catch (error) {
@@ -212,8 +255,8 @@ export function TeamAttendance() {
 
       memberRecords.forEach(record => {
         dailyRecords.set(record.date, {
-          checkIn: record.checkIn,
-          checkOut: record.checkOut,
+          checkIn: toHHmm(record.checkIn),
+          checkOut: toHHmm(record.checkOut),
           status: record.status,
         });
 
@@ -258,13 +301,14 @@ export function TeamAttendance() {
       const daysUntilToday = monthDays.filter(d => !isWeekend(d) && d <= today).length;
       absentDays = Math.max(0, daysUntilToday - workedOrAbsent);
 
+      const memberApproval = approvalState[member.id];
       return {
         memberId: member.id,
         memberName: member.name,
         department: member.department || '',
-        closingRequested: false, // TODO: Get from API
-        managerApproved: false, // TODO: Get from API
-        attendanceClosed: false, // TODO: Get from API
+        closingRequested: memberApproval?.closingRequested ?? false,
+        managerApproved: memberApproval?.managerApproved ?? false,
+        attendanceClosed: memberApproval?.attendanceClosed ?? false,
         dailyRecords,
         summary: {
           workDays,
@@ -278,7 +322,7 @@ export function TeamAttendance() {
         },
       };
     });
-  }, [teamMembers, attendanceRecords, currentDate, monthDays]);
+  }, [teamMembers, attendanceRecords, currentDate, monthDays, approvalState]);
 
   // 権限に応じたメンバー表示フィルタ
   const displayMembers = useMemo(() => {
@@ -339,7 +383,33 @@ export function TeamAttendance() {
       cancel_approval: '承認解除',
     };
 
-    if (actionType) {
+    if (actionType && selectedMemberId) {
+      const prev = approvalState[selectedMemberId] || {
+        closingRequested: false,
+        managerApproved: false,
+        attendanceClosed: false,
+      };
+
+      let updated = { ...prev };
+      switch (actionType) {
+        case 'approve':
+          updated = { ...prev, managerApproved: true };
+          break;
+        case 'reject':
+          updated = { closingRequested: false, managerApproved: false, attendanceClosed: false };
+          break;
+        case 'close':
+          updated = { ...prev, attendanceClosed: true };
+          break;
+        case 'unlock':
+          updated = { ...prev, attendanceClosed: false };
+          break;
+        case 'cancel_approval':
+          updated = { ...prev, managerApproved: false };
+          break;
+      }
+
+      setApprovalState(s => ({ ...s, [selectedMemberId]: updated }));
       toast.success(`${actionLabels[actionType]}を実行しました`);
     }
     setActionDialogOpen(false);
@@ -439,10 +509,12 @@ export function TeamAttendance() {
                 <Clock className="h-4 w-4" />
                 打刻状況
               </TabsTrigger>
-              <TabsTrigger value="summary" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                勤怠項目別集計
-              </TabsTrigger>
+              {(isHR || isManager) && (
+                <TabsTrigger value="summary" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  勤怠項目別集計
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* 打刻状況タブ - 1ヶ月横スクロール表示 */}
@@ -654,8 +726,8 @@ export function TeamAttendance() {
               </ScrollArea>
             </TabsContent>
 
-            {/* 勤怠項目別集計タブ（閲覧のみ） */}
-            <TabsContent value="summary">
+            {/* 勤怠項目別集計タブ（管理者/人事のみ） */}
+            {(isHR || isManager) && <TabsContent value="summary">
               <div className="border rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <Table>
@@ -733,7 +805,7 @@ export function TeamAttendance() {
                   </Table>
                 </div>
               </div>
-            </TabsContent>
+            </TabsContent>}
           </Tabs>
         </CardContent>
       </Card>

@@ -255,9 +255,9 @@ export default function AttendancePage() {
   }, [allHistoryRecords]);
 
   // 勤怠記録更新ハンドラー
-  const handleRecordUpdate = (date: string, updates: Record<string, unknown>) => {
+  const handleRecordUpdate = async (date: string, updates: Record<string, unknown>) => {
     const existingRecord = allHistoryRecords.find(r => r.date === date);
-    addOrUpdateRecord({
+    await addOrUpdateRecord({
       ...(existingRecord || {}),
       ...updates,
       date,

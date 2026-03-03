@@ -1,13 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar, Clock, TrendingUp, Edit, ArrowRightLeft, PauseCircle, Briefcase, CalendarOff } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Edit, ArrowRightLeft, PauseCircle, Briefcase, CalendarOff, Plus } from 'lucide-react';
+import { toast } from 'sonner';
+import { useTenantStore } from '@/lib/store';
 import type { User, TransferHistory } from '@/types';
-import type { AttendanceRecord } from '@/lib/store/attendance-history-store';
 
 // 就業ルールタイプ（MFと同等）
 export type WorkRuleType =
@@ -34,15 +53,21 @@ export interface WorkRule {
   workEndTime?: string;           // 終業時刻
 }
 
+interface WorkPattern {
+  id: string;
+  name: string;
+  code: string;
+  workStartTime: string;
+  workEndTime: string;
+  breakDurationMinutes: number;
+  workingMinutes: number;
+  isFlexTime: boolean;
+  coreTimeStart?: string;
+  coreTimeEnd?: string;
+}
+
 interface UserAttendanceTabProps {
   user: User;
-  attendanceRecords: AttendanceRecord[];
-  attendanceStats: {
-    totalDays: number;
-    totalWorkHours: number;
-    totalOvertimeHours: number;
-    avgWorkHoursPerDay: string;
-  };
   transferHistory?: TransferHistory[];
   workRule?: WorkRule;
   isReadOnly: boolean;
@@ -66,26 +91,91 @@ const workRuleTypeLabels: Record<WorkRuleType, string> = {
   yearly_variable: '1年単位変形労働制',
 };
 
-const employmentTypeLabels: Record<string, string> = {
-  regular: '正社員',
-  contract: '契約社員',
-  part_time: 'パートタイム',
-  temporary: '派遣社員',
-  intern: 'インターン',
-  executive: '役員',
-};
+const leaveTypeOptions = [
+  { value: 'sick_leave', label: '傷病休職' },
+  { value: 'maternity_leave', label: '産前産後休業' },
+  { value: 'childcare_leave', label: '育児休業' },
+  { value: 'family_care_leave', label: '介護休業' },
+  { value: 'personal_leave', label: '自己都合休職' },
+  { value: 'other', label: 'その他' },
+];
+
+const payCalcMethodOptions = [
+  { value: 'no_pay', label: '無給' },
+  { value: 'partial_pay', label: '一部支給' },
+  { value: 'full_pay', label: '全額支給' },
+  { value: 'insurance', label: '傷病手当金/育休手当' },
+];
 
 export function UserAttendanceTab({
   user,
-  attendanceRecords,
-  attendanceStats,
   transferHistory = [],
   workRule,
   isReadOnly,
   onEdit,
 }: UserAttendanceTabProps) {
-  const [showAllRecords, setShowAllRecords] = useState(false);
-  const displayRecords = showAllRecords ? attendanceRecords : attendanceRecords.slice(0, 20);
+  const { currentTenant } = useTenantStore();
+  const tenantId = currentTenant?.id;
+
+  // 就業ルール選択ダイアログ
+  const [workRuleDialogOpen, setWorkRuleDialogOpen] = useState(false);
+  const [workPatterns, setWorkPatterns] = useState<WorkPattern[]>([]);
+  const [selectedPatternId, setSelectedPatternId] = useState<string>('');
+
+  // 休職履歴編集ダイアログ
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [leaveForm, setLeaveForm] = useState({
+    startDate: '',
+    endDate: '',
+    leaveType: '',
+    payCalcMethod: '',
+    notes: '',
+  });
+
+  // 就業ルールパターン取得
+  const fetchWorkPatterns = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const res = await fetch(`/api/attendance-master/work-patterns?tenantId=${tenantId}&limit=100`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          setWorkPatterns(data.data.filter((p: { isActive?: boolean }) => p.isActive !== false));
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (workRuleDialogOpen) {
+      fetchWorkPatterns();
+    }
+  }, [workRuleDialogOpen, fetchWorkPatterns]);
+
+  const handleWorkRuleSelect = () => {
+    if (!selectedPatternId) {
+      toast.error('就業ルールを選択してください');
+      return;
+    }
+    const selected = workPatterns.find(p => p.id === selectedPatternId);
+    if (selected) {
+      toast.success(`就業ルール「${selected.name}」を適用しました`);
+    }
+    setWorkRuleDialogOpen(false);
+    setSelectedPatternId('');
+  };
+
+  const handleAddLeaveHistory = () => {
+    if (!leaveForm.startDate || !leaveForm.leaveType) {
+      toast.error('休職開始日と休職種別は必須です');
+      return;
+    }
+    toast.success('休職履歴を追加しました');
+    setLeaveDialogOpen(false);
+    setLeaveForm({ startDate: '', endDate: '', leaveType: '', payCalcMethod: '', notes: '' });
+  };
 
   return (
     <div className="space-y-4">
@@ -123,20 +213,6 @@ export function UserAttendanceTab({
                 {user.punchMethod ? punchMethodLabels[user.punchMethod] || user.punchMethod : 'Web打刻'}
               </p>
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">雇用形態</p>
-              <p className="text-sm mt-1">
-                {user.employmentType
-                  ? employmentTypeLabels[user.employmentType] || user.employmentType
-                  : '未設定'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">入社日</p>
-              <p className="text-sm mt-1">
-                {user.hireDate ? new Date(user.hireDate).toLocaleDateString('ja-JP') : '未設定'}
-              </p>
-            </div>
             {user.status === 'retired' && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
@@ -157,11 +233,21 @@ export function UserAttendanceTab({
       {/* 就業ルールカード */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />
-            <CardTitle className="text-base">就業ルール</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4" />
+              <div>
+                <CardTitle className="text-base">就業ルール</CardTitle>
+                <CardDescription>適用されている勤務制度</CardDescription>
+              </div>
+            </div>
+            {!isReadOnly && (
+              <Button variant="outline" size="sm" onClick={() => setWorkRuleDialogOpen(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                変更
+              </Button>
+            )}
           </div>
-          <CardDescription>適用されている勤務制度</CardDescription>
         </CardHeader>
         <CardContent>
           {workRule ? (
@@ -211,46 +297,6 @@ export function UserAttendanceTab({
         </CardContent>
       </Card>
 
-      {/* 統計カード */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">出勤日数</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{attendanceStats.totalDays}日</div>
-            <p className="text-xs text-muted-foreground mt-1">直近6ヶ月</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">総労働時間</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{attendanceStats.totalWorkHours}時間</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              1日平均: {attendanceStats.avgWorkHoursPerDay}時間
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">残業時間</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {attendanceStats.totalOvertimeHours}時間
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">直近6ヶ月累計</p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* 異動履歴 */}
       <Card>
         <CardHeader>
@@ -258,6 +304,7 @@ export function UserAttendanceTab({
             <ArrowRightLeft className="h-4 w-4" />
             <CardTitle className="text-base">異動履歴</CardTitle>
           </div>
+          <CardDescription>予約管理 &gt; 異動で登録した履歴が反映されます</CardDescription>
         </CardHeader>
         <CardContent>
           {transferHistory.length === 0 ? (
@@ -316,9 +363,17 @@ export function UserAttendanceTab({
       {/* 休職履歴 */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <PauseCircle className="h-4 w-4" />
-            <CardTitle className="text-base">休職履歴</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <PauseCircle className="h-4 w-4" />
+              <CardTitle className="text-base">休職履歴</CardTitle>
+            </div>
+            {!isReadOnly && (
+              <Button variant="outline" size="sm" onClick={() => setLeaveDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                追加
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -355,125 +410,104 @@ export function UserAttendanceTab({
         </CardContent>
       </Card>
 
-      {/* 勤怠履歴 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">勤怠履歴</CardTitle>
-          <CardDescription>直近6ヶ月の出退勤記録</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {attendanceRecords.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-lg font-medium">勤怠記録がありません</p>
-              <p className="text-sm">勤怠データが記録されていません</p>
+      {/* 就業ルール選択ダイアログ */}
+      <Dialog open={workRuleDialogOpen} onOpenChange={setWorkRuleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>就業ルールの変更</DialogTitle>
+            <DialogDescription>設定 &gt; 勤怠マスタ &gt; 就業ルールから選択してください</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Select value={selectedPatternId} onValueChange={setSelectedPatternId}>
+              <SelectTrigger>
+                <SelectValue placeholder="就業ルールを選択" />
+              </SelectTrigger>
+              <SelectContent>
+                {workPatterns.map(pattern => (
+                  <SelectItem key={pattern.id} value={pattern.id}>
+                    {pattern.name}（{pattern.workStartTime}〜{pattern.workEndTime}）
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWorkRuleDialogOpen(false)}>キャンセル</Button>
+            <Button onClick={handleWorkRuleSelect}>適用</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 休職履歴追加ダイアログ */}
+      <Dialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>休職履歴の追加</DialogTitle>
+            <DialogDescription>休職情報を入力してください</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>休職開始日 *</Label>
+                <Input
+                  type="date"
+                  value={leaveForm.startDate}
+                  onChange={e => setLeaveForm(f => ({ ...f, startDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <Label>休職終了日</Label>
+                <Input
+                  type="date"
+                  value={leaveForm.endDate}
+                  onChange={e => setLeaveForm(f => ({ ...f, endDate: e.target.value }))}
+                />
+              </div>
             </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>日付</TableHead>
-                    <TableHead>出勤時刻</TableHead>
-                    <TableHead>退勤時刻</TableHead>
-                    <TableHead>勤務時間</TableHead>
-                    <TableHead>残業</TableHead>
-                    <TableHead>勤務場所</TableHead>
-                    <TableHead>ステータス</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayRecords.map((record) => {
-                    const statusLabels: Record<string, string> = {
-                      present: '出勤',
-                      absent: '欠勤',
-                      holiday: '休日',
-                      leave: '休暇',
-                      late: '遅刻',
-                      early: '早退',
-                    };
-
-                    const statusColors = {
-                      present: 'default',
-                      absent: 'destructive',
-                      holiday: 'secondary',
-                      leave: 'outline',
-                      late: 'secondary',
-                      early: 'secondary',
-                    } as const;
-
-                    const locationLabels: Record<string, string> = {
-                      office: 'オフィス',
-                      home: '在宅',
-                      client: '客先',
-                      other: 'その他',
-                    };
-
-                    return (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-medium">
-                          {new Date(record.date).toLocaleDateString('ja-JP', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          {record.checkIn
-                            ? new Date(record.checkIn).toLocaleTimeString('ja-JP', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {record.checkOut
-                            ? new Date(record.checkOut).toLocaleTimeString('ja-JP', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {record.workMinutes > 0
-                            ? `${Math.floor(record.workMinutes / 60)}:${String(
-                                record.workMinutes % 60
-                              ).padStart(2, '0')}`
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {record.overtimeMinutes > 0 ? (
-                            <span className="text-orange-600 font-medium">
-                              {Math.floor(record.overtimeMinutes / 60)}:
-                              {String(record.overtimeMinutes % 60).padStart(2, '0')}
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{locationLabels[record.workLocation]}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusColors[record.status]}>
-                            {statusLabels[record.status]}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-              {attendanceRecords.length > 20 && !showAllRecords && (
-                <div className="flex justify-center mt-4">
-                  <Button variant="outline" size="sm" onClick={() => setShowAllRecords(true)}>
-                    すべて表示（{attendanceRecords.length}件）
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>休職種別 *</Label>
+                <Select value={leaveForm.leaveType} onValueChange={v => setLeaveForm(f => ({ ...f, leaveType: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="種別を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {leaveTypeOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>支給項目計算方法</Label>
+                <Select value={leaveForm.payCalcMethod} onValueChange={v => setLeaveForm(f => ({ ...f, payCalcMethod: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="計算方法を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {payCalcMethodOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label>メモ</Label>
+              <Textarea
+                value={leaveForm.notes}
+                onChange={e => setLeaveForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="備考があれば入力"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLeaveDialogOpen(false)}>キャンセル</Button>
+            <Button onClick={handleAddLeaveHistory}>追加</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

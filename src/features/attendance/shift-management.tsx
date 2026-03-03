@@ -110,7 +110,7 @@ export function ShiftManagement() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/users?tenantId=${tenantId}`);
+      const response = await fetch(`/api/users?tenantId=${tenantId}&limit=100`);
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -427,6 +427,7 @@ export function ShiftManagement() {
                   </Table>
                 </div>
                 <ScrollBar orientation="horizontal" />
+                <ScrollBar orientation="vertical" />
               </ScrollArea>
             </CardContent>
           </Card>
@@ -621,6 +622,7 @@ export function ShiftManagement() {
                   )}
                 </div>
                 <ScrollBar orientation="horizontal" />
+                <ScrollBar orientation="vertical" />
               </ScrollArea>
             </CardContent>
           </Card>

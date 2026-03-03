@@ -93,7 +93,7 @@ interface AttendanceRecord {
 
 interface MonthlyAttendanceListProps {
   records: AttendanceRecord[];
-  onRecordUpdate?: (date: string, updates: Partial<AttendanceRecord>) => void;
+  onRecordUpdate?: (date: string, updates: Partial<AttendanceRecord>) => Promise<void> | void;
 }
 
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -280,7 +280,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
   };
 
   // Save edits
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (editingRecord && onRecordUpdate) {
       // 打刻ペアをpunchHistory形式に変換
       const punchHistory: PunchRecord[] = editPunchPairs.flatMap((pair, idx) => {
@@ -293,15 +293,20 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
         return punchRecords;
       });
 
-      onRecordUpdate(editingRecord.date, {
-        ...editingRecord,
-        checkIn: editPunchPairs[0]?.checkIn || undefined,
-        checkOut: editPunchPairs[0]?.checkOut || undefined,
-        breakStart: editPunchPairs[0]?.breakStart || undefined,
-        breakEnd: editPunchPairs[0]?.breakEnd || undefined,
-        punchHistory,
-      });
-      toast.success('勤怠記録を更新しました');
+      try {
+        await onRecordUpdate(editingRecord.date, {
+          ...editingRecord,
+          checkIn: editPunchPairs[0]?.checkIn || undefined,
+          checkOut: editPunchPairs[0]?.checkOut || undefined,
+          breakStart: editPunchPairs[0]?.breakStart || undefined,
+          breakEnd: editPunchPairs[0]?.breakEnd || undefined,
+          punchHistory,
+        });
+        toast.success('勤怠記録を更新しました');
+      } catch {
+        toast.error('勤怠記録の更新に失敗しました');
+        return;
+      }
     }
     setEditDialogOpen(false);
     setEditingRecord(null);
@@ -696,6 +701,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
               </Table>
             </div>
             <ScrollBar orientation="horizontal" />
+            <ScrollBar orientation="vertical" />
           </ScrollArea>
         </CardContent>
       </Card>
