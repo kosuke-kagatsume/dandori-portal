@@ -35,18 +35,13 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  XCircle,
   MinusCircle,
   Search,
-  Check,
   ChevronLeft,
   ChevronRight,
   Loader2,
   FileText,
   Eye,
-  Undo2,
-  Lock,
-  Unlock,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, parseISO, getDay, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -254,7 +249,8 @@ export function TeamAttendance() {
       let totalOvertimeHours = 0;
 
       memberRecords.forEach(record => {
-        dailyRecords.set(record.date, {
+        const dateKey = record.date.includes('T') ? record.date.split('T')[0] : record.date;
+        dailyRecords.set(dateKey, {
           checkIn: toHHmm(record.checkIn),
           checkOut: toHHmm(record.checkOut),
           status: record.status,
@@ -494,7 +490,7 @@ export function TeamAttendance() {
                 <SelectValue placeholder="ステータス" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべて</SelectItem>
+                <SelectItem value="all">すべてのステータス</SelectItem>
                 <SelectItem value="open">未締め</SelectItem>
                 <SelectItem value="pending">承認待ち</SelectItem>
                 <SelectItem value="approved">承認済み</SelectItem>
@@ -550,7 +546,7 @@ export function TeamAttendance() {
                         })}
                         {/* アクションカラム（人事/マネージャーのみ） */}
                         {(isHR || isManager) && (
-                          <TableHead className="w-[160px] text-center">アクション</TableHead>
+                          <TableHead className="w-[320px] text-center">アクション</TableHead>
                         )}
                       </TableRow>
                     </TableHeader>
@@ -650,67 +646,57 @@ export function TeamAttendance() {
                             {/* アクションボタン */}
                             {(isHR || isManager) && (
                               <TableCell className="text-center">
-                                <div className="flex items-center justify-center gap-1">
+                                <div className="flex items-center justify-center gap-1 flex-wrap">
                                   {/* マネージャー・人事: 差し戻し/承認 */}
-                                  {member.closingRequested && !member.managerApproved && (
-                                    <>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() => handleAction(member.memberId, 'reject')}
-                                        title="差し戻し"
-                                      >
-                                        <XCircle className="h-4 w-4 text-red-500" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() => handleAction(member.memberId, 'approve')}
-                                        title="承認"
-                                      >
-                                        <Check className="h-4 w-4 text-green-500" />
-                                      </Button>
-                                    </>
-                                  )}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => handleAction(member.memberId, 'reject')}
+                                    disabled={!(member.closingRequested && !member.managerApproved)}
+                                  >
+                                    差し戻し
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => handleAction(member.memberId, 'approve')}
+                                    disabled={!(member.closingRequested && !member.managerApproved)}
+                                  >
+                                    承認
+                                  </Button>
 
-                                  {/* 人事のみ: 承認解除/勤怠締め/締め解除 */}
+                                  {/* 人事のみ: 承認解除/承認/勤怠締め/締め解除 */}
                                   {isHR && (
                                     <>
-                                      {member.managerApproved && !member.attendanceClosed && (
-                                        <>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            onClick={() => handleAction(member.memberId, 'cancel_approval')}
-                                            title="承認解除"
-                                          >
-                                            <Undo2 className="h-4 w-4 text-orange-500" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            onClick={() => handleAction(member.memberId, 'close')}
-                                            title="勤怠締め"
-                                          >
-                                            <Lock className="h-4 w-4 text-blue-500" />
-                                          </Button>
-                                        </>
-                                      )}
-                                      {member.attendanceClosed && (
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-7 w-7"
-                                          onClick={() => handleAction(member.memberId, 'unlock')}
-                                          title="締め解除"
-                                        >
-                                          <Unlock className="h-4 w-4 text-purple-500" />
-                                        </Button>
-                                      )}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => handleAction(member.memberId, 'cancel_approval')}
+                                        disabled={!(member.managerApproved && !member.attendanceClosed)}
+                                      >
+                                        承認解除
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => handleAction(member.memberId, 'close')}
+                                        disabled={!(member.managerApproved && !member.attendanceClosed)}
+                                      >
+                                        勤怠締め
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => handleAction(member.memberId, 'unlock')}
+                                        disabled={!member.attendanceClosed}
+                                      >
+                                        締め解除
+                                      </Button>
                                     </>
                                   )}
                                 </div>

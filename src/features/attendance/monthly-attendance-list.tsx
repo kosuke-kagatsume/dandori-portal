@@ -37,7 +37,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   ChevronLeft,
   ChevronRight,
@@ -418,15 +417,15 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="w-full max-h-[calc(100vh-280px)]">
+          <div className="w-full max-h-[calc(100vh-280px)] overflow-auto">
             <div className="min-w-[1800px]">
               <Table>
                 <TableHeader className="sticky top-0 z-20 bg-background">
                   <TableRow className="bg-muted/50">
                     <TableHead scope="col" className="w-[60px] text-center sticky left-0 bg-muted/50 z-30">詳細</TableHead>
-                    <TableHead scope="col" className="w-[60px] text-center">編集</TableHead>
-                    <TableHead scope="col" className="w-[60px] text-center">申請</TableHead>
-                    <TableHead scope="col" className="w-[100px]">日付</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center sticky left-[60px] bg-muted/50 z-30">編集</TableHead>
+                    <TableHead scope="col" className="w-[60px] text-center sticky left-[120px] bg-muted/50 z-30">申請</TableHead>
+                    <TableHead scope="col" className="w-[100px] sticky left-[180px] bg-muted/50 z-30">日付</TableHead>
                     <TableHead scope="col" className="w-[80px]">勤怠区分</TableHead>
                     <TableHead scope="col" className="w-[80px] text-center">申請状況</TableHead>
                     <TableHead scope="col" className="w-[100px]">勤務パターン</TableHead>
@@ -484,7 +483,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 編集 */}
-                        <TableCell className="text-center">
+                        <TableCell className="text-center sticky left-[60px] bg-inherit z-10">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -497,7 +496,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 申請 */}
-                        <TableCell className="text-center">
+                        <TableCell className="text-center sticky left-[120px] bg-inherit z-10">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`${format(day, 'M月d日')}の申請メニュー`}>
@@ -519,7 +518,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 日付 */}
-                        <TableCell>
+                        <TableCell className="sticky left-[180px] bg-inherit z-10">
                           <div className={cn(
                             'font-medium',
                             isSunday && 'text-red-500',
@@ -667,9 +666,9 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                           )}
                         >
                           <TableCell className="sticky left-0 bg-inherit z-10" />
-                          <TableCell />
-                          <TableCell />
-                          <TableCell />
+                          <TableCell className="sticky left-[60px] bg-inherit z-10" />
+                          <TableCell className="sticky left-[120px] bg-inherit z-10" />
+                          <TableCell className="sticky left-[180px] bg-inherit z-10" />
                           <TableCell />
                           <TableCell />
                           <TableCell />
@@ -700,9 +699,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                 </TableBody>
               </Table>
             </div>
-            <ScrollBar orientation="horizontal" />
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 

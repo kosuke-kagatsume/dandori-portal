@@ -92,7 +92,7 @@ function normalizeApiRecord(record: Record<string, unknown>): Record<string, unk
     id: p.id,
     type: p.punchType as PunchType,
     time: formatTimeToHHmm(p.punchTime) || '',
-    method: 'manual' as PunchMethod,
+    method: 'web' as PunchMethod,
     createdAt: p.punchTime,
   }));
 
@@ -270,11 +270,6 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             r => r.userId === userId && r.date === date
           );
 
-          // 打刻履歴のマージ（既存 + 新規）
-          const existingPunchHistory = existingRecord?.punchHistory || [];
-          const newPunchHistory = record.punchHistory || [];
-          const mergedPunchHistory = [...existingPunchHistory, ...newPunchHistory];
-
           const recordToUpsert = {
             userId,
             date,
@@ -290,7 +285,10 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             memo: record.memo,
             approvalStatus: record.approvalStatus,
             approvalReason: record.approvalReason,
-            punchHistory: mergedPunchHistory.length > 0 ? mergedPunchHistory : undefined,
+            // punchHistoryが明示的に渡された場合のみAPIに送信
+            // syncPunchToHistory（punchHistory未指定）→ 打刻レコードを触らない
+            // 編集ダイアログ（punchHistory指定あり）→ 打刻を上書き
+            punchHistory: record.punchHistory !== undefined ? record.punchHistory : undefined,
           };
 
           const upsertedRecord = await apiUpsertAttendanceRecord(recordToUpsert);
