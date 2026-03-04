@@ -470,7 +470,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         )}
                       >
                         {/* 詳細 */}
-                        <TableCell className="text-center sticky left-0 bg-inherit z-10">
+                        <TableCell className="text-center sticky left-0 bg-background z-10">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -483,7 +483,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 編集 */}
-                        <TableCell className="text-center sticky left-[60px] bg-inherit z-10">
+                        <TableCell className="text-center sticky left-[60px] bg-background z-10">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -496,7 +496,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 申請 */}
-                        <TableCell className="text-center sticky left-[120px] bg-inherit z-10">
+                        <TableCell className="text-center sticky left-[120px] bg-background z-10">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`${format(day, 'M月d日')}の申請メニュー`}>
@@ -518,7 +518,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 日付 */}
-                        <TableCell className="sticky left-[180px] bg-inherit z-10">
+                        <TableCell className="sticky left-[180px] bg-background z-10">
                           <div className={cn(
                             'font-medium',
                             isSunday && 'text-red-500',
@@ -665,10 +665,10 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                             isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
                           )}
                         >
-                          <TableCell className="sticky left-0 bg-inherit z-10" />
-                          <TableCell className="sticky left-[60px] bg-inherit z-10" />
-                          <TableCell className="sticky left-[120px] bg-inherit z-10" />
-                          <TableCell className="sticky left-[180px] bg-inherit z-10" />
+                          <TableCell className="sticky left-0 bg-background z-10" />
+                          <TableCell className="sticky left-[60px] bg-background z-10" />
+                          <TableCell className="sticky left-[120px] bg-background z-10" />
+                          <TableCell className="sticky left-[180px] bg-background z-10" />
                           <TableCell />
                           <TableCell />
                           <TableCell />
@@ -732,41 +732,91 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                   <Clock className="h-4 w-4" />
                   勤怠打刻
                 </h4>
-                <div className="border rounded-lg divide-y">
-                  <div className="grid grid-cols-3 gap-4 p-3 text-sm">
-                    <div className="font-medium text-muted-foreground">打刻種別</div>
-                    <div className="font-medium text-muted-foreground">打刻方法</div>
-                    <div className="font-medium text-muted-foreground">打刻時間</div>
-                  </div>
-                  {editingRecord.checkIn && (
-                    <div className="grid grid-cols-3 gap-4 p-3 text-sm">
-                      <div>出勤</div>
-                      <div>PC打刻</div>
-                      <div className="font-mono">{editingRecord.checkIn}</div>
+                {(() => {
+                  const pairs = extractPunchPairs(editingRecord.punchHistory);
+                  if (pairs.length > 0) {
+                    return pairs.map((pair, idx) => (
+                      <div key={idx} className="space-y-1">
+                        {pairs.length > 1 && (
+                          <div className="text-xs font-medium text-muted-foreground">{idx + 1}組目</div>
+                        )}
+                        <div className="border rounded-lg divide-y">
+                          <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                            <div className="font-medium text-muted-foreground">打刻種別</div>
+                            <div className="font-medium text-muted-foreground">打刻方法</div>
+                            <div className="font-medium text-muted-foreground">打刻時間</div>
+                          </div>
+                          {pair.checkIn && (
+                            <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                              <div>出勤</div>
+                              <div>{pair.checkIn.method}</div>
+                              <div className="font-mono">{pair.checkIn.time}</div>
+                            </div>
+                          )}
+                          {pair.breakStart && (
+                            <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                              <div>休憩入り</div>
+                              <div>{pair.breakStart.method}</div>
+                              <div className="font-mono">{pair.breakStart.time}</div>
+                            </div>
+                          )}
+                          {pair.breakEnd && (
+                            <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                              <div>休憩戻り</div>
+                              <div>{pair.breakEnd.method}</div>
+                              <div className="font-mono">{pair.breakEnd.time}</div>
+                            </div>
+                          )}
+                          {pair.checkOut && (
+                            <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                              <div>退勤</div>
+                              <div>{pair.checkOut.method}</div>
+                              <div className="font-mono">{pair.checkOut.time}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ));
+                  }
+                  // punchHistory がない場合は従来通り checkIn/checkOut から表示
+                  return (
+                    <div className="border rounded-lg divide-y">
+                      <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                        <div className="font-medium text-muted-foreground">打刻種別</div>
+                        <div className="font-medium text-muted-foreground">打刻方法</div>
+                        <div className="font-medium text-muted-foreground">打刻時間</div>
+                      </div>
+                      {editingRecord.checkIn && (
+                        <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                          <div>出勤</div>
+                          <div>PC打刻</div>
+                          <div className="font-mono">{editingRecord.checkIn}</div>
+                        </div>
+                      )}
+                      {editingRecord.breakStart && (
+                        <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                          <div>休憩入り</div>
+                          <div>PC打刻</div>
+                          <div className="font-mono">{editingRecord.breakStart}</div>
+                        </div>
+                      )}
+                      {editingRecord.breakEnd && (
+                        <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                          <div>休憩戻り</div>
+                          <div>PC打刻</div>
+                          <div className="font-mono">{editingRecord.breakEnd}</div>
+                        </div>
+                      )}
+                      {editingRecord.checkOut && (
+                        <div className="grid grid-cols-3 gap-4 p-3 text-sm">
+                          <div>退勤</div>
+                          <div>PC打刻</div>
+                          <div className="font-mono">{editingRecord.checkOut}</div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {editingRecord.breakStart && (
-                    <div className="grid grid-cols-3 gap-4 p-3 text-sm">
-                      <div>休憩入り</div>
-                      <div>PC打刻</div>
-                      <div className="font-mono">{editingRecord.breakStart}</div>
-                    </div>
-                  )}
-                  {editingRecord.breakEnd && (
-                    <div className="grid grid-cols-3 gap-4 p-3 text-sm">
-                      <div>休憩戻り</div>
-                      <div>PC打刻</div>
-                      <div className="font-mono">{editingRecord.breakEnd}</div>
-                    </div>
-                  )}
-                  {editingRecord.checkOut && (
-                    <div className="grid grid-cols-3 gap-4 p-3 text-sm">
-                      <div>退勤</div>
-                      <div>PC打刻</div>
-                      <div className="font-mono">{editingRecord.checkOut}</div>
-                    </div>
-                  )}
-                </div>
+                  );
+                })()}
               </div>
 
               {/* 勤怠項目 */}

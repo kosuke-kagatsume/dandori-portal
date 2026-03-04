@@ -332,7 +332,7 @@ export function ShiftManagement() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="w-full max-h-[calc(100vh-320px)]">
+              <ScrollArea className="w-full max-h-[calc(100vh-250px)] [&>div>div[style]]:!block [&_[data-radix-scroll-area-scrollbar]]:w-3 [&_[data-radix-scroll-area-scrollbar]]:opacity-100">
                 <div className="min-w-[1600px]">
                   <Table>
                     <TableHeader className="sticky top-0 z-20">
@@ -369,7 +369,7 @@ export function ShiftManagement() {
                       ) : (
                         filteredMembers.map(member => (
                           <TableRow key={member.id}>
-                            <TableCell className="font-medium sticky left-0 bg-white dark:bg-gray-950 z-10">
+                            <TableCell className="font-medium sticky left-0 bg-background z-10">
                               <div className="truncate">{member.name}</div>
                               <div className="text-xs text-muted-foreground truncate">{member.department}</div>
                             </TableCell>
@@ -531,7 +531,7 @@ export function ShiftManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="w-full max-h-[calc(100vh-320px)]">
+              <ScrollArea className="w-full max-h-[calc(100vh-250px)] [&>div>div[style]]:!block [&_[data-radix-scroll-area-scrollbar]]:w-3 [&_[data-radix-scroll-area-scrollbar]]:opacity-100">
                 <div className="min-w-[1200px]">
                   {/* タイムライン軸 */}
                   <div className="flex border-b mb-2 sticky top-0 z-20 bg-background">

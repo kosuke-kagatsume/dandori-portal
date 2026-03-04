@@ -741,7 +741,7 @@ export function WorkRuleMasterPanel() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-6">
+          <ScrollArea className="flex-1 px-6 [&_[data-radix-scroll-area-scrollbar]]:w-3 [&_[data-radix-scroll-area-scrollbar]]:opacity-100">
             <div className="grid gap-4 py-4 pr-4">
 
               {/* ━━━ A1: ルール名 + 種別 ━━━ */}

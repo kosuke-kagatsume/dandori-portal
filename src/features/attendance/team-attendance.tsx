@@ -128,6 +128,8 @@ export function TeamAttendance() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject' | 'close' | 'unlock' | 'cancel_approval' | null>(null);
+  const [dayDetailDialogOpen, setDayDetailDialogOpen] = useState(false);
+  const [selectedDayDetail, setSelectedDayDetail] = useState<{ memberName: string; date: string; checkIn: string | null; checkOut: string | null; status: string } | null>(null);
 
   // API data states
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -272,18 +274,22 @@ export function TeamAttendance() {
             presentDays++;
           }
 
-          if (record.checkIn > '09:30') {
+          const inTimeStr = toHHmm(record.checkIn) || '';
+          if (inTimeStr > '09:30') {
             lateDays++;
           }
 
-          if (record.checkOut && record.checkOut < '17:00') {
+          const outTimeStr = toHHmm(record.checkOut);
+          if (outTimeStr && outTimeStr < '17:00') {
             earlyLeaveDays++;
           }
 
           if (record.checkIn && record.checkOut) {
-            const [inH, inM] = record.checkIn.split(':').map(Number);
-            const [outH, outM] = record.checkOut.split(':').map(Number);
-            const hours = (outH * 60 + outM - inH * 60 - inM) / 60;
+            const inTime = toHHmm(record.checkIn) || '0:00';
+            const outTime = toHHmm(record.checkOut) || '0:00';
+            const [inH, inM] = inTime.split(':').map(Number);
+            const [outH, outM] = outTime.split(':').map(Number);
+            const hours = (!isNaN(inH) && !isNaN(outH)) ? (outH * 60 + outM - inH * 60 - inM) / 60 : 0;
             totalWorkHours += hours;
             if (hours > 8) {
               totalOvertimeHours += hours - 8;
@@ -561,7 +567,7 @@ export function TeamAttendance() {
                         filteredData.map((member) => (
                           <TableRow key={member.memberId}>
                             {/* 氏名 */}
-                            <TableCell className="font-medium sticky left-0 bg-white dark:bg-gray-950 z-10">
+                            <TableCell className="font-medium sticky left-0 bg-background z-10">
                               <div className="truncate">{member.memberName}</div>
                               <div className="text-xs text-muted-foreground truncate">{member.department}</div>
                             </TableCell>
@@ -622,8 +628,21 @@ export function TeamAttendance() {
                                   className={cn(
                                     'text-center p-1 text-[10px] font-mono',
                                     isWeekendDay && 'bg-gray-50 dark:bg-gray-900',
-                                    isToday(day) && 'bg-primary/10'
+                                    isToday(day) && 'bg-primary/10',
+                                    record && !isWeekendDay && 'cursor-pointer hover:bg-muted/50'
                                   )}
+                                  onClick={() => {
+                                    if (record && !isWeekendDay) {
+                                      setSelectedDayDetail({
+                                        memberName: member.memberName,
+                                        date: dateStr,
+                                        checkIn: record.checkIn,
+                                        checkOut: record.checkOut,
+                                        status: record.status,
+                                      });
+                                      setDayDetailDialogOpen(true);
+                                    }
+                                  }}
                                 >
                                   {record && !isWeekendDay ? (
                                     <div className="space-y-0.5">
@@ -935,6 +954,66 @@ export function TeamAttendance() {
               onClick={executeAction}
             >
               実行する
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 日次打刻詳細ダイアログ */}
+      <Dialog open={dayDetailDialogOpen} onOpenChange={setDayDetailDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              日次勤怠詳細
+            </DialogTitle>
+            <DialogDescription>
+              {selectedDayDetail?.memberName}さん - {selectedDayDetail?.date}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedDayDetail && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">出勤</div>
+                  <div className="text-lg font-mono font-medium">{selectedDayDetail.checkIn || '-'}</div>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">退勤</div>
+                  <div className="text-lg font-mono font-medium">{selectedDayDetail.checkOut || '-'}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">ステータス</div>
+                  <div className="text-sm font-medium">
+                    {selectedDayDetail.status === 'present' ? '出勤' :
+                     selectedDayDetail.status === 'absent' ? '欠勤' :
+                     selectedDayDetail.status === 'late' ? '遅刻' :
+                     selectedDayDetail.status === 'early' ? '早退' : selectedDayDetail.status}
+                  </div>
+                </div>
+                {selectedDayDetail.checkIn && selectedDayDetail.checkOut && (() => {
+                  const inTime = toHHmm(selectedDayDetail.checkIn) || '0:00';
+                  const outTime = toHHmm(selectedDayDetail.checkOut) || '0:00';
+                  const [inH, inM] = inTime.split(':').map(Number);
+                  const [outH, outM] = outTime.split(':').map(Number);
+                  const hours = (!isNaN(inH) && !isNaN(outH)) ? (outH * 60 + outM - inH * 60 - inM) / 60 : 0;
+                  return (
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <div className="text-xs text-muted-foreground mb-1">総労働時間</div>
+                      <div className="text-lg font-mono font-medium">{hours.toFixed(1)}h</div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDayDetailDialogOpen(false)}>
+              閉じる
             </Button>
           </DialogFooter>
         </DialogContent>

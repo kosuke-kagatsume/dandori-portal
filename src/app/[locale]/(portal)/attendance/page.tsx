@@ -199,6 +199,18 @@ export default function AttendancePage() {
     const firstCheckIn = punchPairs.length > 0 ? punchPairs[0].checkIn?.time : todayStatus.checkIn;
     const lastCheckOut = latestPair?.checkOut?.time || todayStatus.checkOut;
 
+    // checkIn/checkOut から workMinutes を計算
+    let workMinutes = 0;
+    let overtimeMinutes = 0;
+    if (firstCheckIn && lastCheckOut) {
+      const [inH, inM] = firstCheckIn.split(':').map(Number);
+      const [outH, outM] = lastCheckOut.split(':').map(Number);
+      if (!isNaN(inH) && !isNaN(inM) && !isNaN(outH) && !isNaN(outM)) {
+        workMinutes = Math.max(0, (outH * 60 + outM) - (inH * 60 + inM) - totalBreakMinutes);
+        overtimeMinutes = Math.max(0, workMinutes - 480); // 8時間超を残業
+      }
+    }
+
     // 勤怠一覧ストアに同期
     addOrUpdateRecord({
       userId: currentUser.id,
@@ -209,6 +221,8 @@ export default function AttendancePage() {
       breakStart: latestPair?.breakStart?.time || todayStatus.breakStart || null,
       breakEnd: latestPair?.breakEnd?.time || todayStatus.breakEnd || null,
       totalBreakMinutes,
+      workMinutes,
+      overtimeMinutes,
       workLocation: todayStatus.workLocation || 'office',
       status: todayStatus.status === 'finished' ? 'present' :
               todayStatus.status === 'working' ? 'present' :
@@ -246,6 +260,7 @@ export default function AttendancePage() {
       breakEnd: record.breakEnd || undefined,
       breakMinutes: record.totalBreakMinutes,
       workHours: (record.workMinutes || 0) / 60,
+      scheduledHours: 8.0,
       overtime: (record.overtimeMinutes || 0) / 60,
       workLocation: record.workLocation as 'office' | 'home' | 'client' | 'other' | undefined,
       note: record.memo || undefined,
