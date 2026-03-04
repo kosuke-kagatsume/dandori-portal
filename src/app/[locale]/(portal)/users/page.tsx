@@ -235,6 +235,48 @@ export default function UsersPage() {
     }
   };
 
+  // CSV行を正しくパース（空セルも保持する）
+  const parseCSVLine = (line: string): string[] => {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (inQuotes) {
+        if (char === '"' && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else if (char === '"') {
+          inQuotes = false;
+        } else {
+          current += char;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+    }
+    values.push(current.trim());
+    return values;
+  };
+
+  // ステータスラベル → 内部値の逆引き
+  const reverseStatusLabel = (label: string): 'active' | 'inactive' | 'suspended' | 'retired' => {
+    const reverseMap: Record<string, 'active' | 'inactive' | 'suspended' | 'retired'> = {
+      '有効': 'active', '無効': 'inactive', '停止': 'suspended', '退職': 'retired',
+      '在籍中': 'active', '入社予定': 'inactive', '休職中': 'suspended', '退職済み': 'retired',
+      'active': 'active', 'inactive': 'inactive', 'suspended': 'suspended', 'retired': 'retired',
+    };
+    return reverseMap[label] || 'active';
+  };
+
   const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -245,10 +287,10 @@ export default function UsersPage() {
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const text = e.target?.result as string;
-        const lines = text.split('\n').filter(line => line.trim());
+        const text = (e.target?.result as string).replace(/^\uFEFF/, '');
+        const lines = text.split(/\r?\n/).filter(line => line.trim());
 
         if (lines.length < 2) {
           toast.error('CSVファイルが空です');
@@ -262,17 +304,18 @@ export default function UsersPage() {
 
         dataLines.forEach((line, index) => {
           try {
-            // CSV行をパース（カンマで分割、引用符考慮）
-            const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-            const cleanValues = values.map(v => v.replace(/^"|"$/g, '').trim());
+            const cleanValues = parseCSVLine(line);
 
             if (cleanValues.length < 6) {
               errorCount++;
               return;
             }
 
-            // 新しいCSV形式: 従業員ID,社員番号,氏名,フリガナ,メール,電話,部署,役職,雇用形態,入社日,生年月日,性別,郵便番号,住所,ステータス,退職日,退職理由,役割
-            const [id, employeeNumber, name, nameKana, email, phone, department, position, employmentType, hireDate, birthDate, gender, postalCode, address, status, , , roles] = cleanValues;
+            // CSV形式: 従業員ID,社員番号,氏名,フリガナ,メール,電話,部署,役職,雇用形態,入社日,生年月日,性別,郵便番号,住所,ステータス,退職日,退職理由,役割
+            const [id, employeeNumber, name, nameKana, email, phone, department, position, employmentType, hireDate, birthDate, gender, postalCode, address, status, retiredDate, retirementReason, roles] = cleanValues;
+
+            // 日付形式の正規化（yyyy/mm/dd → yyyy-mm-dd）
+            const normalizeDate = (d: string | undefined) => d ? d.replace(/\//g, '-') : undefined;
 
             const user: User = {
               id: id || `imported-${Date.now()}-${index}`,
@@ -285,13 +328,15 @@ export default function UsersPage() {
               department: department || '',
               position: position || '',
               employmentType: employmentType || '',
-              hireDate: hireDate || new Date().toISOString().split('T')[0],
-              birthDate: birthDate || undefined,
-              gender: (gender as 'male' | 'female' | 'other' | 'prefer_not_to_say') || undefined,
+              hireDate: normalizeDate(hireDate) || new Date().toISOString().split('T')[0],
+              birthDate: normalizeDate(birthDate) || undefined,
+              gender: (gender === '男' ? 'male' : gender === '女' ? 'female' : gender as 'male' | 'female' | 'other' | 'prefer_not_to_say') || undefined,
               postalCode: postalCode || '',
               address: address || '',
-              status: (status as 'active' | 'inactive' | 'suspended' | 'retired') || 'active',
-              roles: roles ? roles.split(';').map(r => r.trim()) : ['employee'],
+              status: reverseStatusLabel(status || ''),
+              retiredDate: normalizeDate(retiredDate) || undefined,
+              retirementReason: (['voluntary', 'company', 'contract_end', 'retirement_age', 'other'].includes(retirementReason || '') ? retirementReason as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other' : undefined),
+              roles: roles ? roles.split(/[;,]/).map(r => r.trim()).filter(Boolean) : ['employee'],
               unitId: '1',
               timezone: 'Asia/Tokyo',
               avatar: '',
@@ -333,15 +378,65 @@ export default function UsersPage() {
           });
 
           if (newUsers.length > 0 || updatedUsers.length > 0) {
-            // 既存ユーザーリストに反映（更新分は上書き、新規分は追加）
-            const updatedIds = new Set(updatedUsers.map(u => u.id));
-            const mergedUsers = users.map(u => updatedIds.has(u.id) ? updatedUsers.find(uu => uu.id === u.id)! : u);
-            setUsers([...mergedUsers, ...newUsers]);
+            // DB APIに永続化
+            let apiErrorCount = 0;
+
+            for (const user of updatedUsers) {
+              try {
+                const res = await fetch(`/api/users/${user.id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    name: user.name,
+                    nameKana: user.nameKana,
+                    employeeNumber: user.employeeNumber,
+                    email: user.email,
+                    phone: user.phone,
+                    department: user.department,
+                    position: user.position,
+                    employmentType: user.employmentType,
+                    hireDate: user.hireDate,
+                    birthDate: user.birthDate,
+                    gender: user.gender,
+                    postalCode: user.postalCode,
+                    address: user.address,
+                    status: user.status,
+                    retiredDate: user.retiredDate,
+                    retirementReason: user.retirementReason,
+                    roles: user.roles,
+                  }),
+                });
+                if (!res.ok) apiErrorCount++;
+              } catch {
+                apiErrorCount++;
+              }
+            }
+
+            // 新規ユーザーもAPIで作成
+            for (const user of newUsers) {
+              try {
+                const res = await fetch('/api/users', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    ...user,
+                    tenantId: currentUser?.tenantId || tenantId,
+                  }),
+                });
+                if (!res.ok) apiErrorCount++;
+              } catch {
+                apiErrorCount++;
+              }
+            }
+
+            // DB保存後にリフレッシュ
+            await fetchUsers();
 
             const parts: string[] = [];
             if (newUsers.length > 0) parts.push(`${newUsers.length}件を新規追加`);
             if (updatedUsers.length > 0) parts.push(`${updatedUsers.length}件を更新`);
-            if (errorCount > 0) parts.push(`${errorCount}件のエラーをスキップ`);
+            if (apiErrorCount > 0) parts.push(`${apiErrorCount}件のAPI保存エラー`);
+            if (errorCount > 0) parts.push(`${errorCount}件のパースエラー`);
             toast.success(`インポート完了: ${parts.join('、')}`);
           } else {
             toast.warning('インポート対象のデータがありません');
@@ -382,9 +477,12 @@ export default function UsersPage() {
       retired: '退職済み',
     } as const;
 
+    // 日本語ラベルや不明値が入っている場合の逆引き
+    const normalized = reverseStatusLabel(status);
+
     return (
-      <Badge variant={variants[status as keyof typeof variants]}>
-        {labels[status as keyof typeof labels]}
+      <Badge variant={variants[normalized] || 'outline'}>
+        {labels[normalized] || status || '不明'}
       </Badge>
     );
   };
