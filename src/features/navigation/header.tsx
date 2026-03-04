@@ -33,6 +33,7 @@ import {
 } from '@/lib/store';
 import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenterV2 } from './notification-center-v2';
+import { CertificationNotificationBell } from '@/features/certifications/certification-notification-bell';
 import { CommandPalette } from './command-palette';
 
 export function Header() {
@@ -154,6 +155,9 @@ export function Header() {
             </div>
 
             <Separator orientation="vertical" className="h-6 hidden lg:block" />
+
+            {/* Certification Notifications */}
+            <CertificationNotificationBell />
 
             {/* Notifications */}
             <NotificationCenterV2>

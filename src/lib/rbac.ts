@@ -45,6 +45,7 @@ export const MENU_PERMISSIONS = {
   audit: ['admin'], // 監査ログはシステム管理者のみ
   dwAdminDashboard: ['admin'], // DW管理者ダッシュボード（システム管理者のみ）
   health: ['hr', 'admin'], // 健康管理（人事担当・管理者のみ）
+  certifications: ['hr', 'admin'], // 資格管理（人事担当・管理者のみ）
   dailyReport: ['employee', 'manager', 'executive', 'hr', 'admin'], // 日報（全社員）
 } as const;
 

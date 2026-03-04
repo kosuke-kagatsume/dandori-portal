@@ -13,10 +13,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCertificationNotifications } from '@/hooks/use-certification-notifications';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 export function CertificationNotificationBell() {
   const router = useRouter();
+  const params = useParams();
+  const locale = params?.locale as string || 'ja';
   const { notifications, unreadCount, loading, markAsRead, acknowledge } = useCertificationNotifications();
   const [open, setOpen] = useState(false);
 
@@ -49,7 +51,7 @@ export function CertificationNotificationBell() {
       await markAsRead(notification.id);
     }
     setOpen(false);
-    router.push('/ja/profile?tab=certifications');
+    router.push(`/${locale}/profile?tab=certifications`);
   };
 
   const handleAcknowledge = async (e: React.MouseEvent, notificationId: string) => {
@@ -150,7 +152,7 @@ export function CertificationNotificationBell() {
             className="w-full justify-center text-sm"
             onClick={() => {
               setOpen(false);
-              router.push('/ja/profile?tab=certifications');
+              router.push(`/${locale}/profile?tab=certifications`);
             }}
           >
             すべての資格を見る

@@ -25,6 +25,7 @@ import {
   Scale,
   Bell,
   Heart,
+  Award,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
@@ -53,6 +54,7 @@ const getNavigation = (locale: string, currentUser: User | null) => {
     { key: 'payroll', href: `/${locale}/payroll`, icon: Calculator, menuKey: 'payroll' as MenuKey },
     { key: 'evaluation', href: `/${locale}/evaluation`, icon: Star, menuKey: 'evaluation' as MenuKey },
     { key: 'health', href: `/${locale}/health`, icon: Heart, menuKey: 'health' as MenuKey },
+    { key: 'certifications', href: `/${locale}/certifications`, icon: Award, menuKey: 'certifications' as MenuKey },
     { key: 'organization', href: `/${locale}/organization`, icon: Building2, menuKey: 'organization' as MenuKey },
     { key: 'scheduledChanges', href: `/${locale}/scheduled-changes`, icon: ClipboardCheck, menuKey: 'scheduledChanges' as MenuKey },
     { key: 'legalUpdates', href: `/${locale}/legal-updates`, icon: Scale, menuKey: 'legalUpdates' as MenuKey },

@@ -53,19 +53,6 @@ export interface WorkRule {
   workEndTime?: string;           // 終業時刻
 }
 
-interface WorkPattern {
-  id: string;
-  name: string;
-  code: string;
-  workStartTime: string;
-  workEndTime: string;
-  breakDurationMinutes: number;
-  workingMinutes: number;
-  isFlexTime: boolean;
-  coreTimeStart?: string;
-  coreTimeEnd?: string;
-}
-
 interface UserAttendanceTabProps {
   user: User;
   transferHistory?: TransferHistory[];
@@ -119,11 +106,13 @@ export function UserAttendanceTab({
 
   // 就業ルール選択ダイアログ
   const [workRuleDialogOpen, setWorkRuleDialogOpen] = useState(false);
-  const [workPatterns, setWorkPatterns] = useState<WorkPattern[]>([]);
-  const [selectedPatternId, setSelectedPatternId] = useState<string>('');
+  const [availableWorkRules, setAvailableWorkRules] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [selectedRuleId, setSelectedRuleId] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // 休職履歴編集ダイアログ
+  // 休職履歴
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [leaveHistory, setLeaveHistory] = useState<{ id: string; startDate: string; endDate?: string | null; leaveType: string; payCalcMethod?: string | null; notes?: string | null }[]>([]);
   const [leaveForm, setLeaveForm] = useState({
     startDate: '',
     endDate: '',
@@ -132,15 +121,15 @@ export function UserAttendanceTab({
     notes: '',
   });
 
-  // 就業ルールパターン取得
-  const fetchWorkPatterns = useCallback(async () => {
+  // 就業ルール一覧取得
+  const fetchWorkRules = useCallback(async () => {
     if (!tenantId) return;
     try {
-      const res = await fetch(`/api/attendance-master/work-patterns?tenantId=${tenantId}&limit=100`);
+      const res = await fetch(`/api/attendance-master/work-rules?tenantId=${tenantId}&activeOnly=true`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.data) {
-          setWorkPatterns(data.data.filter((p: { isActive?: boolean }) => p.isActive !== false));
+          setAvailableWorkRules(data.data);
         }
       }
     } catch {
@@ -148,33 +137,78 @@ export function UserAttendanceTab({
     }
   }, [tenantId]);
 
+  // 休職履歴取得
+  const fetchLeaveHistory = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/users/${user.id}/leave-of-absence`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          setLeaveHistory(data.data);
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }, [user.id]);
+
+  useEffect(() => {
+    fetchLeaveHistory();
+  }, [fetchLeaveHistory]);
+
   useEffect(() => {
     if (workRuleDialogOpen) {
-      fetchWorkPatterns();
+      fetchWorkRules();
     }
-  }, [workRuleDialogOpen, fetchWorkPatterns]);
+  }, [workRuleDialogOpen, fetchWorkRules]);
 
-  const handleWorkRuleSelect = () => {
-    if (!selectedPatternId) {
+  const handleWorkRuleSelect = async () => {
+    if (!selectedRuleId) {
       toast.error('就業ルールを選択してください');
       return;
     }
-    const selected = workPatterns.find(p => p.id === selectedPatternId);
-    if (selected) {
-      toast.success(`就業ルール「${selected.name}」を適用しました`);
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workRuleId: selectedRuleId }),
+      });
+      if (!res.ok) throw new Error('更新に失敗しました');
+      const selected = availableWorkRules.find(r => r.id === selectedRuleId);
+      toast.success(`就業ルール「${selected?.name}」を適用しました`);
+      setWorkRuleDialogOpen(false);
+      setSelectedRuleId('');
+      window.location.reload();
+    } catch {
+      toast.error('就業ルールの更新に失敗しました');
+    } finally {
+      setIsSaving(false);
     }
-    setWorkRuleDialogOpen(false);
-    setSelectedPatternId('');
   };
 
-  const handleAddLeaveHistory = () => {
+  const handleAddLeaveHistory = async () => {
     if (!leaveForm.startDate || !leaveForm.leaveType) {
       toast.error('休職開始日と休職種別は必須です');
       return;
     }
-    toast.success('休職履歴を追加しました');
-    setLeaveDialogOpen(false);
-    setLeaveForm({ startDate: '', endDate: '', leaveType: '', payCalcMethod: '', notes: '' });
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/users/${user.id}/leave-of-absence`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(leaveForm),
+      });
+      if (!res.ok) throw new Error('追加に失敗しました');
+      toast.success('休職履歴を追加しました');
+      setLeaveDialogOpen(false);
+      setLeaveForm({ startDate: '', endDate: '', leaveType: '', payCalcMethod: '', notes: '' });
+      await fetchLeaveHistory();
+    } catch {
+      toast.error('休職履歴の追加に失敗しました');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -377,7 +411,7 @@ export function UserAttendanceTab({
           </div>
         </CardHeader>
         <CardContent>
-          {(!user.leaveOfAbsenceHistory || user.leaveOfAbsenceHistory.length === 0) ? (
+          {leaveHistory.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">休職履歴はありません</p>
           ) : (
             <Table>
@@ -385,12 +419,12 @@ export function UserAttendanceTab({
                 <TableRow>
                   <TableHead>開始日</TableHead>
                   <TableHead>終了日</TableHead>
-                  <TableHead>理由</TableHead>
+                  <TableHead>種別</TableHead>
                   <TableHead>備考</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {user.leaveOfAbsenceHistory.map((record) => (
+                {leaveHistory.map((record) => (
                   <TableRow key={record.id}>
                     <TableCell className="font-medium">
                       {new Date(record.startDate).toLocaleDateString('ja-JP')}
@@ -400,7 +434,9 @@ export function UserAttendanceTab({
                         ? new Date(record.endDate).toLocaleDateString('ja-JP')
                         : <Badge variant="destructive">休職中</Badge>}
                     </TableCell>
-                    <TableCell>{record.reason}</TableCell>
+                    <TableCell>
+                      {leaveTypeOptions.find(o => o.value === record.leaveType)?.label || record.leaveType}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{record.notes || '-'}</TableCell>
                   </TableRow>
                 ))}
@@ -418,14 +454,14 @@ export function UserAttendanceTab({
             <DialogDescription>設定 &gt; 勤怠マスタ &gt; 就業ルールから選択してください</DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Select value={selectedPatternId} onValueChange={setSelectedPatternId}>
+            <Select value={selectedRuleId} onValueChange={setSelectedRuleId}>
               <SelectTrigger>
                 <SelectValue placeholder="就業ルールを選択" />
               </SelectTrigger>
               <SelectContent>
-                {workPatterns.map(pattern => (
-                  <SelectItem key={pattern.id} value={pattern.id}>
-                    {pattern.name}（{pattern.workStartTime}〜{pattern.workEndTime}）
+                {availableWorkRules.map(rule => (
+                  <SelectItem key={rule.id} value={rule.id}>
+                    {rule.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -433,7 +469,9 @@ export function UserAttendanceTab({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setWorkRuleDialogOpen(false)}>キャンセル</Button>
-            <Button onClick={handleWorkRuleSelect}>適用</Button>
+            <Button onClick={handleWorkRuleSelect} disabled={isSaving}>
+              {isSaving ? '適用中...' : '適用'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -504,7 +542,9 @@ export function UserAttendanceTab({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLeaveDialogOpen(false)}>キャンセル</Button>
-            <Button onClick={handleAddLeaveHistory}>追加</Button>
+            <Button onClick={handleAddLeaveHistory} disabled={isSaving}>
+              {isSaving ? '追加中...' : '追加'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

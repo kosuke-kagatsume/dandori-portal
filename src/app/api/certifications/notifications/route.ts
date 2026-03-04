@@ -5,6 +5,7 @@ import {
   handleApiError,
   getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
+import { sendEmail } from '@/lib/email/send-email';
 
 // GET /api/certifications/notifications - 通知履歴一覧取得
 export async function GET(request: NextRequest) {
@@ -106,9 +107,38 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: 実際のメール送信、プッシュ通知の実装
-    // await sendEmail(...)
-    // await sendPushNotification(...)
+    // メール送信（SendGrid未設定でもgraceful fail）
+    if (settings.enableEmailNotification) {
+      const user = await prisma.users.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      });
+      const cert = await prisma.certifications.findUnique({
+        where: { id: certificationId },
+        select: { name: true, expiryDate: true },
+      });
+      if (user?.email && cert) {
+        const expiryStr = cert.expiryDate
+          ? new Date(cert.expiryDate).toLocaleDateString('ja-JP')
+          : '不明';
+        await sendEmail({
+          to: user.email,
+          subject: `【資格期限通知】${cert.name} の有効期限が近づいています`,
+          html: `
+            <p>${user.name} 様</p>
+            <p>お持ちの資格「<strong>${cert.name}</strong>」の有効期限が近づいています。</p>
+            <ul>
+              <li>有効期限: ${expiryStr}</li>
+              <li>残日数: ${daysUntilExpiry}日</li>
+            </ul>
+            <p>更新手続きをお願いいたします。</p>
+            <p>Dandoriポータル</p>
+          `,
+        }).catch((err) => {
+          console.error('[CertNotification] Email send failed:', err);
+        });
+      }
+    }
 
     return NextResponse.json(
       { success: true, data: notification },

@@ -34,12 +34,16 @@ export async function GET(request: NextRequest) {
       where.userId = userId;
     }
 
+    const limitParam = searchParams.get('limit');
+    const take = limitParam ? parseInt(limitParam, 10) : undefined;
+
     const changes = await prisma.scheduled_changes.findMany({
       where,
       orderBy: [
         { effectiveDate: 'asc' },
         { createdAt: 'desc' },
       ],
+      ...(take ? { take } : {}),
     });
 
     // 統計情報を計算

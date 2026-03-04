@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Briefcase, Plus, Edit, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTenantStore } from '@/lib/store/tenant-store';
 import type { WorkRule, WorkRuleType } from '@/features/users/user-attendance-tab';
 
 // ── 定数定義 ──────────────────────────────────────────
@@ -267,41 +268,6 @@ const defaultFormData: WorkRuleFormData = {
   yearlyScope: 'all',
 };
 
-// ── デモデータ ──────────────────────────────────────
-
-const demoWorkRules: (WorkRule & { id: string; assignedCount: number })[] = [
-  {
-    id: '1',
-    type: 'standard',
-    name: '基本勤務（9:00-18:00）',
-    standardWorkHours: 480,
-    breakMinutes: 60,
-    workStartTime: '09:00',
-    workEndTime: '18:00',
-    assignedCount: 45,
-  },
-  {
-    id: '2',
-    type: 'flextime',
-    name: 'フレックス（コア10-15時）',
-    standardWorkHours: 480,
-    breakMinutes: 60,
-    coreTimeStart: '10:00',
-    coreTimeEnd: '15:00',
-    flexTimeStart: '07:00',
-    flexTimeEnd: '22:00',
-    assignedCount: 23,
-  },
-  {
-    id: '3',
-    type: 'manager',
-    name: '管理職',
-    standardWorkHours: 480,
-    breakMinutes: 60,
-    assignedCount: 8,
-  },
-];
-
 // ── セクション表示ヘルパー ────────────────────────────
 
 function showSection(type: WorkRuleType, section: string): boolean {
@@ -466,17 +432,45 @@ function FormField({ label, children, required }: { label: string; children: Rea
 
 // ── メインコンポーネント ──────────────────────────────────
 
+interface WorkRuleRecord extends WorkRule {
+  id: string;
+  assignedCount: number;
+  settings?: Record<string, unknown> | null;
+}
+
 export function WorkRuleMasterPanel() {
-  const [workRules, setWorkRules] = useState(demoWorkRules);
+  const [workRules, setWorkRules] = useState<WorkRuleRecord[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<(typeof demoWorkRules)[0] | null>(null);
+  const [editingRule, setEditingRule] = useState<WorkRuleRecord | null>(null);
   const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
   const [formData, setFormData] = useState<WorkRuleFormData>(defaultFormData);
+  const [isSaving, setIsSaving] = useState(false);
+  const { currentTenant } = useTenantStore();
+  const tenantId = currentTenant?.id;
 
   // 勤務パターンダイアログ
   const [isPatternDialogOpen, setIsPatternDialogOpen] = useState(false);
   const [editingPattern, setEditingPattern] = useState<WorkPatternFormData | null>(null);
+
+  const fetchWorkRules = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const res = await fetch(`/api/attendance-master/work-rules?tenantId=${tenantId}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setWorkRules(json.data);
+        }
+      }
+    } catch {
+      toast.error('就業ルールの取得に失敗しました');
+    }
+  }, [tenantId]);
+
+  useEffect(() => {
+    fetchWorkRules();
+  }, [fetchWorkRules]);
 
   const handleOpenCreate = () => {
     setEditingRule(null);
@@ -484,10 +478,12 @@ export function WorkRuleMasterPanel() {
     setIsDialogOpen(true);
   };
 
-  const handleOpenEdit = (rule: (typeof demoWorkRules)[0]) => {
+  const handleOpenEdit = (rule: WorkRuleRecord) => {
     setEditingRule(rule);
+    const savedSettings = (rule.settings ?? {}) as Partial<WorkRuleFormData>;
     setFormData({
       ...defaultFormData,
+      ...savedSettings,
       type: rule.type,
       name: rule.name,
       standardWorkHours: rule.standardWorkHours,
@@ -498,59 +494,86 @@ export function WorkRuleMasterPanel() {
       coreTimeEnd: rule.coreTimeEnd || '15:00',
       flexTimeStart: rule.flexTimeStart || '07:00',
       flexTimeEnd: rule.flexTimeEnd || '22:00',
-      scheduleRows: defaultScheduleRows.map(r => ({ ...r })),
+      scheduleRows: (savedSettings.scheduleRows as ScheduleRow[] | undefined) || defaultScheduleRows.map(r => ({ ...r })),
+      workPatterns: (savedSettings.workPatterns as WorkPatternFormData[] | undefined) || [],
     });
     setIsDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error('就業ルール名を入力してください');
       return;
     }
 
-    const t = formData.type;
-    const newRule: WorkRule & { id: string; assignedCount: number } = {
-      id: editingRule?.id || `rule-${Date.now()}`,
-      type: t,
-      name: formData.name,
-      standardWorkHours: formData.standardWorkHours,
-      breakMinutes: formData.breakMinutes,
-      workStartTime: (t === 'standard' || t === 'shift' || t === 'monthly_variable' || t === 'yearly_variable') ? formData.workStartTime : undefined,
-      workEndTime: (t === 'standard' || t === 'shift' || t === 'monthly_variable' || t === 'yearly_variable') ? formData.workEndTime : undefined,
-      coreTimeStart: t === 'flextime' ? formData.coreTimeStart : undefined,
-      coreTimeEnd: t === 'flextime' ? formData.coreTimeEnd : undefined,
-      flexTimeStart: t === 'flextime' ? formData.flexTimeStart : undefined,
-      flexTimeEnd: t === 'flextime' ? formData.flexTimeEnd : undefined,
-      assignedCount: editingRule?.assignedCount || 0,
-    };
+    setIsSaving(true);
+    try {
+      const t = formData.type;
+      const payload = {
+        type: t,
+        name: formData.name,
+        standardWorkHours: formData.standardWorkHours,
+        breakMinutes: formData.breakMinutes,
+        workStartTime: (t === 'standard' || t === 'shift' || t === 'monthly_variable' || t === 'yearly_variable') ? formData.workStartTime : null,
+        workEndTime: (t === 'standard' || t === 'shift' || t === 'monthly_variable' || t === 'yearly_variable') ? formData.workEndTime : null,
+        coreTimeStart: t === 'flextime' ? formData.coreTimeStart : null,
+        coreTimeEnd: t === 'flextime' ? formData.coreTimeEnd : null,
+        flexTimeStart: t === 'flextime' ? formData.flexTimeStart : null,
+        flexTimeEnd: t === 'flextime' ? formData.flexTimeEnd : null,
+        settings: formData,
+      };
 
-    if (editingRule) {
-      setWorkRules(workRules.map(r => r.id === editingRule.id ? newRule : r));
-      toast.success('就業ルールを更新しました');
-    } else {
-      setWorkRules([...workRules, newRule]);
-      toast.success('就業ルールを作成しました');
+      if (editingRule) {
+        const res = await fetch(`/api/attendance-master/work-rules?id=${editingRule.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || '更新に失敗しました');
+        }
+        toast.success('就業ルールを更新しました');
+      } else {
+        const res = await fetch('/api/attendance-master/work-rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || '作成に失敗しました');
+        }
+        toast.success('就業ルールを作成しました');
+      }
+
+      await fetchWorkRules();
+      setIsDialogOpen(false);
+      setFormData(defaultFormData);
+      setEditingRule(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '保存に失敗しました');
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsDialogOpen(false);
-    setFormData(defaultFormData);
-    setEditingRule(null);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deletingRuleId) return;
 
-    const rule = workRules.find(r => r.id === deletingRuleId);
-    if (rule && rule.assignedCount > 0) {
-      toast.error(`${rule.assignedCount}名の従業員に割り当てられているため削除できません`);
-      setIsDeleteDialogOpen(false);
-      setDeletingRuleId(null);
-      return;
+    try {
+      const res = await fetch(`/api/attendance-master/work-rules?id=${deletingRuleId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || '削除に失敗しました');
+      }
+      toast.success('就業ルールを削除しました');
+      await fetchWorkRules();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '削除に失敗しました');
     }
-
-    setWorkRules(workRules.filter(r => r.id !== deletingRuleId));
-    toast.success('就業ルールを削除しました');
     setIsDeleteDialogOpen(false);
     setDeletingRuleId(null);
   };
@@ -1443,8 +1466,8 @@ export function WorkRuleMasterPanel() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               キャンセル
             </Button>
-            <Button onClick={handleSave}>
-              {editingRule ? '更新' : '作成'}
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? '保存中...' : editingRule ? '更新' : '作成'}
             </Button>
           </DialogFooter>
         </DialogContent>

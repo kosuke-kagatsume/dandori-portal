@@ -16,7 +16,6 @@ import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGlobalShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { SkipLink } from '@/components/a11y/skip-link';
-import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 import { useScheduledChangesNotifications } from '@/hooks/use-scheduled-changes-notifications';
 import { usePaymentReminderCheck } from '@/hooks/use-payment-reminder-check';
 import { initBackgroundSync } from '@/lib/offline/sync-manager';
@@ -33,13 +32,7 @@ export default function PortalLayout({
 }) {
   const { theme, sidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen, getDensityClass } = useUIStore();
   const { currentUser } = useUserStore();
-  const {
-    initializeApplication,
-    initializeBasicInfoForm,
-    initializeFamilyInfoForm,
-    initializeBankAccountForm,
-    initializeCommuteRouteForm,
-  } = useOnboardingStore();
+  const { loadApplication } = useOnboardingStore();
   const { fetchLegalUpdates } = useLegalUpdatesStore();
   const { initializeNotifications } = useNotificationHistoryStore();
   const { initializeInvoices } = useInvoiceStore();
@@ -56,32 +49,21 @@ export default function PortalLayout({
   // 支払い期限リマインダーの自動チェックを有効化
   usePaymentReminderCheck();
 
-  // Initialize onboarding data for applicant role (only once if no data exists)
+  // Initialize onboarding data for applicant role from API
   useEffect(() => {
-    // 新入社員の場合のみ、onboardingデモデータを初期化
-    // ただし、既にデータが存在する場合はスキップ（承認後のデータを保護）
-    if (currentUser?.roles?.includes('applicant')) {
-      // localStorageをチェック（zustand-persistが保存している）
-      const existingData = localStorage.getItem('onboarding-storage');
-
-      if (!existingData) {
-        // データが存在しない場合のみ初期化
-        const onboardingData = getDemoOnboardingData();
-        initializeApplication(onboardingData.application);
-        initializeBasicInfoForm(onboardingData.basicInfoForm);
-        initializeFamilyInfoForm(onboardingData.familyInfoForm);
-        initializeBankAccountForm(onboardingData.bankAccountForm);
-        initializeCommuteRouteForm(onboardingData.commuteRouteForm);
-      }
+    if (currentUser?.roles?.includes('applicant') && currentUser?.id) {
+      fetch(`/api/onboarding/applications?status=invited,in_progress,submitted`)
+        .then((res) => res.json())
+        .then((result) => {
+          if (result.success && result.data && result.data.length > 0) {
+            loadApplication(result.data[0].id);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to load onboarding application:', error);
+        });
     }
-  }, [
-    currentUser,
-    initializeApplication,
-    initializeBasicInfoForm,
-    initializeFamilyInfoForm,
-    initializeBankAccountForm,
-    initializeCommuteRouteForm,
-  ]);
+  }, [currentUser, loadApplication]);
 
   // Initialize legal updates from API
   useEffect(() => {

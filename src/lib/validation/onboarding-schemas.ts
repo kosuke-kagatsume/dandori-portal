@@ -284,7 +284,7 @@ export const privateCarInfoSchema = z.object({
 export const basicInfoFormSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
-  status: z.enum(['draft', 'submitted', 'returned', 'approved']),
+  status: z.enum(['not_started', 'draft', 'submitted', 'returned', 'approved']),
 
   // Basic info
   email: emailSchema,
@@ -338,7 +338,7 @@ export const basicInfoFormSchema = z.object({
 const familyInfoFormBaseSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
-  status: z.enum(['draft', 'submitted', 'returned', 'approved']),
+  status: z.enum(['not_started', 'draft', 'submitted', 'returned', 'approved']),
 
   email: emailSchema,
   employeeNumber: z.string().optional(),
@@ -380,7 +380,7 @@ export const familyInfoFormSchema = familyInfoFormBaseSchema.refine(
 export const bankAccountFormSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
-  status: z.enum(['draft', 'submitted', 'returned', 'approved']),
+  status: z.enum(['not_started', 'draft', 'submitted', 'returned', 'approved']),
 
   email: emailSchema,
   employeeNumber: z.string().optional(),
@@ -413,7 +413,7 @@ export const bankAccountFormSchema = z.object({
 const commuteRouteFormBaseSchema = z.object({
   id: z.string(),
   applicationId: z.string(),
-  status: z.enum(['draft', 'submitted', 'returned', 'approved']),
+  status: z.enum(['not_started', 'draft', 'submitted', 'returned', 'approved']),
 
   // Confirmations (4 checkboxes)
   confirmations: z.object({

@@ -15,16 +15,20 @@
 export type OnboardingStatus =
   | 'not_invited' // 未招待（メール未送信）
   | 'invited' // 招待済み（メール送信済み、未着手）
-  | 'not_submitted' // 未提出（入力中）
+  | 'in_progress' // 入力中
+  | 'not_submitted' // 未提出（旧互換）
   | 'submitted' // 提出済み（人事確認待ち）
+  | 'under_review' // 確認中
   | 'returned' // 差し戻し
   | 'approved' // 承認済み
+  | 'completed' // 完了
   | 'registered'; // システム登録完了
 
 /**
  * 個別フォームのステータス
  */
 export type FormStatus =
+  | 'not_started' // 未開始
   | 'draft' // 下書き
   | 'submitted' // 提出済み
   | 'returned' // 差し戻し

@@ -1,13 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useOnboardingStore } from '@/lib/store/onboarding-store';
-import { getDemoOnboardingData } from '@/lib/demo-onboarding-data';
 import { ProgressIndicator } from '@/features/onboarding/components/ProgressIndicator';
 import { FormCard } from '@/features/onboarding/components/FormCard';
 import { NextActionCard } from '@/features/onboarding/components/NextActionCard';
-// import { DocumentTextIcon } from '@heroicons/react/24/outline'; // アイコン表示で使用予定
 
 /**
  * Onboarding Dashboard Page
@@ -20,6 +18,7 @@ import { NextActionCard } from '@/features/onboarding/components/NextActionCard'
  */
 export default function OnboardingDashboard() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const locale = params?.locale as string;
 
   const {
@@ -28,34 +27,19 @@ export default function OnboardingDashboard() {
     startAutoSave,
     stopAutoSave,
     lastSavedAt,
-    initializeApplication,
-    initializeBasicInfoForm,
-    initializeFamilyInfoForm,
-    initializeBankAccountForm,
-    initializeCommuteRouteForm,
+    loadApplication,
+    isLoading,
   } = useOnboardingStore();
 
   const [progress, setProgress] = useState(getProgress());
 
-  // Initialize demo data if no application exists
+  // Load application from API
   useEffect(() => {
-    if (!application) {
-      console.log('[Onboarding] No application found, initializing demo data');
-      const demoData = getDemoOnboardingData();
-      initializeApplication(demoData.application);
-      initializeBasicInfoForm(demoData.basicInfoForm);
-      initializeFamilyInfoForm(demoData.familyInfoForm);
-      initializeBankAccountForm(demoData.bankAccountForm);
-      initializeCommuteRouteForm(demoData.commuteRouteForm);
+    const applicationId = searchParams?.get('id');
+    if (applicationId && !application) {
+      loadApplication(applicationId);
     }
-  }, [
-    application,
-    initializeApplication,
-    initializeBasicInfoForm,
-    initializeFamilyInfoForm,
-    initializeBankAccountForm,
-    initializeCommuteRouteForm,
-  ]);
+  }, [searchParams, application, loadApplication]);
 
   // Initialize auto-save on mount
   useEffect(() => {
@@ -71,17 +55,32 @@ export default function OnboardingDashboard() {
     setProgress(getProgress());
   }, [getProgress, application]);
 
-  // If no application, show loading (it will be initialized by useEffect)
-  if (!application) {
+  // If no application, show loading or empty state
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
+          <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
           <h2 className="mt-4 text-xl font-semibold text-gray-900">
             読み込み中...
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            入社手続きデータを初期化しています
+            入社手続きデータを読み込んでいます
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!application) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900">
+            入社手続きが見つかりません
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            招待メールに記載されたリンクからアクセスしてください
           </p>
         </div>
       </div>

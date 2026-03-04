@@ -620,18 +620,41 @@ export function DepartmentSalaryChart() {
   );
 }
 
-// 今後の入退社予定データ（デモ）
-// 注意: IDはDBのユーザーIDと一致させる必要がある（t1-プレフィックス付き）
-const upcomingPersonnelChanges = [
-  { id: 't1-user-017', name: '清水愛', type: 'join', date: '2025年1月6日', department: '開発部' },
-  { id: 't1-user-010', name: '加藤翔太', type: 'join', date: '2025年1月6日', department: '営業部' },
-  { id: 't1-user-023', name: '前田美穂', type: 'leave', date: '2025年1月31日', department: '総務部' },
-  { id: 't1-user-029', name: '近藤大地', type: 'join', date: '2025年2月1日', department: 'マーケティング部' },
-  { id: 't1-user-024', name: '藤田一樹', type: 'leave', date: '2025年2月28日', department: '総務部' },
-];
+interface PersonnelChange {
+  id: string;
+  userId?: string;
+  userName?: string;
+  type: string;
+  effectiveDate: string;
+  department?: string;
+  newDepartment?: string;
+  details?: {
+    department?: string;
+    newDepartment?: string;
+  };
+}
 
 export function HeadcountTrendChart() {
   const router = useRouter();
+  const [changes, setChanges] = useState<PersonnelChange[]>([]);
+
+  const fetchChanges = useCallback(async () => {
+    try {
+      const res = await fetch('/api/scheduled-changes?status=pending&limit=10');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          setChanges(data.data);
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchChanges();
+  }, [fetchChanges]);
 
   const handleMemberClick = (userId: string) => {
     router.push(`/ja/users/${userId}`);
@@ -647,43 +670,52 @@ export function HeadcountTrendChart() {
         <CardDescription>今後の入社・退職予定（クリックでユーザー詳細へ）</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {upcomingPersonnelChanges.map((person) => (
-            <div
-              key={person.id}
-              className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
-              onClick={() => handleMemberClick(person.id)}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-full ${
-                  person.type === 'join'
-                    ? 'bg-green-100 dark:bg-green-900'
-                    : 'bg-red-100 dark:bg-red-900'
-                }`}>
-                  <Users className={`h-4 w-4 ${
-                    person.type === 'join'
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`} />
+        {changes.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">予定はありません</p>
+        ) : (
+          <div className="space-y-3">
+            {changes.map((person) => {
+              const isJoin = person.type === 'hire' || person.type === 'join';
+              return (
+                <div
+                  key={person.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => person.userId && handleMemberClick(person.userId)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${
+                      isJoin
+                        ? 'bg-green-100 dark:bg-green-900'
+                        : 'bg-red-100 dark:bg-red-900'
+                    }`}>
+                      <Users className={`h-4 w-4 ${
+                        isJoin
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-600 dark:text-red-400'
+                      }`} />
+                    </div>
+                    <div>
+                      <p className="font-medium">{person.userName || '未定'}</p>
+                      <p className="text-xs text-muted-foreground">{person.details?.newDepartment || person.details?.department || person.newDepartment || person.department || ''}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      isJoin
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                    }`}>
+                      {isJoin ? '入社' : '退職'}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {new Date(person.effectiveDate).toLocaleDateString('ja-JP')}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">{person.name}</p>
-                  <p className="text-xs text-muted-foreground">{person.department}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  person.type === 'join'
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-                }`}>
-                  {person.type === 'join' ? '入社' : '退職'}
-                </span>
-                <span className="text-sm text-muted-foreground">{person.date}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

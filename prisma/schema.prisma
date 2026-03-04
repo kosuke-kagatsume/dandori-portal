@@ -1743,15 +1743,21 @@ model users {
   invitedAt             DateTime?
   inviteToken           String?
   inviteTokenExpiry     DateTime?
+  paidLeaveStartDate    DateTime?            @db.Date
+  punchMethod           String?
+  workRuleId            String?
   attendance            attendance[]
   attendance_punches    attendance_punches[]
   tenants               tenants              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   org_units             org_units?           @relation(fields: [unitId], references: [id])
+  work_rules            work_rules?          @relation(fields: [workRuleId], references: [id], onDelete: SetNull)
+  leave_of_absence_history leave_of_absence_history[]
 
   @@index([email])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([unitId])
+  @@index([workRuleId])
 }
 
 model vehicles {
@@ -2567,4 +2573,153 @@ model audit_logs {
   @@index([tenantId, action])
   @@index([tenantId, createdAt])
   @@index([createdAt])
+}
+
+// ============================================
+// 入社手続き
+// ============================================
+
+model onboarding_applications {
+  id              String    @id
+  tenantId        String
+  applicantName   String
+  applicantEmail  String
+  employeeNumber  String?
+  department      String?
+  position        String?
+  hireDate        DateTime  @db.Date
+  deadline        DateTime? @db.Date
+  status          String    @default("invited") // invited, in_progress, submitted, under_review, approved, completed
+  invitedAt       DateTime?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?
+  accessToken     String?   @unique
+  hrNotes         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime
+
+  basic_info      onboarding_basic_info?
+  family_info     onboarding_family_info?
+  bank_account    onboarding_bank_account?
+  commute_route   onboarding_commute_route?
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+}
+
+model onboarding_basic_info {
+  id              String   @id
+  applicationId   String   @unique
+  status          String   @default("not_started") // not_started, draft, submitted, returned, approved
+  formData        Json
+  reviewComment   String?
+  savedAt         DateTime?
+  submittedAt     DateTime?
+  returnedAt      DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  application     onboarding_applications @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model onboarding_family_info {
+  id              String   @id
+  applicationId   String   @unique
+  status          String   @default("not_started")
+  formData        Json
+  reviewComment   String?
+  savedAt         DateTime?
+  submittedAt     DateTime?
+  returnedAt      DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  application     onboarding_applications @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model onboarding_bank_account {
+  id              String   @id
+  applicationId   String   @unique
+  status          String   @default("not_started")
+  formData        Json
+  reviewComment   String?
+  savedAt         DateTime?
+  submittedAt     DateTime?
+  returnedAt      DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  application     onboarding_applications @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+model onboarding_commute_route {
+  id              String   @id
+  applicationId   String   @unique
+  status          String   @default("not_started")
+  formData        Json
+  reviewComment   String?
+  savedAt         DateTime?
+  submittedAt     DateTime?
+  returnedAt      DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  application     onboarding_applications @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// 就業ルール
+// ============================================
+
+model work_rules {
+  id                 String   @id
+  tenantId           String
+  type               String   // standard, shift, manager, discretionary, flextime, monthly_variable, yearly_variable
+  name               String
+  standardWorkHours  Int      @default(480)
+  breakMinutes       Int      @default(60)
+  workStartTime      String?
+  workEndTime        String?
+  coreTimeStart      String?
+  coreTimeEnd        String?
+  flexTimeStart      String?
+  flexTimeEnd        String?
+  settings           Json?
+  isActive           Boolean  @default(true)
+  sortOrder          Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime
+  users              users[]
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, type])
+}
+
+// ============================================
+// 休職履歴
+// ============================================
+
+model leave_of_absence_history {
+  id            String    @id
+  tenantId      String
+  userId        String
+  startDate     DateTime  @db.Date
+  endDate       DateTime? @db.Date
+  leaveType     String    // sick_leave, maternity_leave, childcare_leave, family_care_leave, personal_leave, other
+  payCalcMethod String?   // no_pay, partial_pay, full_pay, insurance
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  users         users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, userId])
+  @@index([userId])
 }

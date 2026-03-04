@@ -37,15 +37,6 @@ import {
   updateFamilyInfoForm as apiUpdateFamilyInfoForm,
   updateBankAccountForm as apiUpdateBankAccountForm,
   updateCommuteRouteForm as apiUpdateCommuteRouteForm,
-  // 承認・差戻しAPI（将来的にバックエンド実装時に有効化）
-  // approveBasicInfoForm as apiApproveBasicInfoForm,
-  // approveFamilyInfoForm as apiApproveFamilyInfoForm,
-  // approveBankAccountForm as apiApproveBankAccountForm,
-  // approveCommuteRouteForm as apiApproveCommuteRouteForm,
-  // returnBasicInfoForm as apiReturnBasicInfoForm,
-  // returnFamilyInfoForm as apiReturnFamilyInfoForm,
-  // returnBankAccountForm as apiReturnBankAccountForm,
-  // returnCommuteRouteForm as apiReturnCommuteRouteForm,
 } from '@/lib/api/onboarding';
 import { APIError } from '@/lib/api/client';
 
@@ -119,10 +110,10 @@ interface OnboardingActions {
   getProgress: () => OnboardingProgress;
 
   // HR Admin actions (approval/return)
-  approveForm: (formType: string, approvedBy: string) => void;
-  returnForm: (formType: string, comment: string, returnedBy: string) => void;
-  approveAllForms: (approvedBy: string) => void;
-  updateHrNotes: (notes: string) => void;
+  approveForm: (formType: string, approvedBy: string) => Promise<void>;
+  returnForm: (formType: string, comment: string, returnedBy: string) => Promise<void>;
+  approveAllForms: (approvedBy: string) => Promise<void>;
+  updateHrNotes: (notes: string) => Promise<void>;
 
   // Utility actions
   setLoading: (loading: boolean) => void;
@@ -730,62 +721,44 @@ export const useOnboardingStore = create<OnboardingStore>()(
       // HR Admin Actions (Approval/Return)
       // ========================================================================
 
-      approveForm: (formType, approvedBy) => {
+      approveForm: async (formType, approvedBy) => {
         const now = new Date().toISOString();
+        const { application } = get();
+        if (!application) return;
 
-        switch (formType) {
-          case 'basic_info':
-            const basicInfo = get().basicInfoForm;
-            if (basicInfo) {
-              set({
-                basicInfoForm: {
-                  ...basicInfo,
-                  status: 'approved',
-                  approvedAt: now,
-                  approvedBy,
-                },
-              });
-            }
-            break;
-          case 'family_info':
-            const familyInfo = get().familyInfoForm;
-            if (familyInfo) {
-              set({
-                familyInfoForm: {
-                  ...familyInfo,
-                  status: 'approved',
-                  approvedAt: now,
-                  approvedBy,
-                },
-              });
-            }
-            break;
-          case 'bank_account':
-            const bankAccount = get().bankAccountForm;
-            if (bankAccount) {
-              set({
-                bankAccountForm: {
-                  ...bankAccount,
-                  status: 'approved',
-                  approvedAt: now,
-                  approvedBy,
-                },
-              });
-            }
-            break;
-          case 'commute_route':
-            const commuteRoute = get().commuteRouteForm;
-            if (commuteRoute) {
-              set({
-                commuteRouteForm: {
-                  ...commuteRoute,
-                  status: 'approved',
-                  approvedAt: now,
-                  approvedBy,
-                },
-              });
-            }
-            break;
+        // Call API to approve the form
+        try {
+          const formEndpoints: Record<string, string> = {
+            basic_info: 'basic-info',
+            family_info: 'family-info',
+            bank_account: 'bank-account',
+            commute_route: 'commute-route',
+          };
+          const endpoint = formEndpoints[formType];
+          if (endpoint) {
+            await fetch(`/api/onboarding/applications/${application.id}/${endpoint}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'approve', approvedBy }),
+            });
+          }
+        } catch (error) {
+          console.error('Failed to approve form via API:', error);
+        }
+
+        // Update local state
+        const formKeyMap: Record<string, keyof OnboardingState> = {
+          basic_info: 'basicInfoForm',
+          family_info: 'familyInfoForm',
+          bank_account: 'bankAccountForm',
+          commute_route: 'commuteRouteForm',
+        };
+        const stateKey = formKeyMap[formType];
+        if (stateKey) {
+          const form = get()[stateKey] as OnboardingFormData | null;
+          if (form) {
+            set({ [stateKey]: { ...form, status: 'approved', approvedAt: now, approvedBy } } as Partial<OnboardingState>);
+          }
         }
 
         // Check if all forms are approved
@@ -797,6 +770,15 @@ export const useOnboardingStore = create<OnboardingStore>()(
           state.commuteRouteForm?.status === 'approved';
 
         if (allApproved && state.application) {
+          try {
+            await fetch(`/api/onboarding/applications/${application.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'approved', approvedBy }),
+            });
+          } catch (error) {
+            console.error('Failed to update application status:', error);
+          }
           set({
             application: {
               ...state.application,
@@ -807,67 +789,44 @@ export const useOnboardingStore = create<OnboardingStore>()(
         }
       },
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      returnForm: (formType, comment, returnedBy) => {
+      returnForm: async (formType, comment, returnedBy) => {
         const now = new Date().toISOString();
+        const { application } = get();
+        if (!application) return;
 
-        switch (formType) {
-          case 'basic_info':
-            const basicInfo = get().basicInfoForm;
-            if (basicInfo) {
-              set({
-                basicInfoForm: {
-                  ...basicInfo,
-                  status: 'returned',
-                  returnedAt: now,
-                  reviewComment: comment,
-                  approvedBy: returnedBy, // 差戻し者を記録
-                },
-              });
-            }
-            break;
-          case 'family_info':
-            const familyInfo = get().familyInfoForm;
-            if (familyInfo) {
-              set({
-                familyInfoForm: {
-                  ...familyInfo,
-                  status: 'returned',
-                  returnedAt: now,
-                  reviewComment: comment,
-                  approvedBy: returnedBy, // 差戻し者を記録
-                },
-              });
-            }
-            break;
-          case 'bank_account':
-            const bankAccount = get().bankAccountForm;
-            if (bankAccount) {
-              set({
-                bankAccountForm: {
-                  ...bankAccount,
-                  status: 'returned',
-                  returnedAt: now,
-                  reviewComment: comment,
-                  approvedBy: returnedBy, // 差戻し者を記録
-                },
-              });
-            }
-            break;
-          case 'commute_route':
-            const commuteRoute = get().commuteRouteForm;
-            if (commuteRoute) {
-              set({
-                commuteRouteForm: {
-                  ...commuteRoute,
-                  status: 'returned',
-                  returnedAt: now,
-                  reviewComment: comment,
-                  approvedBy: returnedBy, // 差戻し者を記録
-                },
-              });
-            }
-            break;
+        // Call API to return the form
+        try {
+          const formEndpoints: Record<string, string> = {
+            basic_info: 'basic-info',
+            family_info: 'family-info',
+            bank_account: 'bank-account',
+            commute_route: 'commute-route',
+          };
+          const endpoint = formEndpoints[formType];
+          if (endpoint) {
+            await fetch(`/api/onboarding/applications/${application.id}/${endpoint}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'return', reviewComment: comment, returnedBy }),
+            });
+          }
+        } catch (error) {
+          console.error('Failed to return form via API:', error);
+        }
+
+        // Update local state
+        const formKeyMap: Record<string, keyof OnboardingState> = {
+          basic_info: 'basicInfoForm',
+          family_info: 'familyInfoForm',
+          bank_account: 'bankAccountForm',
+          commute_route: 'commuteRouteForm',
+        };
+        const stateKey = formKeyMap[formType];
+        if (stateKey) {
+          const form = get()[stateKey] as OnboardingFormData | null;
+          if (form) {
+            set({ [stateKey]: { ...form, status: 'returned', returnedAt: now, reviewComment: comment, approvedBy: returnedBy } } as Partial<OnboardingState>);
+          }
         }
 
         // Update application status to 'returned'
@@ -883,75 +842,72 @@ export const useOnboardingStore = create<OnboardingStore>()(
         }
       },
 
-      approveAllForms: (approvedBy) => {
+      approveAllForms: async (approvedBy) => {
         const now = new Date().toISOString();
         const state = get();
+        if (!state.application) return;
 
-        // Approve all forms
-        if (state.basicInfoForm) {
-          set({
-            basicInfoForm: {
-              ...state.basicInfoForm,
-              status: 'approved',
-              approvedAt: now,
-              approvedBy,
-            },
+        // Call API to approve all forms in parallel
+        const formEndpoints = ['basic-info', 'family-info', 'bank-account', 'commute-route'];
+        try {
+          await Promise.all(
+            formEndpoints.map((endpoint) =>
+              fetch(`/api/onboarding/applications/${state.application!.id}/${endpoint}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'approve', approvedBy }),
+              })
+            )
+          );
+          // Update application status
+          await fetch(`/api/onboarding/applications/${state.application.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'approved', approvedBy }),
           });
+        } catch (error) {
+          console.error('Failed to approve all forms via API:', error);
+        }
+
+        // Update local state
+        if (state.basicInfoForm) {
+          set({ basicInfoForm: { ...state.basicInfoForm, status: 'approved', approvedAt: now, approvedBy } });
         }
         if (state.familyInfoForm) {
-          set({
-            familyInfoForm: {
-              ...state.familyInfoForm,
-              status: 'approved',
-              approvedAt: now,
-              approvedBy,
-            },
-          });
+          set({ familyInfoForm: { ...state.familyInfoForm, status: 'approved', approvedAt: now, approvedBy } });
         }
         if (state.bankAccountForm) {
-          set({
-            bankAccountForm: {
-              ...state.bankAccountForm,
-              status: 'approved',
-              approvedAt: now,
-              approvedBy,
-            },
-          });
+          set({ bankAccountForm: { ...state.bankAccountForm, status: 'approved', approvedAt: now, approvedBy } });
         }
         if (state.commuteRouteForm) {
-          set({
-            commuteRouteForm: {
-              ...state.commuteRouteForm,
-              status: 'approved',
-              approvedAt: now,
-              approvedBy,
-            },
-          });
+          set({ commuteRouteForm: { ...state.commuteRouteForm, status: 'approved', approvedAt: now, approvedBy } });
         }
-
-        // Update application status
         if (state.application) {
-          set({
-            application: {
-              ...state.application,
-              status: 'approved',
-              updatedAt: now,
-            },
-          });
+          set({ application: { ...state.application, status: 'approved', updatedAt: now } });
         }
       },
 
-      updateHrNotes: (notes) => {
+      updateHrNotes: async (notes) => {
         const state = get();
-        if (state.application) {
-          set({
-            application: {
-              ...state.application,
-              hrNotes: notes,
-              updatedAt: new Date().toISOString(),
-            },
+        if (!state.application) return;
+
+        try {
+          await fetch(`/api/onboarding/applications/${state.application.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hrNotes: notes }),
           });
+        } catch (error) {
+          console.error('Failed to update HR notes via API:', error);
         }
+
+        set({
+          application: {
+            ...state.application,
+            hrNotes: notes,
+            updatedAt: new Date().toISOString(),
+          },
+        });
       },
     }),
     {

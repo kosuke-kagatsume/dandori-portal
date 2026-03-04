@@ -7,6 +7,8 @@ export interface KpiData {
   attendanceRate: number;
   pendingApprovals: number;
   urgentApprovals: number;
+  myPendingRequests: number;
+  myPendingApprovals: number;
 }
 
 export interface SaasCostCategory {
@@ -42,7 +44,7 @@ interface DashboardState {
   lastFetched: Date | null;
 
   // アクション
-  fetchDashboardStats: (tenantId?: string) => Promise<void>;
+  fetchDashboardStats: (tenantId?: string, userId?: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -53,6 +55,8 @@ const initialState = {
     attendanceRate: 0,
     pendingApprovals: 0,
     urgentApprovals: 0,
+    myPendingRequests: 0,
+    myPendingApprovals: 0,
   },
   saasCostByCategory: [],
   saasMonthlyTrend: [],
@@ -66,7 +70,7 @@ const initialState = {
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   ...initialState,
 
-  fetchDashboardStats: async (tenantId?: string) => {
+  fetchDashboardStats: async (tenantId?: string, userId?: string) => {
     const effectiveTenantId = tenantId ?? getTenantIdFromCookie();
     // 5分以内に取得済みならキャッシュを使用
     const lastFetched = get().lastFetched;
@@ -77,7 +81,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const response = await fetch(`/api/dashboard/stats?tenantId=${effectiveTenantId}`);
+      const userParam = userId ? `&userId=${userId}` : '';
+      const response = await fetch(`/api/dashboard/stats?tenantId=${effectiveTenantId}${userParam}`);
       const json = await response.json();
 
       if (!response.ok || !json.success) {

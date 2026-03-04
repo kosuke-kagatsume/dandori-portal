@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import {
   AlertTriangle,
   Clock,
@@ -79,6 +80,7 @@ export function CertificationAdminDashboard() {
   // currentUser from useUserStore() - 将来使用予定
   const [selectedRenewal, setSelectedRenewal] = useState<PendingRenewal | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
 
   if (loading) {
     return (
@@ -97,10 +99,27 @@ export function CertificationAdminDashboard() {
     underReview: 0,
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleSendNotification = async (_certificationId: string, _userId: string) => {
-    // TODO: 通知送信API呼び出し
-    alert('通知送信機能は準備中です');
+  const handleSendNotification = async (certificationId: string, userId: string, daysUntilExpiry?: number) => {
+    setIsSendingNotification(true);
+    try {
+      const days = daysUntilExpiry ?? 0;
+      const res = await fetch('/api/certifications/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          certificationId,
+          userId,
+          notificationType: days <= 0 ? 'expired' : 'expiring_soon',
+          daysUntilExpiry: days,
+        }),
+      });
+      if (!res.ok) throw new Error('送信に失敗しました');
+      toast.success('通知を送信しました');
+    } catch {
+      toast.error('通知の送信に失敗しました');
+    } finally {
+      setIsSendingNotification(false);
+    }
   };
 
   const handleOpenReview = (renewal: PendingRenewal) => {
@@ -258,7 +277,8 @@ export function CertificationAdminDashboard() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleSendNotification(cert.id, cert.userId)}
+                              disabled={isSendingNotification}
+                              onClick={() => handleSendNotification(cert.id, cert.userId, cert.daysUntilExpiry)}
                             >
                               <Mail className="mr-1 h-3 w-3" />
                               通知送信
@@ -329,7 +349,8 @@ export function CertificationAdminDashboard() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleSendNotification(cert.id, cert.userId)}
+                              disabled={isSendingNotification}
+                              onClick={() => handleSendNotification(cert.id, cert.userId, 0)}
                             >
                               <Mail className="mr-1 h-3 w-3" />
                               催促通知

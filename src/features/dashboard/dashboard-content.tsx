@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +14,6 @@ import {
   Calendar,
   TrendingUp,
   Activity,
-  Wifi,
-  WifiOff,
   ShieldCheck,
   Settings,
   Loader2,
@@ -24,7 +22,6 @@ import { useUserStore } from '@/lib/store/user-store';
 import { useDashboardStore } from '@/lib/store/dashboard-store';
 import { type UserRole, ROLE_LABELS } from '@/lib/rbac';
 import { LatestAnnouncementCard } from '@/features/announcements/latest-announcement-card';
-import { allApplications } from '@/lib/demo-onboarding-applications';
 import type { OnboardingApplication } from '@/types/onboarding';
 import {
   DepartmentLeaveChart,
@@ -34,6 +31,18 @@ import {
   SaasCostByCategoryChart,
   AssetUtilizationChart,
 } from '@/components/dashboard/role-based-charts';
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / (1000 * 60));
+  if (diffMin < 1) return 'たった今';
+  if (diffMin < 60) return `${diffMin}分前`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}時間前`;
+  const diffDay = Math.floor(diffHour / 24);
+  return `${diffDay}日前`;
+}
 
 export function DashboardContent() {
   const { currentUser } = useUserStore();
@@ -45,7 +54,6 @@ export function DashboardContent() {
   const [dashboardSettings, setDashboardSettings] = useState({
     showLeaveBalance: false,      // 有給残日数（デフォルト非表示）
     showRecentActivity: false,    // 最近のアクティビティ（デフォルト非表示）
-    showSystemStatus: false,      // システム接続状況（デフォルト非表示）
     showAttendanceButton: true,   // 勤怠打刻ボタン（デフォルト表示）
     showLeaveRequestButton: true, // 休暇申請ボタン（デフォルト表示）
   });
@@ -108,39 +116,69 @@ export function DashboardContent() {
   // ダッシュボードデータを取得
   useEffect(() => {
     if (mounted) {
-      fetchDashboardStats();
+      fetchDashboardStats(undefined, currentUser?.id);
     }
-  }, [mounted, fetchDashboardStats]);
+  }, [mounted, fetchDashboardStats, currentUser?.id]);
 
-  const leaveBalance = {
-    remaining: 12,
-    used: 8,
-    pending: 2,
-    expiring: 3,
-  };
+  // 有給残日数（API連携）
+  const [leaveBalance, setLeaveBalance] = useState({ remaining: 0, used: 0, pending: 0, expiring: 0 });
+  const [recentActivity, setRecentActivity] = useState<{ id: string | number; user: string; action: string; time: string; type: string }[]>([]);
+  const [allActivities, setAllActivities] = useState<{ id: string | number; user: string; action: string; time: string; type: string }[]>([]);
 
-  const recentActivity = [
-    { id: 1, user: '田中太郎', action: '有給申請を提出', time: '5分前', type: 'leave' as const },
-    { id: 2, user: '佐藤花子', action: '勤怠記録を修正', time: '15分前', type: 'attendance' as const },
-    { id: 3, user: '山田次郎', action: '経費申請を承認', time: '30分前', type: 'approval' as const },
-    { id: 4, user: '鈴木一郎', action: '出勤記録', time: '1時間前', type: 'attendance' as const },
-  ];
+  const fetchLeaveBalance = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      const year = new Date().getFullYear();
+      const res = await fetch(`/api/leave/balances?userId=${currentUser.id}&year=${year}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          // APIは配列を返す。最初のレコードからフィールドをマッピング
+          const balances = Array.isArray(data.data) ? data.data : [data.data];
+          if (balances.length > 0) {
+            const b = balances[0];
+            setLeaveBalance({
+              remaining: b.paidLeaveRemaining ?? 0,
+              used: b.paidLeaveUsed ?? 0,
+              pending: b.pendingRequests ?? 0,
+              expiring: b.expiringDays ?? 0,
+            });
+          }
+        }
+      }
+    } catch {
+      // keep defaults
+    }
+  }, [currentUser?.id]);
 
-  // 全ての活動（モーダル用）
-  const allActivities = [
-    { id: 1, user: '田中太郎', action: '有給申請を提出', time: '5分前', type: 'leave' as const },
-    { id: 2, user: '佐藤花子', action: '勤怠記録を修正', time: '15分前', type: 'attendance' as const },
-    { id: 3, user: '山田次郎', action: '経費申請を承認', time: '30分前', type: 'approval' as const },
-    { id: 4, user: '鈴木一郎', action: '出勤記録', time: '1時間前', type: 'attendance' as const },
-    { id: 5, user: '高橋美咲', action: '退勤記録', time: '2時間前', type: 'attendance' as const },
-    { id: 6, user: '伊藤健太', action: '休暇申請を承認', time: '3時間前', type: 'approval' as const },
-    { id: 7, user: '渡辺由美', action: '勤怠報告書を提出', time: '4時間前', type: 'report' as const },
-    { id: 8, user: '中村雅人', action: 'プロフィールを更新', time: '5時間前', type: 'profile' as const },
-    { id: 9, user: '小林優子', action: '給与明細を確認', time: '6時間前', type: 'payroll' as const },
-    { id: 10, user: '加藤大輔', action: '有給申請を提出', time: '7時間前', type: 'leave' as const },
-    { id: 11, user: '吉田春奈', action: '出勤記録', time: '8時間前', type: 'attendance' as const },
-    { id: 12, user: '山口隆', action: '経費申請を提出', time: '9時間前', type: 'expense' as const },
-  ];
+  const fetchRecentActivity = useCallback(async () => {
+    try {
+      const res = await fetch('/api/audit-logs?limit=12');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          const logs = data.data.map((log: { id: string; userName?: string; description: string; createdAt: string; category: string }) => ({
+            id: log.id,
+            user: log.userName || '不明',
+            action: log.description,
+            time: formatTimeAgo(new Date(log.createdAt)),
+            type: log.category,
+          }));
+          setRecentActivity(logs.slice(0, 4));
+          setAllActivities(logs);
+        }
+      }
+    } catch {
+      // keep defaults
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      fetchLeaveBalance();
+      fetchRecentActivity();
+    }
+  }, [mounted, fetchLeaveBalance, fetchRecentActivity]);
 
   // 権限チェック（本番ユーザーのロールを使用）
   const rolePermissions: Record<UserRole, { viewAll: boolean; viewTeam: boolean; approve: boolean; manageSystem: boolean; manageUsers: boolean }> = {
@@ -158,26 +196,37 @@ export function DashboardContent() {
   const canApprove = permissions.approve;
   const canManageSystem = permissions.manageSystem;
 
-  // 締切間近（3日以内）の入社手続き申請を計算
-  const upcomingDeadlineApplications = useMemo((): (OnboardingApplication & { daysUntilDeadline: number })[] => {
-    const now = new Date();
-    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  // 締切間近の入社手続き申請をAPIから取得
+  const [upcomingDeadlineApplications, setUpcomingDeadlineApplications] = useState<(OnboardingApplication & { daysUntilDeadline: number })[]>([]);
 
-    return allApplications
-      .filter((app) => {
-        // 承認済み・登録完了は除外
-        if (app.status === 'approved' || app.status === 'registered') return false;
-        const deadline = new Date(app.deadline);
-        // 3日以内または期限超過
-        return deadline <= threeDaysFromNow;
-      })
-      .map((app) => {
-        const deadline = new Date(app.deadline);
-        const daysUntilDeadline = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        return { ...app, daysUntilDeadline };
-      })
-      .sort((a, b) => a.daysUntilDeadline - b.daysUntilDeadline);
-  }, []);
+  useEffect(() => {
+    if (!canViewAll && !canManageSystem) return;
+    const fetchOnboardingAlerts = async () => {
+      try {
+        const res = await fetch('/api/onboarding/applications?status=invited,in_progress,submitted');
+        const result = await res.json();
+        if (result.success && result.data) {
+          const now = new Date();
+          const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+          const apps = (result.data as OnboardingApplication[])
+            .filter((app) => {
+              const deadline = new Date(app.deadline || app.hireDate);
+              return deadline <= threeDaysFromNow;
+            })
+            .map((app) => {
+              const deadline = new Date(app.deadline || app.hireDate);
+              const daysUntilDeadline = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              return { ...app, daysUntilDeadline };
+            })
+            .sort((a, b) => a.daysUntilDeadline - b.daysUntilDeadline);
+          setUpcomingDeadlineApplications(apps);
+        }
+      } catch (error) {
+        console.error('Failed to fetch onboarding alerts:', error);
+      }
+    };
+    fetchOnboardingAlerts();
+  }, [canViewAll, canManageSystem]);
   const canManageUsers = permissions.manageUsers;
 
   // マウント完了までローディング表示
@@ -418,7 +467,7 @@ export function DashboardContent() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-amber-900 dark:text-amber-100">
-                  {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.pendingApprovals : 3)}
+                  {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : (canViewAll ? kpiData.pendingApprovals : kpiData.myPendingApprovals)}
                 </div>
                 <div className="flex items-center gap-1 mt-1">
                   <Clock className="h-3 w-3 text-amber-600" />
@@ -445,7 +494,7 @@ export function DashboardContent() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
-                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : 2}
+                {isLoadingStats ? <Loader2 className="h-6 w-6 animate-spin" /> : kpiData.myPendingRequests}
               </div>
               <div className="flex items-center gap-1 mt-1">
                 <Activity className="h-3 w-3 text-blue-600" />
@@ -504,7 +553,7 @@ export function DashboardContent() {
       )}
 
       {/* 設定でON/OFF可能な項目 */}
-      {(dashboardSettings.showLeaveBalance || dashboardSettings.showRecentActivity || dashboardSettings.showSystemStatus) && (
+      {(dashboardSettings.showLeaveBalance || dashboardSettings.showRecentActivity) && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {/* Leave Balance Summary - 設定でON/OFF */}
           {dashboardSettings.showLeaveBalance && (
@@ -591,50 +640,6 @@ export function DashboardContent() {
             </Card>
           )}
 
-          {/* System Status - 設定でON/OFF */}
-          {dashboardSettings.showSystemStatus && (
-            <Card className="md:col-span-1">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wifi className="h-5 w-5 text-green-500" />
-                  {t('systemConnection')}
-                </CardTitle>
-                <CardDescription>
-                  システム接続状態
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">データベース</span>
-                    <Badge variant="default" className="bg-green-500">
-                      <Wifi className="h-3 w-3 mr-1" />
-                      接続中
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">外部API</span>
-                    <Badge variant="default" className="bg-green-500">
-                      <Wifi className="h-3 w-3 mr-1" />
-                      接続中
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">メール配信</span>
-                    <Badge variant="secondary">
-                      <WifiOff className="h-3 w-3 mr-1" />
-                      メンテナンス中
-                    </Badge>
-                  </div>
-                </div>
-                <div className="pt-2 border-t">
-                  <p className="text-xs text-muted-foreground text-center">
-                    最終更新: 2024年1月15日 14:30
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
 

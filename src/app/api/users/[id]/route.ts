@@ -111,6 +111,10 @@ export async function PATCH(
       const dateStr = body.birthDate.split('T')[0];
       updateData.birthDate = new Date(`${dateStr}T12:00:00Z`);
     }
+    if (body.paidLeaveStartDate) {
+      const dateStr = body.paidLeaveStartDate.split('T')[0];
+      updateData.paidLeaveStartDate = new Date(`${dateStr}T12:00:00Z`);
+    }
 
     // roles配列からrole（単数）への同期
     // フロントエンドはroles配列を送信するが、認証システムはroleフィールドを使用

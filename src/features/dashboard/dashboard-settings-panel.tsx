@@ -13,7 +13,6 @@ interface DashboardDisplaySettings {
   showLeaveRequestButton: boolean;
   showLeaveBalance: boolean;
   showRecentActivity: boolean;
-  showSystemStatus: boolean;
 }
 
 const defaultSettings: DashboardDisplaySettings = {
@@ -21,7 +20,6 @@ const defaultSettings: DashboardDisplaySettings = {
   showLeaveRequestButton: true,
   showLeaveBalance: false,
   showRecentActivity: false,
-  showSystemStatus: false,
 };
 
 export function DashboardSettingsPanel() {

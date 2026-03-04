@@ -25,6 +25,7 @@ const BATCH_ENDPOINTS = {
   'generate-invoices': '/api/dw-admin/batch/generate-invoices',
   'check-overdue': '/api/dw-admin/batch/check-overdue',
   'cleanup-notifications': '/api/dw-admin/batch/cleanup-notifications',
+  'check-certifications': '/api/dw-admin/batch/check-certifications',
 };
 
 type BatchName = keyof typeof BATCH_ENDPOINTS;
@@ -90,6 +91,13 @@ async function runBatch(
       console.log(`期限間近: ${upcoming.count}件（¥${upcoming.totalAmount.toLocaleString()}）`);
     }
 
+    if (batchName === 'check-certifications' && result.data) {
+      console.log('\n--- サマリー ---');
+      console.log(`通知作成: ${result.data.created}件`);
+      console.log(`スキップ: ${result.data.skipped}件`);
+      console.log(`メール送信: ${result.data.emailsSent}件`);
+    }
+
     if (batchName === 'cleanup-notifications' && result.data?.deleted) {
       const d = result.data.deleted;
       console.log('\n--- サマリー ---');
@@ -115,10 +123,11 @@ async function main(): Promise<void> {
 使用方法: npx ts-node scripts/run-batch.ts <batch-name> [options]
 
 バッチ一覧:
-  generate-invoices     請求書自動生成（月末実行）
-  check-overdue         支払い期限チェック（毎日実行）
-  cleanup-notifications 通知クリーンアップ（週次実行）
-  all                   全バッチ実行
+  generate-invoices      請求書自動生成（月末実行）
+  check-overdue          支払い期限チェック（毎日実行）
+  cleanup-notifications  通知クリーンアップ（週次実行）
+  check-certifications   資格期限チェック（毎日実行）
+  all                    全バッチ実行
 
 オプション:
   --dry-run             実行せずにプレビューのみ

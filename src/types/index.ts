@@ -22,6 +22,7 @@ export const UserSchema = z.object({
   // 勤怠関連
   paidLeaveStartDate: z.string().optional(), // 有給起算日
   punchMethod: z.enum(['web', 'ic_card', 'mobile', 'face']).optional(), // 打刻方法
+  workRuleId: z.string().optional(), // 就業ルールID
   employmentType: z.string().optional(), // 雇用形態
   birthDate: z.string().optional(), // 生年月日
   gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(), // 性別

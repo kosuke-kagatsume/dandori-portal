@@ -55,115 +55,9 @@ export default function OnboardingAdminPage() {
   // 招待メール送信確認
   const [sendingInvite, setSendingInvite] = useState<string | null>(null);
 
-  // デモ用: applicationの状態管理
+  // applicationの状態管理
   const [localApplications, setLocalApplications] = useState<OnboardingApplication[]>([]);
-
-  // Demo data - 複数の申請データ
-  const applications: OnboardingApplication[] = useMemo(() => [
-    {
-      id: 'demo-onboarding-001',
-      employeeId: '6',
-      applicantEmail: 'shinnyu@dandori.local',
-      applicantName: '新入太郎',
-      hireDate: '2025-11-01',
-      status: 'not_submitted',
-      createdAt: '2025-10-15T00:00:00Z',
-      updatedAt: '2025-10-18T00:00:00Z',
-      invitedAt: '2025-10-15T09:00:00Z',
-      basicInfoFormId: 'demo-basic-001',
-      familyInfoFormId: 'demo-family-001',
-      bankAccountFormId: 'demo-bank-001',
-      commuteRouteFormId: 'demo-commute-001',
-      deadline: '2025-10-31T23:59:59Z',
-      accessToken: 'demo-access-token-001',
-      department: '営業部',
-      position: '営業',
-      hrNotes: 'デモ用の入社申請データです',
-    },
-    {
-      id: 'demo-onboarding-002',
-      employeeId: '7',
-      applicantEmail: 'yamada.hanako@dandori.local',
-      applicantName: '山田花子',
-      hireDate: '2025-11-01',
-      status: 'submitted',
-      createdAt: '2025-10-10T00:00:00Z',
-      updatedAt: '2025-10-17T00:00:00Z',
-      invitedAt: '2025-10-10T09:00:00Z',
-      submittedAt: '2025-10-17T14:30:00Z',
-      basicInfoFormId: 'demo-basic-002',
-      familyInfoFormId: 'demo-family-002',
-      bankAccountFormId: 'demo-bank-002',
-      commuteRouteFormId: 'demo-commute-002',
-      deadline: '2025-10-31T23:59:59Z',
-      accessToken: 'demo-access-token-002',
-      department: 'エンジニアリング部',
-      position: 'エンジニア',
-    },
-    {
-      id: 'demo-onboarding-003',
-      employeeId: '8',
-      applicantEmail: 'suzuki.jiro@dandori.local',
-      applicantName: '鈴木次郎',
-      hireDate: '2025-11-15',
-      status: 'returned',
-      createdAt: '2025-10-12T00:00:00Z',
-      updatedAt: '2025-10-16T00:00:00Z',
-      invitedAt: '2025-10-05T09:00:00Z',
-      submittedAt: '2025-10-16T10:00:00Z',
-      basicInfoFormId: 'demo-basic-003',
-      familyInfoFormId: 'demo-family-003',
-      bankAccountFormId: 'demo-bank-003',
-      commuteRouteFormId: 'demo-commute-003',
-      deadline: '2025-11-07T23:59:59Z',
-      accessToken: 'demo-access-token-003',
-      department: '総務部',
-      position: '総務',
-      hrNotes: '住所情報に不備があり差し戻し',
-    },
-    {
-      id: 'demo-onboarding-004',
-      employeeId: '9',
-      applicantEmail: 'tanaka.yuki@dandori.local',
-      applicantName: '田中雪',
-      hireDate: '2025-12-01',
-      status: 'approved',
-      createdAt: '2025-10-01T00:00:00Z',
-      updatedAt: '2025-10-14T00:00:00Z',
-      invitedAt: '2025-10-01T09:00:00Z',
-      submittedAt: '2025-10-13T16:45:00Z',
-      reviewedAt: '2025-10-14T09:30:00Z',
-      approvedAt: '2025-10-14T09:30:00Z',
-      approvedBy: '1',
-      basicInfoFormId: 'demo-basic-004',
-      familyInfoFormId: 'demo-family-004',
-      bankAccountFormId: 'demo-bank-004',
-      commuteRouteFormId: 'demo-commute-004',
-      deadline: '2025-11-23T23:59:59Z',
-      accessToken: 'demo-access-token-004',
-      department: '人事部',
-      position: '人事',
-    },
-    {
-      id: 'demo-onboarding-005',
-      employeeId: '10',
-      applicantEmail: 'sato.akira@dandori.local',
-      applicantName: '佐藤明',
-      hireDate: '2025-12-01',
-      status: 'invited',
-      createdAt: '2025-10-18T00:00:00Z',
-      updatedAt: '2025-10-18T00:00:00Z',
-      invitedAt: '2025-10-18T09:00:00Z',
-      basicInfoFormId: 'demo-basic-005',
-      familyInfoFormId: 'demo-family-005',
-      bankAccountFormId: 'demo-bank-005',
-      commuteRouteFormId: 'demo-commute-005',
-      deadline: '2025-11-23T23:59:59Z',
-      accessToken: 'demo-access-token-005',
-      department: '経理部',
-      position: '経理',
-    },
-  ], []);
+  const [isLoadingApps, setIsLoadingApps] = useState(true);
 
   // フィルター・検索処理
   const filteredApplications = useMemo(() => {
@@ -201,40 +95,99 @@ export default function OnboardingAdminPage() {
     setCurrentPage(1);
   }, [statusFilter, searchQuery]);
 
-  // 初期データのロード
+  // APIからデータをロード
   useEffect(() => {
-    setLocalApplications(applications);
-  }, [applications]);
+    const fetchApplications = async () => {
+      try {
+        setIsLoadingApps(true);
+        const res = await fetch('/api/onboarding/applications');
+        const result = await res.json();
+        if (result.success && result.data) {
+          // API response を OnboardingApplication 型にマッピング
+          const apps: OnboardingApplication[] = result.data.map((app: Record<string, unknown>) => ({
+            id: app.id as string,
+            applicantEmail: app.applicantEmail as string,
+            applicantName: app.applicantName as string,
+            hireDate: app.hireDate as string,
+            status: app.status as string,
+            createdAt: app.createdAt as string,
+            updatedAt: app.updatedAt as string,
+            invitedAt: app.invitedAt as string | undefined,
+            submittedAt: app.submittedAt as string | undefined,
+            reviewedAt: app.reviewedAt as string | undefined,
+            approvedAt: app.approvedAt as string | undefined,
+            approvedBy: app.approvedBy as string | undefined,
+            employeeNumber: app.employeeNumber as string | undefined,
+            department: app.department as string | undefined,
+            position: app.position as string | undefined,
+            deadline: app.deadline as string || app.hireDate as string,
+            accessToken: app.accessToken as string || '',
+            hrNotes: app.hrNotes as string | undefined,
+            basicInfoFormId: '',
+            familyInfoFormId: '',
+            bankAccountFormId: '',
+            commuteRouteFormId: '',
+          }));
+          setLocalApplications(apps);
+        }
+      } catch (error) {
+        console.error('Failed to fetch onboarding applications:', error);
+      } finally {
+        setIsLoadingApps(false);
+      }
+    };
+    fetchApplications();
+  }, []);
 
-  // 新規登録処理（デモ用）
-  const handleCreateApplication = () => {
+  // 新規登録処理
+  const handleCreateApplication = async () => {
     if (!newApplicant.name || !newApplicant.email || !newApplicant.hireDate) {
       alert('氏名、メールアドレス、入社日は必須です');
       return;
     }
 
-    const newApp: OnboardingApplication = {
-      id: `demo-onboarding-${Date.now()}`,
-      employeeId: undefined,
-      applicantEmail: newApplicant.email,
-      applicantName: newApplicant.name,
-      hireDate: newApplicant.hireDate,
-      status: 'not_invited',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      basicInfoFormId: `demo-basic-${Date.now()}`,
-      familyInfoFormId: `demo-family-${Date.now()}`,
-      bankAccountFormId: `demo-bank-${Date.now()}`,
-      commuteRouteFormId: `demo-commute-${Date.now()}`,
-      deadline: new Date(new Date(newApplicant.hireDate).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      accessToken: `demo-token-${Date.now()}`,
-      department: newApplicant.department || undefined,
-      position: newApplicant.position || undefined,
-    };
-
-    setLocalApplications([newApp, ...localApplications]);
-    setNewApplicant({ name: '', email: '', hireDate: '', department: '', position: '' });
-    setShowNewDialog(false);
+    try {
+      const res = await fetch('/api/onboarding/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicantName: newApplicant.name,
+          applicantEmail: newApplicant.email,
+          hireDate: newApplicant.hireDate,
+          department: newApplicant.department || null,
+          position: newApplicant.position || null,
+          deadline: new Date(new Date(newApplicant.hireDate).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+        }),
+      });
+      const result = await res.json();
+      if (result.success && result.data) {
+        const app = result.data;
+        const newApp: OnboardingApplication = {
+          id: app.id,
+          applicantEmail: app.applicantEmail,
+          applicantName: app.applicantName,
+          hireDate: app.hireDate,
+          status: app.status || 'invited',
+          createdAt: app.createdAt,
+          updatedAt: app.updatedAt,
+          invitedAt: app.invitedAt,
+          deadline: app.deadline || app.hireDate,
+          accessToken: app.accessToken || '',
+          department: app.department,
+          position: app.position,
+          basicInfoFormId: '',
+          familyInfoFormId: '',
+          bankAccountFormId: '',
+          commuteRouteFormId: '',
+        };
+        setLocalApplications([newApp, ...localApplications]);
+      }
+      setNewApplicant({ name: '', email: '', hireDate: '', department: '', position: '' });
+      setShowNewDialog(false);
+    } catch (error) {
+      console.error('Failed to create application:', error);
+      alert('登録に失敗しました');
+    }
   };
 
   // 招待メール送信処理
@@ -516,7 +469,16 @@ export default function OnboardingAdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {paginatedApplications.length === 0 ? (
+                {isLoadingApps ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600" />
+                        <p className="text-sm text-gray-500">読み込み中...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : paginatedApplications.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center gap-2">

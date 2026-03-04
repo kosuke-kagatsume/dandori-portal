@@ -7,6 +7,8 @@ import { createSuccessResponse, handleError } from '@/lib/api/response';
 export async function GET(request: NextRequest) {
   try {
     const tenantId = await getTenantIdFromRequest(request);
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
 
     // 今日の日付
     const today = new Date();
@@ -130,6 +132,20 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // ユーザー別件数（userId指定時）
+    let myPendingRequests = 0;
+    let myPendingApprovals = 0;
+    if (userId) {
+      [myPendingRequests, myPendingApprovals] = await Promise.all([
+        prisma.workflow_requests.count({
+          where: { tenantId, requesterId: userId, status: 'pending' },
+        }),
+        prisma.approval_steps.count({
+          where: { tenantId, approverId: userId, status: 'pending' },
+        }),
+      ]);
+    }
+
     // SaaSカテゴリ別コスト集計
     const categoryTotals: Record<string, number> = {};
     let totalMonthlyCost = 0;
@@ -251,6 +267,8 @@ export async function GET(request: NextRequest) {
         attendanceRate,
         pendingApprovals,
         urgentApprovals,
+        myPendingRequests,
+        myPendingApprovals,
       },
       // SaaSコスト（カテゴリ別）
       saasCostByCategory,

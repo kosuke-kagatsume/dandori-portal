@@ -15,7 +15,6 @@ import {
   ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import type {
-  OnboardingApplication,
   OnboardingStatus,
   FormStatus,
   FormType,
@@ -54,11 +53,6 @@ export default function OnboardingAdminDetailPage() {
     familyInfoForm,
     bankAccountForm,
     commuteRouteForm,
-    initializeApplication,
-    initializeBasicInfoForm,
-    initializeFamilyInfoForm,
-    initializeBankAccountForm,
-    initializeCommuteRouteForm,
   } = useOnboardingStore();
   const { currentUser, getUserById } = useUserStore();
 
@@ -77,150 +71,17 @@ export default function OnboardingAdminDetailPage() {
   const [returnComment, setReturnComment] = useState('');
   const [hrNotes, setHrNotes] = useState('');
 
-  // HR管理画面用：applicationIdに応じたデータを読み込み
+  // HR管理画面用：applicationIdに応じたデータをAPIから読み込み
+  const { loadApplication, application: storeApplication } = useOnboardingStore();
+
   useEffect(() => {
-    console.log('[HR Admin] Loading application data for:', applicationId);
-    import('@/lib/demo-onboarding-applications').then(
-      ({ getApplicationData }) => {
-        const data = getApplicationData(applicationId);
+    if (applicationId) {
+      loadApplication(applicationId);
+    }
+  }, [applicationId, loadApplication]);
 
-        if (data) {
-          // demo-onboarding-001（新入太郎）の場合はonboarding-storeから取得
-          // それ以外の場合は、このデータを直接storeに設定
-          if (applicationId !== 'demo-onboarding-001' && data.basicInfoForm) {
-            console.log('[HR Admin] Initializing data for:', data.application.applicantName);
-            initializeApplication(data.application);
-            initializeBasicInfoForm(data.basicInfoForm);
-            initializeFamilyInfoForm(data.familyInfoForm!);
-            initializeBankAccountForm(data.bankAccountForm!);
-            initializeCommuteRouteForm(data.commuteRouteForm!);
-          } else if (applicationId === 'demo-onboarding-001') {
-            // 新入太郎のデータは既にonboarding-storeにあるはず
-            const existingData = localStorage.getItem('onboarding-storage');
-            if (!existingData) {
-              console.log('[HR Admin] Initializing data for 新入太郎 from demo-onboarding-data');
-              import('@/lib/demo-onboarding-data').then(({ getDemoOnboardingData }) => {
-                const onboardingData = getDemoOnboardingData();
-                initializeApplication(onboardingData.application);
-                initializeBasicInfoForm(onboardingData.basicInfoForm);
-                initializeFamilyInfoForm(onboardingData.familyInfoForm);
-                initializeBankAccountForm(onboardingData.bankAccountForm);
-                initializeCommuteRouteForm(onboardingData.commuteRouteForm);
-              });
-            }
-          }
-        }
-      }
-    );
-  }, [applicationId, initializeApplication, initializeBasicInfoForm, initializeFamilyInfoForm, initializeBankAccountForm, initializeCommuteRouteForm]); // applicationIdが変わるたびに実行
-
-  // Demo data - 実際にはAPIから取得
-  const application: OnboardingApplication | null = useMemo(() => {
-    // applicationIdに応じたデモデータを返す
-    const applications: Record<string, OnboardingApplication> = {
-      'demo-onboarding-001': {
-        id: 'demo-onboarding-001',
-        employeeId: '6',
-        applicantEmail: 'shinnyu@dandori.local',
-        applicantName: '新入太郎',
-        hireDate: '2025-11-01',
-        status: 'not_submitted',
-        createdAt: '2025-10-15T00:00:00Z',
-        updatedAt: '2025-10-18T00:00:00Z',
-        invitedAt: '2025-10-15T09:00:00Z',
-        basicInfoFormId: 'demo-basic-001',
-        familyInfoFormId: 'demo-family-001',
-        bankAccountFormId: 'demo-bank-001',
-        commuteRouteFormId: 'demo-commute-001',
-        deadline: '2025-10-31T23:59:59Z',
-        accessToken: 'demo-access-token-001',
-        department: '営業部',
-        position: '営業',
-        hrNotes: 'デモ用の入社申請データです',
-      },
-      'demo-onboarding-002': {
-        id: 'demo-onboarding-002',
-        employeeId: '7',
-        applicantEmail: 'yamada.hanako@dandori.local',
-        applicantName: '山田花子',
-        hireDate: '2025-11-01',
-        status: 'submitted',
-        createdAt: '2025-10-10T00:00:00Z',
-        updatedAt: '2025-10-16T00:00:00Z',
-        basicInfoFormId: 'demo-basic-002',
-        familyInfoFormId: 'demo-family-002',
-        bankAccountFormId: 'demo-bank-002',
-        commuteRouteFormId: 'demo-commute-002',
-        deadline: '2025-10-31T23:59:59Z',
-        accessToken: 'demo-access-token-002',
-        department: 'エンジニアリング部',
-        position: 'エンジニア',
-        hrNotes: '',
-      },
-      'demo-onboarding-003': {
-        id: 'demo-onboarding-003',
-        employeeId: '8',
-        applicantEmail: 'suzuki.jiro@dandori.local',
-        applicantName: '鈴木次郎',
-        hireDate: '2025-11-15',
-        status: 'returned',
-        createdAt: '2025-10-05T00:00:00Z',
-        updatedAt: '2025-10-17T00:00:00Z',
-        basicInfoFormId: 'demo-basic-003',
-        familyInfoFormId: 'demo-family-003',
-        bankAccountFormId: 'demo-bank-003',
-        commuteRouteFormId: 'demo-commute-003',
-        deadline: '2025-11-07T23:59:59Z',
-        accessToken: 'demo-access-token-003',
-        department: '総務部',
-        position: '総務',
-        hrNotes: '住所の表記に誤りがあるため、差し戻しました。',
-      },
-      'demo-onboarding-004': {
-        id: 'demo-onboarding-004',
-        employeeId: '9',
-        applicantEmail: 'tanaka.yuki@dandori.local',
-        applicantName: '田中雪',
-        hireDate: '2025-12-01',
-        status: 'approved',
-        createdAt: '2025-10-01T00:00:00Z',
-        updatedAt: '2025-10-18T00:00:00Z',
-        basicInfoFormId: 'demo-basic-004',
-        familyInfoFormId: 'demo-family-004',
-        bankAccountFormId: 'demo-bank-004',
-        commuteRouteFormId: 'demo-commute-004',
-        deadline: '2025-11-23T23:59:59Z',
-        accessToken: 'demo-access-token-004',
-        department: '人事部',
-        position: '人事',
-        hrNotes: '全フォーム承認完了。入社準備を進めてください。',
-      },
-      'demo-onboarding-005': {
-        id: 'demo-onboarding-005',
-        employeeId: '10',
-        applicantEmail: 'sato.akira@dandori.local',
-        applicantName: '佐藤明',
-        hireDate: '2025-12-01',
-        status: 'invited',
-        createdAt: '2025-10-12T00:00:00Z',
-        updatedAt: '2025-10-18T00:00:00Z',
-        invitedAt: '2025-10-18T09:00:00Z',
-        basicInfoFormId: 'demo-basic-005',
-        familyInfoFormId: 'demo-family-005',
-        bankAccountFormId: 'demo-bank-005',
-        commuteRouteFormId: 'demo-commute-005',
-        deadline: '2025-11-23T23:59:59Z',
-        accessToken: 'demo-access-token-005',
-        department: '経理部',
-        position: '経理',
-        hrNotes: '',
-      },
-    };
-
-    const app = applications[applicationId] || null;
-    console.log('[HR Admin Detail] applicationId:', applicationId, 'application:', app);
-    return app;
-  }, [applicationId]);
+  // APIから取得したapplicationデータ（storeから）
+  const application = storeApplication;
 
   // フォームステータス（onboarding-storeから取得）
   const formStatuses = useMemo(() => ({
@@ -328,6 +189,7 @@ export default function OnboardingAdminDetailPage() {
       approved: { label: '承認済み', class: 'bg-green-100 text-green-800' },
       registered: { label: '登録完了', class: 'bg-purple-100 text-purple-800' },
       // FormStatus
+      not_started: { label: '未開始', class: 'bg-slate-100 text-slate-600' },
       draft: { label: '下書き', class: 'bg-gray-100 text-gray-800' },
     };
 
@@ -370,15 +232,14 @@ export default function OnboardingAdminDetailPage() {
   ];
 
   // 承認処理
-  const handleApprove = (formType: FormType) => {
+  const handleApprove = async (formType: FormType) => {
     if (!currentUser) {
       toast.error('ユーザー情報が取得できませんでした');
       return;
     }
 
     try {
-      // onboarding-storeのメソッドを呼び出し
-      approveForm(formType, currentUser.id);
+      await approveForm(formType, currentUser.id);
       toast.success(`${formType}を承認しました`);
       setShowApproveModal(false);
     } catch (error) {
@@ -388,7 +249,7 @@ export default function OnboardingAdminDetailPage() {
   };
 
   // 差し戻し処理
-  const handleReturn = (formType: FormType) => {
+  const handleReturn = async (formType: FormType) => {
     if (!returnComment.trim()) {
       toast.error('差し戻し理由を入力してください');
       return;
@@ -400,8 +261,7 @@ export default function OnboardingAdminDetailPage() {
     }
 
     try {
-      // onboarding-storeのメソッドを呼び出し
-      returnForm(formType, returnComment, currentUser.id);
+      await returnForm(formType, returnComment, currentUser.id);
       toast.success(`${formType}を差し戻しました`);
       setShowReturnModal(false);
       setReturnComment('');
@@ -412,15 +272,14 @@ export default function OnboardingAdminDetailPage() {
   };
 
   // 全承認処理
-  const handleApproveAll = () => {
+  const handleApproveAll = async () => {
     if (!currentUser) {
       toast.error('ユーザー情報が取得できませんでした');
       return;
     }
 
     try {
-      // onboarding-storeのメソッドを呼び出し
-      approveAllForms(currentUser.id);
+      await approveAllForms(currentUser.id);
       toast.success('全フォームを承認しました');
     } catch (error) {
       console.error('Approve all error:', error);

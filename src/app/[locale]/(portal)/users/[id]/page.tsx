@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +19,7 @@ import { categoryLabels } from '@/types/saas';
 import { exportUserSaaSToCSV } from '@/lib/utils/csv-export';
 import { toast } from 'sonner';
 import type { User } from '@/types';
+import type { WorkRule } from '@/features/users/user-attendance-tab';
 
 export default function UserDetailPage({ params }: { params: { id: string; locale: string } }) {
   const router = useRouter();
@@ -95,11 +96,54 @@ export default function UserDetailPage({ params }: { params: { id: string; local
     return getUserTotalCost(user.id);
   }, [user, getUserTotalCost]);
 
-  // 異動履歴を組織ストアから取得
-  const userTransferHistory = useMemo(() => {
+  // 異動履歴を組織ストアから取得（fallback）+ APIから取得
+  const storeTransferHistory = useMemo(() => {
     if (!user) return [];
     return getTransferHistoriesByUser(user.id);
   }, [user, getTransferHistoriesByUser]);
+
+  const [apiTransferHistory, setApiTransferHistory] = useState<typeof storeTransferHistory>([]);
+  const [userWorkRule, setUserWorkRule] = useState<WorkRule | undefined>(undefined);
+
+  const fetchUserWorkRule = useCallback(async () => {
+    if (!user?.workRuleId) return;
+    try {
+      const res = await fetch(`/api/attendance-master/work-rules?tenantId=${user.tenantId}&activeOnly=true`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          const matched = data.data.find((r: { id: string }) => r.id === user.workRuleId);
+          if (matched) {
+            setUserWorkRule(matched);
+          }
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }, [user?.workRuleId, user?.tenantId]);
+
+  const fetchTransferHistory = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/scheduled-changes?type=transfer&userId=${user.id}&status=applied`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          setApiTransferHistory(data.data);
+        }
+      }
+    } catch {
+      // fallback to store data
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUserWorkRule();
+    fetchTransferHistory();
+  }, [fetchUserWorkRule, fetchTransferHistory]);
+
+  const userTransferHistory = apiTransferHistory.length > 0 ? apiTransferHistory : storeTransferHistory;
 
 
 
@@ -591,7 +635,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
           <UserAttendanceTab
             user={user}
             transferHistory={userTransferHistory}
-            workRule={undefined}  // TODO: 就業ルールマスタから取得
+            workRule={userWorkRule}
             isReadOnly={isReadOnly}
             onEdit={() => setEditDialogOpen(true)}
           />

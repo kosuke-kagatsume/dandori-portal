@@ -51,6 +51,8 @@
     "settings": "Settings",
     "audit": "Audit Logs",
     "health": "Health Management",
+    "certifications": "Certifications",
+    "announcements": "Announcements",
     "profile": "Profile"
   },
   "dashboard": {
