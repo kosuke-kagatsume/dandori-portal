@@ -18,28 +18,79 @@ import { drmService } from './client';
 // ============================================================
 
 /**
+ * 役職名→コード、部署名→コード の逆引きマップを構築
+ */
+async function buildLookupMaps(tenantId: string): Promise<{
+  positionNameToCode: Map<string, string>;
+  departmentNameToCode: Map<string, string>;
+}> {
+  const [positions, departments] = await Promise.all([
+    prisma.positions.findMany({
+      where: { tenantId, isActive: true },
+      select: { id: true, name: true },
+    }),
+    prisma.departments.findMany({
+      where: { tenantId, isActive: true },
+      select: { id: true, code: true, name: true },
+    }),
+  ]);
+
+  // positions: code = id（DRM PositionMaster への同期と同じキー）
+  const positionNameToCode = new Map<string, string>();
+  for (const pos of positions) {
+    positionNameToCode.set(pos.name, pos.id);
+  }
+
+  // departments: code があればそれを使う、なければ id
+  const departmentNameToCode = new Map<string, string>();
+  for (const dept of departments) {
+    departmentNameToCode.set(dept.name, dept.code || dept.id);
+  }
+
+  return { positionNameToCode, departmentNameToCode };
+}
+
+/**
  * ユーザーデータを同期データに変換
  */
-function userToSyncData(user: {
-  id: string;
-  employeeNumber: string | null;
-  name: string;
-  nameKana: string | null;
-  email: string;
-  department: string | null;
-  position: string | null;
-  hireDate: Date | null;
-  retiredDate: Date | null;
-  status: string;
-  employmentType: string | null;
-  roles: string[];
-}): EmployeeSyncData {
+function userToSyncData(
+  user: {
+    id: string;
+    employeeNumber: string | null;
+    name: string;
+    nameKana: string | null;
+    email: string;
+    department: string | null;
+    position: string | null;
+    hireDate: Date | null;
+    retiredDate: Date | null;
+    status: string;
+    employmentType: string | null;
+    roles: string[];
+  },
+  lookupMaps?: {
+    positionNameToCode: Map<string, string>;
+    departmentNameToCode: Map<string, string>;
+  },
+): EmployeeSyncData {
+  // 役職コード・部署コードを逆引き
+  const positionCode =
+    user.position && lookupMaps?.positionNameToCode
+      ? lookupMaps.positionNameToCode.get(user.position)
+      : undefined;
+  const departmentCode =
+    user.department && lookupMaps?.departmentNameToCode
+      ? lookupMaps.departmentNameToCode.get(user.department)
+      : undefined;
+
   return {
     employeeNumber: user.employeeNumber || user.id,
     name: user.name || '',
     nameKana: user.nameKana || undefined,
     email: user.email,
+    departmentCode: departmentCode || undefined,
     departmentName: user.department || undefined,
+    positionCode: positionCode || undefined,
     positionName: user.position || undefined,
     hireDate: user.hireDate?.toISOString().split('T')[0],
     retirementDate: user.retiredDate?.toISOString().split('T')[0],
@@ -77,12 +128,17 @@ export async function pushEmployeesToDrm(
     whereClause.employeeNumber = { in: employeeNumbers };
   }
 
-  const users = await prisma.users.findMany({
-    where: whereClause,
-  });
+  const [users, lookupMaps] = await Promise.all([
+    prisma.users.findMany({
+      where: whereClause,
+    }),
+    buildLookupMaps(tenantId),
+  ]);
 
-  // 同期データに変換
-  const employees: EmployeeSyncData[] = users.map(userToSyncData);
+  // 同期データに変換（positionCode / departmentCode 付き）
+  const employees: EmployeeSyncData[] = users.map((u) =>
+    userToSyncData(u, lookupMaps),
+  );
 
   // DRM API に送信
   const request: EmployeeSyncRequest = {
@@ -118,15 +174,18 @@ export async function notifyEmployeeChange(
   changeType: 'created' | 'updated' | 'retired' | 'department_changed'
 ): Promise<{ success: boolean; error?: string }> {
   // 従業員データを取得
-  const user = await prisma.users.findFirst({
-    where: { tenantId, employeeNumber },
-  });
+  const [user, lookupMaps] = await Promise.all([
+    prisma.users.findFirst({
+      where: { tenantId, employeeNumber },
+    }),
+    buildLookupMaps(tenantId),
+  ]);
 
   if (!user) {
     return { success: false, error: 'Employee not found' };
   }
 
-  const employeeData = userToSyncData(user);
+  const employeeData = userToSyncData(user, lookupMaps);
 
   const eventType = `employee.${changeType}` as const;
   const result = await sendWebhookToDrm(eventType, tenantId, employeeData);
@@ -161,7 +220,7 @@ export async function getEmployeesForSync(
     whereClause.updatedAt = { gte: lastSyncAt };
   }
 
-  const [users, total] = await Promise.all([
+  const [users, total, lookupMaps] = await Promise.all([
     prisma.users.findMany({
       where: whereClause,
       take: limit,
@@ -169,9 +228,12 @@ export async function getEmployeesForSync(
       orderBy: { updatedAt: 'desc' },
     }),
     prisma.users.count({ where: whereClause }),
+    buildLookupMaps(tenantId),
   ]);
 
-  const employees: EmployeeSyncData[] = users.map(userToSyncData);
+  const employees: EmployeeSyncData[] = users.map((u) =>
+    userToSyncData(u, lookupMaps),
+  );
 
   return {
     employees,
