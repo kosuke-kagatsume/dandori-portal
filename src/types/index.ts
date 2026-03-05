@@ -19,6 +19,8 @@ export const UserSchema = z.object({
   avatar: z.string().optional(),
   position: z.string().optional(),
   department: z.string().optional(),
+  positionId: z.string().optional(),
+  departmentId: z.string().optional(),
   // 勤怠関連
   paidLeaveStartDate: z.string().optional(), // 有給起算日
   punchMethod: z.enum(['web', 'ic_card', 'mobile', 'face']).optional(), // 打刻方法
@@ -70,10 +72,15 @@ export const UserSchema = z.object({
   payrollInfo: z.object({
     // 一般情報
     basicSalary: z.number().optional(), // 基本給
+    hourlyRate: z.number().optional(), // 時給（パート用）
+    positionAllowance: z.number().optional(), // 役職手当
     workType: z.enum(['monthly', 'daily', 'hourly']).optional(), // 給与形態
     residentTaxCity: z.string().optional(), // 住民税 徴収先市区町村
     residentTaxMethod: z.enum(['special', 'normal']).optional(), // 特別徴収/普通徴収
     incomeTaxType: z.enum(['kouA', 'kouB', 'otsu']).optional(), // 所得税 甲欄/乙欄
+    // 配偶者情報
+    hasSpouse: z.boolean().optional(), // 配偶者有無
+    spouseDeductionEligible: z.boolean().optional(), // 配偶者控除対象
     dependentCount: z.number().optional(), // 扶養人数
     dependents: z.array(z.object({
       id: z.string(),
@@ -94,19 +101,33 @@ export const UserSchema = z.object({
     commuteMethod: z.enum(['train', 'bus', 'car', 'bicycle', 'walk', 'other']).optional(),
     commuteAllowance: z.number().optional(), // 通勤手当
     commuteRoute: z.string().optional(), // 通勤経路
+    // 社会保険（4分野）
     healthInsuranceGrade: z.string().optional(), // 健康保険等級
+    healthInsuranceNumber: z.string().optional(), // 健康保険番号
+    healthInsuranceType: z.enum(['association', 'society', 'national']).optional(), // 協会けんぽ/組合/国保
     pensionGrade: z.string().optional(), // 厚生年金等級
+    pensionNumber: z.string().optional(), // 基礎年金番号
     employmentInsuranceNumber: z.string().optional(), // 雇用保険番号
-    residentTaxMonthlyAmount: z.number().optional(), // 住民税月額
+    employmentInsuranceRate: z.string().optional(), // 雇用保険料率区分
+    workersCompInsuranceNumber: z.string().optional(), // 労災保険番号
+    workersCompCategory: z.string().optional(), // 労災保険 業種区分
+    // 住民税
+    residentTaxMonthlyAmount: z.number().optional(), // 住民税月額（旧: 単一値）
+    residentTaxMonthlyAmounts: z.array(z.object({
+      month: z.number(), // 1-12
+      amount: z.number(),
+    })).optional(), // 住民税月額（新: 12ヶ月分）
     // 支払情報
     bankAccounts: z.array(z.object({
       id: z.string(),
+      isPrimary: z.boolean().optional(), // メイン口座フラグ
       usage: z.enum(['salary', 'bonus', 'both']), // 給与/賞与/両方
       bankName: z.string(),
       branchName: z.string(),
       accountType: z.enum(['ordinary', 'current', 'savings']), // 普通/当座/貯蓄
       accountNumber: z.string(),
       accountHolder: z.string(),
+      fixedAmount: z.number().optional(), // 定額振込（サブ口座用）
     })).optional(),
   }).optional(),
 });

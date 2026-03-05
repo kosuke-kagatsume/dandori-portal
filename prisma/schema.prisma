@@ -460,6 +460,7 @@ model departments {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime
+  users     users[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -1341,6 +1342,7 @@ model positions {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime
+  users     users[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
@@ -1746,11 +1748,15 @@ model users {
   paidLeaveStartDate    DateTime?            @db.Date
   punchMethod           String?
   workRuleId            String?
+  positionId            String?
+  departmentId          String?
   attendance            attendance[]
   attendance_punches    attendance_punches[]
   tenants               tenants              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   org_units             org_units?           @relation(fields: [unitId], references: [id])
   work_rules            work_rules?          @relation(fields: [workRuleId], references: [id], onDelete: SetNull)
+  positions_rel         positions?           @relation(fields: [positionId], references: [id])
+  departments_rel       departments?         @relation(fields: [departmentId], references: [id])
   leave_of_absence_history leave_of_absence_history[]
 
   @@index([email])
@@ -1758,6 +1764,8 @@ model users {
   @@index([tenantId, status])
   @@index([unitId])
   @@index([workRuleId])
+  @@index([positionId])
+  @@index([departmentId])
 }
 
 model vehicles {

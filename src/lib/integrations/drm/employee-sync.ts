@@ -62,6 +62,8 @@ function userToSyncData(
     email: string;
     department: string | null;
     position: string | null;
+    positionId: string | null;
+    departmentId: string | null;
     hireDate: Date | null;
     retiredDate: Date | null;
     status: string;
@@ -73,15 +75,18 @@ function userToSyncData(
     departmentNameToCode: Map<string, string>;
   },
 ): EmployeeSyncData {
-  // 役職コード・部署コードを逆引き
+  // positionId があればそのまま使用、なければ名前ベースで逆引き（後方互換）
   const positionCode =
-    user.position && lookupMaps?.positionNameToCode
+    user.positionId ||
+    (user.position && lookupMaps?.positionNameToCode
       ? lookupMaps.positionNameToCode.get(user.position)
-      : undefined;
+      : undefined);
+  // departmentId があればそのまま使用、なければ名前ベースで逆引き（後方互換）
   const departmentCode =
-    user.department && lookupMaps?.departmentNameToCode
+    user.departmentId ||
+    (user.department && lookupMaps?.departmentNameToCode
       ? lookupMaps.departmentNameToCode.get(user.department)
-      : undefined;
+      : undefined);
 
   return {
     employeeNumber: user.employeeNumber || user.id,
@@ -250,6 +255,9 @@ export async function receiveEmployeesFromDrm(
 ): Promise<EmployeeSyncResponse> {
   const { tenantId, employees, syncType } = request;
 
+  // positionName / departmentName → ID の逆引きマップを構築
+  const lookupMaps = await buildLookupMaps(tenantId);
+
   let createdCount = 0;
   let updatedCount = 0;
   let skippedCount = 0;
@@ -268,6 +276,21 @@ export async function receiveEmployeesFromDrm(
         },
       });
 
+      // positionId / departmentId を名前から解決
+      const resolvedPositionId = employee.positionName
+        ? lookupMaps.positionNameToCode.get(employee.positionName) || null
+        : null;
+      const resolvedDepartmentId = employee.departmentName
+        ? lookupMaps.departmentNameToCode.get(employee.departmentName) || null
+        : null;
+
+      if (employee.positionName && !resolvedPositionId) {
+        console.warn(`[employee-sync] positionId 解決不可: "${employee.positionName}" (employee: ${employee.employeeNumber})`);
+      }
+      if (employee.departmentName && !resolvedDepartmentId) {
+        console.warn(`[employee-sync] departmentId 解決不可: "${employee.departmentName}" (employee: ${employee.employeeNumber})`);
+      }
+
       const userData = {
         name: employee.name,
         nameKana: employee.nameKana || null,
@@ -275,6 +298,8 @@ export async function receiveEmployeesFromDrm(
         employeeNumber: employee.employeeNumber,
         department: employee.departmentName || null,
         position: employee.positionName || null,
+        positionId: resolvedPositionId,
+        departmentId: resolvedDepartmentId,
         hireDate: employee.hireDate ? new Date(employee.hireDate) : null,
         retiredDate: employee.retirementDate
           ? new Date(employee.retirementDate)

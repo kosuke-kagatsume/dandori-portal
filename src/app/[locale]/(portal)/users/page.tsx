@@ -168,8 +168,10 @@ export default function UsersPage() {
     employeeNumber?: string;
     email: string;
     phone?: string;
-    department: string;
-    position: string;
+    department?: string;
+    position?: string;
+    departmentId: string;
+    positionId: string;
     employmentType?: string;
     hireDate: Date;
     status: 'active' | 'inactive' | 'suspended' | 'retired';
@@ -192,6 +194,8 @@ export default function UsersPage() {
           phone: data.phone,
           department: data.department,
           position: data.position,
+          departmentId: data.departmentId,
+          positionId: data.positionId,
           employmentType: data.employmentType,
           hireDate: hireDateStr,
           status: data.status,

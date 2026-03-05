@@ -6,6 +6,7 @@ import {
   getTenantIdFromRequest,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
+import { resolvePositionAndDepartment, ValidationError } from '@/lib/api/user-helpers';
 
 // GET /api/users - ユーザー一覧取得
 export async function GET(request: NextRequest) {
@@ -37,6 +38,8 @@ export async function GET(request: NextRequest) {
         status: true,
         position: true,
         department: true,
+        positionId: true,
+        departmentId: true,
         avatar: true,
         roles: true,
         hireDate: true,
@@ -97,6 +100,8 @@ export async function POST(request: NextRequest) {
       status = 'active',
       position,
       department,
+      positionId,
+      departmentId,
       avatar,
     } = body;
 
@@ -110,6 +115,20 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // positionId / departmentId バリデーション + 名前解決
+    let resolvedNames: { position?: string; department?: string } = {};
+    try {
+      resolvedNames = await resolvePositionAndDepartment(tenantId, positionId, departmentId);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return NextResponse.json(
+          { success: false, error: error.message },
+          { status: 400 }
+        );
+      }
+      throw error;
     }
 
     // メールアドレス重複チェック
@@ -139,8 +158,10 @@ export async function POST(request: NextRequest) {
         tenantId,
         roles,
         status,
-        position,
-        department,
+        position: resolvedNames.position || position,
+        department: resolvedNames.department || department,
+        positionId: positionId || undefined,
+        departmentId: departmentId || undefined,
         avatar,
         updatedAt: new Date(),
       },

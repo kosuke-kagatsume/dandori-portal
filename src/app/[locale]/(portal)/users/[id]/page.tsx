@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ArrowLeft, Mail, Phone, Calendar, Building, Shield, CreditCard, Download, Edit, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Calendar, Building, Shield, CreditCard, Download, Loader2 } from 'lucide-react';
 import { useUserStore } from '@/lib/store/user-store';
 import { useSaaSStore } from '@/lib/store/saas-store';
 import { useOrganizationStore } from '@/lib/store/organization-store';
@@ -15,6 +15,7 @@ import { UserFormDialog } from '@/features/users/user-form-dialog';
 import { UserAttendanceTab } from '@/features/users/user-attendance-tab';
 import { UserQualificationTab } from '@/features/users/user-qualification-tab';
 import { UserPayrollTab } from '@/features/users/user-payroll-tab';
+import { UserGeneralInfoTab } from '@/features/users/user-general-info-tab';
 import { categoryLabels } from '@/types/saas';
 import { exportUserSaaSToCSV } from '@/lib/utils/csv-export';
 import { toast } from 'sonner';
@@ -199,8 +200,10 @@ export default function UserDetailPage({ params }: { params: { id: string; local
     employeeNumber?: string;
     email: string;
     phone?: string;
-    department: string;
-    position: string;
+    department?: string;
+    position?: string;
+    departmentId: string;
+    positionId: string;
     employmentType?: string;
     hireDate: Date;
     birthDate?: Date | null;
@@ -230,6 +233,8 @@ export default function UserDetailPage({ params }: { params: { id: string; local
           phone: data.phone,
           department: data.department,
           position: data.position,
+          departmentId: data.departmentId,
+          positionId: data.positionId,
           employmentType: data.employmentType,
           hireDate: hireDateStr,
           birthDate: birthDateStr,
@@ -396,100 +401,14 @@ export default function UserDetailPage({ params }: { params: { id: string; local
 
         {/* 基本情報タブ */}
         <TabsContent value="basic" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>基本情報</CardTitle>
-                  <CardDescription>ユーザーの詳細情報</CardDescription>
-                </div>
-                {!isReadOnly && (
-                  <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(true)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    編集
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">ユーザーID</p>
-                  <p className="text-sm mt-1">{user.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">ステータス</p>
-                  <p className="text-sm mt-1">
-                    <Badge variant={statusColors[user.status]}>
-                      {statusLabels[user.status]}
-                    </Badge>
-                  </p>
-                </div>
-                {user.employeeNumber && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">社員番号</p>
-                    <p className="text-sm mt-1">{user.employeeNumber}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">氏名</p>
-                  <p className="text-sm mt-1">{user.name}</p>
-                </div>
-                {user.nameKana && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">フリガナ</p>
-                    <p className="text-sm mt-1">{user.nameKana}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">メールアドレス</p>
-                  <p className="text-sm mt-1">{user.email}</p>
-                </div>
-                {user.phone && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">電話番号</p>
-                    <p className="text-sm mt-1">{user.phone}</p>
-                  </div>
-                )}
-                {user.department && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">部署</p>
-                    <p className="text-sm mt-1">{user.department}</p>
-                  </div>
-                )}
-                {user.position && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">役職</p>
-                    <p className="text-sm mt-1">{user.position}</p>
-                  </div>
-                )}
-                {user.hireDate && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">入社日</p>
-                    <p className="text-sm mt-1">
-                      {new Date(user.hireDate).toLocaleDateString('ja-JP')}
-                    </p>
-                  </div>
-                )}
-                {user.employmentType && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">雇用形態</p>
-                    <p className="text-sm mt-1">
-                      {{ regular: '正社員', contract: '契約社員', part_time: 'パートタイム', temporary: '派遣社員', intern: 'インターン', executive: '役員' }[user.employmentType] || user.employmentType}
-                    </p>
-                  </div>
-                )}
-                {user.status === 'retired' && user.retiredDate && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">退職日</p>
-                    <p className="text-sm mt-1">
-                      {new Date(user.retiredDate).toLocaleDateString('ja-JP')}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <UserGeneralInfoTab
+            user={user}
+            isReadOnly={isReadOnly}
+            onEdit={() => setEditDialogOpen(true)}
+            onUserUpdated={(updatedUser) => {
+              setUsers(users.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+            }}
+          />
         </TabsContent>
 
         {/* SaaS利用タブ */}

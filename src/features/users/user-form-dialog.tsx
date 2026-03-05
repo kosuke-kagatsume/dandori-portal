@@ -40,8 +40,10 @@ const userSchema = z.object({
   employeeNumber: z.string().optional(),
   email: z.string().email('有効なメールアドレスを入力してください'),
   phone: z.string().optional(),
-  department: z.string().min(1, '部署を選択してください'),
-  position: z.string().min(1, '役職を選択してください'),
+  department: z.string().optional(),
+  position: z.string().optional(),
+  departmentId: z.string().min(1, '部署を選択してください'),
+  positionId: z.string().min(1, '役職を選択してください'),
   employmentType: z.string().optional(),
   hireDate: z.date({ required_error: '入社日を選択してください' }),
   birthDate: z.date().optional().nullable(),
@@ -87,8 +89,12 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
   const tenantId = currentTenant?.id;
 
   // マスタデータをAPIから取得
-  const [departments, setDepartments] = useState<string[]>(FALLBACK_DEPARTMENTS);
-  const [positions, setPositions] = useState<string[]>(FALLBACK_POSITIONS);
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>(
+    FALLBACK_DEPARTMENTS.map((name) => ({ id: name, name }))
+  );
+  const [positions, setPositions] = useState<{ id: string; name: string }[]>(
+    FALLBACK_POSITIONS.map((name) => ({ id: name, name }))
+  );
   const [employmentTypes, setEmploymentTypes] = useState<{ value: string; label: string }[]>(FALLBACK_EMPLOYMENT_TYPES);
 
   const fetchMasterData = useCallback(async () => {
@@ -103,13 +109,21 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
       if (deptRes.ok) {
         const data = await deptRes.json();
         if (data.success && data.data?.length > 0) {
-          setDepartments(data.data.filter((d: { isActive: boolean }) => d.isActive !== false).map((d: { name: string }) => d.name));
+          setDepartments(
+            data.data
+              .filter((d: { isActive: boolean }) => d.isActive !== false)
+              .map((d: { id: string; name: string }) => ({ id: d.id, name: d.name }))
+          );
         }
       }
       if (posRes.ok) {
         const data = await posRes.json();
         if (data.success && data.data?.length > 0) {
-          setPositions(data.data.filter((p: { isActive: boolean }) => p.isActive !== false).map((p: { name: string }) => p.name));
+          setPositions(
+            data.data
+              .filter((p: { isActive: boolean }) => p.isActive !== false)
+              .map((p: { id: string; name: string }) => ({ id: p.id, name: p.name }))
+          );
         }
       }
       if (etRes.ok) {
@@ -150,6 +164,8 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
       phone: user?.phone || '',
       department: user?.department || '',
       position: user?.position || '',
+      departmentId: user?.departmentId || '',
+      positionId: user?.positionId || '',
       employmentType: user?.employmentType || '',
       hireDate: user?.hireDate ? new Date(user.hireDate) : new Date(),
       birthDate: user?.birthDate ? new Date(user.birthDate) : null,
@@ -163,8 +179,8 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
 
   const hireDate = watch('hireDate');
   const birthDate = watch('birthDate');
-  const watchDepartment = watch('department');
-  const watchPosition = watch('position');
+  const watchDepartmentId = watch('departmentId');
+  const watchPositionId = watch('positionId');
   const watchEmploymentType = watch('employmentType');
   const watchGender = watch('gender');
   const watchStatus = watch('status');
@@ -181,6 +197,8 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
         phone: user?.phone || '',
         department: user?.department || '',
         position: user?.position || '',
+        departmentId: user?.departmentId || '',
+        positionId: user?.positionId || '',
         employmentType: user?.employmentType || '',
         hireDate: user?.hireDate ? new Date(user.hireDate) : new Date(),
         birthDate: user?.birthDate ? new Date(user.birthDate) : null,
@@ -295,22 +313,26 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
               </Label>
               <div className="col-span-3">
                 <Select
-                  onValueChange={(value) => setValue('department', value)}
-                  value={watchDepartment}
+                  onValueChange={(value) => {
+                    setValue('departmentId', value);
+                    const dept = departments.find(d => d.id === value);
+                    if (dept) setValue('department', dept.name);
+                  }}
+                  value={watchDepartmentId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="部署を選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.department && (
-                  <p className="text-sm text-red-500 mt-1">{errors.department.message}</p>
+                {errors.departmentId && (
+                  <p className="text-sm text-red-500 mt-1">{errors.departmentId.message}</p>
                 )}
               </div>
             </div>
@@ -321,22 +343,26 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
               </Label>
               <div className="col-span-3">
                 <Select
-                  onValueChange={(value) => setValue('position', value)}
-                  value={watchPosition}
+                  onValueChange={(value) => {
+                    setValue('positionId', value);
+                    const pos = positions.find(p => p.id === value);
+                    if (pos) setValue('position', pos.name);
+                  }}
+                  value={watchPositionId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="役職を選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {positions.map((pos) => (
-                      <SelectItem key={pos} value={pos}>
-                        {pos}
+                      <SelectItem key={pos.id} value={pos.id}>
+                        {pos.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.position && (
-                  <p className="text-sm text-red-500 mt-1">{errors.position.message}</p>
+                {errors.positionId && (
+                  <p className="text-sm text-red-500 mt-1">{errors.positionId.message}</p>
                 )}
               </div>
             </div>

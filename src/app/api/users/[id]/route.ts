@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resolvePositionAndDepartment, ValidationError } from '@/lib/api/user-helpers';
 
 // GET /api/users/[id] - 個別ユーザー取得
 export async function GET(
@@ -92,6 +93,27 @@ export async function PATCH(
           },
           { status: 409 }
         );
+      }
+    }
+
+    // positionId / departmentId バリデーション + 名前解決
+    if (body.positionId || body.departmentId) {
+      try {
+        const resolvedNames = await resolvePositionAndDepartment(
+          existingUser.tenantId,
+          body.positionId,
+          body.departmentId,
+        );
+        if (resolvedNames.position) body.position = resolvedNames.position;
+        if (resolvedNames.department) body.department = resolvedNames.department;
+      } catch (error) {
+        if (error instanceof ValidationError) {
+          return NextResponse.json(
+            { success: false, error: error.message },
+            { status: 400 }
+          );
+        }
+        throw error;
       }
     }
 
