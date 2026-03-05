@@ -72,31 +72,62 @@ export interface YearEndAdjustmentSettings {
   includeQRCode: boolean; // QRコード付与
 }
 
+// 締日グループ
+export interface ClosingDayGroup {
+  id: string;
+  name: string; // グループ名（例: 末日締め、20日締め）
+  closingDay: number; // 締日（1-31、31=末日）
+  paymentDay: number; // 支給日（1-31）
+  paymentMonthOffset: number; // 支給月オフセット（0=当月、1=翌月）
+}
+
+// 集計区分
+export interface AggregationCategory {
+  id: string;
+  name: string; // 区分名（例: 通常勤務、時間外）
+  code: string; // 区分コード
+  type: 'work' | 'leave' | 'overtime' | 'other'; // 種別
+  isActive: boolean;
+}
+
+// 所定労働時間（月別）
+export interface MonthlyStandardWorkHours {
+  month: number; // 1-12
+  hours: number; // 所定労働時間（時間）
+  days: number; // 所定労働日数
+}
+
 export interface AttendanceSettings {
-  // 勤務時間設定
-  workStartTime: string; // 始業時刻
-  workEndTime: string; // 終業時刻
-  breakStartTime: string; // 休憩開始時刻
-  breakEndTime: string; // 休憩終了時刻
-  breakDurationMinutes: number; // 休憩時間（分）
-
-  // フレックス設定
-  enableFlexTime: boolean; // フレックス制度
-  coreTimeStart?: string; // コアタイム開始
-  coreTimeEnd?: string; // コアタイム終了
-
-  // 残業設定
-  overtimeThresholdMinutes: number; // 残業計算開始（分）
-  maxOvertimeHoursPerMonth: number; // 月間残業上限（時間）
-
-  // 打刻設定
+  // 打刻設定（残存）
   allowRemoteCheckIn: boolean; // リモート打刻許可
   requireLocationOnCheckIn: boolean; // 位置情報必須
   allowEarlyCheckIn: boolean; // 早出打刻許可
   earlyCheckInMinutes: number; // 早出許容時間（分）
 
-  // 休日設定
-  weeklyHolidays: string[]; // 週休日
+  // 締日グループ設定
+  closingDayGroups: ClosingDayGroup[];
+
+  // 集計区分設定
+  aggregationCategories: AggregationCategory[];
+
+  // 所定労働時間設定
+  standardWorkHoursPerDay: number; // 1日の所定労働時間
+  standardWorkDaysPerMonthAvg: number; // 所定労働日数（月平均）
+  standardWorkHoursPerMonthAvg: number; // 所定労働時間（月平均）
+  monthlyStandardWorkHours: MonthlyStandardWorkHours[];
+
+  // --- 以下は就業ルールマスタに移動済み（後方互換のため保持） ---
+  workStartTime: string;
+  workEndTime: string;
+  breakStartTime: string;
+  breakEndTime: string;
+  breakDurationMinutes: number;
+  enableFlexTime: boolean;
+  coreTimeStart?: string;
+  coreTimeEnd?: string;
+  overtimeThresholdMinutes: number;
+  maxOvertimeHoursPerMonth: number;
+  weeklyHolidays: string[];
 }
 
 export interface WorkflowSettings {
@@ -193,6 +224,33 @@ const defaultYearEndAdjustmentSettings: YearEndAdjustmentSettings = {
 };
 
 const defaultAttendanceSettings: AttendanceSettings = {
+  // 打刻設定
+  allowRemoteCheckIn: true,
+  requireLocationOnCheckIn: false,
+  allowEarlyCheckIn: true,
+  earlyCheckInMinutes: 30,
+  // 締日グループ
+  closingDayGroups: [
+    { id: 'default', name: '末日締め翌月25日払い', closingDay: 31, paymentDay: 25, paymentMonthOffset: 1 },
+  ],
+  // 集計区分
+  aggregationCategories: [
+    { id: 'normal', name: '通常勤務', code: 'NORMAL', type: 'work', isActive: true },
+    { id: 'overtime', name: '時間外勤務', code: 'OVERTIME', type: 'overtime', isActive: true },
+    { id: 'holiday', name: '休日勤務', code: 'HOLIDAY', type: 'overtime', isActive: true },
+    { id: 'paid_leave', name: '有給休暇', code: 'PAID_LEAVE', type: 'leave', isActive: true },
+  ],
+  // 所定労働時間設定
+  standardWorkHoursPerDay: 8,
+  standardWorkDaysPerMonthAvg: 20,
+  standardWorkHoursPerMonthAvg: 160,
+  // 所定労働時間（月別デフォルト）
+  monthlyStandardWorkHours: Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    hours: 160,
+    days: 20,
+  })),
+  // 後方互換（就業ルールマスタに移動済み）
   workStartTime: '09:00',
   workEndTime: '18:00',
   breakStartTime: '12:00',
@@ -203,10 +261,6 @@ const defaultAttendanceSettings: AttendanceSettings = {
   coreTimeEnd: undefined,
   overtimeThresholdMinutes: 480,
   maxOvertimeHoursPerMonth: 45,
-  allowRemoteCheckIn: true,
-  requireLocationOnCheckIn: false,
-  allowEarlyCheckIn: true,
-  earlyCheckInMinutes: 30,
   weeklyHolidays: ['saturday', 'sunday'],
 };
 
@@ -408,6 +462,19 @@ const createCompanySettingsStore = () => {
         if (result.success) {
           set({
             attendanceSettings: {
+              // 打刻設定
+              allowRemoteCheckIn: result.data.allowRemoteCheckIn,
+              requireLocationOnCheckIn: result.data.requireLocationOnCheckIn,
+              allowEarlyCheckIn: result.data.allowEarlyCheckIn,
+              earlyCheckInMinutes: result.data.earlyCheckInMinutes,
+              // 新設定
+              closingDayGroups: result.data.closingDayGroups || defaultAttendanceSettings.closingDayGroups,
+              aggregationCategories: result.data.aggregationCategories || defaultAttendanceSettings.aggregationCategories,
+              standardWorkHoursPerDay: result.data.standardWorkHoursPerDay ?? defaultAttendanceSettings.standardWorkHoursPerDay,
+              standardWorkDaysPerMonthAvg: result.data.standardWorkDaysPerMonthAvg ?? defaultAttendanceSettings.standardWorkDaysPerMonthAvg,
+              standardWorkHoursPerMonthAvg: result.data.standardWorkHoursPerMonthAvg ?? defaultAttendanceSettings.standardWorkHoursPerMonthAvg,
+              monthlyStandardWorkHours: result.data.monthlyStandardWorkHours || defaultAttendanceSettings.monthlyStandardWorkHours,
+              // 後方互換
               workStartTime: result.data.workStartTime,
               workEndTime: result.data.workEndTime,
               breakStartTime: result.data.breakStartTime,
@@ -418,10 +485,6 @@ const createCompanySettingsStore = () => {
               coreTimeEnd: result.data.coreTimeEnd || undefined,
               overtimeThresholdMinutes: result.data.overtimeThresholdMinutes,
               maxOvertimeHoursPerMonth: result.data.maxOvertimeHoursPerMonth,
-              allowRemoteCheckIn: result.data.allowRemoteCheckIn,
-              requireLocationOnCheckIn: result.data.requireLocationOnCheckIn,
-              allowEarlyCheckIn: result.data.allowEarlyCheckIn,
-              earlyCheckInMinutes: result.data.earlyCheckInMinutes,
               weeklyHolidays: result.data.weeklyHolidays,
             },
             isLoading: false,
