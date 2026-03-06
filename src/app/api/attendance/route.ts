@@ -65,6 +65,8 @@ export async function GET(request: NextRequest) {
         status: true,
         memo: true,
         approvalStatus: true,
+        workPatternId: true,
+        workPatternName: true,
         createdAt: true,
         updatedAt: true,
         user: {

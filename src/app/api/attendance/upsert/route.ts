@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
       approvalStatus,
       approvalReason,
       punchHistory,
+      workPatternId,
+      workPatternName,
     } = body;
 
     // バリデーション
@@ -66,6 +68,8 @@ export async function POST(request: NextRequest) {
         ...(memo !== undefined && { memo }),
         ...(approvalStatus !== undefined && { approvalStatus }),
         ...(approvalReason !== undefined && { approvalReason }),
+        ...(workPatternId !== undefined && { workPatternId }),
+        ...(workPatternName !== undefined && { workPatternName }),
       },
       create: {
         id: crypto.randomUUID(),
@@ -84,6 +88,8 @@ export async function POST(request: NextRequest) {
         memo,
         approvalStatus,
         approvalReason,
+        workPatternId: workPatternId || null,
+        workPatternName: workPatternName || null,
         updatedAt: new Date(),
       },
       include: {

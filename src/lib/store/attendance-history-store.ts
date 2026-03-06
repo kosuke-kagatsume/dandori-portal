@@ -141,6 +141,8 @@ export interface AttendanceRecord {
   memo?: string;
   approvalStatus?: 'pending' | 'approved' | 'rejected';
   approvalReason?: string;
+  workPatternId?: string;
+  workPatternName?: string;
   // 打刻履歴（P.2 複数打刻の履歴保存）
   punchHistory?: PunchRecord[];
   createdAt: string;

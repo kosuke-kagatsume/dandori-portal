@@ -46,7 +46,6 @@ import {
   FileText,
   Download,
   FileCheck,
-  FileUp,
   ChevronDown,
   AlertCircle,
   CheckCircle2,
@@ -297,8 +296,8 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
           ...editingRecord,
           checkIn: editPunchPairs[0]?.checkIn || undefined,
           checkOut: editPunchPairs[0]?.checkOut || undefined,
-          breakStart: editPunchPairs[0]?.breakStart || undefined,
-          breakEnd: editPunchPairs[0]?.breakEnd || undefined,
+          breakStart: editPunchPairs[0]?.breakStart || '',
+          breakEnd: editPunchPairs[0]?.breakEnd || '',
           punchHistory,
         });
         toast.success('勤怠記録を更新しました');
@@ -324,9 +323,6 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
     setClosingDialogOpen(true);
   };
 
-  const handleProxyClosing = () => {
-    toast.info('代理締め申請機能は準備中です');
-  };
 
   const getStatusLabel = (status?: AttendanceRecord['status']) => {
     switch (status) {
@@ -402,16 +398,10 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                 締め申請
               </Button>
               {isHR && (
-                <>
-                  <Button variant="outline" size="sm" onClick={handleExportCSV}>
-                    <Download className="h-4 w-4 mr-2" />
-                    CSV出力
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleProxyClosing}>
-                    <FileUp className="h-4 w-4 mr-2" />
-                    代理締め申請
-                  </Button>
-                </>
+                <Button variant="outline" size="sm" onClick={handleExportCSV}>
+                  <Download className="h-4 w-4 mr-2" />
+                  CSV出力
+                </Button>
               )}
             </div>
           </div>
@@ -554,7 +544,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
 
                         {/* 勤務パターン */}
                         <TableCell className="text-sm text-muted-foreground">
-                          {WORK_PATTERNS.find(p => p.value === record?.workPattern)?.label || '-'}
+                          {record?.workPattern || WORK_PATTERNS.find(p => p.value === record?.workPattern)?.label || '-'}
                         </TableCell>
 
                         {/* 出勤 */}

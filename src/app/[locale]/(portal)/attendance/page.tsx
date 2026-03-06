@@ -247,26 +247,49 @@ export default function AttendancePage() {
 
   // 月間勤怠一覧用のレコード
   const monthlyListRecords = useMemo(() => {
-    return allHistoryRecords.map(record => ({
-      date: record.date,
-      status: record.status === 'present' ? 'present' as const :
-              record.status === 'absent' || record.status === 'holiday' || record.status === 'leave' ? 'absent' as const :
-              record.status === 'late' ? 'late' as const :
-              record.status === 'early' ? 'early_leave' as const :
-              record.workLocation === 'home' ? 'remote' as const : 'present' as const,
-      checkIn: record.checkIn || undefined,
-      checkOut: record.checkOut || undefined,
-      breakStart: record.breakStart || undefined,
-      breakEnd: record.breakEnd || undefined,
-      breakMinutes: record.totalBreakMinutes,
-      workHours: (record.workMinutes || 0) / 60,
-      scheduledHours: 8.0,
-      overtime: (record.overtimeMinutes || 0) / 60,
-      workLocation: record.workLocation as 'office' | 'home' | 'client' | 'other' | undefined,
-      note: record.memo || undefined,
-      approvalStatus: record.approvalStatus as 'pending' | 'approved' | 'rejected' | undefined,
-      punchHistory: record.punchHistory,
-    }));
+    return allHistoryRecords.map(record => {
+      // workMinutes が 0 でも checkIn/checkOut があれば再計算
+      let workMinutes = record.workMinutes || 0;
+      if (workMinutes === 0 && record.checkIn && record.checkOut) {
+        const [inH, inM] = record.checkIn.split(':').map(Number);
+        const [outH, outM] = record.checkOut.split(':').map(Number);
+        if (!isNaN(inH) && !isNaN(inM) && !isNaN(outH) && !isNaN(outM)) {
+          let breakMs = 0;
+          if (record.breakStart && record.breakEnd) {
+            const [bsH, bsM] = record.breakStart.split(':').map(Number);
+            const [beH, beM] = record.breakEnd.split(':').map(Number);
+            if (!isNaN(bsH) && !isNaN(bsM) && !isNaN(beH) && !isNaN(beM)) {
+              breakMs = (beH * 60 + beM) - (bsH * 60 + bsM);
+            }
+          }
+          const totalBreak = record.totalBreakMinutes || breakMs;
+          workMinutes = Math.max(0, (outH * 60 + outM) - (inH * 60 + inM) - totalBreak);
+        }
+      }
+      const overtimeMinutes = record.overtimeMinutes || Math.max(0, workMinutes - 480);
+
+      return {
+        date: record.date,
+        status: record.status === 'present' ? 'present' as const :
+                record.status === 'absent' || record.status === 'holiday' || record.status === 'leave' ? 'absent' as const :
+                record.status === 'late' ? 'late' as const :
+                record.status === 'early' ? 'early_leave' as const :
+                record.workLocation === 'home' ? 'remote' as const : 'present' as const,
+        checkIn: record.checkIn || undefined,
+        checkOut: record.checkOut || undefined,
+        breakStart: record.breakStart || undefined,
+        breakEnd: record.breakEnd || undefined,
+        breakMinutes: record.totalBreakMinutes,
+        workHours: workMinutes / 60,
+        scheduledHours: 8.0,
+        overtime: overtimeMinutes / 60,
+        workLocation: record.workLocation as 'office' | 'home' | 'client' | 'other' | undefined,
+        workPattern: record.workPatternName || undefined,
+        note: record.memo || undefined,
+        approvalStatus: record.approvalStatus as 'pending' | 'approved' | 'rejected' | undefined,
+        punchHistory: record.punchHistory,
+      };
+    });
   }, [allHistoryRecords]);
 
   // 勤怠記録更新ハンドラー

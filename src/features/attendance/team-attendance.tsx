@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -64,8 +66,15 @@ interface AttendanceRecord {
   date: string;
   checkIn: string | null;
   checkOut: string | null;
+  breakStart: string | null;
+  breakEnd: string | null;
+  totalBreakMinutes: number;
+  workMinutes: number;
+  overtimeMinutes: number;
   workLocation: string | null;
+  workPatternName: string | null;
   status: string;
+  memo: string | null;
 }
 
 interface MemberMonthlyData {
@@ -75,7 +84,19 @@ interface MemberMonthlyData {
   closingRequested: boolean;
   managerApproved: boolean;
   attendanceClosed: boolean;
-  dailyRecords: Map<string, { checkIn: string | null; checkOut: string | null; status: string }>;
+  dailyRecords: Map<string, {
+    checkIn: string | null;
+    checkOut: string | null;
+    breakStart: string | null;
+    breakEnd: string | null;
+    totalBreakMinutes: number;
+    workMinutes: number;
+    overtimeMinutes: number;
+    workLocation: string | null;
+    workPatternName: string | null;
+    status: string;
+    memo: string | null;
+  }>;
   summary: {
     workDays: number;
     presentDays: number;
@@ -130,6 +151,7 @@ export function TeamAttendance() {
   const [actionType, setActionType] = useState<'approve' | 'reject' | 'close' | 'unlock' | 'cancel_approval' | null>(null);
   const [dayDetailDialogOpen, setDayDetailDialogOpen] = useState(false);
   const [selectedDayDetail, setSelectedDayDetail] = useState<{ memberName: string; date: string; checkIn: string | null; checkOut: string | null; status: string } | null>(null);
+  const [actionMemo, setActionMemo] = useState('');
 
   // API data states
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -240,7 +262,13 @@ export function TeamAttendance() {
 
     return teamMembers.map(member => {
       const memberRecords = attendanceRecords.filter(r => r.userId === member.id);
-      const dailyRecords = new Map<string, { checkIn: string | null; checkOut: string | null; status: string }>();
+      const dailyRecords = new Map<string, {
+        checkIn: string | null; checkOut: string | null;
+        breakStart: string | null; breakEnd: string | null;
+        totalBreakMinutes: number; workMinutes: number; overtimeMinutes: number;
+        workLocation: string | null; workPatternName: string | null;
+        status: string; memo: string | null;
+      }>();
 
       let presentDays = 0;
       let remoteDays = 0;
@@ -255,7 +283,15 @@ export function TeamAttendance() {
         dailyRecords.set(dateKey, {
           checkIn: toHHmm(record.checkIn),
           checkOut: toHHmm(record.checkOut),
+          breakStart: toHHmm(record.breakStart),
+          breakEnd: toHHmm(record.breakEnd),
+          totalBreakMinutes: record.totalBreakMinutes || 0,
+          workMinutes: record.workMinutes || 0,
+          overtimeMinutes: record.overtimeMinutes || 0,
+          workLocation: record.workLocation,
+          workPatternName: record.workPatternName,
           status: record.status,
+          memo: record.memo,
         });
 
         const recordDate = parseISO(record.date);
@@ -856,14 +892,20 @@ export function TeamAttendance() {
               </div>
 
               {/* 日次一覧 */}
-              <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-y-auto">
+              <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-auto">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 z-10">
                     <TableRow className="bg-muted/50">
-                      <TableHead>日付</TableHead>
-                      <TableHead className="text-center">出勤</TableHead>
-                      <TableHead className="text-center">退勤</TableHead>
-                      <TableHead className="text-center">ステータス</TableHead>
+                      <TableHead className="w-[100px]">日付</TableHead>
+                      <TableHead className="text-center w-[70px]">ステータス</TableHead>
+                      <TableHead className="text-center w-[80px]">勤務パターン</TableHead>
+                      <TableHead className="text-center w-[55px]">出勤</TableHead>
+                      <TableHead className="text-center w-[55px]">退勤</TableHead>
+                      <TableHead className="text-center w-[55px]">休憩入</TableHead>
+                      <TableHead className="text-center w-[55px]">休憩戻</TableHead>
+                      <TableHead className="text-right w-[55px]">総労働</TableHead>
+                      <TableHead className="text-right w-[55px]">残業</TableHead>
+                      <TableHead className="w-[100px]">備考</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -872,6 +914,8 @@ export function TeamAttendance() {
                       const record = selectedMember.dailyRecords.get(dateStr);
                       const dayOfWeek = getDay(day);
                       const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
+                      const workHours = record ? (record.workMinutes || 0) / 60 : 0;
+                      const overtimeHours = record ? (record.overtimeMinutes || 0) / 60 : 0;
 
                       return (
                         <TableRow
@@ -881,28 +925,48 @@ export function TeamAttendance() {
                           )}
                         >
                           <TableCell className={cn(
-                            'font-medium',
+                            'font-medium text-sm',
                             dayOfWeek === 0 && 'text-red-500',
                             dayOfWeek === 6 && 'text-blue-500'
                           )}>
                             {format(day, 'MM/dd')}（{WEEKDAY_LABELS[dayOfWeek]}）
                           </TableCell>
-                          <TableCell className="text-center font-mono">
-                            {record?.checkIn || '-'}
-                          </TableCell>
-                          <TableCell className="text-center font-mono">
-                            {record?.checkOut || '-'}
-                          </TableCell>
                           <TableCell className="text-center">
                             {isWeekendDay ? (
-                              <Badge variant="outline">休日</Badge>
+                              <Badge variant="outline" className="text-xs">休日</Badge>
                             ) : record?.status === 'absent' ? (
-                              <Badge variant="destructive">欠勤</Badge>
+                              <Badge variant="destructive" className="text-xs">欠勤</Badge>
                             ) : record?.checkIn ? (
-                              <Badge className="bg-green-500">出勤</Badge>
+                              <Badge className="bg-green-500 text-xs">出勤</Badge>
                             ) : (
-                              <Badge variant="outline">未出勤</Badge>
+                              <Badge variant="outline" className="text-xs">未出勤</Badge>
                             )}
+                          </TableCell>
+                          <TableCell className="text-center text-xs text-muted-foreground">
+                            {record?.workPatternName || '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm">
+                            {record?.checkIn || '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm">
+                            {record?.checkOut || '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm">
+                            {record?.breakStart || '-'}
+                          </TableCell>
+                          <TableCell className="text-center font-mono text-sm">
+                            {record?.breakEnd || '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            {workHours > 0 ? workHours.toFixed(1) : '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-sm">
+                            {overtimeHours > 0 ? (
+                              <span className="text-orange-600">{overtimeHours.toFixed(1)}</span>
+                            ) : '-'}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]">
+                            {record?.memo || '-'}
                           </TableCell>
                         </TableRow>
                       );
@@ -936,7 +1000,7 @@ export function TeamAttendance() {
               {selectedMember?.memberName}さんに対して操作を実行します。
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="space-y-4 py-4">
             <p className="text-sm">
               {actionType === 'approve' && 'この勤怠を承認してよろしいですか？'}
               {actionType === 'reject' && '差し戻しを実行すると、本人に再提出を依頼します。'}
@@ -944,14 +1008,24 @@ export function TeamAttendance() {
               {actionType === 'unlock' && '締めを解除すると、修正が可能になります。'}
               {actionType === 'cancel_approval' && '承認を取り消して、承認待ち状態に戻します。'}
             </p>
+            <div className="space-y-2">
+              <Label htmlFor="action-memo">メモ（任意）</Label>
+              <Textarea
+                id="action-memo"
+                placeholder={actionType === 'reject' ? '差し戻し理由を入力してください...' : 'コメントを入力...'}
+                value={actionMemo}
+                onChange={(e) => setActionMemo(e.target.value)}
+                rows={3}
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActionDialogOpen(false)}>
+            <Button variant="outline" onClick={() => { setActionDialogOpen(false); setActionMemo(''); }}>
               キャンセル
             </Button>
             <Button
               variant={actionType === 'reject' ? 'destructive' : 'default'}
-              onClick={executeAction}
+              onClick={() => { executeAction(); setActionMemo(''); }}
             >
               実行する
             </Button>
