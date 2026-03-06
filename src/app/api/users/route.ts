@@ -6,7 +6,7 @@ import {
   getTenantIdFromRequest,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
-import { resolvePositionAndDepartment, ValidationError } from '@/lib/api/user-helpers';
+import { resolvePositionAndDepartment, resolveIdsFromNames, ValidationError } from '@/lib/api/user-helpers';
 
 // GET /api/users - ユーザー一覧取得
 export async function GET(request: NextRequest) {
@@ -119,6 +119,8 @@ export async function POST(request: NextRequest) {
 
     // positionId / departmentId バリデーション + 名前解決
     let resolvedNames: { position?: string; department?: string } = {};
+    let resolvedPositionId = positionId;
+    let resolvedDepartmentId = departmentId;
     try {
       resolvedNames = await resolvePositionAndDepartment(tenantId, positionId, departmentId);
     } catch (error) {
@@ -129,6 +131,13 @@ export async function POST(request: NextRequest) {
         );
       }
       throw error;
+    }
+
+    // IDが未指定だが文字列名がある場合、名前からIDを逆引き（CSVインポート等）
+    if (!positionId && position || !departmentId && department) {
+      const resolvedIds = await resolveIdsFromNames(tenantId, department, position);
+      if (resolvedIds.departmentId) resolvedDepartmentId = resolvedIds.departmentId;
+      if (resolvedIds.positionId) resolvedPositionId = resolvedIds.positionId;
     }
 
     // メールアドレス重複チェック
@@ -160,8 +169,8 @@ export async function POST(request: NextRequest) {
         status,
         position: resolvedNames.position || position,
         department: resolvedNames.department || department,
-        positionId: positionId || undefined,
-        departmentId: departmentId || undefined,
+        positionId: resolvedPositionId || undefined,
+        departmentId: resolvedDepartmentId || undefined,
         avatar,
         updatedAt: new Date(),
       },

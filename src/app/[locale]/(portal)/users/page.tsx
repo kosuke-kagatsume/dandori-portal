@@ -400,18 +400,23 @@ export default function UsersPage() {
                     position: user.position,
                     employmentType: user.employmentType,
                     hireDate: user.hireDate,
-                    birthDate: user.birthDate,
-                    gender: user.gender,
-                    postalCode: user.postalCode,
-                    address: user.address,
+                    birthDate: user.birthDate || undefined,
+                    gender: user.gender || undefined,
+                    postalCode: user.postalCode || undefined,
+                    address: user.address || undefined,
                     status: user.status,
-                    retiredDate: user.retiredDate,
-                    retirementReason: user.retirementReason,
-                    roles: user.roles,
+                    retiredDate: user.retiredDate || undefined,
+                    retirementReason: user.retirementReason || undefined,
+                    roles: user.roles?.length ? user.roles : undefined,
                   }),
                 });
-                if (!res.ok) apiErrorCount++;
-              } catch {
+                if (!res.ok) {
+                  const errBody = await res.json().catch(() => null);
+                  console.error(`Import PATCH error for ${user.name} (${user.id}):`, res.status, errBody);
+                  apiErrorCount++;
+                }
+              } catch (err) {
+                console.error(`Import PATCH exception for ${user.name}:`, err);
                 apiErrorCount++;
               }
             }
@@ -427,8 +432,13 @@ export default function UsersPage() {
                     tenantId: currentUser?.tenantId || tenantId,
                   }),
                 });
-                if (!res.ok) apiErrorCount++;
-              } catch {
+                if (!res.ok) {
+                  const errBody = await res.json().catch(() => null);
+                  console.error(`Import POST error for ${user.name}:`, res.status, errBody);
+                  apiErrorCount++;
+                }
+              } catch (err) {
+                console.error(`Import POST exception for ${user.name}:`, err);
                 apiErrorCount++;
               }
             }

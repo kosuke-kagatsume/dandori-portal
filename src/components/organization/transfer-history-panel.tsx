@@ -49,11 +49,11 @@ export function TransferHistoryPanel() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       if (
-        !transfer.userName.toLowerCase().includes(query) &&
-        !transfer.fromUnitName.toLowerCase().includes(query) &&
-        !transfer.toUnitName.toLowerCase().includes(query) &&
-        !transfer.fromPosition.toLowerCase().includes(query) &&
-        !transfer.toPosition.toLowerCase().includes(query)
+        !(transfer.userName || '').toLowerCase().includes(query) &&
+        !(transfer.fromUnitName || '').toLowerCase().includes(query) &&
+        !(transfer.toUnitName || '').toLowerCase().includes(query) &&
+        !(transfer.fromPosition || '').toLowerCase().includes(query) &&
+        !(transfer.toPosition || '').toLowerCase().includes(query)
       ) {
         return false;
       }

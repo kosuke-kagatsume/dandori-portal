@@ -42,3 +42,33 @@ export class ValidationError extends Error {
     this.name = 'ValidationError';
   }
 }
+
+/**
+ * department / position の文字列名から departmentId / positionId を逆引き
+ * CSVインポート等でIDが未指定の場合に利用
+ */
+export async function resolveIdsFromNames(
+  tenantId: string,
+  departmentName?: string,
+  positionName?: string,
+): Promise<{ departmentId?: string; positionId?: string }> {
+  const result: { departmentId?: string; positionId?: string } = {};
+
+  if (departmentName) {
+    const dept = await prisma.departments.findFirst({
+      where: { tenantId, name: departmentName, isActive: true },
+      select: { id: true },
+    });
+    if (dept) result.departmentId = dept.id;
+  }
+
+  if (positionName) {
+    const pos = await prisma.positions.findFirst({
+      where: { tenantId, name: positionName, isActive: true },
+      select: { id: true },
+    });
+    if (pos) result.positionId = pos.id;
+  }
+
+  return result;
+}

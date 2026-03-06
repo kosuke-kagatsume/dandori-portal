@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { resolvePositionAndDepartment, ValidationError } from '@/lib/api/user-helpers';
+import { resolvePositionAndDepartment, resolveIdsFromNames, ValidationError } from '@/lib/api/user-helpers';
 
 // GET /api/users/[id] - 個別ユーザー取得
 export async function GET(
@@ -115,6 +115,15 @@ export async function PATCH(
         }
         throw error;
       }
+    } else if (body.department || body.position) {
+      // IDが未指定だが文字列名がある場合、名前からIDを逆引き（CSVインポート等）
+      const resolvedIds = await resolveIdsFromNames(
+        existingUser.tenantId,
+        body.department,
+        body.position,
+      );
+      if (resolvedIds.departmentId) body.departmentId = resolvedIds.departmentId;
+      if (resolvedIds.positionId) body.positionId = resolvedIds.positionId;
     }
 
     // 更新データの準備
