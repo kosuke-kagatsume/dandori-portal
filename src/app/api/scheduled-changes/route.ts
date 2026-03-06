@@ -116,6 +116,10 @@ function formatDetails(change: {
   currentPosition: string | null;
   newPosition: string | null;
   transferReason: string | null;
+  newEmploymentType: string | null;
+  newWorkRuleId: string | null;
+  currentEmploymentType: string | null;
+  currentWorkRuleName: string | null;
   retirementReason: string | null;
   retirementNotes: string | null;
 }) {
@@ -136,6 +140,10 @@ function formatDetails(change: {
         currentPosition: change.currentPosition,
         newPosition: change.newPosition,
         reason: change.transferReason,
+        newEmploymentType: change.newEmploymentType,
+        newWorkRuleId: change.newWorkRuleId,
+        currentEmploymentType: change.currentEmploymentType,
+        currentWorkRuleName: change.currentWorkRuleName,
       };
     case 'retirement':
       return {
@@ -229,6 +237,10 @@ export async function POST(request: NextRequest) {
         currentPosition: type === 'transfer' ? details?.currentPosition : null,
         newPosition: type === 'transfer' ? details?.newPosition : null,
         transferReason: type === 'transfer' ? details?.reason : null,
+        newEmploymentType: type === 'transfer' ? details?.newEmploymentType : null,
+        newWorkRuleId: type === 'transfer' ? details?.newWorkRuleId : null,
+        currentEmploymentType: type === 'transfer' ? details?.currentEmploymentType : null,
+        currentWorkRuleName: type === 'transfer' ? details?.currentWorkRuleName : null,
         // 退職詳細
         retirementReason: type === 'retirement' ? details?.retirementReason : null,
         retirementNotes: type === 'retirement' ? details?.notes : null,

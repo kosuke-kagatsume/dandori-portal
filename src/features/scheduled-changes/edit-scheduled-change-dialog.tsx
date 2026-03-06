@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,11 +30,32 @@ import {
 } from '@/lib/store/scheduled-changes-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
+import { UserCombobox } from './user-combobox';
 
 interface EditScheduledChangeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   change: ScheduledChange | null;
+}
+
+interface MasterDepartment {
+  id: string;
+  name: string;
+}
+
+interface MasterPosition {
+  id: string;
+  name: string;
+}
+
+interface MasterEmploymentType {
+  id: string;
+  name: string;
+}
+
+interface MasterWorkRule {
+  id: string;
+  name: string;
 }
 
 export function EditScheduledChangeDialog({
@@ -44,6 +65,40 @@ export function EditScheduledChangeDialog({
 }: EditScheduledChangeDialogProps) {
   const { updateScheduledChange } = useScheduledChangesStore();
   const users = useUserStore((state) => state.users);
+
+  // マスタデータ
+  const [departments, setDepartments] = useState<MasterDepartment[]>([]);
+  const [positions, setPositions] = useState<MasterPosition[]>([]);
+  const [employmentTypes, setEmploymentTypes] = useState<MasterEmploymentType[]>([]);
+  const [workRules, setWorkRules] = useState<MasterWorkRule[]>([]);
+
+  // マスタデータ取得
+  useEffect(() => {
+    if (!open) return;
+    const fetchMasterData = async () => {
+      try {
+        const [deptRes, posRes, etRes, wrRes] = await Promise.all([
+          fetch('/api/master-data/departments'),
+          fetch('/api/master-data/positions'),
+          fetch('/api/master-data/employment-types'),
+          fetch('/api/attendance-master/work-rules?activeOnly=true'),
+        ]);
+        const [deptData, posData, etData, wrData] = await Promise.all([
+          deptRes.json(),
+          posRes.json(),
+          etRes.json(),
+          wrRes.json(),
+        ]);
+        if (deptData.success !== false) setDepartments(deptData.data || []);
+        if (posData.success !== false) setPositions(posData.data || []);
+        if (etData.success !== false) setEmploymentTypes(etData.data || []);
+        if (wrData.success !== false) setWorkRules(wrData.data || []);
+      } catch (e) {
+        console.error('Failed to fetch master data:', e);
+      }
+    };
+    fetchMasterData();
+  }, [open]);
 
   // 入社予約フォーム
   const hireForm = useForm({
@@ -62,8 +117,10 @@ export function EditScheduledChangeDialog({
   const transferForm = useForm({
     defaultValues: {
       userId: '',
-      newDepartment: '',
-      newPosition: '',
+      newDepartment: '変更なし',
+      newPosition: '変更なし',
+      newEmploymentType: '変更なし',
+      newWorkRuleId: '変更なし',
       reason: '',
       effectiveDate: '',
     },
@@ -97,8 +154,10 @@ export function EditScheduledChangeDialog({
         const details = change.details as TransferDetails;
         transferForm.reset({
           userId: change.userId || '',
-          newDepartment: details.newDepartment,
-          newPosition: details.newPosition,
+          newDepartment: details.newDepartment || '変更なし',
+          newPosition: details.newPosition || '変更なし',
+          newEmploymentType: details.newEmploymentType || '変更なし',
+          newWorkRuleId: details.newWorkRuleId || '変更なし',
           reason: details.reason || '',
           effectiveDate: change.effectiveDate,
         });
@@ -148,6 +207,8 @@ export function EditScheduledChangeDialog({
       return;
     }
 
+    const currentWorkRule = workRules.find((r) => r.id === (user as Record<string, unknown>).workRuleId);
+
     const success = await updateScheduledChange(change.id, {
       userId: data.userId,
       userName: user.name,
@@ -158,6 +219,10 @@ export function EditScheduledChangeDialog({
         currentPosition: user.position ?? '',
         newPosition: data.newPosition,
         reason: data.reason || undefined,
+        newEmploymentType: data.newEmploymentType,
+        newWorkRuleId: data.newWorkRuleId,
+        currentEmploymentType: (user as Record<string, unknown>).employmentType as string ?? '',
+        currentWorkRuleName: currentWorkRule?.name ?? '',
       },
     });
 
@@ -196,6 +261,16 @@ export function EditScheduledChangeDialog({
       toast.error('退職予約の更新に失敗しました');
     }
   });
+
+  // ユーザーリストをCombobox用に変換
+  const activeUsers = users
+    .filter((user) => user.status === 'active')
+    .map((user) => ({
+      id: user.id,
+      name: user.name,
+      department: user.department ?? null,
+      position: user.position ?? null,
+    }));
 
   if (!change) return null;
 
@@ -241,21 +316,41 @@ export function EditScheduledChangeDialog({
                 <Label htmlFor="edit-hire-department">
                   部署 <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="edit-hire-department"
-                  {...hireForm.register('department', { required: true })}
-                  placeholder="営業部"
-                />
+                <Select
+                  value={hireForm.watch('department')}
+                  onValueChange={(value) => hireForm.setValue('department', value)}
+                >
+                  <SelectTrigger id="edit-hire-department">
+                    <SelectValue placeholder="部署を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-hire-position">
                   役職 <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="edit-hire-position"
-                  {...hireForm.register('position', { required: true })}
-                  placeholder="営業担当"
-                />
+                <Select
+                  value={hireForm.watch('position')}
+                  onValueChange={(value) => hireForm.setValue('position', value)}
+                >
+                  <SelectTrigger id="edit-hire-position">
+                    <SelectValue placeholder="役職を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {positions.map((pos) => (
+                      <SelectItem key={pos.id} value={pos.name}>
+                        {pos.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -265,8 +360,8 @@ export function EditScheduledChangeDialog({
                   権限 <span className="text-red-500">*</span>
                 </Label>
                 <Select
+                  value={hireForm.watch('role')}
                   onValueChange={(value) => hireForm.setValue('role', value as 'employee' | 'manager' | 'hr' | 'admin')}
-                  defaultValue={hireForm.getValues('role')}
                 >
                   <SelectTrigger id="edit-hire-role">
                     <SelectValue placeholder="権限を選択" />
@@ -291,7 +386,7 @@ export function EditScheduledChangeDialog({
 
             <div className="space-y-2">
               <Label htmlFor="edit-hire-effectiveDate">
-                有効日 <span className="text-red-500">*</span>
+                入社日 <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="edit-hire-effectiveDate"
@@ -313,26 +408,14 @@ export function EditScheduledChangeDialog({
         {change.type === 'transfer' && (
           <form onSubmit={handleTransferSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-transfer-userId">
+              <Label>
                 対象ユーザー <span className="text-red-500">*</span>
               </Label>
-              <Select
+              <UserCombobox
+                users={activeUsers}
+                value={transferForm.watch('userId')}
                 onValueChange={(value) => transferForm.setValue('userId', value)}
-                defaultValue={transferForm.getValues('userId')}
-              >
-                <SelectTrigger id="edit-transfer-userId">
-                  <SelectValue placeholder="ユーザーを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users
-                    .filter((user) => user.status === 'active')
-                    .map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.department} - {user.position})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -340,21 +423,84 @@ export function EditScheduledChangeDialog({
                 <Label htmlFor="edit-transfer-newDepartment">
                   新部署 <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="edit-transfer-newDepartment"
-                  {...transferForm.register('newDepartment', { required: true })}
-                  placeholder="営業部"
-                />
+                <Select
+                  value={transferForm.watch('newDepartment')}
+                  onValueChange={(value) => transferForm.setValue('newDepartment', value)}
+                >
+                  <SelectTrigger id="edit-transfer-newDepartment">
+                    <SelectValue placeholder="新部署を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="変更なし">変更なし</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-transfer-newPosition">
                   新役職 <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="edit-transfer-newPosition"
-                  {...transferForm.register('newPosition', { required: true })}
-                  placeholder="マネージャー"
-                />
+                <Select
+                  value={transferForm.watch('newPosition')}
+                  onValueChange={(value) => transferForm.setValue('newPosition', value)}
+                >
+                  <SelectTrigger id="edit-transfer-newPosition">
+                    <SelectValue placeholder="新役職を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="変更なし">変更なし</SelectItem>
+                    {positions.map((pos) => (
+                      <SelectItem key={pos.id} value={pos.name}>
+                        {pos.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-transfer-newEmploymentType">新雇用形態</Label>
+                <Select
+                  value={transferForm.watch('newEmploymentType')}
+                  onValueChange={(value) => transferForm.setValue('newEmploymentType', value)}
+                >
+                  <SelectTrigger id="edit-transfer-newEmploymentType">
+                    <SelectValue placeholder="雇用形態を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="変更なし">変更なし</SelectItem>
+                    {employmentTypes.map((et) => (
+                      <SelectItem key={et.id} value={et.name}>
+                        {et.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-transfer-newWorkRuleId">新就業ルール</Label>
+                <Select
+                  value={transferForm.watch('newWorkRuleId')}
+                  onValueChange={(value) => transferForm.setValue('newWorkRuleId', value)}
+                >
+                  <SelectTrigger id="edit-transfer-newWorkRuleId">
+                    <SelectValue placeholder="就業ルールを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="変更なし">変更なし</SelectItem>
+                    {workRules.map((rule) => (
+                      <SelectItem key={rule.id} value={rule.id}>
+                        {rule.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -370,7 +516,7 @@ export function EditScheduledChangeDialog({
 
             <div className="space-y-2">
               <Label htmlFor="edit-transfer-effectiveDate">
-                有効日 <span className="text-red-500">*</span>
+                異動日 <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="edit-transfer-effectiveDate"
@@ -392,26 +538,14 @@ export function EditScheduledChangeDialog({
         {change.type === 'retirement' && (
           <form onSubmit={handleRetirementSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-retirement-userId">
+              <Label>
                 対象ユーザー <span className="text-red-500">*</span>
               </Label>
-              <Select
+              <UserCombobox
+                users={activeUsers}
+                value={retirementForm.watch('userId')}
                 onValueChange={(value) => retirementForm.setValue('userId', value)}
-                defaultValue={retirementForm.getValues('userId')}
-              >
-                <SelectTrigger id="edit-retirement-userId">
-                  <SelectValue placeholder="ユーザーを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users
-                    .filter((user) => user.status === 'active')
-                    .map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.department} - {user.position})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
 
             <div className="space-y-2">
@@ -419,8 +553,8 @@ export function EditScheduledChangeDialog({
                 退職理由 <span className="text-red-500">*</span>
               </Label>
               <Select
+                value={retirementForm.watch('retirementReason')}
                 onValueChange={(value) => retirementForm.setValue('retirementReason', value as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other')}
-                defaultValue={retirementForm.getValues('retirementReason')}
               >
                 <SelectTrigger id="edit-retirement-reason">
                   <SelectValue placeholder="退職理由を選択" />
@@ -447,7 +581,7 @@ export function EditScheduledChangeDialog({
 
             <div className="space-y-2">
               <Label htmlFor="edit-retirement-effectiveDate">
-                有効日（退職日） <span className="text-red-500">*</span>
+                退職日 <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="edit-retirement-effectiveDate"

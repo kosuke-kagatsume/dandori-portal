@@ -2526,6 +2526,10 @@ model scheduled_changes {
   currentPosition  String?   // 現在の役職
   newPosition      String?   // 新役職
   transferReason   String?   // 異動理由
+  newEmploymentType     String?   // 新雇用形態
+  newWorkRuleId         String?   // 新就業ルールID
+  currentEmploymentType String?   // 現在の雇用形態
+  currentWorkRuleName   String?   // 現在の就業ルール名
 
   // 退職予約の詳細（typeがretirementの場合）
   retirementReason String?   // voluntary, company, contract_end, retirement_age, other

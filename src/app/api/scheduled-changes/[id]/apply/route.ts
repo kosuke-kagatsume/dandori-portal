@@ -55,20 +55,81 @@ export async function POST(
       );
     }
 
-    const change = await prisma.scheduled_changes.update({
-      where: { id },
-      data: {
-        status: 'applied',
+    // 異動タイプの場合、ユーザー情報を実際に更新
+    if (existing.type === 'transfer' && existing.userId) {
+      const userUpdateData: Record<string, unknown> = {
         updatedAt: new Date(),
-      },
+      };
+
+      // 部門更新
+      if (existing.newDepartment && existing.newDepartment !== '変更なし') {
+        userUpdateData.department = existing.newDepartment;
+        // 部門名からdepartmentIdを逆引き
+        const dept = await prisma.departments.findFirst({
+          where: { tenantId, name: existing.newDepartment, isActive: true },
+        });
+        if (dept) {
+          userUpdateData.departmentId = dept.id;
+        }
+      }
+
+      // 役職更新
+      if (existing.newPosition && existing.newPosition !== '変更なし') {
+        userUpdateData.position = existing.newPosition;
+        // 役職名からpositionIdを逆引き
+        const pos = await prisma.positions.findFirst({
+          where: { tenantId, name: existing.newPosition, isActive: true },
+        });
+        if (pos) {
+          userUpdateData.positionId = pos.id;
+        }
+      }
+
+      // 雇用形態更新
+      if (existing.newEmploymentType && existing.newEmploymentType !== '変更なし') {
+        userUpdateData.employmentType = existing.newEmploymentType;
+      }
+
+      // 就業ルール更新
+      if (existing.newWorkRuleId && existing.newWorkRuleId !== '変更なし') {
+        userUpdateData.workRuleId = existing.newWorkRuleId;
+      }
+
+      // トランザクションでユーザー更新 + ステータス更新
+      await prisma.$transaction([
+        prisma.users.update({
+          where: { id: existing.userId },
+          data: userUpdateData,
+        }),
+        prisma.scheduled_changes.update({
+          where: { id },
+          data: {
+            status: 'applied',
+            updatedAt: new Date(),
+          },
+        }),
+      ]);
+    } else {
+      // 異動以外はステータスのみ更新
+      await prisma.scheduled_changes.update({
+        where: { id },
+        data: {
+          status: 'applied',
+          updatedAt: new Date(),
+        },
+      });
+    }
+
+    const change = await prisma.scheduled_changes.findFirst({
+      where: { id },
     });
 
     return NextResponse.json({
       success: true,
       data: {
-        id: change.id,
-        status: change.status,
-        updatedAt: change.updatedAt.toISOString(),
+        id: change!.id,
+        status: change!.status,
+        updatedAt: change!.updatedAt.toISOString(),
       },
       message: '予約を適用しました',
     });

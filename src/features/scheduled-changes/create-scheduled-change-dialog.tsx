@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +27,7 @@ import { useScheduledChangesStore } from '@/lib/store/scheduled-changes-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
 import { UserPlus, ArrowRightLeft, UserX, ShieldCheck } from 'lucide-react';
+import { UserCombobox } from './user-combobox';
 
 interface CreateScheduledChangeDialogProps {
   open: boolean;
@@ -34,6 +35,26 @@ interface CreateScheduledChangeDialogProps {
 }
 
 type FormType = 'hire' | 'transfer' | 'retirement';
+
+interface MasterDepartment {
+  id: string;
+  name: string;
+}
+
+interface MasterPosition {
+  id: string;
+  name: string;
+}
+
+interface MasterEmploymentType {
+  id: string;
+  name: string;
+}
+
+interface MasterWorkRule {
+  id: string;
+  name: string;
+}
 
 export function CreateScheduledChangeDialog({
   open,
@@ -43,6 +64,40 @@ export function CreateScheduledChangeDialog({
   const { scheduleChange } = useScheduledChangesStore();
   const currentUser = useUserStore((state) => state.currentUser);
   const users = useUserStore((state) => state.users);
+
+  // マスタデータ
+  const [departments, setDepartments] = useState<MasterDepartment[]>([]);
+  const [positions, setPositions] = useState<MasterPosition[]>([]);
+  const [employmentTypes, setEmploymentTypes] = useState<MasterEmploymentType[]>([]);
+  const [workRules, setWorkRules] = useState<MasterWorkRule[]>([]);
+
+  // マスタデータ取得
+  useEffect(() => {
+    if (!open) return;
+    const fetchMasterData = async () => {
+      try {
+        const [deptRes, posRes, etRes, wrRes] = await Promise.all([
+          fetch('/api/master-data/departments'),
+          fetch('/api/master-data/positions'),
+          fetch('/api/master-data/employment-types'),
+          fetch('/api/attendance-master/work-rules?activeOnly=true'),
+        ]);
+        const [deptData, posData, etData, wrData] = await Promise.all([
+          deptRes.json(),
+          posRes.json(),
+          etRes.json(),
+          wrRes.json(),
+        ]);
+        if (deptData.success !== false) setDepartments(deptData.data || []);
+        if (posData.success !== false) setPositions(posData.data || []);
+        if (etData.success !== false) setEmploymentTypes(etData.data || []);
+        if (wrData.success !== false) setWorkRules(wrData.data || []);
+      } catch (e) {
+        console.error('Failed to fetch master data:', e);
+      }
+    };
+    fetchMasterData();
+  }, [open]);
 
   // 入社予約フォーム
   const hireForm = useForm({
@@ -62,8 +117,10 @@ export function CreateScheduledChangeDialog({
   const transferForm = useForm({
     defaultValues: {
       userId: '',
-      newDepartment: '',
-      newPosition: '',
+      newDepartment: '変更なし',
+      newPosition: '変更なし',
+      newEmploymentType: '変更なし',
+      newWorkRuleId: '変更なし',
       reason: '',
       effectiveDate: '',
       requiresApproval: false,
@@ -129,6 +186,9 @@ export function CreateScheduledChangeDialog({
       return;
     }
 
+    // 現在の就業ルール名を取得
+    const currentWorkRule = workRules.find((r) => r.id === (user as Record<string, unknown>).workRuleId);
+
     const result = await scheduleChange({
       type: 'transfer',
       userId: data.userId,
@@ -143,6 +203,10 @@ export function CreateScheduledChangeDialog({
         currentPosition: user.position ?? '',
         newPosition: data.newPosition,
         reason: data.reason || undefined,
+        newEmploymentType: data.newEmploymentType,
+        newWorkRuleId: data.newWorkRuleId,
+        currentEmploymentType: (user as Record<string, unknown>).employmentType as string ?? '',
+        currentWorkRuleName: currentWorkRule?.name ?? '',
       },
     });
 
@@ -196,6 +260,16 @@ export function CreateScheduledChangeDialog({
       toast.error('退職予約の作成に失敗しました');
     }
   });
+
+  // ユーザーリストをCombobox用に変換
+  const activeUsers = users
+    .filter((user) => user.status === 'active')
+    .map((user) => ({
+      id: user.id,
+      name: user.name,
+      department: user.department ?? null,
+      position: user.position ?? null,
+    }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -255,21 +329,39 @@ export function CreateScheduledChangeDialog({
                   <Label htmlFor="hire-department">
                     部署 <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="hire-department"
-                    {...hireForm.register('department', { required: true })}
-                    placeholder="営業部"
-                  />
+                  <Select
+                    onValueChange={(value) => hireForm.setValue('department', value)}
+                  >
+                    <SelectTrigger id="hire-department">
+                      <SelectValue placeholder="部署を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.name}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="hire-position">
                     役職 <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="hire-position"
-                    {...hireForm.register('position', { required: true })}
-                    placeholder="営業担当"
-                  />
+                  <Select
+                    onValueChange={(value) => hireForm.setValue('position', value)}
+                  >
+                    <SelectTrigger id="hire-position">
+                      <SelectValue placeholder="役職を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.map((pos) => (
+                        <SelectItem key={pos.id} value={pos.name}>
+                          {pos.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -305,7 +397,7 @@ export function CreateScheduledChangeDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="hire-effectiveDate">
-                  有効日 <span className="text-red-500">*</span>
+                  入社日 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="hire-effectiveDate"
@@ -341,25 +433,14 @@ export function CreateScheduledChangeDialog({
           <TabsContent value="transfer" className="space-y-4">
             <form onSubmit={handleTransferSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="transfer-userId">
+                <Label>
                   対象ユーザー <span className="text-red-500">*</span>
                 </Label>
-                <Select
+                <UserCombobox
+                  users={activeUsers}
+                  value={transferForm.watch('userId')}
                   onValueChange={(value) => transferForm.setValue('userId', value)}
-                >
-                  <SelectTrigger id="transfer-userId">
-                    <SelectValue placeholder="ユーザーを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users
-                      .filter((user) => user.status === 'active')
-                      .map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({user.department} - {user.position})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -367,21 +448,84 @@ export function CreateScheduledChangeDialog({
                   <Label htmlFor="transfer-newDepartment">
                     新部署 <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="transfer-newDepartment"
-                    {...transferForm.register('newDepartment', { required: true })}
-                    placeholder="営業部"
-                  />
+                  <Select
+                    value={transferForm.watch('newDepartment')}
+                    onValueChange={(value) => transferForm.setValue('newDepartment', value)}
+                  >
+                    <SelectTrigger id="transfer-newDepartment">
+                      <SelectValue placeholder="新部署を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="変更なし">変更なし</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.name}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="transfer-newPosition">
                     新役職 <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="transfer-newPosition"
-                    {...transferForm.register('newPosition', { required: true })}
-                    placeholder="マネージャー"
-                  />
+                  <Select
+                    value={transferForm.watch('newPosition')}
+                    onValueChange={(value) => transferForm.setValue('newPosition', value)}
+                  >
+                    <SelectTrigger id="transfer-newPosition">
+                      <SelectValue placeholder="新役職を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="変更なし">変更なし</SelectItem>
+                      {positions.map((pos) => (
+                        <SelectItem key={pos.id} value={pos.name}>
+                          {pos.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="transfer-newEmploymentType">新雇用形態</Label>
+                  <Select
+                    value={transferForm.watch('newEmploymentType')}
+                    onValueChange={(value) => transferForm.setValue('newEmploymentType', value)}
+                  >
+                    <SelectTrigger id="transfer-newEmploymentType">
+                      <SelectValue placeholder="雇用形態を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="変更なし">変更なし</SelectItem>
+                      {employmentTypes.map((et) => (
+                        <SelectItem key={et.id} value={et.name}>
+                          {et.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="transfer-newWorkRuleId">新就業ルール</Label>
+                  <Select
+                    value={transferForm.watch('newWorkRuleId')}
+                    onValueChange={(value) => transferForm.setValue('newWorkRuleId', value)}
+                  >
+                    <SelectTrigger id="transfer-newWorkRuleId">
+                      <SelectValue placeholder="就業ルールを選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="変更なし">変更なし</SelectItem>
+                      {workRules.map((rule) => (
+                        <SelectItem key={rule.id} value={rule.id}>
+                          {rule.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -397,7 +541,7 @@ export function CreateScheduledChangeDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="transfer-effectiveDate">
-                  有効日 <span className="text-red-500">*</span>
+                  異動日 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="transfer-effectiveDate"
@@ -419,25 +563,14 @@ export function CreateScheduledChangeDialog({
           <TabsContent value="retirement" className="space-y-4">
             <form onSubmit={handleRetirementSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="retirement-userId">
+                <Label>
                   対象ユーザー <span className="text-red-500">*</span>
                 </Label>
-                <Select
+                <UserCombobox
+                  users={activeUsers}
+                  value={retirementForm.watch('userId')}
                   onValueChange={(value) => retirementForm.setValue('userId', value)}
-                >
-                  <SelectTrigger id="retirement-userId">
-                    <SelectValue placeholder="ユーザーを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users
-                      .filter((user) => user.status === 'active')
-                      .map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({user.department} - {user.position})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
 
               <div className="space-y-2">
@@ -473,7 +606,7 @@ export function CreateScheduledChangeDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="retirement-effectiveDate">
-                  有効日（退職日） <span className="text-red-500">*</span>
+                  退職日 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="retirement-effectiveDate"

@@ -112,6 +112,10 @@ export async function PUT(
         if (details.currentPosition !== undefined) updateData.currentPosition = details.currentPosition;
         if (details.newPosition !== undefined) updateData.newPosition = details.newPosition;
         if (details.reason !== undefined) updateData.transferReason = details.reason;
+        if (details.newEmploymentType !== undefined) updateData.newEmploymentType = details.newEmploymentType;
+        if (details.newWorkRuleId !== undefined) updateData.newWorkRuleId = details.newWorkRuleId;
+        if (details.currentEmploymentType !== undefined) updateData.currentEmploymentType = details.currentEmploymentType;
+        if (details.currentWorkRuleName !== undefined) updateData.currentWorkRuleName = details.currentWorkRuleName;
       } else if (existing.type === 'retirement') {
         if (details.retirementReason !== undefined) updateData.retirementReason = details.retirementReason;
         if (details.notes !== undefined) updateData.retirementNotes = details.notes;
@@ -205,6 +209,10 @@ function formatChange(change: {
   currentPosition: string | null;
   newPosition: string | null;
   transferReason: string | null;
+  newEmploymentType: string | null;
+  newWorkRuleId: string | null;
+  currentEmploymentType: string | null;
+  currentWorkRuleName: string | null;
   retirementReason: string | null;
   retirementNotes: string | null;
   requiresApproval: boolean;
@@ -235,6 +243,10 @@ function formatChange(change: {
         currentPosition: change.currentPosition,
         newPosition: change.newPosition,
         reason: change.transferReason,
+        newEmploymentType: change.newEmploymentType,
+        newWorkRuleId: change.newWorkRuleId,
+        currentEmploymentType: change.currentEmploymentType,
+        currentWorkRuleName: change.currentWorkRuleName,
       };
       break;
     case 'retirement':

@@ -348,18 +348,6 @@ export default function ScheduledChangesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pending}</div>
-            <p className="text-xs text-muted-foreground">未適用の予約</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">適用済み</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.applied}</div>
-            <p className="text-xs text-muted-foreground">適用完了</p>
           </CardContent>
         </Card>
 
@@ -370,7 +358,6 @@ export default function ScheduledChangesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.byType.hire}</div>
-            <p className="text-xs text-muted-foreground">新規入社</p>
           </CardContent>
         </Card>
 
@@ -381,7 +368,6 @@ export default function ScheduledChangesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.byType.transfer}</div>
-            <p className="text-xs text-muted-foreground">部署・役職変更</p>
           </CardContent>
         </Card>
 
@@ -392,7 +378,16 @@ export default function ScheduledChangesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.byType.retirement}</div>
-            <p className="text-xs text-muted-foreground">退職予定</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">手続き完了</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.applied}</div>
           </CardContent>
         </Card>
       </div>
@@ -452,7 +447,7 @@ export default function ScheduledChangesPage() {
             予約中 ({stats.pending})
           </TabsTrigger>
           <TabsTrigger value="applied">
-            適用済み ({stats.applied})
+            手続き完了 ({stats.applied})
           </TabsTrigger>
           <TabsTrigger value="cancelled">
             キャンセル ({stats.cancelled})
@@ -516,7 +511,7 @@ export default function ScheduledChangesPage() {
                 <CardTitle>
                   {activeTab === 'all' && 'すべての予約'}
                   {activeTab === 'pending' && '予約中の変更'}
-                  {activeTab === 'applied' && '適用済みの変更'}
+                  {activeTab === 'applied' && '手続き完了の変更'}
                   {activeTab === 'cancelled' && 'キャンセルされた変更'}
                 </CardTitle>
                 {filteredChanges.length > 0 && (

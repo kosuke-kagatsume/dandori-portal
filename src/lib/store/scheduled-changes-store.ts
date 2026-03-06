@@ -21,6 +21,10 @@ export interface TransferDetails {
   currentPosition: string;
   newPosition: string;
   reason?: string;
+  newEmploymentType?: string;
+  newWorkRuleId?: string;
+  currentEmploymentType?: string;
+  currentWorkRuleName?: string;
 }
 
 // 退職予約の詳細
@@ -460,7 +464,7 @@ export const changeTypeLabels: Record<ScheduledChangeType, string> = {
 // ステータス別のラベル
 export const changeStatusLabels: Record<ScheduledChangeStatus, string> = {
   pending: '予約中',
-  applied: '適用済み',
+  applied: '手続き完了',
   cancelled: 'キャンセル',
 };
 
