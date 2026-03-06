@@ -133,29 +133,35 @@ export default function UserDetailPage({ params }: { params: { id: string; local
         if (data.success && data.data) {
           // scheduled_changes のデータ構造を TransferHistory 形式に変換
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const mapped = data.data.map((sc: any) => ({
-            id: sc.id,
-            userId: sc.userId,
-            userName: sc.userName,
-            type: sc.type || 'transfer',
-            fromUnitId: '',
-            fromUnitName: sc.details?.currentDepartment || '',
-            toUnitId: '',
-            toUnitName: sc.details?.newDepartment || '',
-            fromPosition: sc.details?.currentPosition || '',
-            toPosition: sc.details?.newPosition || '',
-            fromRole: '',
-            toRole: '',
-            effectiveDate: sc.effectiveDate,
-            status: sc.status === 'applied' ? 'completed' : sc.status,
-            reason: sc.details?.reason || '',
-            notes: sc.details?.notes || '',
-            approvedBy: sc.approvedBy,
-            approvedByName: sc.approvedByName,
-            createdBy: sc.createdBy,
-            createdByName: sc.createdByName,
-            createdAt: sc.createdAt,
-          }));
+          const mapped = data.data.map((sc: any) => {
+            const currentDept = sc.details?.currentDepartment || '';
+            const currentPos = sc.details?.currentPosition || '';
+            const newDept = sc.details?.newDepartment;
+            const newPos = sc.details?.newPosition;
+            return {
+              id: sc.id,
+              userId: sc.userId,
+              userName: sc.userName,
+              type: sc.type || 'transfer',
+              fromUnitId: '',
+              fromUnitName: currentDept,
+              toUnitId: '',
+              toUnitName: (!newDept || newDept === '変更なし') ? currentDept : newDept,
+              fromPosition: currentPos,
+              toPosition: (!newPos || newPos === '変更なし') ? currentPos : newPos,
+              fromRole: '',
+              toRole: '',
+              effectiveDate: sc.effectiveDate,
+              status: sc.status === 'applied' ? 'completed' : sc.status,
+              reason: sc.details?.reason || '',
+              notes: sc.details?.notes || '',
+              approvedBy: sc.approvedBy,
+              approvedByName: sc.approvedByName,
+              createdBy: sc.createdBy,
+              createdByName: sc.createdByName,
+              createdAt: sc.createdAt,
+            };
+          });
           setApiTransferHistory(mapped);
         }
       }

@@ -382,12 +382,26 @@ export default function UsersPage() {
           });
 
           if (newUsers.length > 0 || updatedUsers.length > 0) {
-            // DB APIに永続化
+            // DB APIに永続化（レート制限対策: リトライ付き、リクエスト間に遅延）
             let apiErrorCount = 0;
+            const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+            const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 2): Promise<Response> => {
+              for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                const res = await fetch(url, options);
+                if (res.ok || (res.status !== 401 && res.status !== 429 && res.status !== 503)) {
+                  return res;
+                }
+                if (attempt < maxRetries) {
+                  await delay(500 * (attempt + 1));
+                }
+              }
+              return fetch(url, options);
+            };
 
             for (const user of updatedUsers) {
               try {
-                const res = await fetch(`/api/users/${user.id}`, {
+                const res = await fetchWithRetry(`/api/users/${user.id}`, {
                   method: 'PATCH',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -415,6 +429,8 @@ export default function UsersPage() {
                   console.error(`Import PATCH error for ${user.name} (${user.id}):`, res.status, errBody);
                   apiErrorCount++;
                 }
+                // レート制限回避のため少し待つ
+                await delay(50);
               } catch (err) {
                 console.error(`Import PATCH exception for ${user.name}:`, err);
                 apiErrorCount++;
@@ -424,7 +440,7 @@ export default function UsersPage() {
             // 新規ユーザーもAPIで作成
             for (const user of newUsers) {
               try {
-                const res = await fetch('/api/users', {
+                const res = await fetchWithRetry('/api/users', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -437,6 +453,7 @@ export default function UsersPage() {
                   console.error(`Import POST error for ${user.name}:`, res.status, errBody);
                   apiErrorCount++;
                 }
+                await delay(50);
               } catch (err) {
                 console.error(`Import POST exception for ${user.name}:`, err);
                 apiErrorCount++;

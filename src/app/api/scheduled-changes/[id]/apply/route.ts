@@ -57,6 +57,40 @@ export async function POST(
 
     // 異動タイプの場合、ユーザー情報を実際に更新
     if (existing.type === 'transfer' && existing.userId) {
+      // 適用時点のユーザー現在情報を取得
+      const currentUser = await prisma.users.findFirst({
+        where: { id: existing.userId },
+        select: {
+          department: true,
+          position: true,
+          employmentType: true,
+          workRuleId: true,
+        },
+      });
+
+      // 予約レコードに現在の情報を確実にセット（作成時に未設定だった場合の補完）
+      const historyUpdateData: Record<string, unknown> = {};
+      if (!existing.currentDepartment && currentUser?.department) {
+        historyUpdateData.currentDepartment = currentUser.department;
+      }
+      if (!existing.currentPosition && currentUser?.position) {
+        historyUpdateData.currentPosition = currentUser.position;
+      }
+      if (!existing.currentEmploymentType && currentUser?.employmentType) {
+        historyUpdateData.currentEmploymentType = currentUser.employmentType;
+      }
+
+      // 就業ルール名を取得して保存
+      if (!existing.currentWorkRuleName && currentUser?.workRuleId) {
+        const currentWorkRule = await prisma.work_rules.findFirst({
+          where: { id: currentUser.workRuleId },
+          select: { name: true },
+        });
+        if (currentWorkRule) {
+          historyUpdateData.currentWorkRuleName = currentWorkRule.name;
+        }
+      }
+
       const userUpdateData: Record<string, unknown> = {
         updatedAt: new Date(),
       };
@@ -95,7 +129,7 @@ export async function POST(
         userUpdateData.workRuleId = existing.newWorkRuleId;
       }
 
-      // トランザクションでユーザー更新 + ステータス更新
+      // トランザクションでユーザー更新 + 予約ステータス更新 + 履歴情報保存
       await prisma.$transaction([
         prisma.users.update({
           where: { id: existing.userId },
@@ -106,6 +140,7 @@ export async function POST(
           data: {
             status: 'applied',
             updatedAt: new Date(),
+            ...historyUpdateData,
           },
         }),
       ]);

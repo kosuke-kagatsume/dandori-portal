@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,15 +34,63 @@ import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 
 export function TransferHistoryPanel() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { getAllTransferHistories, getTransferHistoriesByUser: _getTransferHistoriesByUser } = useOrganizationStore(); // getTransferHistoriesByUserは将来的にユーザー別履歴で使用予定
+  const { getAllTransferHistories } = useOrganizationStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'transfer' | 'promotion' | 'demotion' | 'role_change'>('all');
   const [filterPeriod, setFilterPeriod] = useState<'all' | '1month' | '3months' | '6months' | '1year'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'scheduled' | 'completed' | 'cancelled'>('all');
+  const [apiTransfers, setApiTransfers] = useState<TransferHistory[]>([]);
 
-  // 異動履歴の取得とフィルター
-  const allTransfers = getAllTransferHistories();
+  // APIから異動履歴を取得（scheduled_changes の transfer タイプ）
+  const fetchApiTransfers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/scheduled-changes?type=transfer');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mapped: TransferHistory[] = data.data.map((sc: any) => {
+            const currentDept = sc.details?.currentDepartment || '';
+            const currentPos = sc.details?.currentPosition || '';
+            const newDept = sc.details?.newDepartment;
+            const newPos = sc.details?.newPosition;
+            return {
+              id: sc.id,
+              userId: sc.userId || '',
+              userName: sc.userName || '',
+              type: 'transfer' as const,
+              fromUnitId: '',
+              fromUnitName: currentDept,
+              toUnitId: '',
+              toUnitName: (!newDept || newDept === '変更なし') ? currentDept : newDept,
+              fromPosition: currentPos,
+              toPosition: (!newPos || newPos === '変更なし') ? currentPos : newPos,
+              effectiveDate: sc.effectiveDate,
+              status: sc.status === 'applied' ? 'completed' as const : sc.status === 'cancelled' ? 'cancelled' as const : 'scheduled' as const,
+              reason: sc.details?.reason || '',
+              notes: '',
+              approvedBy: sc.approvedBy,
+              approvedByName: sc.approvedByName,
+              createdAt: sc.createdAt,
+              createdBy: sc.createdBy || '',
+              createdByName: sc.createdByName || '',
+            };
+          });
+          setApiTransfers(mapped);
+        }
+      }
+    } catch {
+      // fallback to store data
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApiTransfers();
+  }, [fetchApiTransfers]);
+
+  // APIデータを優先、なければストアデータ
+  const storeTransfers = getAllTransferHistories();
+  const allTransfers = apiTransfers.length > 0 ? apiTransfers : storeTransfers;
 
   const filteredTransfers = allTransfers.filter(transfer => {
     // 検索クエリでフィルター
