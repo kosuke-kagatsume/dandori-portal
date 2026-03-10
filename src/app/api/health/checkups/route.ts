@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const sortBy = searchParams.get('sortBy');
     const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50') || 50, 1), 100);
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0') || 0, 0);
 
     const where: Record<string, unknown> = { tenantId };
 
@@ -99,11 +99,28 @@ export async function POST(request: NextRequest) {
     const tenantId = await getTenantIdFromRequest(request);
 
     const body = await request.json();
+
+    // 必須フィールドバリデーション
+    if (!body.userId || !body.userName || !body.checkupDate || !body.checkupType || !body.overallResult) {
+      return NextResponse.json(
+        { error: 'userId, userName, checkupDate, checkupType, overallResult are required' },
+        { status: 400 }
+      );
+    }
+
+    // checkupDate日付バリデーション
+    const parsedCheckupDate = new Date(body.checkupDate);
+    if (isNaN(parsedCheckupDate.getTime())) {
+      return NextResponse.json(
+        { error: 'Invalid checkupDate format' },
+        { status: 400 }
+      );
+    }
+
     const {
       userId,
       userName,
       department,
-      checkupDate,
       checkupType,
       medicalInstitution,
       fiscalYear,
@@ -151,7 +168,7 @@ export async function POST(request: NextRequest) {
         userId,
         userName,
         department,
-        checkupDate: new Date(checkupDate),
+        checkupDate: parsedCheckupDate,
         checkupType,
         medicalInstitution,
         fiscalYear: fiscalYear || new Date().getFullYear(),

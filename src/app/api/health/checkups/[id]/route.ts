@@ -137,10 +137,11 @@ export async function PUT(
           urinaryProtein,
           urinaryGlucose,
           followUpStatus,
-          followUpDate: followUpDate ? new Date(followUpDate) : null,
+          followUpDate: followUpDate !== undefined ? (followUpDate ? new Date(followUpDate) : null) : undefined,
           followUpNotes,
           doctorOpinion,
           workRestriction,
+          updatedAt: new Date(),
           health_findings: findings
             ? {
                 create: findings.map((f: { category: string; finding: string; severity: string; recommendation?: string }) => ({

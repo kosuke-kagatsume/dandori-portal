@@ -11,8 +11,8 @@ export async function GET(request: NextRequest) {
     const fiscalYear = searchParams.get('fiscalYear');
     const status = searchParams.get('status');
     const isHighStress = searchParams.get('isHighStress');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50') || 50, 1), 100);
+    const offset = Math.max(parseInt(searchParams.get('offset') || '0') || 0, 0);
 
     const where: Record<string, unknown> = { tenantId };
 
@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
       prisma.stress_checks.count({ where }),
     ]);
 
-    // 統計情報を計算（N+1問題解消: 5クエリ→2クエリ）
-    const currentYear = new Date().getFullYear();
+    // 統計情報を計算（フィルタ年度があればその年度、なければ現在年度）
+    const statsYear = fiscalYear ? parseInt(fiscalYear) : new Date().getFullYear();
 
     // 統計情報を全件ベースで取得（ページネーション範囲ではなくテナント全体）
     const [totalUsers, statusCounts, completedCount, highStressCount, interviewRequestedCount] = await Promise.all([
@@ -52,17 +52,17 @@ export async function GET(request: NextRequest) {
       }),
       prisma.stress_checks.groupBy({
         by: ['status'],
-        where: { tenantId, fiscalYear: currentYear },
+        where: { tenantId, fiscalYear: statsYear },
         _count: true,
       }),
       prisma.stress_checks.count({
-        where: { tenantId, fiscalYear: currentYear, status: 'completed' },
+        where: { tenantId, fiscalYear: statsYear, status: 'completed' },
       }),
       prisma.stress_checks.count({
-        where: { tenantId, fiscalYear: currentYear, isHighStress: true },
+        where: { tenantId, fiscalYear: statsYear, isHighStress: true },
       }),
       prisma.stress_checks.count({
-        where: { tenantId, fiscalYear: currentYear, interviewRequested: true },
+        where: { tenantId, fiscalYear: statsYear, interviewRequested: true },
       }),
     ]);
 
@@ -99,6 +99,15 @@ export async function POST(request: NextRequest) {
     const tenantId = await getTenantIdFromRequest(request);
 
     const body = await request.json();
+
+    // 必須フィールドバリデーション
+    if (!body.userId || !body.userName) {
+      return NextResponse.json(
+        { error: 'userId and userName are required' },
+        { status: 400 }
+      );
+    }
+
     const {
       userId,
       userName,
@@ -141,6 +150,7 @@ export async function POST(request: NextRequest) {
             totalScore,
             isHighStress,
             highStressReason,
+            updatedAt: new Date(),
           },
         })
       : await prisma.stress_checks.create({

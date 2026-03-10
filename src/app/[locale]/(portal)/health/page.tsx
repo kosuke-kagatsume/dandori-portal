@@ -396,7 +396,7 @@ export default function HealthPage() {
       highStress,
       stressCheckCompletionRate,
     };
-  }, [checkups, stressChecks, users]);
+  }, [checkups, stressChecks, users, selfOnly, canViewDepartmentEmployees, userDepartment]);
 
   // フィルタリングされたストレスチェックデータ
   const filteredStressChecks = useMemo(() => {
@@ -440,10 +440,10 @@ export default function HealthPage() {
     const filtered = reportFilterDepartment === 'all'
       ? checkups
       : checkups.filter(c => c.department === reportFilterDepartment);
-    // 年度ごとに集計
+    // 年度ごとに集計（4月起算）
     const byYear: Record<number, { total: number; withFindings: number }> = {};
     filtered.forEach(c => {
-      const year = c.checkupDate.getFullYear();
+      const year = getFiscalYear(c.checkupDate);
       if (!byYear[year]) byYear[year] = { total: 0, withFindings: 0 };
       byYear[year].total++;
       if (c.overallResult !== 'A') byYear[year].withFindings++;
@@ -458,8 +458,11 @@ export default function HealthPage() {
 
   // レポート用: 部署別ストレス傾向（実データ）
   const stressByDepartmentData = useMemo(() => {
+    const filtered = reportFilterDepartment === 'all'
+      ? stressChecks
+      : stressChecks.filter(s => s.department === reportFilterDepartment);
     const byDept: Record<string, { factors: number[]; response: number[]; support: number[] }> = {};
-    stressChecks.forEach(s => {
+    filtered.forEach(s => {
       const dept = s.department || '未設定';
       if (!byDept[dept]) byDept[dept] = { factors: [], response: [], support: [] };
       byDept[dept].factors.push(s.stressFactorsScore);
@@ -473,7 +476,7 @@ export default function HealthPage() {
       stressResponse: avg(data.response),
       support: avg(data.support),
     }));
-  }, [stressChecks]);
+  }, [stressChecks, reportFilterDepartment]);
 
   const handleViewDetails = (checkup: HealthCheckup) => {
     setSelectedCheckup(checkup);
@@ -837,7 +840,7 @@ export default function HealthPage() {
               <div>
                 <CardTitle>ストレスチェック結果一覧</CardTitle>
                 <CardDescription>
-                  2024年度 ストレスチェック実施状況
+                  {getCurrentFiscalYear()}年度 ストレスチェック実施状況
                 </CardDescription>
               </div>
               <Button onClick={() => router.push(`/${locale}/health/stress-check/take`)}>
@@ -872,7 +875,13 @@ export default function HealthPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredStressChecks.map((check) => (
+                    {filteredStressChecks.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          ストレスチェックデータがありません
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredStressChecks.map((check) => (
                       <TableRow key={check.id}>
                         <TableCell className="font-medium">{check.userName}</TableCell>
                         <TableCell>{check.department || '-'}</TableCell>
@@ -1260,29 +1269,33 @@ export default function HealthPage() {
                 </div>
               </div>
 
+              {(selectedCheckup.height || selectedCheckup.weight || selectedCheckup.bmi || selectedCheckup.bloodPressureSystolic) && (
               <div>
                 <h4 className="text-sm font-medium text-muted-foreground mb-2">身体計測</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">身長</p>
-                    <p className="text-lg font-medium">{selectedCheckup.height} cm</p>
+                    <p className="text-lg font-medium">{selectedCheckup.height != null ? `${selectedCheckup.height} cm` : '-'}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">体重</p>
-                    <p className="text-lg font-medium">{selectedCheckup.weight} kg</p>
+                    <p className="text-lg font-medium">{selectedCheckup.weight != null ? `${selectedCheckup.weight} kg` : '-'}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">BMI</p>
-                    <p className="text-lg font-medium">{selectedCheckup.bmi?.toFixed(1)}</p>
+                    <p className="text-lg font-medium">{selectedCheckup.bmi != null ? selectedCheckup.bmi.toFixed(1) : '-'}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg text-center">
                     <p className="text-xs text-muted-foreground">血圧</p>
                     <p className="text-lg font-medium">
-                      {selectedCheckup.bloodPressureSystolic}/{selectedCheckup.bloodPressureDiastolic}
+                      {selectedCheckup.bloodPressureSystolic != null
+                        ? `${selectedCheckup.bloodPressureSystolic}/${selectedCheckup.bloodPressureDiastolic}`
+                        : '-'}
                     </p>
                   </div>
                 </div>
               </div>
+              )}
 
               {selectedCheckup.findings.length > 0 && (
                 <div>
@@ -1337,7 +1350,7 @@ export default function HealthPage() {
                       severity: 'warning',
                     })),
                   }];
-                  await downloadHealthCheckupSummaryPDF(data, selectedCheckup.checkupDate.getFullYear());
+                  await downloadHealthCheckupSummaryPDF(data, getFiscalYear(selectedCheckup.checkupDate));
                 }}>
                   <Download className="mr-2 h-4 w-4" />
                   PDFダウンロード
