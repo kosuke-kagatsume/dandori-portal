@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/lib/store/user-store';
 import { useHealthStore } from '@/lib/store/health-store';
+import { useTenantStore } from '@/lib/store/tenant-store';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,7 +38,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { cn, getFiscalYear, getCurrentFiscalYear } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import {
   Heart,
@@ -196,6 +197,8 @@ export default function HealthPage() {
   const users = useUserStore(state => state.users);
   const fetchUsers = useUserStore(state => state.fetchUsers);
   const tenantId = currentUser?.tenantId || '';
+  const currentTenant = useTenantStore(state => state.currentTenant);
+  const companyName = currentTenant?.name || '';
   const userRoles = currentUser?.roles || ['employee'];
   const { canRegisterResults, canViewAllEmployees, canViewDepartmentEmployees, canManageFollowUp, selfOnly, userDepartment, userId: rbacUserId } = useHealthRBAC();
 
@@ -583,7 +586,7 @@ export default function HealthPage() {
       checkupDate: format(checkup.checkupDate, 'yyyy-MM-dd'),
       checkupType: checkup.checkupType,
       medicalInstitution: checkup.medicalInstitution,
-      fiscalYear: checkup.checkupDate.getFullYear(),
+      fiscalYear: getFiscalYear(checkup.checkupDate),
       overallResult: checkup.overallResult,
       requiresReexam: checkup.requiresReexam,
       requiresTreatment: checkup.requiresTreatment,
@@ -608,7 +611,7 @@ export default function HealthPage() {
       checkupDate: format(checkup.checkupDate, 'yyyy-MM-dd'),
       checkupType: checkup.checkupType,
       medicalInstitution: checkup.medicalInstitution,
-      fiscalYear: checkup.checkupDate.getFullYear(),
+      fiscalYear: getFiscalYear(checkup.checkupDate),
       overallResult: checkup.overallResult,
       requiresReexam: checkup.requiresReexam,
       requiresTreatment: checkup.requiresTreatment,
@@ -656,7 +659,7 @@ export default function HealthPage() {
       checkupDate: checkup.checkupDate,
       checkupType: checkup.checkupType,
       medicalInstitution: checkup.medicalInstitution,
-      fiscalYear: checkup.checkupDate.getFullYear(),
+      fiscalYear: getFiscalYear(checkup.checkupDate),
       overallResult: checkup.overallResult,
       requiresReexam: checkup.requiresReexam,
       requiresTreatment: checkup.requiresTreatment,
@@ -696,8 +699,8 @@ export default function HealthPage() {
     await downloadIndustrialPhysicianReportPDF(
       checkupData,
       stressData,
-      new Date().getFullYear(),
-      '株式会社サンプル'
+      getCurrentFiscalYear(),
+      companyName
     );
   };
 
@@ -721,7 +724,7 @@ export default function HealthPage() {
       interviewCompleted: false,
     }));
 
-    await downloadHighStressListPDF(stressData, new Date().getFullYear());
+    await downloadHighStressListPDF(stressData, getCurrentFiscalYear());
   };
 
   const handleExportHealthCheckupSummaryPDF = async () => {
@@ -733,7 +736,7 @@ export default function HealthPage() {
       checkupDate: checkup.checkupDate,
       checkupType: checkup.checkupType,
       medicalInstitution: checkup.medicalInstitution,
-      fiscalYear: checkup.checkupDate.getFullYear(),
+      fiscalYear: getFiscalYear(checkup.checkupDate),
       overallResult: checkup.overallResult,
       requiresReexam: checkup.requiresReexam,
       requiresTreatment: checkup.requiresTreatment,
@@ -751,7 +754,7 @@ export default function HealthPage() {
       })),
     }));
 
-    await downloadHealthCheckupSummaryPDF(checkupData, new Date().getFullYear());
+    await downloadHealthCheckupSummaryPDF(checkupData, getCurrentFiscalYear());
   };
 
   return (
@@ -1307,7 +1310,35 @@ export default function HealthPage() {
                 <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
                   閉じる
                 </Button>
-                <Button>
+                <Button onClick={async () => {
+                  if (!selectedCheckup) return;
+                  const data: HealthCheckupForPDF[] = [{
+                    id: selectedCheckup.id,
+                    userId: selectedCheckup.userId,
+                    userName: selectedCheckup.userName,
+                    departmentName: selectedCheckup.department || '',
+                    checkupDate: selectedCheckup.checkupDate,
+                    checkupType: selectedCheckup.checkupType,
+                    medicalInstitution: selectedCheckup.medicalInstitution,
+                    fiscalYear: getFiscalYear(selectedCheckup.checkupDate),
+                    overallResult: selectedCheckup.overallResult,
+                    requiresReexam: selectedCheckup.requiresReexam,
+                    requiresTreatment: selectedCheckup.requiresTreatment,
+                    requiresGuidance: selectedCheckup.requiresGuidance || false,
+                    height: selectedCheckup.height,
+                    weight: selectedCheckup.weight,
+                    bmi: selectedCheckup.bmi,
+                    bloodPressureSystolic: selectedCheckup.bloodPressureSystolic,
+                    bloodPressureDiastolic: selectedCheckup.bloodPressureDiastolic,
+                    followUpStatus: selectedCheckup.followUpStatus,
+                    findings: selectedCheckup.findings?.map(f => ({
+                      category: f,
+                      finding: f,
+                      severity: 'warning',
+                    })),
+                  }];
+                  await downloadHealthCheckupSummaryPDF(data, selectedCheckup.checkupDate.getFullYear());
+                }}>
                   <Download className="mr-2 h-4 w-4" />
                   PDFダウンロード
                 </Button>

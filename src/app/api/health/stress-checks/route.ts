@@ -45,9 +45,8 @@ export async function GET(request: NextRequest) {
     // 統計情報を計算（N+1問題解消: 5クエリ→2クエリ）
     const currentYear = new Date().getFullYear();
 
-    // 1. ユーザー総数（受検率計算用）
-    // 2. ステータス別集計（groupByで一度に取得）
-    const [totalUsers, statusCounts] = await Promise.all([
+    // 統計情報を全件ベースで取得（ページネーション範囲ではなくテナント全体）
+    const [totalUsers, statusCounts, completedCount, highStressCount, interviewRequestedCount] = await Promise.all([
       prisma.users.count({
         where: { tenantId, status: 'active' },
       }),
@@ -56,12 +55,16 @@ export async function GET(request: NextRequest) {
         where: { tenantId, fiscalYear: currentYear },
         _count: true,
       }),
+      prisma.stress_checks.count({
+        where: { tenantId, fiscalYear: currentYear, status: 'completed' },
+      }),
+      prisma.stress_checks.count({
+        where: { tenantId, fiscalYear: currentYear, isHighStress: true },
+      }),
+      prisma.stress_checks.count({
+        where: { tenantId, fiscalYear: currentYear, interviewRequested: true },
+      }),
     ]);
-
-    // 取得済みデータからインメモリで計算（追加クエリ不要）
-    const completedCount = stressChecks.filter(s => s.status === 'completed').length;
-    const highStressCount = stressChecks.filter(s => s.isHighStress).length;
-    const interviewRequestedCount = stressChecks.filter(s => s.interviewRequested).length;
 
     return NextResponse.json({
       data: stressChecks,

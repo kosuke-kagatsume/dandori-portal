@@ -7,6 +7,23 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * 日本の会計年度を取得（4月起算）
+ * 1-3月は前年度扱い
+ */
+export function getFiscalYear(date: Date): number {
+  const month = date.getMonth(); // 0-indexed: 0=Jan, 3=Apr
+  const year = date.getFullYear();
+  return month < 3 ? year - 1 : year;
+}
+
+/**
+ * 現在の会計年度を取得
+ */
+export function getCurrentFiscalYear(): number {
+  return getFiscalYear(new Date());
+}
+
+/**
  * 分数を指定のフォーマットで時間文字列に変換（P.22 エクスポート時間フォーマット）
  * @param minutes - 変換する分数
  * @param format - 出力フォーマット

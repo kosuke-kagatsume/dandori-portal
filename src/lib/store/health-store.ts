@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getCurrentFiscalYear } from '@/lib/utils';
 import type {
   HealthCheckupSchedule,
   HealthCheckupScheduleInput,
@@ -69,7 +70,7 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
   filters: {
     departmentName: undefined,
     status: 'all',
-    fiscalYear: new Date().getFullYear(),
+    fiscalYear: getCurrentFiscalYear(),
     searchQuery: '',
   },
   sortBy: 'scheduledDate',
@@ -97,7 +98,7 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
     const { tenantId, filters } = get();
     if (!tenantId) return;
 
-    const year = fiscalYear || filters.fiscalYear || new Date().getFullYear();
+    const year = fiscalYear || filters.fiscalYear || getCurrentFiscalYear();
     const userParam = userId ? `&userId=${userId}` : '';
 
     set({ isLoading: true, error: null });
@@ -211,7 +212,7 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
       filters: {
         departmentName: undefined,
         status: 'all',
-        fiscalYear: new Date().getFullYear(),
+        fiscalYear: getCurrentFiscalYear(),
         searchQuery: '',
       },
     });

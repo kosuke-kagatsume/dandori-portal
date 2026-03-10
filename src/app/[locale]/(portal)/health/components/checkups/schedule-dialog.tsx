@@ -23,7 +23,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getFiscalYear } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -94,7 +94,7 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
         medicalInstitutionId: formData.medicalInstitutionId || undefined,
         scheduledDate: formData.scheduledDate,
         scheduledTime: formData.scheduledTime || undefined,
-        fiscalYear: formData.scheduledDate.getFullYear(),
+        fiscalYear: getFiscalYear(formData.scheduledDate),
         notes: formData.notes || undefined,
       });
 
