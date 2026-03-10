@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
+import { getTenantIdFromRequest, parseFiscalYear } from '@/lib/api/api-helpers';
 
 // 健康診断一覧取得
 export async function GET(request: NextRequest) {
@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (fiscalYear) {
-      where.fiscalYear = parseInt(fiscalYear);
+      const fy = parseFiscalYear(fiscalYear);
+      if (fy) where.fiscalYear = fy;
     }
 
     if (status === 'requires_reexam') {
@@ -104,6 +105,15 @@ export async function POST(request: NextRequest) {
     if (!body.userId || !body.userName || !body.checkupDate || !body.checkupType || !body.overallResult) {
       return NextResponse.json(
         { error: 'userId, userName, checkupDate, checkupType, overallResult are required' },
+        { status: 400 }
+      );
+    }
+
+    // overallResult値バリデーション
+    const validResults = ['A', 'B', 'C', 'D', 'E'];
+    if (!validResults.includes(body.overallResult)) {
+      return NextResponse.json(
+        { error: `overallResult must be one of: ${validResults.join(', ')}` },
         { status: 400 }
       );
     }

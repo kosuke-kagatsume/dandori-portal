@@ -11,12 +11,18 @@ interface CheckupSubTabsProps {
   schedules: HealthCheckupSchedule[];
   checkups: HealthCheckup[];
   departments: string[];
-  searchQuery: string;
-  filterDepartment: string;
-  filterResult: string;
-  onSearchQueryChange: (query: string) => void;
-  onFilterDepartmentChange: (dept: string) => void;
-  onFilterResultChange: (result: string) => void;
+  // 予定タブ用フィルタ
+  scheduleSearchQuery: string;
+  scheduleFilterDepartment: string;
+  onScheduleSearchQueryChange: (query: string) => void;
+  onScheduleFilterDepartmentChange: (dept: string) => void;
+  // 結果タブ用フィルタ
+  resultSearchQuery: string;
+  resultFilterDepartment: string;
+  resultFilterResult: string;
+  onResultSearchQueryChange: (query: string) => void;
+  onResultFilterDepartmentChange: (dept: string) => void;
+  onResultFilterResultChange: (result: string) => void;
   onViewCheckupDetails: (checkup: HealthCheckup) => void;
   onRefreshSchedules: () => void;
   onUpdateScheduleStatus?: (id: string, status: ScheduleStatus) => Promise<void>;
@@ -27,12 +33,16 @@ export function CheckupSubTabs({
   schedules,
   checkups,
   departments,
-  searchQuery,
-  filterDepartment,
-  filterResult,
-  onSearchQueryChange,
-  onFilterDepartmentChange,
-  onFilterResultChange,
+  scheduleSearchQuery,
+  scheduleFilterDepartment,
+  onScheduleSearchQueryChange,
+  onScheduleFilterDepartmentChange,
+  resultSearchQuery,
+  resultFilterDepartment,
+  resultFilterResult,
+  onResultSearchQueryChange,
+  onResultFilterDepartmentChange,
+  onResultFilterResultChange,
   onViewCheckupDetails,
   onRefreshSchedules,
   onUpdateScheduleStatus,
@@ -63,10 +73,10 @@ export function CheckupSubTabs({
         <ScheduleList
           schedules={schedules}
           departments={departments}
-          searchQuery={searchQuery}
-          filterDepartment={filterDepartment}
-          onSearchQueryChange={onSearchQueryChange}
-          onFilterDepartmentChange={onFilterDepartmentChange}
+          searchQuery={scheduleSearchQuery}
+          filterDepartment={scheduleFilterDepartment}
+          onSearchQueryChange={onScheduleSearchQueryChange}
+          onFilterDepartmentChange={onScheduleFilterDepartmentChange}
           onRefresh={onRefreshSchedules}
           onUpdateStatus={onUpdateScheduleStatus}
           isAdmin={isAdmin}
@@ -77,12 +87,12 @@ export function CheckupSubTabs({
         <ResultsList
           checkups={checkups}
           departments={departments}
-          searchQuery={searchQuery}
-          filterDepartment={filterDepartment}
-          filterResult={filterResult}
-          onSearchQueryChange={onSearchQueryChange}
-          onFilterDepartmentChange={onFilterDepartmentChange}
-          onFilterResultChange={onFilterResultChange}
+          searchQuery={resultSearchQuery}
+          filterDepartment={resultFilterDepartment}
+          filterResult={resultFilterResult}
+          onSearchQueryChange={onResultSearchQueryChange}
+          onFilterDepartmentChange={onResultFilterDepartmentChange}
+          onFilterResultChange={onResultFilterResultChange}
           onViewDetails={onViewCheckupDetails}
         />
       </TabsContent>

@@ -144,7 +144,7 @@ export function validateRequired<T extends Record<string, unknown>>(
   data: T,
   requiredFields: (keyof T)[]
 ): { valid: true } | { valid: false; error: string } {
-  const missingFields = requiredFields.filter(field => !data[field]);
+  const missingFields = requiredFields.filter(field => data[field] === undefined || data[field] === null);
 
   if (missingFields.length > 0) {
     return {
@@ -158,3 +158,22 @@ export function validateRequired<T extends Record<string, unknown>>(
 
 // validateRequiredのエイリアス（後方互換性のため）
 export const validateRequiredFields = validateRequired;
+
+// 日付文字列のバリデーション
+export function parseDate(value: unknown): Date | null {
+  if (!value) return null;
+  const d = new Date(value as string);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// fiscalYear パラメータの安全なパース
+export function parseFiscalYear(value: string | null): number | null {
+  if (!value) return null;
+  const n = parseInt(value);
+  return isNaN(n) || n < 1900 || n > 2100 ? null : n;
+}
+
+// price パラメータの安全なバリデーション
+export function validatePrice(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}

@@ -114,7 +114,7 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
   const activeInstitutions = medicalInstitutions.filter((i) => i.isActive);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) resetForm(); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>健診予定登録</DialogTitle>

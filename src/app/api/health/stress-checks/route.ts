@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
+import { getTenantIdFromRequest, parseFiscalYear } from '@/lib/api/api-helpers';
 
 // ストレスチェック一覧取得
 export async function GET(request: NextRequest) {
@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (fiscalYear) {
-      where.fiscalYear = parseInt(fiscalYear);
+      const fy = parseFiscalYear(fiscalYear);
+      if (fy) where.fiscalYear = fy;
     }
 
     if (status) {
@@ -30,6 +31,8 @@ export async function GET(request: NextRequest) {
 
     if (isHighStress === 'true') {
       where.isHighStress = true;
+    } else if (isHighStress === 'false') {
+      where.isHighStress = false;
     }
 
     const [stressChecks, total] = await Promise.all([
@@ -173,7 +176,7 @@ export async function POST(request: NextRequest) {
           },
         });
 
-    return NextResponse.json({ data: stressCheck }, { status: 201 });
+    return NextResponse.json({ data: stressCheck }, { status: existing ? 200 : 201 });
   } catch (error) {
     console.error('Error creating stress check:', error);
     return NextResponse.json(

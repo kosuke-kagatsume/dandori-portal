@@ -57,6 +57,14 @@ export async function PUT(
       return NextResponse.json({ error: '健診予定が見つかりません' }, { status: 404 });
     }
 
+    // 日付バリデーション
+    if (scheduledDate !== undefined) {
+      const d = new Date(scheduledDate);
+      if (isNaN(d.getTime())) {
+        return NextResponse.json({ error: '予定日の日付形式が不正です' }, { status: 400 });
+      }
+    }
+
     const schedule = await prisma.health_checkup_schedules.update({
       where: { id },
       data: {

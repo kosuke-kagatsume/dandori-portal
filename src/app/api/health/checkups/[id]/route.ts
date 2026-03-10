@@ -95,6 +95,14 @@ export async function PUT(
       findings,
     } = body;
 
+    // 日付バリデーション
+    if (checkupDate) {
+      const d = new Date(checkupDate);
+      if (isNaN(d.getTime())) {
+        return NextResponse.json({ error: 'Invalid checkupDate format' }, { status: 400 });
+      }
+    }
+
     // トランザクションで更新
     const checkup = await prisma.$transaction(async (tx) => {
       // 既存の所見を削除

@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
     const yearParam = searchParams.get('year');
 
     const now = new Date();
-    const year = yearParam ? parseInt(yearParam) : now.getFullYear();
+    const parsedYear = yearParam ? parseInt(yearParam) : now.getFullYear();
+    const year = isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100 ? now.getFullYear() : parsedYear;
 
     // 並行してデータを取得
     const [
@@ -158,7 +159,7 @@ export async function GET(request: NextRequest) {
             id: c.id,
             userId: c.userId,
             userName: c.userName,
-            department: null,
+            department: c.department || null,
             scheduledDate: c.checkupDate,
           })),
         },

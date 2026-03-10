@@ -43,6 +43,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 日付バリデーション
+    const parsedFollowUpDate = new Date(followUpDate);
+    if (isNaN(parsedFollowUpDate.getTime())) {
+      return NextResponse.json({ error: 'フォロー日の日付形式が不正です' }, { status: 400 });
+    }
+    const parsedNextDate = nextFollowUpDate ? new Date(nextFollowUpDate) : null;
+    if (nextFollowUpDate && parsedNextDate && isNaN(parsedNextDate.getTime())) {
+      return NextResponse.json({ error: '次回フォロー日の日付形式が不正です' }, { status: 400 });
+    }
+
     const record = await prisma.health_follow_up_records.create({
       data: {
         id: crypto.randomUUID(),
@@ -50,10 +60,10 @@ export async function POST(request: NextRequest) {
         userId,
         userName,
         checkupId,
-        followUpDate: new Date(followUpDate),
+        followUpDate: parsedFollowUpDate,
         status: status || 'pending',
         notes,
-        nextFollowUpDate: nextFollowUpDate ? new Date(nextFollowUpDate) : null,
+        nextFollowUpDate: parsedNextDate,
         assignedTo,
         updatedAt: new Date(),
       },

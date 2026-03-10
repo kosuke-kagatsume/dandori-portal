@@ -50,6 +50,13 @@ export async function POST(
       );
     }
 
+    if (typeof price !== 'number' || !Number.isFinite(price) || price < 0) {
+      return NextResponse.json(
+        { error: '料金は0以上の数値で指定してください' },
+        { status: 400 }
+      );
+    }
+
     // 医療機関の所有権検証
     const institution = await prisma.health_medical_institutions.findFirst({
       where: { id: institutionId, tenantId },

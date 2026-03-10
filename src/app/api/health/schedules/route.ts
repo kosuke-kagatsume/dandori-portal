@@ -5,6 +5,7 @@ import {
   successResponse,
   handleApiError,
   validateRequired,
+  parseFiscalYear,
 } from '@/lib/api/api-helpers';
 
 // 健診予定一覧取得
@@ -25,7 +26,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (fiscalYear) {
-      where.fiscalYear = parseInt(fiscalYear);
+      const fy = parseFiscalYear(fiscalYear);
+      if (fy) where.fiscalYear = fy;
     }
 
     if (status && status !== 'all') {
@@ -80,6 +82,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
+    // 日付バリデーション
+    const parsedScheduledDate = new Date(scheduledDate);
+    if (isNaN(parsedScheduledDate.getTime())) {
+      return NextResponse.json({ error: '予定日の日付形式が不正です' }, { status: 400 });
+    }
+
     const schedule = await prisma.health_checkup_schedules.create({
       data: {
         id: crypto.randomUUID(),
@@ -89,7 +97,7 @@ export async function POST(request: NextRequest) {
         departmentName,
         checkupTypeName,
         medicalInstitutionId,
-        scheduledDate: new Date(scheduledDate),
+        scheduledDate: parsedScheduledDate,
         scheduledTime,
         status: status || 'scheduled',
         fiscalYear,

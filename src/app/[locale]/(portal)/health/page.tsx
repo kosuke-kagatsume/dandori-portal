@@ -208,13 +208,15 @@ export default function HealthPage() {
   // APIからのデータ
   const [checkups, setCheckups] = useState<HealthCheckup[]>([]);
   const [stressChecks, setStressChecks] = useState<StressCheck[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState('checkups');
 
   // タブごとに独立したフィルタ状態
-  // 健康診断タブ
+  // 健康診断 - 予定サブタブ
+  const [scheduleSearchQuery, setScheduleSearchQuery] = useState('');
+  const [scheduleFilterDepartment, setScheduleFilterDepartment] = useState<string>('all');
+  // 健康診断 - 結果サブタブ
   const [checkupSearchQuery, setCheckupSearchQuery] = useState('');
   const [checkupFilterResult, setCheckupFilterResult] = useState<string>('all');
   const [checkupFilterDepartment, setCheckupFilterDepartment] = useState<string>('all');
@@ -307,9 +309,9 @@ export default function HealthPage() {
           fiscalYear: s.fiscalYear,
           checkDate: new Date(s.checkDate),
           status: (s.status as StressCheckStatus) || 'pending',
-          stressFactorsScore: s.stressFactorsScore || 0,
-          stressResponseScore: s.stressResponseScore || 0,
-          socialSupportScore: s.socialSupportScore || 0,
+          stressFactorsScore: s.stressFactorsScore ?? 0,
+          stressResponseScore: s.stressResponseScore ?? 0,
+          socialSupportScore: s.socialSupportScore ?? 0,
           isHighStress: s.isHighStress,
           interviewRequested: s.interviewRequested,
           interviewDate: s.interviewDate ? new Date(s.interviewDate) : undefined,
@@ -412,11 +414,14 @@ export default function HealthPage() {
     });
   }, [stressChecks, stressSearchQuery, stressFilterDepartment, stressFilterJudgment]);
 
-  // 部門リスト
+  // 部門リスト（全データソースから導出）
   const departments = useMemo(() => {
-    const depts = new Set(checkups.map((c) => c.department).filter(Boolean));
-    return Array.from(depts) as string[];
-  }, [checkups]);
+    const depts = new Set<string>();
+    checkups.forEach(c => { if (c.department) depts.add(c.department); });
+    stressChecks.forEach(s => { if (s.department) depts.add(s.department); });
+    filteredSchedules.forEach(s => { if (s.departmentName) depts.add(s.departmentName); });
+    return Array.from(depts).sort();
+  }, [checkups, stressChecks, filteredSchedules]);
 
   // レポート用: 健康診断結果分布（実データ）
   const checkupResultDistribution = useMemo(() => {
@@ -760,6 +765,17 @@ export default function HealthPage() {
     await downloadHealthCheckupSummaryPDF(checkupData, getCurrentFiscalYear());
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center space-y-3">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+          <p className="text-muted-foreground">データを読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -820,12 +836,16 @@ export default function HealthPage() {
             schedules={filteredSchedules}
             checkups={checkups}
             departments={departments}
-            searchQuery={checkupSearchQuery}
-            filterDepartment={checkupFilterDepartment}
-            filterResult={checkupFilterResult}
-            onSearchQueryChange={setCheckupSearchQuery}
-            onFilterDepartmentChange={setCheckupFilterDepartment}
-            onFilterResultChange={setCheckupFilterResult}
+            scheduleSearchQuery={scheduleSearchQuery}
+            scheduleFilterDepartment={scheduleFilterDepartment}
+            onScheduleSearchQueryChange={setScheduleSearchQuery}
+            onScheduleFilterDepartmentChange={setScheduleFilterDepartment}
+            resultSearchQuery={checkupSearchQuery}
+            resultFilterDepartment={checkupFilterDepartment}
+            resultFilterResult={checkupFilterResult}
+            onResultSearchQueryChange={setCheckupSearchQuery}
+            onResultFilterDepartmentChange={setCheckupFilterDepartment}
+            onResultFilterResultChange={setCheckupFilterResult}
             onViewCheckupDetails={handleViewDetails}
             onRefreshSchedules={() => fetchSchedules()}
             onUpdateScheduleStatus={updateScheduleStatus}
@@ -952,12 +972,17 @@ export default function HealthPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {checkups
-                    .filter((c) => c.requiresReexam)
-                    .filter((c) => followUpFilterDepartment === 'all' || c.department === followUpFilterDepartment)
-                    .filter((c) => c.userName.toLowerCase().includes(followUpSearchQuery.toLowerCase()))
-                    .filter((c) => followUpFilterStatus === 'all' || c.followUpStatus === followUpFilterStatus)
-                    .map((checkup) => (
+                  {(() => {
+                    const filtered = checkups
+                      .filter((c) => c.requiresReexam)
+                      .filter((c) => followUpFilterDepartment === 'all' || c.department === followUpFilterDepartment)
+                      .filter((c) => c.userName.toLowerCase().includes(followUpSearchQuery.toLowerCase()))
+                      .filter((c) => followUpFilterStatus === 'all' || c.followUpStatus === followUpFilterStatus);
+                    return filtered.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        該当する要再検査者はいません
+                      </p>
+                    ) : filtered.map((checkup) => (
                       <div
                         key={checkup.id}
                         className="flex items-center justify-between p-4 border rounded-lg"
@@ -981,12 +1006,8 @@ export default function HealthPage() {
                           フォロー記録
                         </Button>
                       </div>
-                    ))}
-                  {checkups.filter((c) => c.requiresReexam).length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      要再検査者はいません
-                    </p>
-                  )}
+                    ));
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -1001,11 +1022,16 @@ export default function HealthPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {stressChecks
-                    .filter((s) => s.isHighStress)
-                    .filter((s) => followUpFilterDepartment === 'all' || s.department === followUpFilterDepartment)
-                    .filter((s) => s.userName.toLowerCase().includes(followUpSearchQuery.toLowerCase()))
-                    .map((check) => (
+                  {(() => {
+                    const filtered = stressChecks
+                      .filter((s) => s.isHighStress)
+                      .filter((s) => followUpFilterDepartment === 'all' || s.department === followUpFilterDepartment)
+                      .filter((s) => s.userName.toLowerCase().includes(followUpSearchQuery.toLowerCase()));
+                    return filtered.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        該当する高ストレス者はいません
+                      </p>
+                    ) : filtered.map((check) => (
                       <div
                         key={check.id}
                         className="flex items-center justify-between p-4 border rounded-lg"
@@ -1027,12 +1053,8 @@ export default function HealthPage() {
                           面談記録
                         </Button>
                       </div>
-                    ))}
-                  {stressChecks.filter((s) => s.isHighStress).length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      高ストレス者はいません
-                    </p>
-                  )}
+                    ));
+                  })()}
                 </div>
               </CardContent>
             </Card>
