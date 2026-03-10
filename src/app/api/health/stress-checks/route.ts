@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // 統計情報を計算（フィルタ年度があればその年度、なければ現在年度）
-    const statsYear = fiscalYear ? parseInt(fiscalYear) : new Date().getFullYear();
+    const statsYear = (fiscalYear ? parseFiscalYear(fiscalYear) : null) ?? new Date().getFullYear();
 
     // 統計情報を全件ベースで取得（ページネーション範囲ではなくテナント全体）
     const [totalUsers, statusCounts, completedCount, highStressCount, interviewRequestedCount] = await Promise.all([

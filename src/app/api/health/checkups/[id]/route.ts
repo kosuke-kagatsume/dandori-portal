@@ -103,6 +103,17 @@ export async function PUT(
       }
     }
 
+    // overallResult値バリデーション
+    if (overallResult) {
+      const validResults = ['A', 'B', 'C', 'D', 'E'];
+      if (!validResults.includes(overallResult)) {
+        return NextResponse.json(
+          { error: `overallResult must be one of: ${validResults.join(', ')}` },
+          { status: 400 }
+        );
+      }
+    }
+
     // トランザクションで更新
     const checkup = await prisma.$transaction(async (tx) => {
       // 既存の所見を削除

@@ -100,6 +100,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'オプションが見つかりません' }, { status: 404 });
     }
 
+    if (price !== undefined && (typeof price !== 'number' || !Number.isFinite(price) || price < 0)) {
+      return NextResponse.json({ error: '料金は0以上の数値で指定してください' }, { status: 400 });
+    }
+
     const option = await prisma.health_institution_options.update({
       where: { id },
       data: {

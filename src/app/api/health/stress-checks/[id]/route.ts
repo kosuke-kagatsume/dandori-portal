@@ -79,6 +79,7 @@ export async function PUT(
         doctorName,
         doctorOpinion,
         status: interviewRequested ? 'interview_recommended' : undefined,
+        updatedAt: new Date(),
       },
     });
 

@@ -65,6 +65,14 @@ export async function POST(
       return NextResponse.json({ error: '医療機関が見つかりません' }, { status: 404 });
     }
 
+    // 検査種別のテナント検証
+    const checkupType = await prisma.health_checkup_types.findFirst({
+      where: { id: checkupTypeId, tenantId },
+    });
+    if (!checkupType) {
+      return NextResponse.json({ error: '検査種別が見つかりません' }, { status: 404 });
+    }
+
     const examPrice = await prisma.health_institution_exam_prices.create({
       data: {
         id: crypto.randomUUID(),
@@ -106,6 +114,10 @@ export async function PUT(request: NextRequest) {
     });
     if (!existing) {
       return NextResponse.json({ error: '料金情報が見つかりません' }, { status: 404 });
+    }
+
+    if (price !== undefined && (typeof price !== 'number' || !Number.isFinite(price) || price < 0)) {
+      return NextResponse.json({ error: '料金は0以上の数値で指定してください' }, { status: 400 });
     }
 
     const examPrice = await prisma.health_institution_exam_prices.update({
