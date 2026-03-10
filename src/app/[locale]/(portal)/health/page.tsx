@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useUserStore } from '@/lib/store/user-store';
 import { useHealthStore } from '@/lib/store/health-store';
+import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -74,12 +75,15 @@ import { HealthStatsHeader } from './components/health-stats-header';
 import { CheckupSubTabs } from './components/checkups/checkup-sub-tabs';
 import { StressCheckFilters } from './components/stress-checks/stress-check-filters';
 import { FollowUpFilters } from './components/follow-up/follow-up-filters';
+import { CheckupRegistrationDialog } from './components/checkups/checkup-registration-dialog';
+import { useHealthRBAC } from '@/lib/hooks/use-health-rbac';
 
 // APIからのレスポンス型
 interface APIHealthCheckup {
   id: string;
   userId: string;
   userName: string;
+  department?: string;
   checkupDate: string;
   checkupType: string;
   medicalInstitution: string;
@@ -101,6 +105,7 @@ interface APIStressCheck {
   id: string;
   userId: string;
   userName: string;
+  department?: string;
   fiscalYear: number;
   checkDate: string;
   status: string;
@@ -143,27 +148,21 @@ const getResultLabel = (result: OverallResult) => {
   }
 };
 
-// レポート用グラフデータ
-const findingsRateData = [
-  { year: '2022', rate: 42 },
-  { year: '2023', rate: 45 },
-  { year: '2024', rate: 38 },
-];
-
-const stressByDepartmentData = [
-  { department: '営業部', stressFactors: 48, stressResponse: 62, support: 28 },
-  { department: '開発部', stressFactors: 52, stressResponse: 58, support: 32 },
-  { department: '人事部', stressFactors: 38, stressResponse: 45, support: 35 },
-  { department: '総務部', stressFactors: 35, stressResponse: 42, support: 36 },
-];
-
-const checkupResultDistribution = [
-  { name: 'A: 異常なし', value: 30, color: '#22c55e' },
-  { name: 'B: 軽度異常', value: 35, color: '#3b82f6' },
-  { name: 'C: 要経過観察', value: 20, color: '#eab308' },
-  { name: 'D: 要精密検査', value: 10, color: '#f97316' },
-  { name: 'E: 要治療', value: 5, color: '#ef4444' },
-];
+// 結果別の色設定
+const resultColorMap: Record<string, string> = {
+  A: '#22c55e',
+  B: '#3b82f6',
+  C: '#eab308',
+  D: '#f97316',
+  E: '#ef4444',
+};
+const resultLabelMap: Record<string, string> = {
+  A: 'A: 異常なし',
+  B: 'B: 軽度異常',
+  C: 'C: 要経過観察',
+  D: 'D: 要精密検査',
+  E: 'E: 要治療',
+};
 
 // フォロー記録用の型
 interface FollowUpRecord {
@@ -194,12 +193,14 @@ export default function HealthPage() {
   const params = useParams();
   const locale = params?.locale as string || 'ja';
   const currentUser = useUserStore(state => state.currentUser);
+  const users = useUserStore(state => state.users);
+  const fetchUsers = useUserStore(state => state.fetchUsers);
   const tenantId = currentUser?.tenantId || '';
   const userRoles = currentUser?.roles || ['employee'];
-  const userRole = userRoles[0] || 'employee';
+  const { canRegisterResults, canViewAllEmployees, canViewDepartmentEmployees, canManageFollowUp, selfOnly, userDepartment, userId: rbacUserId } = useHealthRBAC();
 
   // 健診予定ストア
-  const { schedules, fetchSchedules, setTenantId: setHealthStoreTenantId } = useHealthStore();
+  const { schedules, fetchSchedules, updateScheduleStatus, setTenantId: setHealthStoreTenantId } = useHealthStore();
 
   // APIからのデータ
   const [checkups, setCheckups] = useState<HealthCheckup[]>([]);
@@ -208,12 +209,41 @@ export default function HealthPage() {
   const [_isLoading, setIsLoading] = useState(true);
 
   const [activeTab, setActiveTab] = useState('checkups');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterResult, setFilterResult] = useState<string>('all');
-  const [filterDepartment, setFilterDepartment] = useState<string>('all');
-  const [filterJudgment, setFilterJudgment] = useState<string>('all');
+
+  // タブごとに独立したフィルタ状態
+  // 健康診断タブ
+  const [checkupSearchQuery, setCheckupSearchQuery] = useState('');
+  const [checkupFilterResult, setCheckupFilterResult] = useState<string>('all');
+  const [checkupFilterDepartment, setCheckupFilterDepartment] = useState<string>('all');
+  // ストレスチェックタブ
+  const [stressSearchQuery, setStressSearchQuery] = useState('');
+  const [stressFilterDepartment, setStressFilterDepartment] = useState<string>('all');
+  const [stressFilterJudgment, setStressFilterJudgment] = useState<string>('all');
+  // フォローアップタブ
+  const [followUpSearchQuery, setFollowUpSearchQuery] = useState('');
+  const [followUpFilterDepartment, setFollowUpFilterDepartment] = useState<string>('all');
+  const [followUpFilterStatus, setFollowUpFilterStatus] = useState<string>('all');
+  // レポートタブ
+  const [reportFilterDepartment, setReportFilterDepartment] = useState<string>('all');
   const [selectedCheckup, setSelectedCheckup] = useState<HealthCheckup | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  // RBAC: APIクエリにユーザー制限を適用
+  const buildRbacQuery = useCallback(() => {
+    if (selfOnly && rbacUserId) {
+      return `&userId=${rbacUserId}`;
+    }
+    return '';
+  }, [selfOnly, rbacUserId]);
+
+  // RBAC: 部署フィルタ（フロントエンド側）
+  const applyDepartmentFilter = useCallback(<T extends { department?: string }>(items: T[]): T[] => {
+    if (canViewAllEmployees) return items;
+    if (canViewDepartmentEmployees && userDepartment) {
+      return items.filter(item => item.department === userDepartment);
+    }
+    return items; // selfOnlyの場合はAPI側でフィルタ済み
+  }, [canViewAllEmployees, canViewDepartmentEmployees, userDepartment]);
 
   // APIからデータを取得
   const fetchData = useCallback(async () => {
@@ -222,10 +252,18 @@ export default function HealthPage() {
       return;
     }
 
+    // RBAC: selfOnlyだがuserIdが未取得（ハイドレーション中）→ スキップ
+    if (selfOnly && !rbacUserId) {
+      setIsLoading(false);
+      return;
+    }
+
+    const rbacQuery = buildRbacQuery();
+
     setIsLoading(true);
     try {
       // 健康診断データを取得
-      const checkupsRes = await fetch(`/api/health/checkups?tenantId=${tenantId}`);
+      const checkupsRes = await fetch(`/api/health/checkups?tenantId=${tenantId}${rbacQuery}`);
       if (checkupsRes.ok) {
         const checkupsData = await checkupsRes.json();
         const apiCheckups: APIHealthCheckup[] = checkupsData.data || [];
@@ -233,7 +271,7 @@ export default function HealthPage() {
           id: c.id,
           userId: c.userId,
           userName: c.userName,
-          department: '',
+          department: c.department || '',
           checkupDate: new Date(c.checkupDate),
           checkupType: (c.checkupType as CheckupType) || 'regular',
           medicalInstitution: c.medicalInstitution,
@@ -250,11 +288,11 @@ export default function HealthPage() {
           doctorOpinion: c.doctorOpinion,
           findings: c.findings?.map(f => f.finding) || [],
         }));
-        setCheckups(mappedCheckups);
+        setCheckups(applyDepartmentFilter(mappedCheckups));
       }
 
       // ストレスチェックデータを取得
-      const stressRes = await fetch(`/api/health/stress-checks?tenantId=${tenantId}`);
+      const stressRes = await fetch(`/api/health/stress-checks?tenantId=${tenantId}${rbacQuery}`);
       if (stressRes.ok) {
         const stressData = await stressRes.json();
         const apiStress: APIStressCheck[] = stressData.data || [];
@@ -262,7 +300,7 @@ export default function HealthPage() {
           id: s.id,
           userId: s.userId,
           userName: s.userName,
-          department: '',
+          department: s.department || '',
           fiscalYear: s.fiscalYear,
           checkDate: new Date(s.checkDate),
           status: (s.status as StressCheckStatus) || 'pending',
@@ -273,22 +311,32 @@ export default function HealthPage() {
           interviewRequested: s.interviewRequested,
           interviewDate: s.interviewDate ? new Date(s.interviewDate) : undefined,
         }));
-        setStressChecks(mappedStress);
+        setStressChecks(applyDepartmentFilter(mappedStress));
       }
 
-      // 健診予定データを取得
+      // 健診予定データを取得（RBAC: selfOnlyなら自分のみ）
       setHealthStoreTenantId(tenantId);
-      await fetchSchedules();
+      await fetchSchedules(undefined, selfOnly ? rbacUserId : undefined);
     } catch (error) {
       console.error('健康管理データの取得に失敗しました:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [tenantId, setHealthStoreTenantId, fetchSchedules]);
+  }, [tenantId, setHealthStoreTenantId, fetchSchedules, buildRbacQuery, applyDepartmentFilter, selfOnly, rbacUserId]);
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    if (users.length === 0) fetchUsers();
+  }, [fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // RBAC: スケジュールの部署フィルタ（managerの場合）
+  const filteredSchedules = useMemo(() => {
+    if (canViewAllEmployees || selfOnly) return schedules; // selfOnlyはAPI側でフィルタ済み
+    if (canViewDepartmentEmployees && userDepartment) {
+      return schedules.filter(s => s.departmentName === userDepartment);
+    }
+    return schedules;
+  }, [schedules, canViewAllEmployees, canViewDepartmentEmployees, selfOnly, userDepartment]);
 
   // フォロー記録ダイアログ用state
   const [followUpDialogOpen, setFollowUpDialogOpen] = useState(false);
@@ -314,26 +362,21 @@ export default function HealthPage() {
 
   // 健診結果登録ダイアログ用state
   const [checkupRegistrationDialogOpen, setCheckupRegistrationDialogOpen] = useState(false);
-  const [newCheckup, setNewCheckup] = useState({
-    userName: '',
-    department: '',
-    checkupDate: undefined as Date | undefined,
-    medicalInstitution: '',
-    overallResult: 'A' as OverallResult,
-    requiresReexam: false,
-    requiresTreatment: false,
-    requiresGuidance: false,
-    height: '',
-    weight: '',
-    bloodPressureSystolic: '',
-    bloodPressureDiastolic: '',
-    doctorOpinion: '',
-  });
 
   // 統計データを計算
   const stats = useMemo(() => {
-    const totalEmployees = checkups.length || 0;
-    const completed = checkups.length || 0;
+    // 総従業員数: RBAC制限時は閲覧可能範囲に合わせる
+    let totalEmployees: number;
+    if (selfOnly) {
+      totalEmployees = 1; // 自分のみ
+    } else if (canViewDepartmentEmployees && userDepartment) {
+      totalEmployees = users.filter(u => u.department === userDepartment).length || 1;
+    } else {
+      totalEmployees = users.length > 0 ? users.length : checkups.length;
+    }
+    // 受診済み = 健診レコードのユニークユーザー数
+    const completedUserIds = new Set(checkups.map(c => c.userId));
+    const completed = completedUserIds.size;
     const requiresReexam = checkups.filter((c) => c.requiresReexam).length;
     const requiresTreatment = checkups.filter((c) => c.requiresTreatment).length;
     const highStress = stressChecks.filter((s) => s.isHighStress).length;
@@ -350,27 +393,84 @@ export default function HealthPage() {
       highStress,
       stressCheckCompletionRate,
     };
-  }, [checkups, stressChecks]);
+  }, [checkups, stressChecks, users]);
 
   // フィルタリングされたストレスチェックデータ
   const filteredStressChecks = useMemo(() => {
     return stressChecks.filter((check) => {
       const matchesSearch =
-        check.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (check.department?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-      const matchesDepartment = filterDepartment === 'all' || check.department === filterDepartment;
-      const matchesJudgment = filterJudgment === 'all' ||
-        (filterJudgment === 'high_stress' && check.isHighStress) ||
-        (filterJudgment === 'normal' && !check.isHighStress);
+        check.userName.toLowerCase().includes(stressSearchQuery.toLowerCase()) ||
+        (check.department?.toLowerCase().includes(stressSearchQuery.toLowerCase()) ?? false);
+      const matchesDepartment = stressFilterDepartment === 'all' || check.department === stressFilterDepartment;
+      const matchesJudgment = stressFilterJudgment === 'all' ||
+        (stressFilterJudgment === 'high_stress' && check.isHighStress) ||
+        (stressFilterJudgment === 'normal' && !check.isHighStress);
       return matchesSearch && matchesDepartment && matchesJudgment;
     });
-  }, [stressChecks, searchQuery, filterDepartment, filterJudgment]);
+  }, [stressChecks, stressSearchQuery, stressFilterDepartment, stressFilterJudgment]);
 
   // 部門リスト
   const departments = useMemo(() => {
     const depts = new Set(checkups.map((c) => c.department).filter(Boolean));
     return Array.from(depts) as string[];
   }, [checkups]);
+
+  // レポート用: 健康診断結果分布（実データ）
+  const checkupResultDistribution = useMemo(() => {
+    // レポート部署フィルタ適用
+    const filtered = reportFilterDepartment === 'all'
+      ? checkups
+      : checkups.filter(c => c.department === reportFilterDepartment);
+    const counts: Record<string, number> = {};
+    filtered.forEach(c => {
+      counts[c.overallResult] = (counts[c.overallResult] || 0) + 1;
+    });
+    return ['A', 'B', 'C', 'D', 'E'].map(r => ({
+      name: resultLabelMap[r] || r,
+      value: counts[r] || 0,
+      color: resultColorMap[r] || '#999',
+    })).filter(d => d.value > 0);
+  }, [checkups, reportFilterDepartment]);
+
+  // レポート用: 有所見率（所見ありの割合）
+  const findingsRateData = useMemo(() => {
+    const filtered = reportFilterDepartment === 'all'
+      ? checkups
+      : checkups.filter(c => c.department === reportFilterDepartment);
+    // 年度ごとに集計
+    const byYear: Record<number, { total: number; withFindings: number }> = {};
+    filtered.forEach(c => {
+      const year = c.checkupDate.getFullYear();
+      if (!byYear[year]) byYear[year] = { total: 0, withFindings: 0 };
+      byYear[year].total++;
+      if (c.overallResult !== 'A') byYear[year].withFindings++;
+    });
+    return Object.entries(byYear)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([year, data]) => ({
+        year,
+        rate: data.total > 0 ? Math.round((data.withFindings / data.total) * 100) : 0,
+      }));
+  }, [checkups, reportFilterDepartment]);
+
+  // レポート用: 部署別ストレス傾向（実データ）
+  const stressByDepartmentData = useMemo(() => {
+    const byDept: Record<string, { factors: number[]; response: number[]; support: number[] }> = {};
+    stressChecks.forEach(s => {
+      const dept = s.department || '未設定';
+      if (!byDept[dept]) byDept[dept] = { factors: [], response: [], support: [] };
+      byDept[dept].factors.push(s.stressFactorsScore);
+      byDept[dept].response.push(s.stressResponseScore);
+      byDept[dept].support.push(s.socialSupportScore);
+    });
+    const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+    return Object.entries(byDept).map(([dept, data]) => ({
+      department: dept,
+      stressFactors: avg(data.factors),
+      stressResponse: avg(data.response),
+      support: avg(data.support),
+    }));
+  }, [stressChecks]);
 
   const handleViewDetails = (checkup: HealthCheckup) => {
     setSelectedCheckup(checkup);
@@ -389,14 +489,31 @@ export default function HealthPage() {
     setFollowUpDialogOpen(true);
   };
 
-  // フォロー記録を保存
-  const handleSaveFollowUp = () => {
-    console.log('フォロー記録を保存:', {
-      userId: selectedFollowUpUser?.id,
-      userName: selectedFollowUpUser?.name,
-      ...followUpRecord,
-    });
-    setFollowUpDialogOpen(false);
+  // フォロー記録を保存（API接続）
+  const handleSaveFollowUp = async () => {
+    if (!selectedFollowUpUser || !followUpRecord.followUpDate) {
+      toast.error('フォロー日を選択してください');
+      return;
+    }
+    try {
+      const res = await fetch('/api/health/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedFollowUpUser.id,
+          userName: selectedFollowUpUser.name,
+          followUpDate: followUpRecord.followUpDate.toISOString(),
+          status: followUpRecord.status || 'scheduled',
+          notes: followUpRecord.notes,
+          nextFollowUpDate: followUpRecord.nextFollowUpDate?.toISOString() || null,
+        }),
+      });
+      if (!res.ok) throw new Error('保存に失敗しました');
+      toast.success('フォロー記録を保存しました');
+      setFollowUpDialogOpen(false);
+    } catch {
+      toast.error('フォロー記録の保存に失敗しました');
+    }
   };
 
   // 面談記録ダイアログを開く
@@ -413,36 +530,48 @@ export default function HealthPage() {
     setInterviewDialogOpen(true);
   };
 
-  // 面談記録を保存
-  const handleSaveInterview = () => {
-    console.log('面談記録を保存:', {
-      userId: selectedInterviewUser?.id,
-      userName: selectedInterviewUser?.name,
-      ...interviewRecord,
-    });
-    setInterviewDialogOpen(false);
+  // 面談記録を保存（API接続 - フォローアップ記録として保存）
+  const handleSaveInterview = async () => {
+    if (!selectedInterviewUser || !interviewRecord.interviewDate) {
+      toast.error('面談日を選択してください');
+      return;
+    }
+    const interviewTypeLabel = {
+      stress_interview: 'ストレスチェック面談',
+      health_guidance: '保健指導',
+      return_to_work: '復職面談',
+    }[interviewRecord.interviewType || 'stress_interview'];
+
+    const notesText = [
+      `【面談種別】${interviewTypeLabel}`,
+      interviewRecord.doctorName ? `【担当】${interviewRecord.doctorName}` : '',
+      interviewRecord.notes ? `【面談内容】${interviewRecord.notes}` : '',
+      interviewRecord.outcome ? `【結果・所見】${interviewRecord.outcome}` : '',
+      interviewRecord.nextAction ? `【今後の対応】${interviewRecord.nextAction}` : '',
+    ].filter(Boolean).join('\n');
+
+    try {
+      const res = await fetch('/api/health/follow-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedInterviewUser.id,
+          userName: selectedInterviewUser.name,
+          followUpDate: interviewRecord.interviewDate.toISOString(),
+          status: 'completed',
+          notes: notesText,
+          assignedTo: interviewRecord.doctorName || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error('保存に失敗しました');
+      toast.success('面談記録を保存しました');
+      setInterviewDialogOpen(false);
+    } catch {
+      toast.error('面談記録の保存に失敗しました');
+    }
   };
 
-  // 健診結果を保存
-  const handleSaveCheckup = () => {
-    console.log('健診結果を保存:', newCheckup);
-    setCheckupRegistrationDialogOpen(false);
-    setNewCheckup({
-      userName: '',
-      department: '',
-      checkupDate: undefined,
-      medicalInstitution: '',
-      overallResult: 'A',
-      requiresReexam: false,
-      requiresTreatment: false,
-      requiresGuidance: false,
-      height: '',
-      weight: '',
-      bloodPressureSystolic: '',
-      bloodPressureDiastolic: '',
-      doctorOpinion: '',
-    });
-  };
+  // (健診結果登録はCheckupRegistrationDialogコンポーネントに抽出済み)
 
   // CSV出力ハンドラー
   const handleExportHealthCheckups = () => {
@@ -636,14 +765,18 @@ export default function HealthPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            レポート出力
-          </Button>
-          <Button onClick={() => setCheckupRegistrationDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            健診結果登録
-          </Button>
+          {canViewAllEmployees && (
+            <Button variant="outline" onClick={() => setActiveTab('reports')}>
+              <Download className="mr-2 h-4 w-4" />
+              レポート出力
+            </Button>
+          )}
+          {canRegisterResults && (
+            <Button onClick={() => setCheckupRegistrationDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              健診結果登録
+            </Button>
+          )}
         </div>
       </div>
 
@@ -652,7 +785,7 @@ export default function HealthPage() {
 
       {/* メインコンテンツ */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${canViewAllEmployees ? 'grid-cols-4' : canManageFollowUp ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <TabsTrigger value="checkups">
             <Heart className="mr-2 h-4 w-4" />
             健康診断
@@ -661,31 +794,36 @@ export default function HealthPage() {
             <Brain className="mr-2 h-4 w-4" />
             ストレスチェック
           </TabsTrigger>
-          <TabsTrigger value="followup">
-            <Clock className="mr-2 h-4 w-4" />
-            フォローアップ
-          </TabsTrigger>
-          <TabsTrigger value="reports">
-            <BarChart3 className="mr-2 h-4 w-4" />
-            レポート
-          </TabsTrigger>
+          {canManageFollowUp && (
+            <TabsTrigger value="followup">
+              <Clock className="mr-2 h-4 w-4" />
+              フォローアップ
+            </TabsTrigger>
+          )}
+          {canViewAllEmployees && (
+            <TabsTrigger value="reports">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              レポート
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* 健康診断タブ（3分割：予定/結果/管理） */}
         <TabsContent value="checkups">
           <CheckupSubTabs
-            schedules={schedules}
+            schedules={filteredSchedules}
             checkups={checkups}
             departments={departments}
-            searchQuery={searchQuery}
-            filterDepartment={filterDepartment}
-            filterResult={filterResult}
-            onSearchQueryChange={setSearchQuery}
-            onFilterDepartmentChange={setFilterDepartment}
-            onFilterResultChange={setFilterResult}
+            searchQuery={checkupSearchQuery}
+            filterDepartment={checkupFilterDepartment}
+            filterResult={checkupFilterResult}
+            onSearchQueryChange={setCheckupSearchQuery}
+            onFilterDepartmentChange={setCheckupFilterDepartment}
+            onFilterResultChange={setCheckupFilterResult}
             onViewCheckupDetails={handleViewDetails}
             onRefreshSchedules={() => fetchSchedules()}
-            userRole={userRole}
+            onUpdateScheduleStatus={updateScheduleStatus}
+            userRoles={userRoles}
           />
         </TabsContent>
 
@@ -707,13 +845,13 @@ export default function HealthPage() {
             <CardContent>
               {/* 部署・判定フィルタ追加 */}
               <StressCheckFilters
-                searchQuery={searchQuery}
-                filterDepartment={filterDepartment}
-                filterJudgment={filterJudgment}
+                searchQuery={stressSearchQuery}
+                filterDepartment={stressFilterDepartment}
+                filterJudgment={stressFilterJudgment}
                 departments={departments}
-                onSearchQueryChange={setSearchQuery}
-                onFilterDepartmentChange={setFilterDepartment}
-                onFilterJudgmentChange={setFilterJudgment}
+                onSearchQueryChange={setStressSearchQuery}
+                onFilterDepartmentChange={setStressFilterDepartment}
+                onFilterJudgmentChange={setStressFilterJudgment}
               />
 
               <div className="overflow-x-auto">
@@ -778,15 +916,17 @@ export default function HealthPage() {
           </Card>
         </TabsContent>
 
-        {/* フォローアップタブ */}
-        <TabsContent value="followup">
+        {/* フォローアップタブ（hr/admin/managerのみ） */}
+        {canManageFollowUp && <TabsContent value="followup">
           {/* 部署フィルタ追加 */}
           <FollowUpFilters
-            searchQuery={searchQuery}
-            filterDepartment={filterDepartment}
+            searchQuery={followUpSearchQuery}
+            filterDepartment={followUpFilterDepartment}
+            filterStatus={followUpFilterStatus}
             departments={departments}
-            onSearchQueryChange={setSearchQuery}
-            onFilterDepartmentChange={setFilterDepartment}
+            onSearchQueryChange={setFollowUpSearchQuery}
+            onFilterDepartmentChange={setFollowUpFilterDepartment}
+            onFilterStatusChange={setFollowUpFilterStatus}
           />
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -802,8 +942,9 @@ export default function HealthPage() {
                 <div className="space-y-4">
                   {checkups
                     .filter((c) => c.requiresReexam)
-                    .filter((c) => filterDepartment === 'all' || c.department === filterDepartment)
-                    .filter((c) => c.userName.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .filter((c) => followUpFilterDepartment === 'all' || c.department === followUpFilterDepartment)
+                    .filter((c) => c.userName.toLowerCase().includes(followUpSearchQuery.toLowerCase()))
+                    .filter((c) => followUpFilterStatus === 'all' || c.followUpStatus === followUpFilterStatus)
                     .map((checkup) => (
                       <div
                         key={checkup.id}
@@ -850,8 +991,8 @@ export default function HealthPage() {
                 <div className="space-y-4">
                   {stressChecks
                     .filter((s) => s.isHighStress)
-                    .filter((s) => filterDepartment === 'all' || s.department === filterDepartment)
-                    .filter((s) => s.userName.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .filter((s) => followUpFilterDepartment === 'all' || s.department === followUpFilterDepartment)
+                    .filter((s) => s.userName.toLowerCase().includes(followUpSearchQuery.toLowerCase()))
                     .map((check) => (
                       <div
                         key={check.id}
@@ -884,13 +1025,13 @@ export default function HealthPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </TabsContent>}
 
-        {/* レポートタブ */}
-        <TabsContent value="reports">
+        {/* レポートタブ（hr/admin/executiveのみ） */}
+        {canViewAllEmployees && <TabsContent value="reports">
           {/* 部署フィルタ追加 */}
           <div className="mb-4">
-            <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+            <Select value={reportFilterDepartment} onValueChange={setReportFilterDepartment}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="部署" />
               </SelectTrigger>
@@ -1058,7 +1199,7 @@ export default function HealthPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
 
       {/* 健康診断詳細ダイアログ */}
@@ -1401,207 +1542,13 @@ export default function HealthPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 健診結果登録ダイアログ */}
-      <Dialog open={checkupRegistrationDialogOpen} onOpenChange={setCheckupRegistrationDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>健康診断結果登録</DialogTitle>
-            <DialogDescription>
-              新しい健康診断結果を登録します
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>社員名</Label>
-                <Input
-                  placeholder="社員名を入力"
-                  value={newCheckup.userName}
-                  onChange={(e) =>
-                    setNewCheckup({ ...newCheckup, userName: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>部署</Label>
-                <Select
-                  value={newCheckup.department}
-                  onValueChange={(value) =>
-                    setNewCheckup({ ...newCheckup, department: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="部署を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>受診日</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !newCheckup.checkupDate && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newCheckup.checkupDate
-                        ? format(newCheckup.checkupDate, 'yyyy年MM月dd日', { locale: ja })
-                        : '日付を選択'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={newCheckup.checkupDate}
-                      onSelect={(date) =>
-                        setNewCheckup({ ...newCheckup, checkupDate: date })
-                      }
-                      locale={ja}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label>医療機関名</Label>
-                <Input
-                  placeholder="医療機関名を入力"
-                  value={newCheckup.medicalInstitution}
-                  onChange={(e) =>
-                    setNewCheckup({ ...newCheckup, medicalInstitution: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>総合判定</Label>
-                <Select
-                  value={newCheckup.overallResult}
-                  onValueChange={(value: OverallResult) =>
-                    setNewCheckup({ ...newCheckup, overallResult: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A">A: 異常なし</SelectItem>
-                    <SelectItem value="B">B: 軽度異常</SelectItem>
-                    <SelectItem value="C">C: 要経過観察</SelectItem>
-                    <SelectItem value="D">D: 要精密検査</SelectItem>
-                    <SelectItem value="E">E: 要治療</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 flex items-end">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newCheckup.requiresReexam}
-                    onChange={(e) =>
-                      setNewCheckup({ ...newCheckup, requiresReexam: e.target.checked })
-                    }
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <span className="text-sm">要再検査</span>
-                </label>
-              </div>
-              <div className="space-y-2 flex items-end">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newCheckup.requiresTreatment}
-                    onChange={(e) =>
-                      setNewCheckup({ ...newCheckup, requiresTreatment: e.target.checked })
-                    }
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <span className="text-sm">要治療</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>身長 (cm)</Label>
-                <Input
-                  type="number"
-                  placeholder="170.0"
-                  value={newCheckup.height}
-                  onChange={(e) =>
-                    setNewCheckup({ ...newCheckup, height: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>体重 (kg)</Label>
-                <Input
-                  type="number"
-                  placeholder="65.0"
-                  value={newCheckup.weight}
-                  onChange={(e) =>
-                    setNewCheckup({ ...newCheckup, weight: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>最高血圧</Label>
-                <Input
-                  type="number"
-                  placeholder="120"
-                  value={newCheckup.bloodPressureSystolic}
-                  onChange={(e) =>
-                    setNewCheckup({ ...newCheckup, bloodPressureSystolic: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>最低血圧</Label>
-                <Input
-                  type="number"
-                  placeholder="80"
-                  value={newCheckup.bloodPressureDiastolic}
-                  onChange={(e) =>
-                    setNewCheckup({ ...newCheckup, bloodPressureDiastolic: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>医師所見</Label>
-              <Textarea
-                placeholder="医師の所見を入力してください..."
-                value={newCheckup.doctorOpinion}
-                onChange={(e) =>
-                  setNewCheckup({ ...newCheckup, doctorOpinion: e.target.value })
-                }
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCheckupRegistrationDialogOpen(false)}>
-              キャンセル
-            </Button>
-            <Button onClick={handleSaveCheckup}>登録</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 健診結果登録ダイアログ（抽出済みコンポーネント） */}
+      <CheckupRegistrationDialog
+        open={checkupRegistrationDialogOpen}
+        onOpenChange={setCheckupRegistrationDialogOpen}
+        tenantId={tenantId}
+        onSuccess={fetchData}
+      />
     </div>
   );
 }

@@ -38,10 +38,16 @@ export interface HealthMedicalInstitution {
   code?: string | null;
   address?: string | null;
   phone?: string | null;
+  email?: string | null;
+  contactPerson?: string | null;
+  region?: string | null;
+  area?: string | null;
   isActive: boolean;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
+  examPrices?: InstitutionExamPrice[];
+  options?: InstitutionOption[];
 }
 
 export interface HealthMedicalInstitutionInput {
@@ -49,8 +55,84 @@ export interface HealthMedicalInstitutionInput {
   code?: string;
   address?: string;
   phone?: string;
+  email?: string;
+  contactPerson?: string;
+  region?: string;
+  area?: string;
   isActive?: boolean;
   sortOrder?: number;
+}
+
+// ============================================================================
+// 医療機関別 検査項目料金
+// ============================================================================
+
+export interface InstitutionExamPrice {
+  id: string;
+  tenantId: string;
+  institutionId: string;
+  checkupTypeId: string;
+  price: number;
+  isActive: boolean;
+  notes?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  checkupTypeName?: string;
+}
+
+export interface InstitutionExamPriceInput {
+  checkupTypeId: string;
+  price: number;
+  isActive?: boolean;
+  notes?: string;
+}
+
+// ============================================================================
+// 医療機関別 オプション検査
+// ============================================================================
+
+export interface InstitutionOption {
+  id: string;
+  tenantId: string;
+  institutionId: string;
+  name: string;
+  code?: string | null;
+  price: number;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface InstitutionOptionInput {
+  name: string;
+  code?: string;
+  price: number;
+  description?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+// ============================================================================
+// フォローアップ記録
+// ============================================================================
+
+export type FollowUpTrackingStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+
+export interface HealthFollowUpRecord {
+  id: string;
+  tenantId: string;
+  userId: string;
+  userName: string;
+  checkupId?: string | null;
+  followUpDate: Date;
+  status: FollowUpTrackingStatus;
+  notes?: string | null;
+  nextFollowUpDate?: Date | null;
+  assignedTo?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ============================================================================
@@ -117,6 +199,10 @@ export interface HealthCheckup {
   followUpStatus: FollowUpStatus;
   doctorOpinion?: string;
   findings: string[];
+  bloodType?: string;
+  selectedExamTypeId?: string;
+  selectedOptionIds?: string[];
+  totalCost?: number;
 }
 
 // ============================================================================
@@ -172,4 +258,15 @@ export interface StressCheckFilters {
   departmentName?: string;
   judgment?: 'all' | 'high_stress' | 'normal';
   searchQuery?: string;
+}
+
+export interface FollowUpRecordFilters {
+  status?: FollowUpTrackingStatus | 'all';
+  searchQuery?: string;
+  departmentName?: string;
+}
+
+export interface ScheduleFiltersExtended extends ScheduleFilters {
+  checkupTypeName?: string;
+  medicalInstitutionId?: string;
 }

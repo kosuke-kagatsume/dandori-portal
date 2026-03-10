@@ -33,10 +33,11 @@ export async function GET(request: NextRequest) {
 // 健診種別追加
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
-    const { tenantId, name, code, description, isActive, sortOrder } = body;
+    const { name, code, description, isActive, sortOrder } = body;
 
-    const validation = validateRequired(body, ['tenantId', 'name', 'code']);
+    const validation = validateRequired(body, ['name', 'code']);
     if (!validation.valid) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
@@ -63,11 +64,20 @@ export async function POST(request: NextRequest) {
 // 健診種別更新
 export async function PUT(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const { id, name, code, description, isActive, sortOrder } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'IDが必要です' }, { status: 400 });
+    }
+
+    // tenantId検証
+    const existing = await prisma.health_checkup_types.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: '健診種別が見つかりません' }, { status: 404 });
     }
 
     const checkupType = await prisma.health_checkup_types.update({
@@ -91,11 +101,20 @@ export async function PUT(request: NextRequest) {
 // 健診種別削除
 export async function DELETE(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
 
     if (!id) {
       return NextResponse.json({ error: 'IDが必要です' }, { status: 400 });
+    }
+
+    // tenantId検証
+    const existing = await prisma.health_checkup_types.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: '健診種別が見つかりません' }, { status: 404 });
     }
 
     await prisma.health_checkup_types.delete({

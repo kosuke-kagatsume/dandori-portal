@@ -4,6 +4,10 @@ import type {
   HealthCheckupTypeInput,
   HealthMedicalInstitution,
   HealthMedicalInstitutionInput,
+  InstitutionExamPrice,
+  InstitutionExamPriceInput,
+  InstitutionOption,
+  InstitutionOptionInput,
 } from '@/types/health';
 
 /**
@@ -34,6 +38,18 @@ interface HealthMasterState {
   addMedicalInstitution: (data: HealthMedicalInstitutionInput) => Promise<void>;
   updateMedicalInstitution: (id: string, data: Partial<HealthMedicalInstitutionInput>) => Promise<void>;
   deleteMedicalInstitution: (id: string) => Promise<void>;
+
+  // 検査項目料金操作
+  fetchExamPrices: (institutionId: string) => Promise<InstitutionExamPrice[]>;
+  addExamPrice: (institutionId: string, data: InstitutionExamPriceInput) => Promise<void>;
+  updateExamPrice: (id: string, data: Partial<InstitutionExamPriceInput>) => Promise<void>;
+  deleteExamPrice: (id: string) => Promise<void>;
+
+  // オプション検査操作
+  fetchOptions: (institutionId: string) => Promise<InstitutionOption[]>;
+  addOption: (institutionId: string, data: InstitutionOptionInput) => Promise<void>;
+  updateOption: (id: string, data: Partial<InstitutionOptionInput>) => Promise<void>;
+  deleteOption: (id: string) => Promise<void>;
 
   // ヘルパー
   getActiveCheckupTypes: () => HealthCheckupType[];
@@ -202,6 +218,112 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
       await fetchMedicalInstitutions();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+    }
+  },
+
+  // ==================== 検査項目料金操作 ====================
+
+  fetchExamPrices: async (institutionId) => {
+    try {
+      const res = await fetch(`/api/health/master/institutions/${institutionId}/exam-prices`);
+      if (!res.ok) throw new Error('検査項目料金の取得に失敗しました');
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.data || []);
+    } catch (error) {
+      set({ error: (error as Error).message });
+      return [];
+    }
+  },
+
+  addExamPrice: async (institutionId, data) => {
+    const { tenantId } = get();
+    if (!tenantId) return;
+    try {
+      const res = await fetch(`/api/health/master/institutions/${institutionId}/exam-prices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, institutionId, ...data }),
+      });
+      if (!res.ok) throw new Error('検査項目料金の追加に失敗しました');
+    } catch (error) {
+      set({ error: (error as Error).message });
+    }
+  },
+
+  updateExamPrice: async (id, data) => {
+    try {
+      const res = await fetch(`/api/health/master/institutions/_/exam-prices`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...data }),
+      });
+      if (!res.ok) throw new Error('検査項目料金の更新に失敗しました');
+    } catch (error) {
+      set({ error: (error as Error).message });
+    }
+  },
+
+  deleteExamPrice: async (id) => {
+    try {
+      const res = await fetch(`/api/health/master/institutions/_/exam-prices?id=${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('検査項目料金の削除に失敗しました');
+    } catch (error) {
+      set({ error: (error as Error).message });
+    }
+  },
+
+  // ==================== オプション検査操作 ====================
+
+  fetchOptions: async (institutionId) => {
+    try {
+      const res = await fetch(`/api/health/master/institutions/${institutionId}/options`);
+      if (!res.ok) throw new Error('オプション検査の取得に失敗しました');
+      const json = await res.json();
+      return Array.isArray(json) ? json : (json.data || []);
+    } catch (error) {
+      set({ error: (error as Error).message });
+      return [];
+    }
+  },
+
+  addOption: async (institutionId, data) => {
+    const { tenantId } = get();
+    if (!tenantId) return;
+    try {
+      const res = await fetch(`/api/health/master/institutions/${institutionId}/options`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, institutionId, ...data }),
+      });
+      if (!res.ok) throw new Error('オプション検査の追加に失敗しました');
+    } catch (error) {
+      set({ error: (error as Error).message });
+    }
+  },
+
+  updateOption: async (id, data) => {
+    try {
+      const res = await fetch(`/api/health/master/institutions/_/options`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...data }),
+      });
+      if (!res.ok) throw new Error('オプション検査の更新に失敗しました');
+    } catch (error) {
+      set({ error: (error as Error).message });
+    }
+  },
+
+  deleteOption: async (id) => {
+    try {
+      const res = await fetch(`/api/health/master/institutions/_/options?id=${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('オプション検査の削除に失敗しました');
+    } catch (error) {
+      set({ error: (error as Error).message });
     }
   },
 

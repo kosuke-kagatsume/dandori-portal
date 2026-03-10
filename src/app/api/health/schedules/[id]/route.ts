@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { successResponse, handleApiError } from '@/lib/api/api-helpers';
+import { getTenantIdFromRequest, successResponse, handleApiError } from '@/lib/api/api-helpers';
 
 // 健診予定個別取得
 export async function GET(
@@ -8,10 +8,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const { id } = await params;
 
-    const schedule = await prisma.health_checkup_schedules.findUnique({
-      where: { id },
+    const schedule = await prisma.health_checkup_schedules.findFirst({
+      where: { id, tenantId },
     });
 
     if (!schedule) {
@@ -33,6 +34,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const { id } = await params;
     const body = await request.json();
     const {
@@ -46,6 +48,14 @@ export async function PUT(
       fiscalYear,
       notes,
     } = body;
+
+    // tenantId検証
+    const existing = await prisma.health_checkup_schedules.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: '健診予定が見つかりません' }, { status: 404 });
+    }
 
     const schedule = await prisma.health_checkup_schedules.update({
       where: { id },
@@ -75,7 +85,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const { id } = await params;
+
+    // tenantId検証
+    const existing = await prisma.health_checkup_schedules.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: '健診予定が見つかりません' }, { status: 404 });
+    }
 
     await prisma.health_checkup_schedules.delete({
       where: { id },

@@ -26,6 +26,7 @@ import {
 import { Edit, ArrowRightLeft, PauseCircle, Briefcase, CalendarOff, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store';
+import { useUserStore } from '@/lib/store/user-store';
 import type { User, TransferHistory } from '@/types';
 
 // 就業ルールタイプ（MFと同等）
@@ -59,6 +60,7 @@ interface UserAttendanceTabProps {
   workRule?: WorkRule;
   isReadOnly: boolean;
   onEdit?: () => void;
+  onUserUpdated?: (updatedUser: User) => void;
 }
 
 const punchMethodLabels: Record<string, string> = {
@@ -100,6 +102,7 @@ export function UserAttendanceTab({
   workRule,
   isReadOnly,
   onEdit,
+  onUserUpdated,
 }: UserAttendanceTabProps) {
   const { currentTenant } = useTenantStore();
   const tenantId = currentTenant?.id;
@@ -159,8 +162,14 @@ export function UserAttendanceTab({
   useEffect(() => {
     if (workRuleDialogOpen) {
       fetchWorkRules();
+      // 現在適用中の就業ルールをプリセレクト
+      if (user.workRuleId) {
+        setSelectedRuleId(user.workRuleId);
+      }
+    } else {
+      setSelectedRuleId('');
     }
-  }, [workRuleDialogOpen, fetchWorkRules]);
+  }, [workRuleDialogOpen, fetchWorkRules, user.workRuleId]);
 
   const handleWorkRuleSelect = async () => {
     if (!selectedRuleId) {
@@ -179,7 +188,11 @@ export function UserAttendanceTab({
       toast.success(`就業ルール「${selected?.name}」を適用しました`);
       setWorkRuleDialogOpen(false);
       setSelectedRuleId('');
-      window.location.reload();
+      // Zustandストアを直接更新（window.location.reload()の代わり）
+      const { users, setUsers } = useUserStore.getState();
+      const updatedUser = { ...user, workRuleId: selectedRuleId };
+      setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+      onUserUpdated?.(updatedUser);
     } catch {
       toast.error('就業ルールの更新に失敗しました');
     } finally {
@@ -454,18 +467,24 @@ export function UserAttendanceTab({
             <DialogDescription>設定 &gt; 勤怠マスタ &gt; 就業ルールから選択してください</DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Select value={selectedRuleId} onValueChange={setSelectedRuleId}>
-              <SelectTrigger>
-                <SelectValue placeholder="就業ルールを選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableWorkRules.map(rule => (
-                  <SelectItem key={rule.id} value={rule.id}>
-                    {rule.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {availableWorkRules.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                就業ルールが登録されていません。設定 &gt; 勤怠マスタ &gt; 就業ルールから追加してください。
+              </p>
+            ) : (
+              <Select value={selectedRuleId} onValueChange={setSelectedRuleId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="就業ルールを選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableWorkRules.map(rule => (
+                    <SelectItem key={rule.id} value={rule.id}>
+                      {rule.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setWorkRuleDialogOpen(false)}>キャンセル</Button>

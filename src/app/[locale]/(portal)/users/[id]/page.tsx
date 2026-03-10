@@ -588,6 +588,11 @@ export default function UserDetailPage({ params }: { params: { id: string; local
             workRule={userWorkRule}
             isReadOnly={isReadOnly}
             onEdit={() => setEditDialogOpen(true)}
+            onUserUpdated={(updatedUser) => {
+              setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+              // 就業ルールを再取得
+              fetchUserWorkRule();
+            }}
           />
         </TabsContent>
 

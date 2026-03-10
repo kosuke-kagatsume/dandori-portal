@@ -145,12 +145,10 @@ export async function PUT(
             ? {
                 create: findings.map((f: { category: string; finding: string; severity: string; recommendation?: string }) => ({
                   id: crypto.randomUUID(),
-                  tenantId,
                   category: f.category,
                   finding: f.finding,
                   severity: f.severity,
                   recommendation: f.recommendation,
-                  updatedAt: new Date(),
                 })),
               }
             : undefined,

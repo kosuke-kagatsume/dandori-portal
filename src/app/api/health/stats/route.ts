@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 
 /**
  * 健康管理統計API
@@ -11,16 +12,9 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId');
     const yearParam = searchParams.get('year');
-
-    if (!tenantId) {
-      return NextResponse.json(
-        { success: false, error: 'tenantId は必須です' },
-        { status: 400 }
-      );
-    }
 
     const now = new Date();
     const year = yearParam ? parseInt(yearParam) : now.getFullYear();

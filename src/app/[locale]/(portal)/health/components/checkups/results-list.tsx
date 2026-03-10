@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, FileText } from 'lucide-react';
+import { Search, FileText, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import type { HealthCheckup, OverallResult, FollowUpStatus } from '@/types/health';
@@ -95,9 +95,21 @@ export function ResultsList({
   onFilterResultChange,
   onViewDetails,
 }: ResultsListProps) {
-  // フィルタリングされた健康診断データ
+  const [sortBy, setSortBy] = useState<string>('checkupDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
+  // フィルタリング + ソートされた健康診断データ
   const filteredCheckups = useMemo(() => {
-    return checkups.filter((checkup) => {
+    const filtered = checkups.filter((checkup) => {
       const matchesSearch =
         checkup.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (checkup.department?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
@@ -105,7 +117,36 @@ export function ResultsList({
       const matchesDepartment = filterDepartment === 'all' || checkup.department === filterDepartment;
       return matchesSearch && matchesResult && matchesDepartment;
     });
-  }, [checkups, searchQuery, filterResult, filterDepartment]);
+
+    // ソート
+    return filtered.sort((a, b) => {
+      const dir = sortOrder === 'asc' ? 1 : -1;
+      switch (sortBy) {
+        case 'userName':
+          return dir * a.userName.localeCompare(b.userName, 'ja');
+        case 'department':
+          return dir * (a.department || '').localeCompare(b.department || '', 'ja');
+        case 'checkupDate':
+          return dir * (new Date(a.checkupDate).getTime() - new Date(b.checkupDate).getTime());
+        case 'overallResult':
+          return dir * a.overallResult.localeCompare(b.overallResult);
+        default:
+          return 0;
+      }
+    });
+  }, [checkups, searchQuery, filterResult, filterDepartment, sortBy, sortOrder]);
+
+  const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer select-none hover:bg-muted/50"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        <ArrowUpDown className={`h-3 w-3 ${sortBy === field ? 'opacity-100' : 'opacity-30'}`} />
+      </div>
+    </TableHead>
+  );
 
   return (
     <Card>
@@ -158,10 +199,10 @@ export function ResultsList({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>氏名</TableHead>
-                <TableHead>部署</TableHead>
-                <TableHead>受診日</TableHead>
-                <TableHead>総合判定</TableHead>
+                <SortableHeader field="userName">氏名</SortableHeader>
+                <SortableHeader field="department">部署</SortableHeader>
+                <SortableHeader field="checkupDate">受診日</SortableHeader>
+                <SortableHeader field="overallResult">総合判定</SortableHeader>
                 <TableHead>所見</TableHead>
                 <TableHead>フォロー状況</TableHead>
                 <TableHead className="text-right">操作</TableHead>

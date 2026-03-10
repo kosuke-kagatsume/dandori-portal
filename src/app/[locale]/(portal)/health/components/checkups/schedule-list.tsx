@@ -23,8 +23,10 @@ import {
 import { Plus, Search, Check, X, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { toast } from 'sonner';
 import type { HealthCheckupSchedule, ScheduleStatus } from '@/types/health';
 import { ScheduleDialog } from './schedule-dialog';
+import { useHealthMasterStore } from '@/lib/store/health-master-store';
 
 interface ScheduleListProps {
   schedules: HealthCheckupSchedule[];
@@ -34,6 +36,7 @@ interface ScheduleListProps {
   onSearchQueryChange: (query: string) => void;
   onFilterDepartmentChange: (dept: string) => void;
   onRefresh: () => void;
+  onUpdateStatus?: (id: string, status: ScheduleStatus) => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -58,10 +61,17 @@ export function ScheduleList({
   onSearchQueryChange,
   onFilterDepartmentChange,
   onRefresh,
+  onUpdateStatus,
   isAdmin,
 }: ScheduleListProps) {
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterCheckupType, setFilterCheckupType] = useState<string>('all');
+  const [filterInstitution, setFilterInstitution] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const { getActiveCheckupTypes, getActiveMedicalInstitutions } = useHealthMasterStore();
+  const checkupTypes = getActiveCheckupTypes();
+  const institutions = getActiveMedicalInstitutions();
 
   // フィルタリングされた予定一覧
   const filteredSchedules = useMemo(() => {
@@ -72,9 +82,11 @@ export function ScheduleList({
       const matchesDepartment =
         filterDepartment === 'all' || schedule.departmentName === filterDepartment;
       const matchesStatus = filterStatus === 'all' || schedule.status === filterStatus;
-      return matchesSearch && matchesDepartment && matchesStatus;
+      const matchesCheckupType = filterCheckupType === 'all' || schedule.checkupTypeName === filterCheckupType;
+      const matchesInstitution = filterInstitution === 'all' || schedule.medicalInstitutionId === filterInstitution;
+      return matchesSearch && matchesDepartment && matchesStatus && matchesCheckupType && matchesInstitution;
     });
-  }, [schedules, searchQuery, filterDepartment, filterStatus]);
+  }, [schedules, searchQuery, filterDepartment, filterStatus, filterCheckupType, filterInstitution]);
 
   // 統計
   const stats = useMemo(() => {
@@ -144,6 +156,32 @@ export function ScheduleList({
               <SelectItem value="cancelled">キャンセル</SelectItem>
             </SelectContent>
           </Select>
+          {checkupTypes.length > 0 && (
+            <Select value={filterCheckupType} onValueChange={setFilterCheckupType}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="健診種別" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべての種別</SelectItem>
+                {checkupTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {institutions.length > 0 && (
+            <Select value={filterInstitution} onValueChange={setFilterInstitution}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="医療機関" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべての機関</SelectItem>
+                {institutions.map((i) => (
+                  <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* テーブル */}
@@ -172,12 +210,36 @@ export function ScheduleList({
                   <TableCell>{schedule.scheduledTime || '-'}</TableCell>
                   <TableCell>{getStatusBadge(schedule.status)}</TableCell>
                   <TableCell className="text-right">
-                    {isAdmin && schedule.status === 'scheduled' && (
+                    {isAdmin && schedule.status === 'scheduled' && onUpdateStatus && (
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" title="完了にする">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="完了にする"
+                          onClick={async () => {
+                            try {
+                              await onUpdateStatus(schedule.id, 'completed');
+                              toast.success(`${schedule.userName}の予定を完了にしました`);
+                            } catch {
+                              toast.error('ステータスの更新に失敗しました');
+                            }
+                          }}
+                        >
                           <Check className="h-4 w-4 text-green-600" />
                         </Button>
-                        <Button variant="ghost" size="sm" title="キャンセル">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="キャンセル"
+                          onClick={async () => {
+                            try {
+                              await onUpdateStatus(schedule.id, 'cancelled');
+                              toast.success(`${schedule.userName}の予定をキャンセルしました`);
+                            } catch {
+                              toast.error('ステータスの更新に失敗しました');
+                            }
+                          }}
+                        >
                           <X className="h-4 w-4 text-red-600" />
                         </Button>
                       </div>

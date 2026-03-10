@@ -4,7 +4,6 @@ import {
   getTenantIdFromRequest,
   successResponse,
   handleApiError,
-  validateRequired,
 } from '@/lib/api/api-helpers';
 
 // 医療機関一覧取得
@@ -33,12 +32,12 @@ export async function GET(request: NextRequest) {
 // 医療機関追加
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
-    const { tenantId, name, code, address, phone, isActive, sortOrder } = body;
+    const { name, code, address, phone, email, contactPerson, region, area, isActive, sortOrder } = body;
 
-    const validation = validateRequired(body, ['tenantId', 'name']);
-    if (!validation.valid) {
-      return NextResponse.json({ error: validation.error }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: '医療機関名は必須です' }, { status: 400 });
     }
 
     const institution = await prisma.health_medical_institutions.create({
@@ -49,6 +48,10 @@ export async function POST(request: NextRequest) {
         code,
         address,
         phone,
+        email,
+        contactPerson,
+        region,
+        area,
         isActive: isActive ?? true,
         sortOrder: sortOrder ?? 0,
         updatedAt: new Date(),
@@ -64,11 +67,20 @@ export async function POST(request: NextRequest) {
 // 医療機関更新
 export async function PUT(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
-    const { id, name, code, address, phone, isActive, sortOrder } = body;
+    const { id, name, code, address, phone, email, contactPerson, region, area, isActive, sortOrder } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'IDが必要です' }, { status: 400 });
+    }
+
+    // tenantId検証
+    const existing = await prisma.health_medical_institutions.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: '医療機関が見つかりません' }, { status: 404 });
     }
 
     const institution = await prisma.health_medical_institutions.update({
@@ -78,6 +90,10 @@ export async function PUT(request: NextRequest) {
         ...(code !== undefined && { code }),
         ...(address !== undefined && { address }),
         ...(phone !== undefined && { phone }),
+        ...(email !== undefined && { email }),
+        ...(contactPerson !== undefined && { contactPerson }),
+        ...(region !== undefined && { region }),
+        ...(area !== undefined && { area }),
         ...(isActive !== undefined && { isActive }),
         ...(sortOrder !== undefined && { sortOrder }),
         updatedAt: new Date(),
@@ -93,11 +109,20 @@ export async function PUT(request: NextRequest) {
 // 医療機関削除
 export async function DELETE(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
 
     if (!id) {
       return NextResponse.json({ error: 'IDが必要です' }, { status: 400 });
+    }
+
+    // tenantId検証
+    const existing = await prisma.health_medical_institutions.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: '医療機関が見つかりません' }, { status: 404 });
     }
 
     await prisma.health_medical_institutions.delete({

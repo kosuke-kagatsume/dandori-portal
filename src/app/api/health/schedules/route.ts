@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const fiscalYear = searchParams.get('fiscalYear');
     const status = searchParams.get('status');
+    const checkupTypeName = searchParams.get('checkupTypeName');
+    const medicalInstitutionId = searchParams.get('medicalInstitutionId');
 
     const where: Record<string, unknown> = { tenantId };
 
@@ -28,6 +30,14 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== 'all') {
       where.status = status;
+    }
+
+    if (checkupTypeName) {
+      where.checkupTypeName = checkupTypeName;
+    }
+
+    if (medicalInstitutionId) {
+      where.medicalInstitutionId = medicalInstitutionId;
     }
 
     const schedules = await prisma.health_checkup_schedules.findMany({
@@ -44,9 +54,9 @@ export async function GET(request: NextRequest) {
 // 健診予定登録
 export async function POST(request: NextRequest) {
   try {
+    const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
     const {
-      tenantId,
       userId,
       userName,
       departmentName,
@@ -60,7 +70,6 @@ export async function POST(request: NextRequest) {
     } = body;
 
     const validation = validateRequired(body, [
-      'tenantId',
       'userId',
       'userName',
       'checkupTypeName',

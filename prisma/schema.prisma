@@ -680,6 +680,7 @@ model health_checkups {
   tenantId               String
   userId                 String
   userName               String
+  department             String?
   checkupDate            DateTime          @db.Date
   checkupType            String
   medicalInstitution     String?
@@ -715,6 +716,10 @@ model health_checkups {
   doctorOpinion          String?
   workRestriction        String?
   attachments            Json?
+  bloodType              String?
+  selectedExamTypeId     String?
+  selectedOptionIds      Json?
+  totalCost              Int?
   createdAt              DateTime          @default(now())
   updatedAt              DateTime
   health_findings        health_findings[]
@@ -2452,6 +2457,8 @@ model health_checkup_types {
   createdAt   DateTime @default(now())
   updatedAt   DateTime
 
+  health_institution_exam_prices health_institution_exam_prices[]
+
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, isActive])
@@ -2459,20 +2466,85 @@ model health_checkup_types {
 
 // 医療機関マスタ
 model health_medical_institutions {
-  id        String   @id
-  tenantId  String
-  name      String
-  code      String?
-  address   String?
-  phone     String?
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime
+  id            String   @id
+  tenantId      String
+  name          String
+  code          String?
+  address       String?
+  phone         String?
+  email         String?
+  contactPerson String?
+  region        String?
+  area          String?
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+
+  health_institution_exam_prices health_institution_exam_prices[]
+  health_institution_options     health_institution_options[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, isActive])
+}
+
+// 医療機関別 検査項目料金
+model health_institution_exam_prices {
+  id              String   @id
+  tenantId        String
+  institutionId   String
+  checkupTypeId   String
+  price           Int
+  isActive        Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+
+  health_medical_institutions health_medical_institutions @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  health_checkup_types        health_checkup_types        @relation(fields: [checkupTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, checkupTypeId])
+  @@index([tenantId])
+}
+
+// 医療機関別 オプション検査
+model health_institution_options {
+  id              String   @id
+  tenantId        String
+  institutionId   String
+  name            String
+  code            String?
+  price           Int
+  description     String?
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+
+  health_medical_institutions health_medical_institutions @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([institutionId])
+}
+
+// フォローアップ記録
+model health_follow_up_records {
+  id               String    @id
+  tenantId         String
+  userId           String
+  userName         String
+  checkupId        String?
+  followUpDate     DateTime  @db.Date
+  status           String    @default("pending")
+  notes            String?
+  nextFollowUpDate DateTime? @db.Date
+  assignedTo       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime
+
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
 }
 
 // 健診予定

@@ -2,7 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, FileText, Settings2 } from 'lucide-react';
-import type { HealthCheckup, HealthCheckupSchedule } from '@/types/health';
+import type { HealthCheckup, HealthCheckupSchedule, ScheduleStatus } from '@/types/health';
 import { ScheduleList } from './schedule-list';
 import { ResultsList } from './results-list';
 import { HealthMasterPanel } from '../master/health-master-panel';
@@ -19,7 +19,8 @@ interface CheckupSubTabsProps {
   onFilterResultChange: (result: string) => void;
   onViewCheckupDetails: (checkup: HealthCheckup) => void;
   onRefreshSchedules: () => void;
-  userRole: string;
+  onUpdateScheduleStatus?: (id: string, status: ScheduleStatus) => Promise<void>;
+  userRoles: string[];
 }
 
 export function CheckupSubTabs({
@@ -34,13 +35,14 @@ export function CheckupSubTabs({
   onFilterResultChange,
   onViewCheckupDetails,
   onRefreshSchedules,
-  userRole,
+  onUpdateScheduleStatus,
+  userRoles,
 }: CheckupSubTabsProps) {
-  const isAdmin = userRole === 'hr' || userRole === 'admin';
+  const isAdmin = userRoles.includes('hr') || userRoles.includes('admin');
 
   return (
     <Tabs defaultValue="schedule" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-3 max-w-md">
+      <TabsList className={`grid w-full max-w-md ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <TabsTrigger value="schedule" className="gap-2">
           <Calendar className="h-4 w-4" />
           予定
@@ -66,6 +68,7 @@ export function CheckupSubTabs({
           onSearchQueryChange={onSearchQueryChange}
           onFilterDepartmentChange={onFilterDepartmentChange}
           onRefresh={onRefreshSchedules}
+          onUpdateStatus={onUpdateScheduleStatus}
           isAdmin={isAdmin}
         />
       </TabsContent>

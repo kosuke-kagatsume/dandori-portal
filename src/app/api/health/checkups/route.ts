@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const fiscalYear = searchParams.get('fiscalYear');
     const status = searchParams.get('status');
+    const sortBy = searchParams.get('sortBy');
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -31,13 +33,19 @@ export async function GET(request: NextRequest) {
       where.requiresGuidance = true;
     }
 
+    // ソートカラムの動的設定（ホワイトリスト検証）
+    const allowedSortFields = ['checkupDate', 'userName', 'department', 'overallResult', 'createdAt'];
+    const orderByField = allowedSortFields.includes(sortBy || '') ? sortBy! : 'checkupDate';
+    const orderByDir = sortOrder === 'asc' ? 'asc' : 'desc';
+    const orderBy: Record<string, string> = { [orderByField]: orderByDir };
+
     const [checkups, total] = await Promise.all([
       prisma.health_checkups.findMany({
         where,
         include: {
           health_findings: true,
         },
-        orderBy: { checkupDate: 'desc' },
+        orderBy,
         take: limit,
         skip: offset,
       }),
@@ -90,6 +98,7 @@ export async function POST(request: NextRequest) {
     const {
       userId,
       userName,
+      department,
       checkupDate,
       checkupType,
       medicalInstitution,
@@ -125,6 +134,10 @@ export async function POST(request: NextRequest) {
       doctorOpinion,
       workRestriction,
       findings,
+      bloodType,
+      selectedExamTypeId,
+      selectedOptionIds,
+      totalCost,
     } = body;
 
     const checkup = await prisma.health_checkups.create({
@@ -133,6 +146,7 @@ export async function POST(request: NextRequest) {
         tenantId,
         userId,
         userName,
+        department,
         checkupDate: new Date(checkupDate),
         checkupType,
         medicalInstitution,
@@ -167,17 +181,19 @@ export async function POST(request: NextRequest) {
         followUpNotes,
         doctorOpinion,
         workRestriction,
+        bloodType,
+        selectedExamTypeId,
+        selectedOptionIds: selectedOptionIds || undefined,
+        totalCost,
         updatedAt: new Date(),
         health_findings: findings
           ? {
               create: findings.map((f: { category: string; finding: string; severity: string; recommendation?: string }) => ({
                 id: crypto.randomUUID(),
-                tenantId,
                 category: f.category,
                 finding: f.finding,
                 severity: f.severity,
                 recommendation: f.recommendation,
-                updatedAt: new Date(),
               })),
             }
           : undefined,

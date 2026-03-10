@@ -21,6 +21,11 @@ interface HealthScheduleState {
   // フィルター
   filters: ScheduleFilters;
 
+  // ソート
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+  setSortBy: (field: string) => void;
+
   // 統計
   stats: {
     totalScheduled: number;
@@ -33,7 +38,7 @@ interface HealthScheduleState {
   setTenantId: (tenantId: string) => void;
 
   // 予定操作
-  fetchSchedules: (fiscalYear?: number) => Promise<void>;
+  fetchSchedules: (fiscalYear?: number, userId?: string) => Promise<void>;
   addSchedule: (data: HealthCheckupScheduleInput) => Promise<void>;
   updateSchedule: (id: string, data: Partial<HealthCheckupScheduleInput>) => Promise<void>;
   deleteSchedule: (id: string) => Promise<void>;
@@ -67,6 +72,14 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
     fiscalYear: new Date().getFullYear(),
     searchQuery: '',
   },
+  sortBy: 'scheduledDate',
+  sortOrder: 'asc',
+  setSortBy: (field) => {
+    set((state) => ({
+      sortBy: field,
+      sortOrder: state.sortBy === field && state.sortOrder === 'asc' ? 'desc' : 'asc',
+    }));
+  },
   stats: {
     totalScheduled: 0,
     totalCompleted: 0,
@@ -80,16 +93,17 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
 
   // ==================== 予定操作 ====================
 
-  fetchSchedules: async (fiscalYear) => {
+  fetchSchedules: async (fiscalYear, userId) => {
     const { tenantId, filters } = get();
     if (!tenantId) return;
 
     const year = fiscalYear || filters.fiscalYear || new Date().getFullYear();
+    const userParam = userId ? `&userId=${userId}` : '';
 
     set({ isLoading: true, error: null });
     try {
       const res = await fetch(
-        `/api/health/schedules?tenantId=${tenantId}&fiscalYear=${year}`
+        `/api/health/schedules?tenantId=${tenantId}&fiscalYear=${year}${userParam}`
       );
       if (!res.ok) throw new Error('健診予定の取得に失敗しました');
       const json = await res.json();

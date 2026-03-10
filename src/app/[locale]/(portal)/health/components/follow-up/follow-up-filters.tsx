@@ -13,17 +13,21 @@ import { Search } from 'lucide-react';
 interface FollowUpFiltersProps {
   searchQuery: string;
   filterDepartment: string;
+  filterStatus?: string;
   departments: string[];
   onSearchQueryChange: (query: string) => void;
   onFilterDepartmentChange: (dept: string) => void;
+  onFilterStatusChange?: (status: string) => void;
 }
 
 export function FollowUpFilters({
   searchQuery,
   filterDepartment,
+  filterStatus = 'all',
   departments,
   onSearchQueryChange,
   onFilterDepartmentChange,
+  onFilterStatusChange,
 }: FollowUpFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -49,6 +53,19 @@ export function FollowUpFilters({
           ))}
         </SelectContent>
       </Select>
+      {onFilterStatusChange && (
+        <Select value={filterStatus} onValueChange={onFilterStatusChange}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectValue placeholder="ステータス" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">すべて</SelectItem>
+            <SelectItem value="pending">未対応</SelectItem>
+            <SelectItem value="in_progress">対応中</SelectItem>
+            <SelectItem value="completed">完了</SelectItem>
+          </SelectContent>
+        </Select>
+      )}
     </div>
   );
 }
