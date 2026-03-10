@@ -91,6 +91,27 @@ export function clearTokenData(): void {
 }
 
 /**
+ * ログアウト時にZustand persistストアをlocalStorageから全削除
+ * ui-storage（テーマ・言語）はユーザー固有データではないため保持
+ */
+const PERSIST_STORE_KEYS = [
+  'user-storage', 'tenant-storage', 'company-settings-store', 'payroll-store',
+  'pc-store', 'vehicle-store', 'saas-storage', 'retired-yearend-storage',
+  'announcements-storage', 'approval-flow-storage', 'attendance-alert-store',
+  'attendance-history-store', 'audit-store', 'leave-management-store',
+  'leave-type-store', 'legal-updates-storage', 'onboarding-storage',
+  'organization-storage', 'payment-reminder-storage', 'performance-evaluation-store',
+  'dandori-permissions', 'shift-store', 'todo-storage', 'invoice-auto-generation-storage',
+];
+
+export function clearAllPersistedStores(): void {
+  if (typeof window === 'undefined') return;
+  for (const key of PERSIST_STORE_KEYS) {
+    localStorage.removeItem(key);
+  }
+}
+
+/**
  * トークンリフレッシュタイマーを開始
  */
 export function startTokenRefreshTimer(

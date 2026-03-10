@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { clearAllPersistedStores } from '@/lib/auth/token-manager';
 
 interface AuthUser {
   id: string;
@@ -87,6 +88,7 @@ export function useAuth() {
     } catch (error) {
       console.error('Logout error:', error);
     }
+    clearAllPersistedStores();
 
     // 現在のロケールを動的に取得
     const currentLocale = typeof window !== 'undefined'
