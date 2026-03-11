@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Edit, ArrowRightLeft, PauseCircle, Briefcase, CalendarOff, Plus } from 'lucide-react';
+import { Edit, ArrowRightLeft, PauseCircle, Briefcase, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store';
 import { useUserStore } from '@/lib/store/user-store';
@@ -232,7 +232,7 @@ export function UserAttendanceTab({
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base">勤怠設定</CardTitle>
-              <CardDescription>有給起算日・打刻方法・退職日</CardDescription>
+              <CardDescription>有給起算日・打刻の方法</CardDescription>
             </div>
             {!isReadOnly && onEdit && (
               <Button variant="outline" size="sm" onClick={onEdit}>
@@ -248,31 +248,24 @@ export function UserAttendanceTab({
               <p className="text-sm font-medium text-muted-foreground">有給起算日</p>
               <p className="text-sm mt-1">
                 {user.paidLeaveStartDate
-                  ? new Date(user.paidLeaveStartDate).toLocaleDateString('ja-JP')
+                  ? (() => {
+                      const d = new Date(user.paidLeaveStartDate);
+                      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+                    })()
                   : user.hireDate
-                    ? new Date(user.hireDate).toLocaleDateString('ja-JP')
+                    ? (() => {
+                        const d = new Date(user.hireDate);
+                        return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+                      })()
                     : '未設定'}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">打刻方法</p>
+              <p className="text-sm font-medium text-muted-foreground">打刻の方法</p>
               <p className="text-sm mt-1">
                 {user.punchMethod ? punchMethodLabels[user.punchMethod] || user.punchMethod : 'Web打刻'}
               </p>
             </div>
-            {user.status === 'retired' && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <CalendarOff className="h-3 w-3" />
-                  退職日
-                </p>
-                <p className="text-sm mt-1 text-destructive font-medium">
-                  {user.retiredDate
-                    ? new Date(user.retiredDate).toLocaleDateString('ja-JP')
-                    : '未設定'}
-                </p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

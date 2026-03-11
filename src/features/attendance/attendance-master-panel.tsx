@@ -6,6 +6,7 @@ import { LeaveTypeMasterPanel } from '@/features/leave/leave-type-master-panel';
 import { PunchRoundingPanel } from './punch-rounding-panel';
 import { AlertMasterPanel } from './alert-master-panel';
 import { WorkRuleMasterPanel } from './work-rule-master-panel';
+import { AggregationCategoryPanel } from './aggregation-category-panel';
 import type { SimpleSettings } from '@/features/settings/types';
 
 interface AttendanceMasterPanelProps {
@@ -29,12 +30,13 @@ export function AttendanceMasterPanel({
 
   return (
     <Tabs defaultValue="work-rules" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="work-rules">就業ルール</TabsTrigger>
         <TabsTrigger value="attendance-settings">勤怠設定</TabsTrigger>
         <TabsTrigger value="leave-holiday">休暇・休日</TabsTrigger>
         <TabsTrigger value="punch-rounding">打刻丸め</TabsTrigger>
         <TabsTrigger value="alert-36">アラート・36協定</TabsTrigger>
+        <TabsTrigger value="aggregation">集計区分</TabsTrigger>
       </TabsList>
 
       <TabsContent value="work-rules">
@@ -59,6 +61,10 @@ export function AttendanceMasterPanel({
 
       <TabsContent value="alert-36">
         <AlertMasterPanel />
+      </TabsContent>
+
+      <TabsContent value="aggregation">
+        <AggregationCategoryPanel />
       </TabsContent>
     </Tabs>
   );

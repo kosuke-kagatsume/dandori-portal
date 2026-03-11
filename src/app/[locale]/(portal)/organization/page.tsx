@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { OrganizationChart } from '@/components/organization/organization-chart';
 import { UserManagementPanel } from '@/components/organization/user-management-panel';
-import { TransferHistoryPanel } from '@/components/organization/transfer-history-panel';
+// import { TransferHistoryPanel } from '@/components/organization/transfer-history-panel'; // F6: 異動タブ削除に伴い未使用
 import { DepartmentManagementPanel } from '@/components/organization/department-management-panel';
 // import { AddTransferDialog } from '@/components/organization/add-transfer-dialog'; // 異動登録ボタン削除に伴い未使用
 import { useOrganizationStore, type ChartTemplateType } from '@/lib/store/organization-store';
@@ -297,11 +297,10 @@ export default function OrganizationPage() {
 
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">組織図</TabsTrigger>
           <TabsTrigger value="departments">部門管理</TabsTrigger>
           <TabsTrigger value="members">メンバー</TabsTrigger>
-          <TabsTrigger value="transfers">異動</TabsTrigger>
         </TabsList>
 
         {/* 組織図タブ */}
@@ -315,42 +314,50 @@ export default function OrganizationPage() {
                 </CardTitle>
                 
                 <div className="flex items-center space-x-2">
-                  {/* テンプレートタイプ選択 */}
-                  <Select value={templateType} onValueChange={(value: ChartTemplateType) => setTemplateType(value)}>
-                    <SelectTrigger className="w-44">
-                      <SelectValue placeholder="テンプレート選択" />
+                  {/* F1: 5表示モード統合セレクト */}
+                  <Select
+                    value={viewMode === 'list' ? 'list' : templateType}
+                    onValueChange={(value) => {
+                      if (value === 'list') {
+                        setViewMode('list');
+                      } else {
+                        setViewMode('tree');
+                        setTemplateType(value as ChartTemplateType);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-52">
+                      <SelectValue placeholder="表示モード" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pyramid-with-names">
-                        ピラミッド（名前あり）
-                      </SelectItem>
-                      <SelectItem value="pyramid-without-names">
-                        ピラミッド（名前なし）
-                      </SelectItem>
-                      <SelectItem value="horizontal-with-names">
-                        横並び（名前あり）
-                      </SelectItem>
-                      <SelectItem value="horizontal-without-names">
-                        横並び（名前なし）
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {/* 表示モード選択 */}
-                  <Select value={viewMode} onValueChange={(value: 'tree' | 'list') => setViewMode(value)}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="tree">
-                        <div className="flex items-center space-x-2">
-                          <TreePine className="h-4 w-4" />
-                          <span>ツリー</span>
-                        </div>
-                      </SelectItem>
                       <SelectItem value="list">
                         <div className="flex items-center space-x-2">
                           <List className="h-4 w-4" />
                           <span>リスト</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pyramid-with-names">
+                        <div className="flex items-center space-x-2">
+                          <TreePine className="h-4 w-4" />
+                          <span>ピラミッド（名前あり）</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pyramid-without-names">
+                        <div className="flex items-center space-x-2">
+                          <TreePine className="h-4 w-4" />
+                          <span>ピラミッド（名前なし）</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="horizontal-with-names">
+                        <div className="flex items-center space-x-2">
+                          <List className="h-4 w-4" />
+                          <span>横型（名前あり）</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="horizontal-without-names">
+                        <div className="flex items-center space-x-2">
+                          <List className="h-4 w-4" />
+                          <span>横型（名前なし）</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -462,10 +469,7 @@ export default function OrganizationPage() {
           />
         </TabsContent>
 
-        {/* 異動履歴タブ */}
-        <TabsContent value="transfers">
-          <TransferHistoryPanel />
-        </TabsContent>
+        {/* 異動タブ削除: F6 */}
       </Tabs>
     </div>
   );

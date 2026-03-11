@@ -165,7 +165,7 @@ export function DepartmentManagementPanel({ canEdit = true }: DepartmentManageme
                       <div className="flex items-center gap-2">
                         {/* 階層インデント */}
                         {dept.level > 0 && (
-                          <span className="text-muted-foreground" style={{ marginLeft: `${dept.level * 16}px` }}>
+                          <span className="text-muted-foreground" style={{ marginLeft: `${(dept.level - 1) * 16}px` }}>
                             └
                           </span>
                         )}

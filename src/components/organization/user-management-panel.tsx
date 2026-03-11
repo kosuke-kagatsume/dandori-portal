@@ -67,7 +67,7 @@ const roleLabels: Record<UserRole, string> = {
   applicant: '応募者',
 };
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
   active: '在籍中',
   inactive: '入社予定',
   suspended: '休職中',
@@ -80,9 +80,14 @@ const getStatusColor = (status: OrganizationMember['status']) => {
     case 'active':
       return 'bg-green-100 text-green-800 border-green-200';
     case 'inactive':
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    case 'suspended':
       return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'leave':
-      return 'bg-red-100 text-red-800 border-red-200';
+    case 'retired':
+      return 'bg-gray-100 text-gray-800 border-gray-200';
+    default:
+      return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
 
@@ -99,8 +104,16 @@ export function UserManagementPanel({
 }: UserManagementPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<OrganizationMember['status'] | 'all'>('all');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<OrganizationMember | null>(null);
+
+  // 部署リスト（メンバーから抽出）
+  const departments = useMemo(() => {
+    const deptSet = new Set<string>();
+    members.forEach(m => { if (m.department) deptSet.add(m.department); });
+    return Array.from(deptSet).sort();
+  }, [members]);
 
   // 新規ユーザー追加フォーム
   const [newMember, setNewMember] = useState<Omit<OrganizationMember, 'id'>>({
@@ -117,17 +130,18 @@ export function UserManagementPanel({
 
   // フィルタリングされたメンバーリスト
   const filteredMembers = useMemo(() => {
-    return members.filter(member => {
-      const matchesSearch = searchQuery === '' || (
-        member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.position.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-
-      const matchesStatus = selectedStatus === 'all' || member.status === selectedStatus;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [members, searchQuery, selectedStatus]);
+    return members
+      .filter(member => {
+        const matchesSearch = searchQuery === '' || (
+          member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          member.position.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        const matchesStatus = selectedStatus === 'all' || member.status === selectedStatus;
+        const matchesDept = selectedDepartment === 'all' || member.department === selectedDepartment;
+        return matchesSearch && matchesStatus && matchesDept;
+      })
+      .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+  }, [members, searchQuery, selectedStatus, selectedDepartment]);
 
   const handleAddMember = () => {
     if (onMemberAdd && newMember.name && newMember.email) {
@@ -312,6 +326,22 @@ export function UserManagementPanel({
                 ))}
               </SelectContent>
             </Select>
+
+            {departments.length > 0 && (
+              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="部署で絞り込み" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべての部署</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>

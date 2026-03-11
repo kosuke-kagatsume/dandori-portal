@@ -5,15 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
-import { DollarSign, Calendar, Shield, Loader2 } from 'lucide-react';
+import { DollarSign, Calendar, Loader2 } from 'lucide-react';
 import type { SettingsTabProps } from '../types';
+import { AllowanceItemsPanel } from './payroll/AllowanceItemsPanel';
+import { DeductionItemsPanel } from './payroll/DeductionItemsPanel';
+import { ResidentTaxPanel } from './payroll/ResidentTaxPanel';
+import { ClosingDayGroupPanel } from './payroll/ClosingDayGroupPanel';
+import { PayCategoryPanel } from './payroll/PayCategoryPanel';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function PayrollTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
+// 支払スケジュールサブタブ
+function PayScheduleSubTab({ saveSettings }: { saveSettings: () => void }) {
   const {
     payrollSettings,
     updatePayrollSettings,
@@ -23,7 +28,6 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
   } = useCompanySettingsStore();
   const [isSaving, setIsSaving] = useState(false);
 
-  // 初回ロード時にAPIからデータ取得
   useEffect(() => {
     fetchPayrollSettings();
   }, [fetchPayrollSettings]);
@@ -32,7 +36,7 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
     setIsSaving(true);
     try {
       await savePayrollSettings();
-      _saveSettings();
+      saveSettings();
     } catch (error) {
       console.error('保存エラー:', error);
     } finally {
@@ -42,7 +46,6 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
 
   return (
     <div className="space-y-6">
-      {/* 支給日・締め日設定 */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -72,11 +75,8 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm text-muted-foreground">
-                締め日（末日は31を選択）
-              </p>
+              <p className="text-sm text-muted-foreground">締め日（末日は31を選択）</p>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="paymentDay">支給日 *</Label>
               <Select
@@ -97,12 +97,9 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm text-muted-foreground">
-                給与支給日（末日は31を選択）
-              </p>
+              <p className="text-sm text-muted-foreground">給与支給日（末日は31を選択）</p>
             </div>
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="paymentDayType">支給タイミング *</Label>
             <Select
@@ -120,8 +117,44 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
           </div>
         </CardContent>
       </Card>
+      <div className="flex justify-end">
+        <Button onClick={handleSave} size="lg" disabled={isSaving || isLoading}>
+          {isSaving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />保存中...</>) : '設定を保存'}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
-      {/* 給与体系設定 */}
+// 給与体系サブタブ
+function PayStructureSubTab({ saveSettings }: { saveSettings: () => void }) {
+  const {
+    payrollSettings,
+    updatePayrollSettings,
+    fetchPayrollSettings,
+    savePayrollSettings,
+    isLoading
+  } = useCompanySettingsStore();
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchPayrollSettings();
+  }, [fetchPayrollSettings]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await savePayrollSettings();
+      saveSettings();
+    } catch (error) {
+      console.error('保存エラー:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -147,9 +180,7 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
               </SelectContent>
             </Select>
           </div>
-
           <Separator />
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="standardWorkHours">所定労働時間 / 日 *</Label>
@@ -162,11 +193,8 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
                 value={payrollSettings.standardWorkHours}
                 onChange={(e) => updatePayrollSettings({ standardWorkHours: parseFloat(e.target.value) })}
               />
-              <p className="text-sm text-muted-foreground">
-                1日あたりの標準労働時間（時間）
-              </p>
+              <p className="text-sm text-muted-foreground">1日あたりの標準労働時間（時間）</p>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="standardWorkDays">所定労働日数 / 月 *</Label>
               <Input
@@ -177,104 +205,61 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
                 value={payrollSettings.standardWorkDays}
                 onChange={(e) => updatePayrollSettings({ standardWorkDays: parseInt(e.target.value) })}
               />
-              <p className="text-sm text-muted-foreground">
-                1ヶ月あたりの標準労働日数（日）
-              </p>
+              <p className="text-sm text-muted-foreground">1ヶ月あたりの標準労働日数（日）</p>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* 控除設定 */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Shield className="w-5 h-5" />
-            <CardTitle>控除設定</CardTitle>
-          </div>
-          <CardDescription>社会保険料および税金の控除設定</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>健康保険</Label>
-                <p className="text-sm text-muted-foreground">健康保険料を控除する</p>
-              </div>
-              <Switch
-                checked={payrollSettings.enableHealthInsurance}
-                onCheckedChange={(checked) => updatePayrollSettings({ enableHealthInsurance: checked })}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>厚生年金保険</Label>
-                <p className="text-sm text-muted-foreground">厚生年金保険料を控除する</p>
-              </div>
-              <Switch
-                checked={payrollSettings.enablePensionInsurance}
-                onCheckedChange={(checked) => updatePayrollSettings({ enablePensionInsurance: checked })}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>雇用保険</Label>
-                <p className="text-sm text-muted-foreground">雇用保険料を控除する</p>
-              </div>
-              <Switch
-                checked={payrollSettings.enableEmploymentInsurance}
-                onCheckedChange={(checked) => updatePayrollSettings({ enableEmploymentInsurance: checked })}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>所得税</Label>
-                <p className="text-sm text-muted-foreground">源泉所得税を控除する</p>
-              </div>
-              <Switch
-                checked={payrollSettings.enableIncomeTax}
-                onCheckedChange={(checked) => updatePayrollSettings({ enableIncomeTax: checked })}
-              />
-            </div>
-
-            <Separator />
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>住民税</Label>
-                <p className="text-sm text-muted-foreground">住民税を控除する</p>
-              </div>
-              <Switch
-                checked={payrollSettings.enableResidentTax}
-                onCheckedChange={(checked) => updatePayrollSettings({ enableResidentTax: checked })}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 保存ボタン */}
       <div className="flex justify-end">
         <Button onClick={handleSave} size="lg" disabled={isSaving || isLoading}>
-          {isSaving ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              保存中...
-            </>
-          ) : (
-            '給与設定を保存'
-          )}
+          {isSaving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />保存中...</>) : '設定を保存'}
         </Button>
       </div>
     </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function PayrollTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
+  return (
+    <Tabs defaultValue="schedule" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-7">
+        <TabsTrigger value="schedule">支払スケジュール</TabsTrigger>
+        <TabsTrigger value="pay-structure">給与体系</TabsTrigger>
+        <TabsTrigger value="allowance-items">支給項目</TabsTrigger>
+        <TabsTrigger value="deduction-items">控除項目</TabsTrigger>
+        <TabsTrigger value="resident-tax">住民税</TabsTrigger>
+        <TabsTrigger value="closing-day-groups">締め日グループ</TabsTrigger>
+        <TabsTrigger value="pay-categories">給与カテゴリ</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="schedule">
+        <PayScheduleSubTab saveSettings={_saveSettings} />
+      </TabsContent>
+
+      <TabsContent value="pay-structure">
+        <PayStructureSubTab saveSettings={_saveSettings} />
+      </TabsContent>
+
+      <TabsContent value="allowance-items">
+        <AllowanceItemsPanel />
+      </TabsContent>
+
+      <TabsContent value="deduction-items">
+        <DeductionItemsPanel />
+      </TabsContent>
+
+      <TabsContent value="resident-tax">
+        <ResidentTaxPanel />
+      </TabsContent>
+
+      <TabsContent value="closing-day-groups">
+        <ClosingDayGroupPanel />
+      </TabsContent>
+
+      <TabsContent value="pay-categories">
+        <PayCategoryPanel />
+      </TabsContent>
+    </Tabs>
   );
 }

@@ -26,6 +26,11 @@ export const UserSchema = z.object({
   punchMethod: z.enum(['web', 'ic_card', 'mobile', 'face']).optional(), // 打刻方法
   workRuleId: z.string().optional(), // 就業ルールID
   employmentType: z.string().optional(), // 雇用形態
+  myNumber: z.string().optional(), // マイナンバー
+  taxClassification: z.string().optional(), // 甲/乙区分
+  isSecondaryIncome: z.boolean().optional(), // 従たる給与
+  displayOrder: z.number().optional(), // 表示順
+  employmentStatus: z.string().optional(), // active/leave/retired
   birthDate: z.string().optional(), // 生年月日
   gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).optional(), // 性別
   postalCode: z.string().optional(), // 郵便番号
@@ -358,7 +363,8 @@ export interface OrganizationMember {
   avatar?: string;
   isManager: boolean;
   joinDate: string;
-  status: 'active' | 'inactive' | 'leave';
+  status: 'active' | 'inactive' | 'leave' | 'suspended' | 'retired';
+  department?: string; // 所属部署名
   displayOrder?: number; // 部署内表示順（小さい順に表示）
 }
 

@@ -5,6 +5,7 @@ import {
   handleApiError,
   getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
+import { syncDepartmentToOrgUnit } from '@/lib/api/dept-org-sync';
 
 // GET /api/organization/departments - 部門一覧取得
 export async function GET(request: NextRequest) {
@@ -60,6 +61,14 @@ export async function POST(request: NextRequest) {
         isActive,
         updatedAt: new Date(),
       },
+    });
+
+    // org_units に同期
+    await syncDepartmentToOrgUnit(tenantId, {
+      id: department.id,
+      name: department.name,
+      parentId: department.parentId,
+      isActive: department.isActive,
     });
 
     return NextResponse.json(

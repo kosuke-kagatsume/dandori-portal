@@ -6,6 +6,7 @@ import {
   getTenantIdFromRequest,
   errorResponse,
 } from '@/lib/api/api-helpers';
+import { syncDepartmentUpdate, syncDepartmentDelete } from '@/lib/api/dept-org-sync';
 
 // GET /api/organization/departments/[id] - 部門詳細取得
 export async function GET(
@@ -83,6 +84,13 @@ export async function PATCH(
       data: updateData,
     });
 
+    // org_units に同期
+    await syncDepartmentUpdate(tenantId, existing.name, {
+      name: body.name,
+      parentId: body.parentId,
+      isActive: body.isActive,
+    });
+
     return successResponse(department);
   } catch (error) {
     return handleApiError(error, '部門の更新');
@@ -115,6 +123,9 @@ export async function DELETE(
     if (childDepartments.length > 0) {
       return errorResponse('子部門が存在するため削除できません', 400);
     }
+
+    // org_units に同期（削除 or 無効化）
+    await syncDepartmentDelete(tenantId, existing.name);
 
     await prisma.departments.delete({
       where: { id },
