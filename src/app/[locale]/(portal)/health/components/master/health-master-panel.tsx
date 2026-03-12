@@ -213,6 +213,9 @@ export function HealthMasterPanel() {
                   <TableRow>
                     <TableHead>医療機関名</TableHead>
                     <TableHead>コード</TableHead>
+                    <TableHead>地域</TableHead>
+                    <TableHead>担当者</TableHead>
+                    <TableHead>メール</TableHead>
                     <TableHead>住所</TableHead>
                     <TableHead>電話番号</TableHead>
                     <TableHead>状態</TableHead>
@@ -229,6 +232,11 @@ export function HealthMasterPanel() {
                         ) : (
                           '-'
                         )}
+                      </TableCell>
+                      <TableCell>{inst.region || '-'}</TableCell>
+                      <TableCell>{inst.contactPerson || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[180px] truncate">
+                        {inst.email || '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground max-w-[200px] truncate">
                         {inst.address || '-'}
@@ -255,7 +263,7 @@ export function HealthMasterPanel() {
                   ))}
                   {medicalInstitutions.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         医療機関がありません
                       </TableCell>
                     </TableRow>

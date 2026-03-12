@@ -51,6 +51,9 @@ interface DeductionItem {
   name: string;
   deductionCategory: 'social_insurance' | 'tax' | 'other';
   calculationType: 'fixed' | 'rate' | 'table';
+  defaultAmount?: number | null;
+  rate?: number | null;
+  isPreTax?: boolean;
   sortOrder: number;
   isActive: boolean;
 }
@@ -78,6 +81,9 @@ const defaultFormData = {
   name: '',
   deductionCategory: 'other' as DeductionItem['deductionCategory'],
   calculationType: 'fixed' as DeductionItem['calculationType'],
+  defaultAmount: 0,
+  rate: 0,
+  isPreTax: false,
   sortOrder: 0,
   isActive: true,
 };
@@ -133,6 +139,9 @@ export function DeductionItemsPanel() {
       name: item.name,
       deductionCategory: item.deductionCategory,
       calculationType: item.calculationType,
+      defaultAmount: item.defaultAmount || 0,
+      rate: item.rate || 0,
+      isPreTax: item.isPreTax || false,
       sortOrder: item.sortOrder,
       isActive: item.isActive,
     });
@@ -255,6 +264,7 @@ export function DeductionItemsPanel() {
                   <TableHead>コード</TableHead>
                   <TableHead>種別</TableHead>
                   <TableHead>計算方式</TableHead>
+                  <TableHead>金額/料率</TableHead>
                   <TableHead>有効</TableHead>
                   <TableHead className="w-[100px]">操作</TableHead>
                 </TableRow>
@@ -278,6 +288,13 @@ export function DeductionItemsPanel() {
                       </Badge>
                     </TableCell>
                     <TableCell>{CALCULATION_LABELS[item.calculationType]}</TableCell>
+                    <TableCell>
+                      {item.calculationType === 'fixed' && item.defaultAmount
+                        ? `¥${item.defaultAmount.toLocaleString()}`
+                        : item.calculationType === 'rate' && item.rate
+                        ? `${item.rate}%`
+                        : '-'}
+                    </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Switch
                         checked={item.isActive}
@@ -382,6 +399,50 @@ export function DeductionItemsPanel() {
                   <SelectItem value="table">テーブル</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {formData.calculationType === 'fixed' && (
+              <div className="space-y-2">
+                <Label htmlFor="deduction-default-amount">デフォルト金額</Label>
+                <Input
+                  id="deduction-default-amount"
+                  type="number"
+                  min={0}
+                  value={formData.defaultAmount}
+                  onChange={(e) =>
+                    setFormData({ ...formData, defaultAmount: parseInt(e.target.value) || 0 })
+                  }
+                  placeholder="0"
+                />
+              </div>
+            )}
+
+            {formData.calculationType === 'rate' && (
+              <div className="space-y-2">
+                <Label htmlFor="deduction-rate">料率（%）</Label>
+                <Input
+                  id="deduction-rate"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={formData.rate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, rate: parseFloat(e.target.value) || 0 })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="deduction-pre-tax">税引前控除</Label>
+              <Switch
+                id="deduction-pre-tax"
+                checked={formData.isPreTax}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, isPreTax: checked })
+                }
+              />
             </div>
 
             <div className="space-y-2">

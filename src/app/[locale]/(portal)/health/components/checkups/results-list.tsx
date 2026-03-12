@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, FileText, ArrowUpDown } from 'lucide-react';
+import { Search, FileText, ArrowUpDown, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import type { HealthCheckup, OverallResult, FollowUpStatus } from '@/types/health';
@@ -35,6 +35,8 @@ interface ResultsListProps {
   onFilterDepartmentChange: (dept: string) => void;
   onFilterResultChange: (result: string) => void;
   onViewDetails: (checkup: HealthCheckup) => void;
+  isAdmin?: boolean;
+  onRegisterResult?: () => void;
 }
 
 // 結果バッジの色を取得
@@ -94,6 +96,8 @@ export function ResultsList({
   onFilterDepartmentChange,
   onFilterResultChange,
   onViewDetails,
+  isAdmin,
+  onRegisterResult,
 }: ResultsListProps) {
   const [sortBy, setSortBy] = useState<string>('checkupDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -150,9 +154,17 @@ export function ResultsList({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>健康診断結果一覧</CardTitle>
-        <CardDescription>{filteredCheckups.length}件の健康診断結果</CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>健康診断結果一覧</CardTitle>
+          <CardDescription>{filteredCheckups.length}件の健康診断結果</CardDescription>
+        </div>
+        {isAdmin && onRegisterResult && (
+          <Button onClick={onRegisterResult}>
+            <Plus className="mr-2 h-4 w-4" />
+            結果登録
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {/* フィルター */}

@@ -51,17 +51,29 @@ interface AllowanceItem {
   name: string;
   isTaxable: boolean;
   itemType: 'fixed' | 'variable';
+  calculationType?: 'fixed' | 'hourly' | 'rate' | null;
+  defaultAmount?: number | null;
   isInsuranceTarget: boolean;
+  isBaseCalculation?: boolean;
   sortOrder: number;
   isActive: boolean;
 }
+
+const CALC_TYPE_LABELS: Record<string, string> = {
+  fixed: '固定額',
+  hourly: '時給計算',
+  rate: '率計算',
+};
 
 const defaultFormData = {
   code: '',
   name: '',
   isTaxable: true,
   itemType: 'fixed' as 'fixed' | 'variable',
+  calculationType: 'fixed' as 'fixed' | 'hourly' | 'rate',
+  defaultAmount: 0,
   isInsuranceTarget: true,
+  isBaseCalculation: false,
   sortOrder: 0,
   isActive: true,
 };
@@ -117,7 +129,10 @@ export function AllowanceItemsPanel() {
       name: item.name,
       isTaxable: item.isTaxable,
       itemType: item.itemType,
+      calculationType: (item.calculationType || 'fixed') as 'fixed' | 'hourly' | 'rate',
+      defaultAmount: item.defaultAmount || 0,
       isInsuranceTarget: item.isInsuranceTarget,
+      isBaseCalculation: item.isBaseCalculation || false,
       sortOrder: item.sortOrder,
       isActive: item.isActive,
     });
@@ -240,6 +255,7 @@ export function AllowanceItemsPanel() {
                   <TableHead>項目コード</TableHead>
                   <TableHead>課税区分</TableHead>
                   <TableHead>種別</TableHead>
+                  <TableHead>計算方式</TableHead>
                   <TableHead>有効</TableHead>
                   <TableHead className="w-[100px]">操作</TableHead>
                 </TableRow>
@@ -263,6 +279,7 @@ export function AllowanceItemsPanel() {
                       </Badge>
                     </TableCell>
                     <TableCell>{item.itemType === 'fixed' ? '固定' : '変動'}</TableCell>
+                    <TableCell>{CALC_TYPE_LABELS[item.calculationType || 'fixed'] || '-'}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Switch
                         checked={item.isActive}
@@ -350,6 +367,41 @@ export function AllowanceItemsPanel() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="allowance-calc-type">計算方式</Label>
+              <Select
+                value={formData.calculationType}
+                onValueChange={(value: 'fixed' | 'hourly' | 'rate') =>
+                  setFormData({ ...formData, calculationType: value })
+                }
+              >
+                <SelectTrigger id="allowance-calc-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fixed">固定額</SelectItem>
+                  <SelectItem value="hourly">時給計算</SelectItem>
+                  <SelectItem value="rate">率計算</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formData.calculationType === 'fixed' && (
+              <div className="space-y-2">
+                <Label htmlFor="allowance-default-amount">デフォルト金額</Label>
+                <Input
+                  id="allowance-default-amount"
+                  type="number"
+                  min={0}
+                  value={formData.defaultAmount}
+                  onChange={(e) =>
+                    setFormData({ ...formData, defaultAmount: parseInt(e.target.value) || 0 })
+                  }
+                  placeholder="0"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
               <Label htmlFor="allowance-sort-order">表示順</Label>
               <Input
                 id="allowance-sort-order"
@@ -380,6 +432,17 @@ export function AllowanceItemsPanel() {
                 checked={formData.isInsuranceTarget}
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, isInsuranceTarget: checked })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="allowance-base-calc">割増賃金の計算基礎に含む</Label>
+              <Switch
+                id="allowance-base-calc"
+                checked={formData.isBaseCalculation}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, isBaseCalculation: checked })
                 }
               />
             </div>

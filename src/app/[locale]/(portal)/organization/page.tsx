@@ -296,7 +296,13 @@ export default function OrganizationPage() {
       </div>
 
       {/* Main Content */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={(tab) => {
+        setActiveTab(tab);
+        // 組織図タブに切り替え時、部門管理での変更を反映するために再取得
+        if (tab === 'overview') {
+          fetchOrganization();
+        }
+      }} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">組織図</TabsTrigger>
           <TabsTrigger value="departments">部門管理</TabsTrigger>

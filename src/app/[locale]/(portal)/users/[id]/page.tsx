@@ -40,25 +40,22 @@ export default function UserDetailPage({ params }: { params: { id: string; local
   const isHR = currentUser?.roles?.includes('hr');
   const isReadOnly = !isHR;
 
-  // API経由でユーザーデータを取得
+  // API経由でユーザーデータを取得（常に最新を取得してストアを更新）
   useEffect(() => {
     const fetchUser = async () => {
-      if (!params.id) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        // ユーザー詳細を取得
         const response = await fetch(`/api/users/${params.id}`);
         if (response.ok) {
           const data = await response.json();
           const apiUser: User = data.data;
           if (apiUser) {
-            // ストア内のユーザーを更新（存在しない場合は追加）
-            const existingUserIndex = users.findIndex(u => u.id === apiUser.id);
-            if (existingUserIndex === -1) {
-              setUsers([...users, apiUser]);
+            const { users: currentUsers, setUsers: updateUsers } = useUserStore.getState();
+            const existingIndex = currentUsers.findIndex(u => u.id === apiUser.id);
+            if (existingIndex === -1) {
+              updateUsers([...currentUsers, apiUser]);
+            } else {
+              // 既存ユーザーもAPI最新データで更新（workRuleId等の欠落を防止）
+              updateUsers(currentUsers.map(u => u.id === apiUser.id ? { ...u, ...apiUser } : u));
             }
           }
         }
@@ -69,14 +66,8 @@ export default function UserDetailPage({ params }: { params: { id: string; local
       }
     };
 
-    // ストアにユーザーがない場合のみAPIから取得
-    const existingUser = users.find(u => u.id === params.id);
-    if (!existingUser) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [params.id, users, setUsers]);
+    fetchUser();
+  }, [params.id]);
 
   // 勤怠・給与データはストアから取得（現在はストアにデータがあれば使用、なければ空表示）
   // 将来的にはAPIから取得するように変更可能

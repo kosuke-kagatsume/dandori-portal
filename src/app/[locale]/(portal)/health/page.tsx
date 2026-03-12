@@ -42,7 +42,6 @@ import { cn, getFiscalYear, getCurrentFiscalYear } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import {
   Heart,
-  Plus,
   AlertTriangle,
   FileText,
   Download,
@@ -200,7 +199,7 @@ export default function HealthPage() {
   const currentTenant = useTenantStore(state => state.currentTenant);
   const companyName = currentTenant?.name || '';
   const userRoles = currentUser?.roles || ['employee'];
-  const { canRegisterResults, canViewAllEmployees, canViewDepartmentEmployees, canManageFollowUp, selfOnly, userDepartment, userId: rbacUserId } = useHealthRBAC();
+  const { canViewAllEmployees, canViewDepartmentEmployees, canManageFollowUp, selfOnly, userDepartment, userId: rbacUserId } = useHealthRBAC();
 
   // 健診予定ストア
   const { schedules, fetchSchedules, updateScheduleStatus, setTenantId: setHealthStoreTenantId } = useHealthStore();
@@ -783,22 +782,8 @@ export default function HealthPage() {
         <div>
           <h1 className="text-2xl font-bold">健康管理</h1>
           <p className="text-muted-foreground">
-            従業員の健康診断・ストレスチェックを管理します
+            健康診断・ストレスチェックを一元管理
           </p>
-        </div>
-        <div className="flex gap-2">
-          {canViewAllEmployees && (
-            <Button variant="outline" onClick={() => setActiveTab('reports')}>
-              <Download className="mr-2 h-4 w-4" />
-              レポート出力
-            </Button>
-          )}
-          {canRegisterResults && (
-            <Button onClick={() => setCheckupRegistrationDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              健診結果登録
-            </Button>
-          )}
         </div>
       </div>
 
@@ -849,6 +834,7 @@ export default function HealthPage() {
             onViewCheckupDetails={handleViewDetails}
             onRefreshSchedules={() => fetchSchedules()}
             onUpdateScheduleStatus={updateScheduleStatus}
+            onRegisterResult={() => setCheckupRegistrationDialogOpen(true)}
             userRoles={userRoles}
           />
         </TabsContent>
@@ -966,7 +952,7 @@ export default function HealthPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  要再検査者リスト
+                  再検査対象者リスト
                 </CardTitle>
                 <CardDescription>精密検査が必要な方</CardDescription>
               </CardHeader>
@@ -980,7 +966,7 @@ export default function HealthPage() {
                       .filter((c) => followUpFilterStatus === 'all' || c.followUpStatus === followUpFilterStatus);
                     return filtered.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
-                        該当する要再検査者はいません
+                        該当する再検査対象者はいません
                       </p>
                     ) : filtered.map((checkup) => (
                       <div

@@ -1,9 +1,10 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, FileText, Settings2 } from 'lucide-react';
+import { Calendar, FileText, Settings2, ListChecks } from 'lucide-react';
 import type { HealthCheckup, HealthCheckupSchedule, ScheduleStatus } from '@/types/health';
 import { ScheduleList } from './schedule-list';
+import { ScheduleFullList } from './schedule-full-list';
 import { ResultsList } from './results-list';
 import { HealthMasterPanel } from '../master/health-master-panel';
 
@@ -26,6 +27,7 @@ interface CheckupSubTabsProps {
   onViewCheckupDetails: (checkup: HealthCheckup) => void;
   onRefreshSchedules: () => void;
   onUpdateScheduleStatus?: (id: string, status: ScheduleStatus) => Promise<void>;
+  onRegisterResult?: () => void;
   userRoles: string[];
 }
 
@@ -46,17 +48,28 @@ export function CheckupSubTabs({
   onViewCheckupDetails,
   onRefreshSchedules,
   onUpdateScheduleStatus,
+  onRegisterResult,
   userRoles,
 }: CheckupSubTabsProps) {
   const isAdmin = userRoles.includes('hr') || userRoles.includes('admin');
 
+  // タブ数に応じたグリッド
+  const tabCount = isAdmin ? 4 : 2;
+  const gridClass = `grid-cols-${tabCount}`;
+
   return (
     <Tabs defaultValue="schedule" className="space-y-4">
-      <TabsList className={`grid w-full max-w-md ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <TabsList className={`grid w-full max-w-lg ${gridClass}`}>
         <TabsTrigger value="schedule" className="gap-2">
           <Calendar className="h-4 w-4" />
           予定
         </TabsTrigger>
+        {isAdmin && (
+          <TabsTrigger value="schedule-list" className="gap-2">
+            <ListChecks className="h-4 w-4" />
+            予定一覧
+          </TabsTrigger>
+        )}
         <TabsTrigger value="results" className="gap-2">
           <FileText className="h-4 w-4" />
           結果
@@ -83,6 +96,15 @@ export function CheckupSubTabs({
         />
       </TabsContent>
 
+      {isAdmin && (
+        <TabsContent value="schedule-list">
+          <ScheduleFullList
+            schedules={schedules}
+            departments={departments}
+          />
+        </TabsContent>
+      )}
+
       <TabsContent value="results">
         <ResultsList
           checkups={checkups}
@@ -94,6 +116,8 @@ export function CheckupSubTabs({
           onFilterDepartmentChange={onResultFilterDepartmentChange}
           onFilterResultChange={onResultFilterResultChange}
           onViewDetails={onViewCheckupDetails}
+          isAdmin={isAdmin}
+          onRegisterResult={onRegisterResult}
         />
       </TabsContent>
 

@@ -394,22 +394,8 @@ export function CheckupRegistrationDialog({
             </div>
           </div>
 
-          {/* フラグ */}
+          {/* フラグ（総合判定プルダウンと重複するため要再検査・要治療は削除） */}
           <div className="flex gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={formData.requiresReexam}
-                onCheckedChange={(c) => setFormData({ ...formData, requiresReexam: !!c })}
-              />
-              <span className="text-sm">要再検査</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={formData.requiresTreatment}
-                onCheckedChange={(c) => setFormData({ ...formData, requiresTreatment: !!c })}
-              />
-              <span className="text-sm">要治療</span>
-            </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={formData.requiresGuidance}
