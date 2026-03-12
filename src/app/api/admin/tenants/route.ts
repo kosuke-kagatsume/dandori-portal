@@ -79,6 +79,8 @@ export async function POST(request: NextRequest) {
       status = 'trial',
     } = body;
 
+    const adminEmail = body.adminEmail;
+
     // バリデーション
     if (!name) {
       return NextResponse.json(
@@ -92,6 +94,19 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'サブドメインは必須です' },
         { status: 400 }
       );
+    }
+
+    // 管理者メールアドレスの重複チェック（テナント作成前に確認）
+    if (adminEmail) {
+      const existingUser = await prisma.users.findFirst({
+        where: { email: adminEmail },
+      });
+      if (existingUser) {
+        return NextResponse.json(
+          { success: false, error: 'このメールアドレスは既に登録されています。別のメールアドレスを使用してください。' },
+          { status: 400 }
+        );
+      }
     }
 
     // サブドメインの形式チェック（英数字とハイフンのみ）

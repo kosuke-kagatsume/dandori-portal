@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
 
-    return successResponse({ items }, { count: items.length });
+    return successResponse(items, { count: items.length });
   } catch (error) {
     return handleApiError(error, '締め日グループ一覧の取得');
   }

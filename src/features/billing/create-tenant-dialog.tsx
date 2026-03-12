@@ -203,7 +203,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
         ? new Date(new Date(formData.contractStartDate).getTime() + trialDays * 24 * 60 * 60 * 1000)
         : null;
 
-      // 1. データベースにテナントを作成
+      // 1. データベースにテナントを作成（adminEmailで事前に重複チェック）
       const tenantResponse = await fetch('/api/admin/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -215,6 +215,7 @@ export function CreateTenantDialog({ open, onClose }: CreateTenantDialogProps) {
           trialEndDate: trialEndDate?.toISOString(),
           contractStartDate: formData.contractStartDate,
           status: trialDays > 0 ? 'trial' : 'active',
+          adminEmail: formData.adminEmail,
         }),
       });
 

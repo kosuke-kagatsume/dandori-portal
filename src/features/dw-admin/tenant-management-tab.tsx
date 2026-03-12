@@ -14,18 +14,69 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, Plus, Search, Globe, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Building2, Plus, Search, Globe, AlertCircle, Loader2, Trash2, Mail } from 'lucide-react';
 import { useTenants, useTenantStats } from '@/hooks/use-dw-admin-api';
 import { CreateTenantDialog } from '@/features/billing/create-tenant-dialog';
+import { toast } from 'sonner';
 
 export function TenantManagementTab() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [resendingTenantId, setResendingTenantId] = useState<string | null>(null);
 
   // APIからデータ取得
   const { data: tenantsData, isLoading: tenantsLoading, error: tenantsError, mutate } = useTenants();
   const { data: statsData } = useTenantStats();
+
+  // テナント削除
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/dw-admin/tenants/${deleteTarget.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'テナントの削除に失敗しました');
+      }
+      toast.success(`テナント「${deleteTarget.name}」を削除しました`);
+      mutate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'テナントの削除に失敗しました');
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  // 招待メール再送
+  const handleResendInvite = async (tenantId: string, tenantName: string) => {
+    setResendingTenantId(tenantId);
+    try {
+      const res = await fetch(`/api/dw-admin/tenants/${tenantId}/resend-invite`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '招待メールの再送に失敗しました');
+      }
+      toast.success(`「${tenantName}」のオーナーへ招待メールを再送しました`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '招待メールの再送に失敗しました');
+    } finally {
+      setResendingTenantId(null);
+    }
+  };
 
   // ローディング中
   if (tenantsLoading) {
@@ -166,12 +217,13 @@ export function TenantManagementTab() {
                 <TableHead>総請求額</TableHead>
                 <TableHead>未払い額</TableHead>
                 <TableHead>ステータス</TableHead>
+                <TableHead className="text-right">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTenants.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     テナントが見つかりませんでした
                   </TableCell>
                 </TableRow>
@@ -235,6 +287,33 @@ export function TenantManagementTab() {
                           </Badge>
                         )}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="招待メール再送"
+                            disabled={resendingTenantId === tenant.id}
+                            onClick={() => handleResendInvite(tenant.id, tenant.name)}
+                          >
+                            {resendingTenantId === tenant.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Mail className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            title="テナント削除"
+                            onClick={() => setDeleteTarget({ id: tenant.id, name: tenant.name })}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })
@@ -252,6 +331,36 @@ export function TenantManagementTab() {
           mutate(); // テナント一覧を再取得
         }}
       />
+
+      {/* テナント削除確認ダイアログ */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>テナントを削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              テナント「{deleteTarget?.name}」とそのユーザー、請求データ等すべての関連データが完全に削除されます。
+              この操作は元に戻せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>キャンセル</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  削除中...
+                </>
+              ) : (
+                '削除する'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
