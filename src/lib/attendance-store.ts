@@ -405,11 +405,13 @@ export const useAttendanceStore = create<AttendanceStore>()(
 
         const { todayStatus } = get();
         const userId = todayStatus.userId;
+        const isReEntry = todayStatus.status === 'finished';
 
         // 新しい打刻APIを使用
         let attendanceRecordId: string | undefined;
-        let currentPunchOrder = 1;
-        const punchPairs: PunchPair[] = todayStatus.punchPairs || [];
+        // C1: 再出勤時は次のpunchOrderを使用
+        let currentPunchOrder = isReEntry ? (todayStatus.currentPunchOrder || 1) + 1 : 1;
+        const punchPairs: PunchPair[] = [...(todayStatus.punchPairs || [])];
 
         if (userId) {
           try {
@@ -439,7 +441,14 @@ export const useAttendanceStore = create<AttendanceStore>()(
             }
           } catch (error) {
             console.error('[AttendanceStore] Failed to check in via API:', error);
-            // APIエラーでも状態は更新（オフライン対応のため）
+            // C1: APIエラー時もpunchPairを追加（オフライン対応）
+            const existingPairIndex = punchPairs.findIndex(p => p.order === currentPunchOrder);
+            if (existingPairIndex < 0) {
+              punchPairs.push({
+                order: currentPunchOrder,
+                checkIn: { time: timeString, location: locationData },
+              });
+            }
           }
         }
 

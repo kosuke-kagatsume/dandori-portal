@@ -95,7 +95,38 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    return successResponse(attendance, {
+    // B2: work_patternsからworkingMinutes等を取得して各レコードに付加
+    const patternIds = Array.from(new Set(attendance.map(a => a.workPatternId).filter(Boolean))) as string[];
+    let patternMap: Record<string, { workingMinutes: number; workStartTime: string; workEndTime: string; breakStartTime: string | null; breakEndTime: string | null; breakDurationMinutes: number; isNightShift: boolean }> = {};
+    if (patternIds.length > 0) {
+      const patterns = await prisma.work_patterns.findMany({
+        where: { id: { in: patternIds }, tenantId },
+        select: { id: true, workingMinutes: true, workStartTime: true, workEndTime: true, breakStartTime: true, breakEndTime: true, breakDurationMinutes: true, isNightShift: true },
+      });
+      patternMap = Object.fromEntries(patterns.map(p => [p.id, p]));
+    }
+
+    // デフォルトパターンも取得（workPatternId未設定時用）
+    const defaultPattern = await prisma.work_patterns.findFirst({
+      where: { tenantId, isDefault: true },
+      select: { id: true, workingMinutes: true, workStartTime: true, workEndTime: true, breakStartTime: true, breakEndTime: true, breakDurationMinutes: true, isNightShift: true },
+    });
+
+    const enrichedAttendance = attendance.map(a => {
+      const pattern = (a.workPatternId && patternMap[a.workPatternId]) || defaultPattern;
+      return {
+        ...a,
+        workPatternWorkingMinutes: pattern?.workingMinutes ?? 480,
+        workPatternStartTime: pattern?.workStartTime ?? '09:00',
+        workPatternEndTime: pattern?.workEndTime ?? '18:00',
+        workPatternBreakStartTime: pattern?.breakStartTime ?? null,
+        workPatternBreakEndTime: pattern?.breakEndTime ?? null,
+        workPatternBreakDurationMinutes: pattern?.breakDurationMinutes ?? 60,
+        workPatternIsNightShift: pattern?.isNightShift ?? false,
+      };
+    });
+
+    return successResponse(enrichedAttendance, {
       count: attendance.length,
       pagination: {
         page,

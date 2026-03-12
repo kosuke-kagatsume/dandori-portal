@@ -21,6 +21,7 @@ import { StatCardsLoadingSkeleton, TableLoadingSkeleton } from '@/components/ui/
 import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { useAttendanceStore } from '@/lib/attendance-store';
+import { calculateAttendanceDetails } from '@/lib/attendance-calculation';
 
 // 重いコンポーネントをlazyロード
 const LazySimplePunchCard = lazy(() =>
@@ -207,7 +208,10 @@ export default function AttendancePage() {
       const [outH, outM] = lastCheckOut.split(':').map(Number);
       if (!isNaN(inH) && !isNaN(inM) && !isNaN(outH) && !isNaN(outM)) {
         workMinutes = Math.max(0, (outH * 60 + outM) - (inH * 60 + inM) - totalBreakMinutes);
-        overtimeMinutes = Math.max(0, workMinutes - 480); // 8時間超を残業
+        // B2: 今日のレコードから所定労働時間を取得
+        const todayRecord = allHistoryRecords.find(r => r.date === today);
+        const todayScheduledMinutes = todayRecord?.workPatternWorkingMinutes || 480;
+        overtimeMinutes = Math.max(0, workMinutes - todayScheduledMinutes);
       }
     }
 
@@ -229,7 +233,7 @@ export default function AttendancePage() {
               todayStatus.status === 'onBreak' ? 'present' : 'absent',
       memo: todayStatus.memo,
     });
-  }, [currentUser, todayStatus, addOrUpdateRecord]);
+  }, [currentUser, todayStatus, addOrUpdateRecord, allHistoryRecords]);
 
   // 打刻状態が変わったら勤怠一覧を同期
   useEffect(() => {
@@ -248,6 +252,9 @@ export default function AttendancePage() {
   // 月間勤怠一覧用のレコード
   const monthlyListRecords = useMemo(() => {
     return allHistoryRecords.map(record => {
+      // B2: 就業ルールの所定労働時間を使用（デフォルト480分=8時間）
+      const scheduledMinutes = record.workPatternWorkingMinutes || 480;
+
       // workMinutes が 0 でも checkIn/checkOut があれば再計算
       let workMinutes = record.workMinutes || 0;
       if (workMinutes === 0 && record.checkIn && record.checkOut) {
@@ -266,7 +273,26 @@ export default function AttendancePage() {
           workMinutes = Math.max(0, (outH * 60 + outM) - (inH * 60 + inM) - totalBreak);
         }
       }
-      const overtimeMinutes = record.overtimeMinutes || Math.max(0, workMinutes - 480);
+      // B2: 残業も就業ルールの所定時間で計算
+      const overtimeMinutes = record.overtimeMinutes || Math.max(0, workMinutes - scheduledMinutes);
+
+      // B1: 詳細時間計算
+      const calcResult = calculateAttendanceDetails(
+        {
+          workingMinutes: scheduledMinutes,
+          workStartTime: record.workPatternStartTime || '09:00',
+          workEndTime: record.workPatternEndTime || '18:00',
+          breakStartTime: record.workPatternBreakStartTime,
+          breakEndTime: record.workPatternBreakEndTime,
+          breakDurationMinutes: record.workPatternBreakDurationMinutes,
+          isNightShift: record.workPatternIsNightShift,
+        },
+        {
+          checkIn: record.checkIn,
+          checkOut: record.checkOut,
+          totalBreakMinutes: record.totalBreakMinutes || 0,
+        }
+      );
 
       return {
         date: record.date,
@@ -281,8 +307,19 @@ export default function AttendancePage() {
         breakEnd: record.breakEnd || undefined,
         breakMinutes: record.totalBreakMinutes,
         workHours: workMinutes / 60,
-        scheduledHours: 8.0,
+        scheduledHours: scheduledMinutes / 60,
         overtime: overtimeMinutes / 60,
+        // B1: 詳細時間フィールド
+        legalOvertime: calcResult.legalOvertimeMinutes / 60,
+        scheduledOvertime: calcResult.scheduledOvertimeMinutes / 60,
+        lateMinutes: calcResult.lateMinutes,
+        earlyLeaveMinutes: calcResult.earlyLeaveMinutes,
+        nightScheduled: calcResult.nightScheduledMinutes / 60,
+        nightOvertime: calcResult.nightOvertimeMinutes / 60,
+        nightLegalOvertime: calcResult.nightLegalOvertimeMinutes / 60,
+        deemedScheduled: calcResult.deemedScheduledMinutes / 60,
+        deemedOvertime: calcResult.deemedOvertimeMinutes / 60,
+        deemedLegalOvertime: calcResult.deemedLegalOvertimeMinutes / 60,
         workLocation: record.workLocation as 'office' | 'home' | 'client' | 'other' | undefined,
         workPattern: record.workPatternName || undefined,
         note: record.memo || undefined,

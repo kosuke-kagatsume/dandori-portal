@@ -51,7 +51,6 @@ export function SimplePunchCard() {
     checkOut,
     checkAndResetForNewDay,
     checkAndResetForUserChange,
-    resetTodayStatus,
   } = useAttendanceStore();
 
   const { attendanceSettings } = useCompanySettingsStore();
@@ -115,10 +114,7 @@ export function SimplePunchCard() {
   };
 
   const confirmCheckIn = async () => {
-    // If coming from finished state, reset first for multiple check-ins
-    if (todayStatus.status === 'finished') {
-      resetTodayStatus();
-    }
+    // C1: 再出勤時はリセットせず、checkInが新しいpunchPairを追加する
     await checkIn(workLocation);
     setShowLocationDialog(false);
     const time = (currentTime || new Date()).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });

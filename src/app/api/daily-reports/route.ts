@@ -10,7 +10,12 @@ import { type StoredReport, getReportsForTenant } from './_store';
 // GET - 日報一覧取得
 export async function GET(request: NextRequest) {
   try {
-    const tenantId = await getTenantIdFromRequest(request);
+    let tenantId: string;
+    try {
+      tenantId = await getTenantIdFromRequest(request);
+    } catch {
+      return errorResponse('テナントIDが取得できません。再度ログインしてください。', 401);
+    }
     const { searchParams } = new URL(request.url);
     const employeeId = searchParams.get('employeeId');
     const startDate = searchParams.get('startDate');
@@ -49,7 +54,12 @@ export async function GET(request: NextRequest) {
 // POST - 日報作成
 export async function POST(request: NextRequest) {
   try {
-    const tenantId = await getTenantIdFromRequest(request);
+    let tenantId: string;
+    try {
+      tenantId = await getTenantIdFromRequest(request);
+    } catch {
+      return errorResponse('テナントIDが取得できません。再度ログインしてください。', 401);
+    }
     const body = await request.json();
 
     if (!body.employeeId || !body.date || !body.templateId) {

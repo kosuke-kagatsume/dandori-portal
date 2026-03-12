@@ -77,6 +77,7 @@ interface AttendanceRecord {
   // 追加フィールド（Phase 2要件）
   attendanceType?: string; // 勤怠区分
   scheduledHours?: number; // 所定
+  scheduledOvertime?: number; // 所定外
   legalOvertime?: number; // 法定外
   nightScheduled?: number; // 深夜所定
   nightOvertime?: number; // 深夜所定外
@@ -96,7 +97,8 @@ interface MonthlyAttendanceListProps {
 
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
-const WORK_PATTERNS = [
+// B3: フォールバック用パターン（APIから取得できない場合）
+const DEFAULT_WORK_PATTERNS = [
   { value: 'normal', label: '通常勤務' },
   { value: 'flex', label: 'フレックス' },
   { value: 'shift_early', label: '早番' },
@@ -131,6 +133,8 @@ interface PunchPairDisplay {
   checkOut?: { time: string; method: string };
   breakStart?: { time: string; method: string };
   breakEnd?: { time: string; method: string };
+  // C2: 複数休憩対応
+  breaks?: Array<{ start?: { time: string; method: string }; end?: { time: string; method: string } }>;
 }
 
 // punchHistoryから打刻ペアを抽出
@@ -143,24 +147,59 @@ function extractPunchPairs(punchHistory?: PunchRecord[]): PunchPairDisplay[] {
 
   const pairs: PunchPairDisplay[] = [];
   let currentPair: PunchPairDisplay | null = null;
+  let currentBreak: { start?: { time: string; method: string }; end?: { time: string; method: string } } | null = null;
 
   for (const punch of sorted) {
     const label = PUNCH_METHOD_LABELS[punch.method] || punch.method;
     if (punch.type === 'check_in') {
-      if (currentPair) pairs.push(currentPair);
-      currentPair = { checkIn: { time: punch.time, method: label } };
+      if (currentPair) {
+        if (currentBreak) {
+          currentPair.breaks = currentPair.breaks || [];
+          currentPair.breaks.push(currentBreak);
+          currentBreak = null;
+        }
+        pairs.push(currentPair);
+      }
+      currentPair = { checkIn: { time: punch.time, method: label }, breaks: [] };
     } else if (currentPair) {
       if (punch.type === 'check_out') {
+        if (currentBreak) {
+          currentPair.breaks = currentPair.breaks || [];
+          currentPair.breaks.push(currentBreak);
+          currentBreak = null;
+        }
         currentPair.checkOut = { time: punch.time, method: label };
       } else if (punch.type === 'break_start') {
-        currentPair.breakStart = { time: punch.time, method: label };
+        if (currentBreak) {
+          currentPair.breaks = currentPair.breaks || [];
+          currentPair.breaks.push(currentBreak);
+        }
+        currentBreak = { start: { time: punch.time, method: label } };
+        // 最初の休憩はbreakStart/breakEndにも保存（後方互換）
+        if (!currentPair.breakStart) {
+          currentPair.breakStart = { time: punch.time, method: label };
+        }
       } else if (punch.type === 'break_end') {
-        currentPair.breakEnd = { time: punch.time, method: label };
+        if (currentBreak) {
+          currentBreak.end = { time: punch.time, method: label };
+          currentPair.breaks = currentPair.breaks || [];
+          currentPair.breaks.push(currentBreak);
+          currentBreak = null;
+        }
+        if (!currentPair.breakEnd) {
+          currentPair.breakEnd = { time: punch.time, method: label };
+        }
       }
     }
   }
 
-  if (currentPair) pairs.push(currentPair);
+  if (currentPair) {
+    if (currentBreak) {
+      currentPair.breaks = currentPair.breaks || [];
+      currentPair.breaks.push(currentBreak);
+    }
+    pairs.push(currentPair);
+  }
   return pairs;
 }
 
@@ -174,6 +213,22 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
 
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+  // B3: APIから勤務パターンを取得
+  const [workPatterns, setWorkPatterns] = useState<Array<{ value: string; label: string }>>([]);
+  useEffect(() => {
+    fetch('/api/attendance-master/work-patterns?activeOnly=true')
+      .then(res => res.json())
+      .then(result => {
+        const patterns = result.data?.patterns;
+        if (patterns && patterns.length > 0) {
+          setWorkPatterns(patterns.map((p: { id: string; name: string }) => ({ value: p.id, label: p.name })));
+        } else {
+          setWorkPatterns(DEFAULT_WORK_PATTERNS);
+        }
+      })
+      .catch(() => setWorkPatterns(DEFAULT_WORK_PATTERNS));
+  }, []);
 
   // Initialize date on client side to avoid SSR/CSR hydration mismatch
   useEffect(() => {
@@ -238,13 +293,39 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
     setDetailDialogOpen(true);
   };
 
-  // Handle edit click
-  const handleEditClick = (date: Date) => {
+  // C3: Handle edit click - APIから最新の打刻履歴を取得
+  const handleEditClick = async (date: Date) => {
     setSelectedDate(date);
     const record = getRecordForDate(date);
+    const dateStr = format(date, 'yyyy-MM-dd');
+
     if (record) {
       setEditingRecord(record);
-      const pairs = extractPunchPairs(record.punchHistory);
+
+      // C3: ローカルにpunchHistoryがない場合はAPIから取得
+      let pairs = extractPunchPairs(record.punchHistory);
+      if (pairs.length === 0 && currentUser?.id) {
+        try {
+          const res = await fetch(`/api/attendance/punches?userId=${currentUser.id}&date=${dateStr}`);
+          if (res.ok) {
+            const result = await res.json();
+            const punches = result.data?.punches || [];
+            if (punches.length > 0) {
+              const punchRecords: PunchRecord[] = punches.map((p: { id: string; punchType: string; punchTime: string }) => ({
+                id: p.id,
+                type: p.punchType as PunchRecord['type'],
+                time: new Date(p.punchTime).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }),
+                method: 'web' as const,
+                createdAt: p.punchTime,
+              }));
+              pairs = extractPunchPairs(punchRecords);
+            }
+          }
+        } catch {
+          // APIエラーはフォールバック
+        }
+      }
+
       if (pairs.length > 0) {
         setEditPunchPairs(pairs.map(p => ({
           checkIn: p.checkIn?.time || '',
@@ -262,7 +343,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
       }
     } else {
       setEditingRecord({
-        date: format(date, 'yyyy-MM-dd'),
+        date: dateStr,
         status: isWeekend(date) ? 'weekend' : 'absent',
       });
       setEditPunchPairs([{ checkIn: '', checkOut: '', breakStart: '', breakEnd: '' }]);
@@ -292,6 +373,8 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
       });
 
       try {
+        // B3: workPatternId/Name を含めて更新
+        const selectedPattern = workPatterns.find(p => p.value === editingRecord.workPattern || p.label === editingRecord.workPattern);
         await onRecordUpdate(editingRecord.date, {
           ...editingRecord,
           checkIn: editPunchPairs[0]?.checkIn || undefined,
@@ -299,7 +382,11 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
           breakStart: editPunchPairs[0]?.breakStart || '',
           breakEnd: editPunchPairs[0]?.breakEnd || '',
           punchHistory,
-        });
+          ...(selectedPattern && {
+            workPatternId: selectedPattern.value,
+            workPatternName: selectedPattern.label,
+          }),
+        } as Partial<AttendanceRecord> & { workPatternId?: string; workPatternName?: string });
         toast.success('勤怠記録を更新しました');
       } catch {
         toast.error('勤怠記録の更新に失敗しました');
@@ -449,6 +536,14 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                     const punchPairs = extractPunchPairs(record?.punchHistory);
                     const hasPunchPairs = punchPairs.length > 0;
 
+                    // B4: sticky列の背景色を行の状態と一致させる
+                    const stickyBg = cn(
+                      'bg-background',
+                      isToday(day) && 'bg-primary/5',
+                      (isSunday || record?.status === 'holiday') && 'bg-red-50 dark:bg-red-950/20',
+                      isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
+                    );
+
                     return (
                       <Fragment key={day.toISOString()}>
                       <TableRow
@@ -460,7 +555,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         )}
                       >
                         {/* 詳細 */}
-                        <TableCell className="text-center sticky left-0 bg-background z-10">
+                        <TableCell className={cn("text-center sticky left-0 z-10", stickyBg)}>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -473,7 +568,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 編集 */}
-                        <TableCell className="text-center sticky left-[60px] bg-background z-10">
+                        <TableCell className={cn("text-center sticky left-[60px] z-10", stickyBg)}>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -486,7 +581,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 申請 */}
-                        <TableCell className="text-center sticky left-[120px] bg-background z-10">
+                        <TableCell className={cn("text-center sticky left-[120px] z-10", stickyBg)}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`${format(day, 'M月d日')}の申請メニュー`}>
@@ -508,7 +603,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                         </TableCell>
 
                         {/* 日付 */}
-                        <TableCell className="sticky left-[180px] bg-background z-10">
+                        <TableCell className={cn("sticky left-[180px] z-10", stickyBg)}>
                           <div className={cn(
                             'font-medium',
                             isSunday && 'text-red-500',
@@ -544,7 +639,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
 
                         {/* 勤務パターン */}
                         <TableCell className="text-sm text-muted-foreground">
-                          {record?.workPattern || WORK_PATTERNS.find(p => p.value === record?.workPattern)?.label || '-'}
+                          {record?.workPattern || workPatterns.find(p => p.value === record?.workPattern)?.label || '-'}
                         </TableCell>
 
                         {/* 出勤 */}
@@ -645,7 +740,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                           {record?.note || '-'}
                         </TableCell>
                       </TableRow>
-                      {/* 複数打刻の追加行 */}
+                      {/* C4: 複数打刻の追加行 */}
                       {punchPairs.slice(1).map((pair, idx) => (
                         <TableRow
                           key={`${day.toISOString()}-pair-${idx}`}
@@ -655,10 +750,12 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                             isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
                           )}
                         >
-                          <TableCell className="sticky left-0 bg-background z-10" />
-                          <TableCell className="sticky left-[60px] bg-background z-10" />
-                          <TableCell className="sticky left-[120px] bg-background z-10" />
-                          <TableCell className="sticky left-[180px] bg-background z-10" />
+                          <TableCell className={cn("sticky left-0 z-10", stickyBg)} />
+                          <TableCell className={cn("sticky left-[60px] z-10", stickyBg)} />
+                          <TableCell className={cn("sticky left-[120px] z-10", stickyBg)} />
+                          <TableCell className={cn("sticky left-[180px] z-10", stickyBg)}>
+                            <span className="text-xs text-muted-foreground">{idx + 2}回目</span>
+                          </TableCell>
                           <TableCell />
                           <TableCell />
                           <TableCell />
@@ -712,7 +809,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <span className="text-sm text-muted-foreground">就業ルール</span>
                 <span className="text-sm font-medium">
-                  {WORK_PATTERNS.find(p => p.value === editingRecord.workPattern)?.label || '通常勤務'}
+                  {editingRecord.workPattern || workPatterns.find(p => p.value === editingRecord.workPattern)?.label || '通常勤務'}
                 </span>
               </div>
 
@@ -932,7 +1029,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {WORK_PATTERNS.map(pattern => (
+                    {workPatterns.map(pattern => (
                       <SelectItem key={pattern.value} value={pattern.value}>
                         {pattern.label}
                       </SelectItem>

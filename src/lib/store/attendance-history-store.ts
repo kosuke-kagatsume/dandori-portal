@@ -104,6 +104,14 @@ function normalizeApiRecord(record: Record<string, unknown>): Record<string, unk
     breakStart: formatTimeToHHmm(record.breakStart as string | null),
     breakEnd: formatTimeToHHmm(record.breakEnd as string | null),
     ...(punchHistory && punchHistory.length > 0 && { punchHistory }),
+    // B2: 就業ルール連動フィールド
+    ...(record.workPatternWorkingMinutes !== undefined && { workPatternWorkingMinutes: record.workPatternWorkingMinutes }),
+    ...(record.workPatternStartTime !== undefined && { workPatternStartTime: record.workPatternStartTime }),
+    ...(record.workPatternEndTime !== undefined && { workPatternEndTime: record.workPatternEndTime }),
+    ...(record.workPatternBreakStartTime !== undefined && { workPatternBreakStartTime: record.workPatternBreakStartTime }),
+    ...(record.workPatternBreakEndTime !== undefined && { workPatternBreakEndTime: record.workPatternBreakEndTime }),
+    ...(record.workPatternBreakDurationMinutes !== undefined && { workPatternBreakDurationMinutes: record.workPatternBreakDurationMinutes }),
+    ...(record.workPatternIsNightShift !== undefined && { workPatternIsNightShift: record.workPatternIsNightShift }),
   };
 }
 
@@ -143,6 +151,25 @@ export interface AttendanceRecord {
   approvalReason?: string;
   workPatternId?: string;
   workPatternName?: string;
+  // B2: 就業ルール連動（APIから取得）
+  workPatternWorkingMinutes?: number;
+  workPatternStartTime?: string;
+  workPatternEndTime?: string;
+  workPatternBreakStartTime?: string | null;
+  workPatternBreakEndTime?: string | null;
+  workPatternBreakDurationMinutes?: number;
+  workPatternIsNightShift?: boolean;
+  // B1: 詳細時間計算結果
+  lateMinutes?: number;
+  earlyLeaveMinutes?: number;
+  nightScheduledMinutes?: number;
+  nightOvertimeMinutes?: number;
+  nightLegalOvertimeMinutes?: number;
+  deemedScheduledMinutes?: number;
+  deemedOvertimeMinutes?: number;
+  deemedLegalOvertimeMinutes?: number;
+  legalOvertimeMinutes?: number;
+  scheduledOvertimeMinutes?: number;
   // 打刻履歴（P.2 複数打刻の履歴保存）
   punchHistory?: PunchRecord[];
   createdAt: string;
@@ -291,6 +318,9 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             // syncPunchToHistory（punchHistory未指定）→ 打刻レコードを触らない
             // 編集ダイアログ（punchHistory指定あり）→ 打刻を上書き
             punchHistory: record.punchHistory !== undefined ? record.punchHistory : undefined,
+            // B3: workPatternId/Name を含める
+            workPatternId: record.workPatternId || existingRecord?.workPatternId,
+            workPatternName: record.workPatternName || existingRecord?.workPatternName,
           };
 
           const upsertedRecord = await apiUpsertAttendanceRecord(recordToUpsert);

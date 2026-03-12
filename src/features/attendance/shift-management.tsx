@@ -110,16 +110,34 @@ export function ShiftManagement() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/users?tenantId=${tenantId}&limit=100`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setTeamMembers(data.data.map((u: { id: string; name: string; department: string | null }) => ({
-            id: u.id,
-            name: u.name,
-            department: u.department || '未設定',
-          })));
+      // E1/F1: 全スタッフ表示のためlimit拡大 + ページネーション
+      let allUsers: Array<{ id: string; name: string; department: string | null }> = [];
+      let page = 1;
+      const pageLimit = 200;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await fetch(`/api/users?tenantId=${tenantId}&limit=${pageLimit}&page=${page}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            allUsers = allUsers.concat(data.data);
+            hasMore = data.data.length >= pageLimit;
+            page++;
+          } else {
+            hasMore = false;
+          }
+        } else {
+          hasMore = false;
         }
+      }
+
+      if (allUsers.length > 0) {
+        setTeamMembers(allUsers.map((u) => ({
+          id: u.id,
+          name: u.name,
+          department: u.department || '未設定',
+        })));
       }
     } catch (error) {
       console.error('Failed to fetch team members:', error);
@@ -335,7 +353,7 @@ export function ShiftManagement() {
               <ScrollArea className="w-full max-h-[calc(100vh-250px)] [&>div>div[style]]:!block [&_[data-radix-scroll-area-scrollbar]]:w-3 [&_[data-radix-scroll-area-scrollbar]]:opacity-100">
                 <div className="min-w-[1600px]">
                   <Table>
-                    <TableHeader className="sticky top-0 z-20">
+                    <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
                         <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
                         {monthDays.map(day => {

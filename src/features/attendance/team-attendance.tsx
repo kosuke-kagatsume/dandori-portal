@@ -148,7 +148,7 @@ export function TeamAttendance() {
   const [memberDetailDialogOpen, setMemberDetailDialogOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
-  const [actionType, setActionType] = useState<'approve' | 'reject' | 'close' | 'unlock' | 'cancel_approval' | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | 'close' | 'unlock' | 'cancel_approval' | 'proxy_close_request' | null>(null);
   const [dayDetailDialogOpen, setDayDetailDialogOpen] = useState(false);
   const [selectedDayDetail, setSelectedDayDetail] = useState<{ memberName: string; date: string; checkIn: string | null; checkOut: string | null; status: string } | null>(null);
   const [actionMemo, setActionMemo] = useState('');
@@ -419,6 +419,7 @@ export function TeamAttendance() {
       close: '勤怠締め',
       unlock: '締め解除',
       cancel_approval: '承認解除',
+      proxy_close_request: '代理締め申請',
     };
 
     if (actionType && selectedMemberId) {
@@ -444,6 +445,9 @@ export function TeamAttendance() {
           break;
         case 'cancel_approval':
           updated = { ...prev, managerApproved: false };
+          break;
+        case 'proxy_close_request':
+          updated = { ...prev, closingRequested: true };
           break;
       }
 
@@ -560,9 +564,9 @@ export function TeamAttendance() {
               <ScrollArea className="w-full">
                 <div className="min-w-[1600px]">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
-                        <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-10">氏名</TableHead>
+                        <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
                         <TableHead className="w-[60px] text-center">一覧</TableHead>
                         <TableHead className="w-[80px] text-center">承認申請</TableHead>
                         <TableHead className="w-[80px] text-center">上長承認</TableHead>
@@ -752,6 +756,16 @@ export function TeamAttendance() {
                                       >
                                         締め解除
                                       </Button>
+                                      {/* D2: 代理締め申請 */}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => handleAction(member.memberId, 'proxy_close_request')}
+                                        disabled={member.closingRequested || member.attendanceClosed}
+                                      >
+                                        代理締め
+                                      </Button>
                                     </>
                                   )}
                                 </div>
@@ -772,7 +786,7 @@ export function TeamAttendance() {
               <div className="border rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
                         <TableHead>氏名</TableHead>
                         <TableHead>部署</TableHead>
@@ -891,88 +905,124 @@ export function TeamAttendance() {
                 </div>
               </div>
 
-              {/* 日次一覧 */}
-              <div className="border rounded-lg overflow-hidden max-h-[400px] overflow-auto">
-                <Table>
-                  <TableHeader className="sticky top-0 z-10">
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-[100px]">日付</TableHead>
-                      <TableHead className="text-center w-[70px]">ステータス</TableHead>
-                      <TableHead className="text-center w-[80px]">勤務パターン</TableHead>
-                      <TableHead className="text-center w-[55px]">出勤</TableHead>
-                      <TableHead className="text-center w-[55px]">退勤</TableHead>
-                      <TableHead className="text-center w-[55px]">休憩入</TableHead>
-                      <TableHead className="text-center w-[55px]">休憩戻</TableHead>
-                      <TableHead className="text-right w-[55px]">総労働</TableHead>
-                      <TableHead className="text-right w-[55px]">残業</TableHead>
-                      <TableHead className="w-[100px]">備考</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {monthDays.map(day => {
-                      const dateStr = format(day, 'yyyy-MM-dd');
-                      const record = selectedMember.dailyRecords.get(dateStr);
-                      const dayOfWeek = getDay(day);
-                      const isWeekendDay = dayOfWeek === 0 || dayOfWeek === 6;
-                      const workHours = record ? (record.workMinutes || 0) / 60 : 0;
-                      const overtimeHours = record ? (record.overtimeMinutes || 0) / 60 : 0;
-
-                      return (
-                        <TableRow
-                          key={day.toISOString()}
-                          className={cn(
-                            isWeekendDay && 'bg-gray-50 dark:bg-gray-900'
-                          )}
-                        >
-                          <TableCell className={cn(
-                            'font-medium text-sm',
-                            dayOfWeek === 0 && 'text-red-500',
-                            dayOfWeek === 6 && 'text-blue-500'
-                          )}>
-                            {format(day, 'MM/dd')}（{WEEKDAY_LABELS[dayOfWeek]}）
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {isWeekendDay ? (
-                              <Badge variant="outline" className="text-xs">休日</Badge>
-                            ) : record?.status === 'absent' ? (
-                              <Badge variant="destructive" className="text-xs">欠勤</Badge>
-                            ) : record?.checkIn ? (
-                              <Badge className="bg-green-500 text-xs">出勤</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs">未出勤</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center text-xs text-muted-foreground">
-                            {record?.workPatternName || '-'}
-                          </TableCell>
-                          <TableCell className="text-center font-mono text-sm">
-                            {record?.checkIn || '-'}
-                          </TableCell>
-                          <TableCell className="text-center font-mono text-sm">
-                            {record?.checkOut || '-'}
-                          </TableCell>
-                          <TableCell className="text-center font-mono text-sm">
-                            {record?.breakStart || '-'}
-                          </TableCell>
-                          <TableCell className="text-center font-mono text-sm">
-                            {record?.breakEnd || '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm">
-                            {workHours > 0 ? workHours.toFixed(1) : '-'}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm">
-                            {overtimeHours > 0 ? (
-                              <span className="text-orange-600">{overtimeHours.toFixed(1)}</span>
-                            ) : '-'}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]">
-                            {record?.memo || '-'}
-                          </TableCell>
+              {/* D1: 日次一覧（勤怠一覧と同じ項目） */}
+              <div className="border rounded-lg overflow-hidden">
+                <ScrollArea className="w-full max-h-[400px]">
+                  <div className="min-w-[1600px]">
+                    <Table>
+                      <TableHeader className="sticky top-0 z-20 bg-background">
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="w-[100px] sticky left-0 bg-muted/50 z-30">日付</TableHead>
+                          <TableHead className="text-center w-[70px]">ステータス</TableHead>
+                          <TableHead className="text-center w-[80px]">勤務パターン</TableHead>
+                          <TableHead className="text-center w-[55px]">出勤</TableHead>
+                          <TableHead className="text-center w-[55px]">退勤</TableHead>
+                          <TableHead className="text-center w-[55px]">休憩入</TableHead>
+                          <TableHead className="text-center w-[55px]">休憩戻</TableHead>
+                          <TableHead className="text-right w-[55px]">総労働</TableHead>
+                          <TableHead className="text-right w-[55px]">所定</TableHead>
+                          <TableHead className="text-right w-[55px]">所定外</TableHead>
+                          <TableHead className="text-right w-[55px]">法定外</TableHead>
+                          <TableHead className="text-right w-[60px]">深夜所定</TableHead>
+                          <TableHead className="text-right w-[70px]">深夜所定外</TableHead>
+                          <TableHead className="text-right w-[70px]">深夜法定外</TableHead>
+                          <TableHead className="text-right w-[50px]">遅刻</TableHead>
+                          <TableHead className="text-right w-[50px]">早退</TableHead>
+                          <TableHead className="text-right w-[50px]">休憩</TableHead>
+                          <TableHead className="w-[100px]">備考</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {monthDays.map(day => {
+                          const dateStr = format(day, 'yyyy-MM-dd');
+                          const record = selectedMember.dailyRecords.get(dateStr);
+                          const dayOfWeek = getDay(day);
+                          const isSunday = dayOfWeek === 0;
+                          const isSaturday = dayOfWeek === 6;
+                          const isWeekendDay = isSunday || isSaturday;
+                          const workHours = record ? (record.workMinutes || 0) / 60 : 0;
+                          const scheduledHours = record ? Math.min(workHours, 8) : 0;
+                          const scheduledOvertimeHours = record ? Math.max(0, workHours - 8) : 0;
+                          const legalOvertimeHours = record ? Math.max(0, workHours - 8) : 0;
+                          const breakMinutes = record?.totalBreakMinutes || 0;
+                          const dateStickyBg = cn(
+                            'bg-background',
+                            isToday(day) && 'bg-primary/5',
+                            isSunday && 'bg-red-50 dark:bg-red-950/20',
+                            isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
+                          );
+
+                          return (
+                            <TableRow
+                              key={day.toISOString()}
+                              className={cn(
+                                isToday(day) && 'bg-primary/5',
+                                isSunday && 'bg-red-50 dark:bg-red-950/20',
+                                isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
+                              )}
+                            >
+                              <TableCell className={cn('font-medium text-sm sticky left-0 z-10', dateStickyBg, isSunday && 'text-red-500', isSaturday && 'text-blue-500')}>
+                                {format(day, 'MM/dd')}（{WEEKDAY_LABELS[dayOfWeek]}）
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {isWeekendDay ? (
+                                  <Badge variant="outline" className="text-xs">休日</Badge>
+                                ) : record?.status === 'absent' ? (
+                                  <Badge variant="destructive" className="text-xs">欠勤</Badge>
+                                ) : record?.checkIn ? (
+                                  <Badge className="bg-green-500 text-xs">出勤</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs">未出勤</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center text-xs text-muted-foreground">
+                                {record?.workPatternName || '-'}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm">
+                                {record?.checkIn || '-'}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm">
+                                {record?.checkOut || '-'}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm">
+                                {record?.breakStart || '-'}
+                              </TableCell>
+                              <TableCell className="text-center font-mono text-sm">
+                                {record?.breakEnd || '-'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {workHours > 0 ? workHours.toFixed(1) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {scheduledHours > 0 ? scheduledHours.toFixed(1) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {scheduledOvertimeHours > 0 ? scheduledOvertimeHours.toFixed(1) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {legalOvertimeHours > 0 ? (
+                                  <span className="text-orange-600">{legalOvertimeHours.toFixed(1)}</span>
+                                ) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">-</TableCell>
+                              <TableCell className="text-right font-mono text-sm">-</TableCell>
+                              <TableCell className="text-right font-mono text-sm">-</TableCell>
+                              <TableCell className="text-right font-mono text-sm">-</TableCell>
+                              <TableCell className="text-right font-mono text-sm">-</TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {breakMinutes > 0 ? `${Math.floor(breakMinutes / 60)}:${String(breakMinutes % 60).padStart(2, '0')}` : '-'}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]">
+                                {record?.memo || '-'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
               </div>
             </div>
           )}
@@ -995,6 +1045,7 @@ export function TeamAttendance() {
               {actionType === 'close' && '勤怠締めの確認'}
               {actionType === 'unlock' && '締め解除の確認'}
               {actionType === 'cancel_approval' && '承認解除の確認'}
+              {actionType === 'proxy_close_request' && '代理締め申請の確認'}
             </DialogTitle>
             <DialogDescription>
               {selectedMember?.memberName}さんに対して操作を実行します。

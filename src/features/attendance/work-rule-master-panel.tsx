@@ -279,16 +279,16 @@ function showSection(type: WorkRuleType, section: string): boolean {
     flexScope: ['flextime'],
     variablePeriod: ['monthly_variable', 'yearly_variable'],
     variableScope: ['monthly_variable', 'yearly_variable'],
-    workTime: ['standard', 'shift', 'manager', 'monthly_variable', 'yearly_variable'],
+    workTime: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     workPattern: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     lateEarlyTally: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    scheduledTallyRange: ['standard', 'shift', 'monthly_variable', 'yearly_variable'],
-    legalHolidayDesignation: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
+    scheduledTallyRange: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
+    legalHolidayDesignation: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     schedule: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     breakPunch: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     leave: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     agreement36: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    unapprovedPunch: ['standard', 'shift', 'monthly_variable', 'yearly_variable'],
+    unapprovedPunch: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
   };
   return matrix[section]?.includes(type) ?? false;
 }
@@ -731,7 +731,7 @@ export function WorkRuleMasterPanel() {
 
       {/* ── 作成・編集ダイアログ（全セクション） ── */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
             <DialogTitle>
               {editingRule ? '就業ルールを編集' : '就業ルールを作成'}
@@ -741,7 +741,7 @@ export function WorkRuleMasterPanel() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0 px-6 [&_[data-radix-scroll-area-scrollbar]]:w-3 [&_[data-radix-scroll-area-scrollbar]]:opacity-100">
+          <ScrollArea className="flex-1 min-h-0 px-6 [&_[data-radix-scroll-area-scrollbar]]:w-4 [&_[data-radix-scroll-area-scrollbar]]:opacity-100 [&_[data-radix-scroll-area-scrollbar]_[data-radix-scroll-area-thumb]]:bg-muted-foreground/40 [&_[data-radix-scroll-area-scrollbar]]:bg-muted/30">
             <div className="grid gap-4 py-4 pr-4">
 
               {/* ━━━ A1: ルール名 + 種別 ━━━ */}
