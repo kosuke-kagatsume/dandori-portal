@@ -16,6 +16,9 @@ import { DeductionItemsPanel } from './payroll/DeductionItemsPanel';
 import { ResidentTaxPanel } from './payroll/ResidentTaxPanel';
 import { ClosingDayGroupPanel } from './payroll/ClosingDayGroupPanel';
 import { PayCategoryPanel } from './payroll/PayCategoryPanel';
+import { OfficePanel } from './payroll/OfficePanel';
+import { SocialInsurancePanel } from './payroll/SocialInsurancePanel';
+import { LaborInsurancePanel } from './payroll/LaborInsurancePanel';
 
 // 支払スケジュールサブタブ
 function PayScheduleSubTab({ saveSettings }: { saveSettings: () => void }) {
@@ -126,7 +129,7 @@ function PayScheduleSubTab({ saveSettings }: { saveSettings: () => void }) {
   );
 }
 
-// 給与体系サブタブ
+// 給与形態サブタブ（月給/時給/日給/賞与マスタ）
 function PayStructureSubTab({ saveSettings }: { saveSettings: () => void }) {
   const {
     payrollSettings,
@@ -153,15 +156,23 @@ function PayStructureSubTab({ saveSettings }: { saveSettings: () => void }) {
     }
   };
 
+  const payTypes = [
+    { key: 'monthly', label: '月給', description: '月額固定の給与形態', icon: '💰' },
+    { key: 'hourly', label: '時給', description: '時間単位の給与形態', icon: '⏰' },
+    { key: 'daily', label: '日給', description: '日額固定の給与形態', icon: '📅' },
+    { key: 'bonus', label: '賞与', description: '賞与（ボーナス）の設定', icon: '🎁' },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* デフォルト給与形態 */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <DollarSign className="w-5 h-5" />
-            <CardTitle>給与体系設定</CardTitle>
+            <CardTitle>給与形態設定</CardTitle>
           </div>
-          <CardDescription>給与の基本設定を行います</CardDescription>
+          <CardDescription>デフォルトの給与形態と基本設定を行います</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -210,6 +221,28 @@ function PayStructureSubTab({ saveSettings }: { saveSettings: () => void }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* 給与形態マスタ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>給与形態マスタ</CardTitle>
+          <CardDescription>月給・時給・日給・賞与の各形態を管理します</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {payTypes.map(pt => (
+              <div key={pt.key} className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{pt.icon}</span>
+                  <h4 className="font-medium">{pt.label}</h4>
+                </div>
+                <p className="text-sm text-muted-foreground">{pt.description}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end">
         <Button onClick={handleSave} size="lg" disabled={isSaving || isLoading}>
           {isSaving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />保存中...</>) : '設定を保存'}
@@ -223,14 +256,17 @@ function PayStructureSubTab({ saveSettings }: { saveSettings: () => void }) {
 export function PayrollTab({ settings: _settings, updateSettings: _updateSettings, saveSettings: _saveSettings }: SettingsTabProps) {
   return (
     <Tabs defaultValue="schedule" className="space-y-4">
-      <TabsList className="grid w-full grid-cols-7">
+      <TabsList className="flex w-full overflow-x-auto">
         <TabsTrigger value="schedule">支払スケジュール</TabsTrigger>
-        <TabsTrigger value="pay-structure">給与体系</TabsTrigger>
+        <TabsTrigger value="pay-structure">給与形態</TabsTrigger>
         <TabsTrigger value="allowance-items">支給項目</TabsTrigger>
         <TabsTrigger value="deduction-items">控除項目</TabsTrigger>
         <TabsTrigger value="resident-tax">住民税</TabsTrigger>
         <TabsTrigger value="closing-day-groups">締め日グループ</TabsTrigger>
         <TabsTrigger value="pay-categories">給与カテゴリ</TabsTrigger>
+        <TabsTrigger value="office">事業所</TabsTrigger>
+        <TabsTrigger value="social-insurance">社会保険</TabsTrigger>
+        <TabsTrigger value="labor-insurance">労働保険</TabsTrigger>
       </TabsList>
 
       <TabsContent value="schedule">
@@ -259,6 +295,18 @@ export function PayrollTab({ settings: _settings, updateSettings: _updateSetting
 
       <TabsContent value="pay-categories">
         <PayCategoryPanel />
+      </TabsContent>
+
+      <TabsContent value="office">
+        <OfficePanel />
+      </TabsContent>
+
+      <TabsContent value="social-insurance">
+        <SocialInsurancePanel />
+      </TabsContent>
+
+      <TabsContent value="labor-insurance">
+        <LaborInsurancePanel />
       </TabsContent>
     </Tabs>
   );

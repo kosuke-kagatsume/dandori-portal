@@ -59,7 +59,7 @@ interface UserAttendanceTabProps {
   transferHistory?: TransferHistory[];
   workRule?: WorkRule;
   isReadOnly: boolean;
-  onEdit?: () => void;
+  onEdit?: () => void; // kept for backward compat
   onUserUpdated?: (updatedUser: User) => void;
 }
 
@@ -101,7 +101,7 @@ export function UserAttendanceTab({
   transferHistory = [],
   workRule,
   isReadOnly,
-  onEdit,
+  onEdit: _onEdit,
   onUserUpdated,
 }: UserAttendanceTabProps) {
   const { currentTenant } = useTenantStore();
@@ -112,6 +112,16 @@ export function UserAttendanceTab({
   const [availableWorkRules, setAvailableWorkRules] = useState<{ id: string; name: string; type: string }[]>([]);
   const [selectedRuleId, setSelectedRuleId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // 勤怠設定編集ダイアログ
+  const [attendanceSettingsDialogOpen, setAttendanceSettingsDialogOpen] = useState(false);
+  const [attendanceForm, setAttendanceForm] = useState<{
+    paidLeaveStartDate: string;
+    punchMethod: 'web' | 'ic_card' | 'mobile' | 'face';
+  }>({
+    paidLeaveStartDate: '',
+    punchMethod: 'web',
+  });
 
   // 休職履歴
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -200,6 +210,59 @@ export function UserAttendanceTab({
     }
   };
 
+  // 勤怠設定の編集
+  const openAttendanceSettingsDialog = () => {
+    setAttendanceForm({
+      paidLeaveStartDate: user.paidLeaveStartDate
+        ? new Date(user.paidLeaveStartDate).toISOString().split('T')[0]
+        : '',
+      punchMethod: (user.punchMethod as 'web' | 'ic_card' | 'mobile' | 'face') || 'web',
+    });
+    setAttendanceSettingsDialogOpen(true);
+  };
+
+  const setHireDateAsPaidLeaveStart = () => {
+    if (user.hireDate) {
+      setAttendanceForm(f => ({
+        ...f,
+        paidLeaveStartDate: new Date(user.hireDate!).toISOString().split('T')[0],
+      }));
+    }
+  };
+
+  const handleSaveAttendanceSettings = async () => {
+    setIsSaving(true);
+    try {
+      const body: Record<string, unknown> = {
+        punchMethod: attendanceForm.punchMethod,
+      };
+      if (attendanceForm.paidLeaveStartDate) {
+        body.paidLeaveStartDate = attendanceForm.paidLeaveStartDate;
+      }
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error('更新に失敗しました');
+      toast.success('勤怠設定を更新しました');
+      setAttendanceSettingsDialogOpen(false);
+      // ストア更新
+      const { users, setUsers } = useUserStore.getState();
+      const updatedUser: User = {
+        ...user,
+        paidLeaveStartDate: attendanceForm.paidLeaveStartDate || user.paidLeaveStartDate,
+        punchMethod: attendanceForm.punchMethod,
+      };
+      setUsers(users.map(u => u.id === user.id ? updatedUser : u));
+      onUserUpdated?.(updatedUser);
+    } catch {
+      toast.error('勤怠設定の更新に失敗しました');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleAddLeaveHistory = async () => {
     if (!leaveForm.startDate || !leaveForm.leaveType) {
       toast.error('休職開始日と休職種別は必須です');
@@ -234,8 +297,8 @@ export function UserAttendanceTab({
               <CardTitle className="text-base">勤怠設定</CardTitle>
               <CardDescription>有給起算日・打刻の方法</CardDescription>
             </div>
-            {!isReadOnly && onEdit && (
-              <Button variant="outline" size="sm" onClick={onEdit}>
+            {!isReadOnly && (
+              <Button variant="outline" size="sm" onClick={openAttendanceSettingsDialog}>
                 <Edit className="mr-2 h-4 w-4" />
                 編集
               </Button>
@@ -451,6 +514,68 @@ export function UserAttendanceTab({
           )}
         </CardContent>
       </Card>
+
+      {/* 勤怠設定編集ダイアログ */}
+      <Dialog open={attendanceSettingsDialogOpen} onOpenChange={setAttendanceSettingsDialogOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>勤怠設定の編集</DialogTitle>
+            <DialogDescription>有給起算日と打刻方法を設定してください</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>有給起算日</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="date"
+                  value={attendanceForm.paidLeaveStartDate}
+                  onChange={e => setAttendanceForm(f => ({ ...f, paidLeaveStartDate: e.target.value }))}
+                  className="flex-1"
+                />
+                {user.hireDate && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={setHireDateAsPaidLeaveStart}
+                    className="whitespace-nowrap"
+                  >
+                    入社日と同日にする
+                  </Button>
+                )}
+              </div>
+              {user.hireDate && (
+                <p className="text-xs text-muted-foreground">
+                  入社日: {new Date(user.hireDate).toLocaleDateString('ja-JP')}
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>打刻の方法</Label>
+              <Select
+                value={attendanceForm.punchMethod}
+                onValueChange={(v: 'web' | 'ic_card' | 'mobile' | 'face') => setAttendanceForm(f => ({ ...f, punchMethod: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="web">Web打刻</SelectItem>
+                  <SelectItem value="ic_card">ICカード</SelectItem>
+                  <SelectItem value="mobile">モバイル</SelectItem>
+                  <SelectItem value="face">顔認証</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAttendanceSettingsDialogOpen(false)}>キャンセル</Button>
+            <Button onClick={handleSaveAttendanceSettings} disabled={isSaving}>
+              {isSaving ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 就業ルール選択ダイアログ */}
       <Dialog open={workRuleDialogOpen} onOpenChange={setWorkRuleDialogOpen}>

@@ -45,6 +45,12 @@ interface AggregationCategory {
   sortOrder: number;
 }
 
+interface FreeTextMasterItem {
+  id: string;
+  name: string;
+  sortOrder: number;
+}
+
 const defaultCategories: AggregationCategory[] = [
   { id: '1', code: 'normal', name: '通常勤務', description: '所定労働時間内の通常勤務', isActive: true, sortOrder: 1 },
   { id: '2', code: 'overtime', name: '残業', description: '所定労働時間を超えた勤務', isActive: true, sortOrder: 2 },
@@ -61,6 +67,30 @@ export function AggregationCategoryPanel() {
   const [editingItem, setEditingItem] = useState<AggregationCategory | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ code: '', name: '', description: '', sortOrder: 0, isActive: true });
+
+  // 部門マスタ
+  const [departments, setDepartments] = useState<FreeTextMasterItem[]>([]);
+  const [deptInput, setDeptInput] = useState('');
+  const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
+  const [editingDeptName, setEditingDeptName] = useState('');
+
+  // 職種マスタ
+  const [jobTypes, setJobTypes] = useState<FreeTextMasterItem[]>([]);
+  const [jobInput, setJobInput] = useState('');
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
+  const [editingJobName, setEditingJobName] = useState('');
+
+  const addDepartment = () => {
+    if (!deptInput.trim()) return;
+    setDepartments(prev => [...prev, { id: crypto.randomUUID(), name: deptInput.trim(), sortOrder: prev.length + 1 }]);
+    setDeptInput('');
+  };
+
+  const addJobType = () => {
+    if (!jobInput.trim()) return;
+    setJobTypes(prev => [...prev, { id: crypto.randomUUID(), name: jobInput.trim(), sortOrder: prev.length + 1 }]);
+    setJobInput('');
+  };
 
   const openAddDialog = () => {
     setEditingItem(null);
@@ -95,6 +125,7 @@ export function AggregationCategoryPanel() {
   };
 
   return (
+    <div className="space-y-6">
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -200,5 +231,148 @@ export function AggregationCategoryPanel() {
         </AlertDialogContent>
       </AlertDialog>
     </Card>
+
+    {/* 部門マスタ */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">部門マスタ</CardTitle>
+        <CardDescription>勤怠集計で使用する部門を管理します（自由入力）</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              value={deptInput}
+              onChange={e => setDeptInput(e.target.value)}
+              placeholder="部門名を入力"
+              onKeyDown={e => e.key === 'Enter' && addDepartment()}
+            />
+            <Button onClick={addDepartment} size="sm" disabled={!deptInput.trim()}>
+              <Plus className="w-4 h-4 mr-1" />追加
+            </Button>
+          </div>
+          {departments.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>部門名</TableHead>
+                  <TableHead className="w-[80px]">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {departments.map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell>
+                      {editingDeptId === d.id ? (
+                        <Input
+                          value={editingDeptName}
+                          onChange={e => setEditingDeptName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              setDepartments(prev => prev.map(p => p.id === d.id ? { ...p, name: editingDeptName } : p));
+                              setEditingDeptId(null);
+                            }
+                          }}
+                          onBlur={() => {
+                            setDepartments(prev => prev.map(p => p.id === d.id ? { ...p, name: editingDeptName } : p));
+                            setEditingDeptId(null);
+                          }}
+                          className="h-8"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="cursor-pointer" onClick={() => { setEditingDeptId(d.id); setEditingDeptName(d.name); }}>{d.name}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingDeptId(d.id); setEditingDeptName(d.name); }}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDepartments(prev => prev.filter(p => p.id !== d.id))}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* 職種マスタ */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">職種マスタ</CardTitle>
+        <CardDescription>勤怠集計で使用する職種を管理します（自由入力）</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Input
+              value={jobInput}
+              onChange={e => setJobInput(e.target.value)}
+              placeholder="職種名を入力"
+              onKeyDown={e => e.key === 'Enter' && addJobType()}
+            />
+            <Button onClick={addJobType} size="sm" disabled={!jobInput.trim()}>
+              <Plus className="w-4 h-4 mr-1" />追加
+            </Button>
+          </div>
+          {jobTypes.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>職種名</TableHead>
+                  <TableHead className="w-[80px]">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {jobTypes.map(j => (
+                  <TableRow key={j.id}>
+                    <TableCell>
+                      {editingJobId === j.id ? (
+                        <Input
+                          value={editingJobName}
+                          onChange={e => setEditingJobName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              setJobTypes(prev => prev.map(p => p.id === j.id ? { ...p, name: editingJobName } : p));
+                              setEditingJobId(null);
+                            }
+                          }}
+                          onBlur={() => {
+                            setJobTypes(prev => prev.map(p => p.id === j.id ? { ...p, name: editingJobName } : p));
+                            setEditingJobId(null);
+                          }}
+                          className="h-8"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="cursor-pointer" onClick={() => { setEditingJobId(j.id); setEditingJobName(j.name); }}>{j.name}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => { setEditingJobId(j.id); setEditingJobName(j.name); }}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setJobTypes(prev => prev.filter(p => p.id !== j.id))}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+    </div>
   );
 }
