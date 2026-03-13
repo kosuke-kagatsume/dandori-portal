@@ -75,6 +75,12 @@ interface AttendanceRecord {
   workPatternName: string | null;
   status: string;
   memo: string | null;
+  punches?: Array<{
+    id: string;
+    punchType: string;
+    punchTime: string;
+    punchOrder: number;
+  }>;
 }
 
 interface MemberMonthlyData {
@@ -96,6 +102,7 @@ interface MemberMonthlyData {
     workPatternName: string | null;
     status: string;
     memo: string | null;
+    punchPairs?: Array<{ checkIn: string | null; checkOut: string | null }>;
   }>;
   summary: {
     workDays: number;
@@ -268,6 +275,7 @@ export function TeamAttendance() {
         totalBreakMinutes: number; workMinutes: number; overtimeMinutes: number;
         workLocation: string | null; workPatternName: string | null;
         status: string; memo: string | null;
+        punchPairs?: Array<{ checkIn: string | null; checkOut: string | null }>;
       }>();
 
       let presentDays = 0;
@@ -280,6 +288,28 @@ export function TeamAttendance() {
 
       memberRecords.forEach(record => {
         const dateKey = record.date.includes('T') ? record.date.split('T')[0] : record.date;
+
+        // K3: punchesから複数打刻ペアを構築
+        let punchPairs: Array<{ checkIn: string | null; checkOut: string | null }> | undefined;
+        if (record.punches && record.punches.length > 0) {
+          const checkIns = record.punches
+            .filter(p => p.punchType === 'check_in')
+            .sort((a, b) => a.punchOrder - b.punchOrder || a.punchTime.localeCompare(b.punchTime));
+          const checkOuts = record.punches
+            .filter(p => p.punchType === 'check_out')
+            .sort((a, b) => a.punchOrder - b.punchOrder || a.punchTime.localeCompare(b.punchTime));
+          const maxPairs = Math.max(checkIns.length, checkOuts.length);
+          if (maxPairs > 1) {
+            punchPairs = [];
+            for (let i = 0; i < maxPairs; i++) {
+              punchPairs.push({
+                checkIn: checkIns[i] ? toHHmm(checkIns[i].punchTime) : null,
+                checkOut: checkOuts[i] ? toHHmm(checkOuts[i].punchTime) : null,
+              });
+            }
+          }
+        }
+
         dailyRecords.set(dateKey, {
           checkIn: toHHmm(record.checkIn),
           checkOut: toHHmm(record.checkOut),
@@ -292,6 +322,7 @@ export function TeamAttendance() {
           workPatternName: record.workPatternName,
           status: record.status,
           memo: record.memo,
+          punchPairs,
         });
 
         const recordDate = parseISO(record.date);
@@ -686,12 +717,27 @@ export function TeamAttendance() {
                                 >
                                   {record && !isWeekendDay ? (
                                     <div className="space-y-0.5">
-                                      <div className={cn(
-                                        record.checkIn && record.checkIn > '09:30' && 'text-orange-600'
-                                      )}>
-                                        {record.checkIn || '-'}
-                                      </div>
-                                      <div>{record.checkOut || '-'}</div>
+                                      {record.punchPairs ? (
+                                        record.punchPairs.map((pair, idx) => (
+                                          <div key={idx} className={cn(idx > 0 && 'border-t border-dashed pt-0.5')}>
+                                            <div className={cn(
+                                              pair.checkIn && pair.checkIn > '09:30' && idx === 0 && 'text-orange-600'
+                                            )}>
+                                              {pair.checkIn || '-'}
+                                            </div>
+                                            <div>{pair.checkOut || '-'}</div>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <>
+                                          <div className={cn(
+                                            record.checkIn && record.checkIn > '09:30' && 'text-orange-600'
+                                          )}>
+                                            {record.checkIn || '-'}
+                                          </div>
+                                          <div>{record.checkOut || '-'}</div>
+                                        </>
+                                      )}
                                     </div>
                                   ) : isWeekendDay ? (
                                     <span className="text-gray-400">-</span>
