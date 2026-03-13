@@ -159,7 +159,7 @@ export default function AttendancePage() {
 
   // Attendance store integration
   // getTodayRecord は勤怠一覧コンポーネントに移動済み
-  const { records: allHistoryRecords, addOrUpdateRecord } = useAttendanceHistoryStore();
+  const { records: allHistoryRecords, addOrUpdateRecord, fetchRecords } = useAttendanceHistoryStore();
 
   // ユーザー権限の確認
   const { currentUser } = useUserStore();
@@ -241,6 +241,18 @@ export default function AttendancePage() {
       syncPunchToHistory();
     }
   }, [todayStatus.status, todayStatus.checkIn, todayStatus.checkOut, todayStatus.punchPairs, syncPunchToHistory]);
+
+  // K1: 初回ロード時にAPIから勤怠レコードを取得
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    fetchRecords(currentUser.id, startDate, endDate).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id]);
 
   // 初期ローディング状態の管理
   useEffect(() => {
@@ -329,6 +341,12 @@ export default function AttendancePage() {
     });
   }, [allHistoryRecords]);
 
+  // K1: 月ナビゲーション時に再取得
+  const handleMonthChange = useCallback((startDate: string, endDate: string) => {
+    if (!currentUser?.id) return;
+    fetchRecords(currentUser.id, startDate, endDate).catch(() => {});
+  }, [currentUser?.id, fetchRecords]);
+
   // 勤怠記録更新ハンドラー
   const handleRecordUpdate = async (date: string, updates: Record<string, unknown>) => {
     const existingRecord = allHistoryRecords.find(r => r.date === date);
@@ -416,6 +434,7 @@ export default function AttendancePage() {
             <LazyMonthlyAttendanceList
               records={monthlyListRecords}
               onRecordUpdate={handleRecordUpdate}
+              onMonthChange={handleMonthChange}
             />
           </Suspense>
         </TabsContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, Fragment } from 'react';
+import { useState, useMemo, useEffect, useCallback, Fragment } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -93,6 +93,7 @@ interface AttendanceRecord {
 interface MonthlyAttendanceListProps {
   records: AttendanceRecord[];
   onRecordUpdate?: (date: string, updates: Partial<AttendanceRecord>) => Promise<void> | void;
+  onMonthChange?: (startDate: string, endDate: string) => void;
 }
 
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
@@ -203,7 +204,7 @@ function extractPunchPairs(punchHistory?: PunchRecord[]): PunchPairDisplay[] {
   return pairs;
 }
 
-export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttendanceListProps) {
+export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }: MonthlyAttendanceListProps) {
   const router = useRouter();
   const { currentUser } = useUserStore();
   const currentUserRoles = currentUser?.roles || ['employee'];
@@ -264,17 +265,31 @@ export function MonthlyAttendanceList({ records, onRecordUpdate }: MonthlyAttend
   };
 
   // Navigate months
+  const notifyMonthChange = useCallback((newDate: Date) => {
+    if (!onMonthChange) return;
+    const y = newDate.getFullYear();
+    const m = newDate.getMonth();
+    const startDate = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    const endDate = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    onMonthChange(startDate, endDate);
+  }, [onMonthChange]);
+
   const goToPreviousMonth = () => {
     setCurrentDate(prev => {
       const date = prev || new Date();
-      return new Date(date.getFullYear(), date.getMonth() - 1, 1);
+      const newDate = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+      notifyMonthChange(newDate);
+      return newDate;
     });
   };
 
   const goToNextMonth = () => {
     setCurrentDate(prev => {
       const date = prev || new Date();
-      return new Date(date.getFullYear(), date.getMonth() + 1, 1);
+      const newDate = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+      notifyMonthChange(newDate);
+      return newDate;
     });
   };
 
