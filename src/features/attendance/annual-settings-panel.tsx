@@ -113,8 +113,6 @@ export function AnnualSettingsPanel() {
   const [regularHolidays, setRegularHolidays] = useState<RegularHoliday[]>([]);
   const [annualHolidays, setAnnualHolidays] = useState<AnnualHoliday[]>([]);
   const [dailyWorkHours, setDailyWorkHours] = useState(8.0);
-  const [monthlyAvgDays, setMonthlyAvgDays] = useState(20.33);
-  const [monthlyAvgHours, setMonthlyAvgHours] = useState(162.66);
   const [monthlyDays] = useState<MonthlyDays[]>(defaultMonthlyDays);
   const [payrollMonths] = useState<PayrollMonth[]>(defaultPayrollMonths);
 
@@ -131,10 +129,6 @@ export function AnnualSettingsPanel() {
   const [dailyHoursDialogOpen, setDailyHoursDialogOpen] = useState(false);
   const [tempDailyHours, setTempDailyHours] = useState(8.0);
 
-  // 所定労働時間ダイアログ
-  const [stdHoursDialogOpen, setStdHoursDialogOpen] = useState(false);
-  const [tempAvgDays, setTempAvgDays] = useState(20.33);
-  const [tempAvgHours, setTempAvgHours] = useState(162.66);
 
   const openHolidayDialog = () => {
     setTempHolidaySettings([...holidaySettings]);
@@ -207,18 +201,6 @@ export function AnnualSettingsPanel() {
   const saveDailyHours = () => {
     setDailyWorkHours(tempDailyHours);
     setDailyHoursDialogOpen(false);
-  };
-
-  const openStdHoursDialog = () => {
-    setTempAvgDays(monthlyAvgDays);
-    setTempAvgHours(monthlyAvgHours);
-    setStdHoursDialogOpen(true);
-  };
-
-  const saveStdHours = () => {
-    setMonthlyAvgDays(tempAvgDays);
-    setMonthlyAvgHours(tempAvgHours);
-    setStdHoursDialogOpen(false);
   };
 
   const totalWorkDays = monthlyDays.reduce((sum, m) => sum + m.workDays, 0);
@@ -412,28 +394,46 @@ export function AnnualSettingsPanel() {
         </CardContent>
       </Card>
 
-      {/* 所定労働時間 */}
+      {/* 所定労働時間（自動算出） */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div>
             <CardTitle className="text-base">所定労働時間</CardTitle>
-            <Button variant="outline" size="sm" onClick={openStdHoursDialog}>
-              <Edit className="w-4 h-4 mr-2" />
-              編集
-            </Button>
+            <CardDescription>月別日数表および就業ルールに基づき、就業ルールごとに自動算出する</CardDescription>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">所定労働日数（月平均）</p>
-              <p className="font-medium">{monthlyAvgDays}日</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">所定労働時間（月平均）</p>
-              <p className="font-medium">{monthlyAvgHours}時間</p>
-            </div>
-          </div>
+        <CardContent className="space-y-4">
+          {(() => {
+            // 通常勤務（固定時間制）: 年度所定労働日数合計÷12, × 1日所定労働時間
+            const stdDays = Math.round((totalWorkDays / 12) * 10) / 10;
+            const stdHours = Math.round((stdDays * dailyWorkHours) * 10) / 10;
+            // 変形労働制の例: 1週所定労働時間(40h想定)×52÷12
+            const weeklyHours = 40; // デフォルト週所定労働時間
+            const varHours = Math.round((weeklyHours * 52 / 12) * 10) / 10;
+            const varDays = Math.round((varHours / dailyWorkHours) * 10) / 10;
+
+            const categories = [
+              { label: 'フレックス', days: stdDays, hours: stdHours },
+              { label: '1ヶ月単位変形労働制', days: varDays, hours: varHours },
+              { label: '固定時間制', days: stdDays, hours: stdHours },
+            ];
+
+            return categories.map(cat => (
+              <div key={cat.label} className="rounded-lg border p-3">
+                <h4 className="text-sm font-semibold text-primary mb-2">{cat.label}</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">所定労働日数（月平均）</p>
+                    <p className="font-medium">{cat.days}日</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">所定労働時間（月平均）</p>
+                    <p className="font-medium">{cat.hours}時間</p>
+                  </div>
+                </div>
+              </div>
+            ));
+          })()}
         </CardContent>
       </Card>
 
@@ -776,47 +776,6 @@ export function AnnualSettingsPanel() {
         </DialogContent>
       </Dialog>
 
-      {/* 所定労働時間ダイアログ */}
-      <Dialog open={stdHoursDialogOpen} onOpenChange={setStdHoursDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>所定労働時間</DialogTitle>
-            <DialogDescription>1ヶ月の所定労働日数・所定労働時間を入力してください。</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center gap-3">
-              <Label className="whitespace-nowrap">所定労働日数（月平均）</Label>
-              <Input
-                type="number"
-                min={0}
-                max={31}
-                step={0.01}
-                value={tempAvgDays}
-                onChange={e => setTempAvgDays(parseFloat(e.target.value) || 0)}
-                className="w-24"
-              />
-              <span className="text-sm text-muted-foreground">日</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Label className="whitespace-nowrap">所定労働時間（月平均）</Label>
-              <Input
-                type="number"
-                min={0}
-                max={250}
-                step={0.01}
-                value={tempAvgHours}
-                onChange={e => setTempAvgHours(parseFloat(e.target.value) || 0)}
-                className="w-24"
-              />
-              <span className="text-sm text-muted-foreground">時間</span>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStdHoursDialogOpen(false)}>キャンセル</Button>
-            <Button onClick={saveStdHours}>更新する</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
