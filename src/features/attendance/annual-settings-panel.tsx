@@ -39,9 +39,16 @@ interface HolidaySetting {
   type: DayType;
 }
 
-interface CustomHoliday {
+interface RegularHoliday {
   id: string;
-  date: string;
+  month: number; // 1-12
+  day: number;   // 1-31
+  name: string;
+}
+
+interface AnnualHoliday {
+  id: string;
+  date: string; // YYYY-MM-DD
   name: string;
 }
 
@@ -103,7 +110,8 @@ const defaultPayrollMonths: PayrollMonth[] = MONTH_NAMES.map((_, i) => ({
 export function AnnualSettingsPanel() {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [holidaySettings, setHolidaySettings] = useState<HolidaySetting[]>(defaultHolidaySettings);
-  const [customHolidays, setCustomHolidays] = useState<CustomHoliday[]>([]);
+  const [regularHolidays, setRegularHolidays] = useState<RegularHoliday[]>([]);
+  const [annualHolidays, setAnnualHolidays] = useState<AnnualHoliday[]>([]);
   const [dailyWorkHours, setDailyWorkHours] = useState(8.0);
   const [monthlyAvgDays, setMonthlyAvgDays] = useState(20.33);
   const [monthlyAvgHours, setMonthlyAvgHours] = useState(162.66);
@@ -116,7 +124,8 @@ export function AnnualSettingsPanel() {
 
   // 独自休日ダイアログ
   const [customHolidayDialogOpen, setCustomHolidayDialogOpen] = useState(false);
-  const [customHolidayForm, setCustomHolidayForm] = useState({ date: '', name: '' });
+  const [regularForm, setRegularForm] = useState({ startMonth: '', startDay: '', endMonth: '', endDay: '', name: '' });
+  const [annualForm, setAnnualForm] = useState({ date: '', name: '' });
 
   // 1日の所定労働時間ダイアログ
   const [dailyHoursDialogOpen, setDailyHoursDialogOpen] = useState(false);
@@ -137,18 +146,57 @@ export function AnnualSettingsPanel() {
     setHolidayDialogOpen(false);
   };
 
-  const addCustomHoliday = () => {
-    if (!customHolidayForm.date || !customHolidayForm.name) return;
-    setCustomHolidays(prev => [...prev, {
-      id: crypto.randomUUID(),
-      ...customHolidayForm,
-    }]);
-    setCustomHolidayForm({ date: '', name: '' });
-    setCustomHolidayDialogOpen(false);
+  // 定期休日: 開始〜終了の範囲を個別日付に展開して追加
+  const addRegularHoliday = () => {
+    const sm = parseInt(regularForm.startMonth);
+    const sd = parseInt(regularForm.startDay);
+    const em = parseInt(regularForm.endMonth);
+    const ed = parseInt(regularForm.endDay);
+    if (!sm || !sd || !em || !ed || !regularForm.name.trim()) return;
+
+    const entries: RegularHoliday[] = [];
+    // 2024を基準年に使用（閏年）
+    const startYear = 2024;
+    const endYear = em < sm || (em === sm && ed < sd) ? 2025 : 2024;
+    const current = new Date(startYear, sm - 1, sd);
+    const end = new Date(endYear, em - 1, ed);
+
+    while (current <= end) {
+      entries.push({
+        id: crypto.randomUUID(),
+        month: current.getMonth() + 1,
+        day: current.getDate(),
+        name: regularForm.name.trim(),
+      });
+      current.setDate(current.getDate() + 1);
+    }
+
+    setRegularHolidays(prev => {
+      // 重複除去（同じ月/日は上書き）
+      const map = new Map(prev.map(h => [`${h.month}-${h.day}`, h]));
+      entries.forEach(e => map.set(`${e.month}-${e.day}`, e));
+      return Array.from(map.values());
+    });
+    setRegularForm({ startMonth: '', startDay: '', endMonth: '', endDay: '', name: '' });
   };
 
-  const removeCustomHoliday = (id: string) => {
-    setCustomHolidays(prev => prev.filter(h => h.id !== id));
+  const removeRegularHoliday = (id: string) => {
+    setRegularHolidays(prev => prev.filter(h => h.id !== id));
+  };
+
+  // 年度休日
+  const addAnnualHoliday = () => {
+    if (!annualForm.date || !annualForm.name.trim()) return;
+    setAnnualHolidays(prev => [...prev, {
+      id: crypto.randomUUID(),
+      date: annualForm.date,
+      name: annualForm.name.trim(),
+    }]);
+    setAnnualForm({ date: '', name: '' });
+  };
+
+  const removeAnnualHoliday = (id: string) => {
+    setAnnualHolidays(prev => prev.filter(h => h.id !== id));
   };
 
   const openDailyHoursDialog = () => {
@@ -250,37 +298,66 @@ export function AnnualSettingsPanel() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          {customHolidays.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              独自休日情報がありません。<br />編集ボタンから独自休日情報を登録してください。
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>日付</TableHead>
-                  <TableHead>名称</TableHead>
-                  <TableHead className="w-[60px]" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {customHolidays.sort((a, b) => a.date.localeCompare(b.date)).map(h => (
-                  <TableRow key={h.id}>
-                    <TableCell>
-                      {new Date(h.date).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short' })}
-                    </TableCell>
-                    <TableCell>{h.name}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removeCustomHoliday(h.id)}>
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </TableCell>
+        <CardContent className="space-y-6">
+          {/* 定期休日設定 */}
+          <div>
+            <h4 className="text-sm font-semibold text-primary mb-2">定期休日設定</h4>
+            {regularHolidays.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-3">
+                定期休日が登録されていません。
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>月日</TableHead>
+                    <TableHead>名称</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                </TableHeader>
+                <TableBody>
+                  {regularHolidays
+                    .sort((a, b) => a.month !== b.month ? a.month - b.month : a.day - b.day)
+                    .map(h => (
+                      <TableRow key={h.id}>
+                        <TableCell>{h.month}/{h.day}</TableCell>
+                        <TableCell>{h.name}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
+          {/* 年度休日設定 */}
+          <div>
+            <h4 className="text-sm font-semibold text-primary mb-2">年度休日設定</h4>
+            {annualHolidays.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-3">
+                年度休日が登録されていません。
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>日付</TableHead>
+                    <TableHead>名称</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {annualHolidays
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .map(h => (
+                      <TableRow key={h.id}>
+                        <TableCell>
+                          {new Date(h.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                        </TableCell>
+                        <TableCell>{h.name}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -496,52 +573,144 @@ export function AnnualSettingsPanel() {
 
       {/* 独自休日ダイアログ */}
       <Dialog open={customHolidayDialogOpen} onOpenChange={setCustomHolidayDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] !flex !flex-col p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
             <DialogTitle>独自休日設定</DialogTitle>
             <DialogDescription>事業所独自の休日を入力し「追加」をクリックしてください。</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {customHolidays.length > 0 && (
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {customHolidays.sort((a, b) => a.date.localeCompare(b.date)).map(h => (
-                  <div key={h.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm">{h.date}</span>
-                      <span className="text-sm font-medium">{h.name}</span>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeCustomHoliday(h.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-6 py-4">
+            {/* 定期休日設定 */}
+            <div>
+              <h4 className="text-sm font-semibold text-primary mb-3">定期休日設定</h4>
+              {regularHolidays.length > 0 && (
+                <div className="space-y-1 max-h-[150px] overflow-y-auto mb-3">
+                  {regularHolidays
+                    .sort((a, b) => a.month !== b.month ? a.month - b.month : a.day - b.day)
+                    .map(h => (
+                      <div key={h.id} className="flex items-center justify-between rounded-lg border px-3 py-1.5">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm">{h.month}/{h.day}</span>
+                          <span className="text-sm font-medium">{h.name}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeRegularHoliday(h.id)}>
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <div className="flex items-end gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">開始</Label>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number" min={1} max={12} placeholder="月"
+                      value={regularForm.startMonth}
+                      onChange={e => setRegularForm(f => ({ ...f, startMonth: e.target.value }))}
+                      className="w-16 h-9"
+                    />
+                    <span className="text-xs">/</span>
+                    <Input
+                      type="number" min={1} max={31} placeholder="日"
+                      value={regularForm.startDay}
+                      onChange={e => setRegularForm(f => ({ ...f, startDay: e.target.value }))}
+                      className="w-16 h-9"
+                    />
                   </div>
-                ))}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">終了</Label>
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number" min={1} max={12} placeholder="月"
+                      value={regularForm.endMonth}
+                      onChange={e => setRegularForm(f => ({ ...f, endMonth: e.target.value }))}
+                      className="w-16 h-9"
+                    />
+                    <span className="text-xs">/</span>
+                    <Input
+                      type="number" min={1} max={31} placeholder="日"
+                      value={regularForm.endDay}
+                      onChange={e => setRegularForm(f => ({ ...f, endDay: e.target.value }))}
+                      className="w-16 h-9"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1 flex-1">
+                  <Label className="text-xs">名称</Label>
+                  <Input
+                    value={regularForm.name}
+                    onChange={e => setRegularForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="例: 年末年始休暇"
+                    className="h-9"
+                  />
+                </div>
+                <Button
+                  onClick={addRegularHoliday}
+                  size="sm"
+                  disabled={!regularForm.startMonth || !regularForm.startDay || !regularForm.endMonth || !regularForm.endDay || !regularForm.name}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  追加
+                </Button>
               </div>
-            )}
-            <div className="grid grid-cols-[140px_1fr_auto] gap-2 items-end">
-              <div className="space-y-1">
-                <Label className="text-xs">休日</Label>
-                <Input
-                  type="date"
-                  value={customHolidayForm.date}
-                  onChange={e => setCustomHolidayForm(f => ({ ...f, date: e.target.value }))}
-                />
+            </div>
+
+            {/* 年度休日設定 */}
+            <div>
+              <h4 className="text-sm font-semibold text-primary mb-3">年度休日設定</h4>
+              {annualHolidays.length > 0 && (
+                <div className="space-y-1 max-h-[150px] overflow-y-auto mb-3">
+                  {annualHolidays
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .map(h => (
+                      <div key={h.id} className="flex items-center justify-between rounded-lg border px-3 py-1.5">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm">
+                            {new Date(h.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric' })}
+                          </span>
+                          <span className="text-sm font-medium">{h.name}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeAnnualHoliday(h.id)}>
+                          <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              )}
+              <div className="flex items-end gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">休日</Label>
+                  <Input
+                    type="date"
+                    value={annualForm.date}
+                    onChange={e => setAnnualForm(f => ({ ...f, date: e.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <Label className="text-xs">名称</Label>
+                  <Input
+                    value={annualForm.name}
+                    onChange={e => setAnnualForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="例: 年末年始休暇"
+                    className="h-9"
+                  />
+                </div>
+                <Button
+                  onClick={addAnnualHoliday}
+                  size="sm"
+                  disabled={!annualForm.date || !annualForm.name}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  追加
+                </Button>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">名称</Label>
-                <Input
-                  value={customHolidayForm.name}
-                  onChange={e => setCustomHolidayForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="例: 年末年始休暇"
-                />
-              </div>
-              <Button onClick={addCustomHoliday} size="sm" disabled={!customHolidayForm.date || !customHolidayForm.name}>
-                <Plus className="w-4 h-4 mr-1" />
-                追加
-              </Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button onClick={() => setCustomHolidayDialogOpen(false)}>閉じる</Button>
+          <DialogFooter className="px-6 py-4 border-t flex-shrink-0">
+            <Button variant="outline" onClick={() => setCustomHolidayDialogOpen(false)}>キャンセル</Button>
+            <Button onClick={() => setCustomHolidayDialogOpen(false)}>更新</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
