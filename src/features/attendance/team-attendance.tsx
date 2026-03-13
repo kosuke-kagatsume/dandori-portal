@@ -75,6 +75,7 @@ interface AttendanceRecord {
   workPatternName: string | null;
   status: string;
   memo: string | null;
+  approvalStatus?: string | null;
   punches?: Array<{
     id: string;
     punchType: string;
@@ -102,6 +103,7 @@ interface MemberMonthlyData {
     workPatternName: string | null;
     status: string;
     memo: string | null;
+    approvalStatus?: string | null;
     punchPairs?: Array<{ checkIn: string | null; checkOut: string | null }>;
   }>;
   summary: {
@@ -275,6 +277,7 @@ export function TeamAttendance() {
         totalBreakMinutes: number; workMinutes: number; overtimeMinutes: number;
         workLocation: string | null; workPatternName: string | null;
         status: string; memo: string | null;
+        approvalStatus?: string | null;
         punchPairs?: Array<{ checkIn: string | null; checkOut: string | null }>;
       }>();
 
@@ -322,6 +325,7 @@ export function TeamAttendance() {
           workPatternName: record.workPatternName,
           status: record.status,
           memo: record.memo,
+          approvalStatus: record.approvalStatus,
           punchPairs,
         });
 
@@ -959,7 +963,8 @@ export function TeamAttendance() {
                       <TableHeader className="sticky top-0 z-20 bg-background">
                         <TableRow className="bg-muted/50">
                           <TableHead className="w-[100px] sticky left-0 bg-muted/50 z-30">日付</TableHead>
-                          <TableHead className="text-center w-[70px]">ステータス</TableHead>
+                          <TableHead className="text-center w-[70px]">勤怠区分</TableHead>
+                          <TableHead className="text-center w-[60px]">申請状況</TableHead>
                           <TableHead className="text-center w-[80px]">勤務パターン</TableHead>
                           <TableHead className="text-center w-[55px]">出勤</TableHead>
                           <TableHead className="text-center w-[55px]">退勤</TableHead>
@@ -975,6 +980,9 @@ export function TeamAttendance() {
                           <TableHead className="text-right w-[50px]">遅刻</TableHead>
                           <TableHead className="text-right w-[50px]">早退</TableHead>
                           <TableHead className="text-right w-[50px]">休憩</TableHead>
+                          <TableHead className="text-right w-[70px]">休憩みなし所定</TableHead>
+                          <TableHead className="text-right w-[80px]">休憩みなし所定外</TableHead>
+                          <TableHead className="text-right w-[80px]">休憩みなし法定外</TableHead>
                           <TableHead className="w-[100px]">備考</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1022,6 +1030,9 @@ export function TeamAttendance() {
                                 )}
                               </TableCell>
                               <TableCell className="text-center text-xs text-muted-foreground">
+                                {record?.approvalStatus === 'approved' ? '承認済' : record?.approvalStatus === 'rejected' ? '差戻' : '-'}
+                              </TableCell>
+                              <TableCell className="text-center text-xs text-muted-foreground">
                                 {record?.workPatternName || '-'}
                               </TableCell>
                               <TableCell className="text-center font-mono text-sm">
@@ -1058,6 +1069,9 @@ export function TeamAttendance() {
                               <TableCell className="text-right font-mono text-sm">
                                 {breakMinutes > 0 ? `${Math.floor(breakMinutes / 60)}:${String(breakMinutes % 60).padStart(2, '0')}` : '-'}
                               </TableCell>
+                              <TableCell className="text-right font-mono text-sm">-</TableCell>
+                              <TableCell className="text-right font-mono text-sm">-</TableCell>
+                              <TableCell className="text-right font-mono text-sm">-</TableCell>
                               <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]">
                                 {record?.memo || '-'}
                               </TableCell>
