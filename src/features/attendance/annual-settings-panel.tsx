@@ -30,7 +30,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { CalendarDays, Plus, Trash2, Edit } from 'lucide-react';
+import { CalendarDays, Plus, Trash2, Edit, ShieldCheck } from 'lucide-react';
 
 type DayType = 'weekday' | 'prescribed_holiday' | 'legal_holiday';
 
@@ -358,6 +358,38 @@ export function AnnualSettingsPanel() {
               </Table>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 休日判定の優先順位 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5" />
+            <div>
+              <CardTitle className="text-base">休日判定の優先順位</CardTitle>
+              <CardDescription>休日が重複する場合、上位のルールが優先されます</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ol className="space-y-2 text-sm">
+            {[
+              { rank: '①', label: '就業ルール', desc: '就業ルールに曜日設定が存在する場合、勤怠マスタの曜日設定より優先' },
+              { rank: '②', label: '個別休日', desc: '従業員ごとに設定された個別の休日' },
+              { rank: '③', label: '定期休日', desc: '毎年固定の定期休日（年末年始・夏季休暇等）' },
+              { rank: '④', label: '祝日', desc: 'APIにより自動取得される国民の祝日' },
+              { rank: '⑤', label: '曜日設定', desc: '上記の休日設定で定義された曜日ごとの休日区分' },
+            ].map(item => (
+              <li key={item.rank} className="flex items-start gap-3">
+                <span className="font-bold text-primary min-w-[24px]">{item.rank}</span>
+                <div>
+                  <span className="font-medium">{item.label}</span>
+                  <p className="text-muted-foreground text-xs mt-0.5">{item.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
         </CardContent>
       </Card>
 
