@@ -731,7 +731,7 @@ export function WorkRuleMasterPanel() {
 
       {/* ── 作成・編集ダイアログ（全セクション） ── */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] !flex !flex-col p-0 overflow-hidden">
           <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
             <DialogTitle>
               {editingRule ? '就業ルールを編集' : '就業ルールを作成'}
