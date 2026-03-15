@@ -1,19 +1,19 @@
 // next-intl設定
-const createNextIntlPlugin = require('next-intl/plugin');
-const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+const createNextIntlPlugin = require("next-intl/plugin");
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 // PWA設定
-const withPWA = require('next-pwa')({
-  dest: 'public',
+const withPWA = require("next-pwa")({
+  dest: "public",
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development', // 開発環境では無効化
+  disable: process.env.NODE_ENV === "development", // 開発環境では無効化
   runtimeCaching: [
     {
       urlPattern: /^https?.*/, // すべてのHTTPリクエスト
-      handler: 'NetworkFirst', // Network-first戦略
+      handler: "NetworkFirst", // Network-first戦略
       options: {
-        cacheName: 'offlineCache',
+        cacheName: "offlineCache",
         expiration: {
           maxEntries: 200,
           maxAgeSeconds: 24 * 60 * 60, // 24時間
@@ -33,55 +33,77 @@ const nextConfig = {
 
   // Production環境でconsole.logを自動削除
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'], // errorとwarnは残す
-    } : false,
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+            exclude: ["error", "warn"], // errorとwarnは残す
+          }
+        : false,
   },
-  
+
   // gzip/brotli 圧縮を有効化
   compress: true,
-  
+
+  // セキュリティヘッダー
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains",
+          },
+          { key: "X-XSS-Protection", value: "1; mode=block" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
+
   // 不要なヘッダーを削除
   poweredByHeader: false,
-  
+
   // 画像最適化設定（Vercelで有効化）
   images: {
     domains: [
-      'localhost',
-      'dandori-portal.vercel.app',
-      'kwnybcmrwknjlhxhhbso.supabase.co',
+      "localhost",
+      "dandori-portal.vercel.app",
+      "kwnybcmrwknjlhxhhbso.supabase.co",
     ],
-    formats: ['image/avif', 'image/webp'],
+    formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
-  
+
   experimental: {
     typedRoutes: true,
     // パッケージの最適化
     optimizePackageImports: [
-      'lucide-react',
-      'date-fns',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-select',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-scroll-area',
-      '@radix-ui/react-toast',
-      '@radix-ui/react-avatar',
-      '@radix-ui/react-checkbox',
-      '@radix-ui/react-label',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-separator',
+      "lucide-react",
+      "date-fns",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-select",
+      "@radix-ui/react-tabs",
+      "@radix-ui/react-scroll-area",
+      "@radix-ui/react-toast",
+      "@radix-ui/react-avatar",
+      "@radix-ui/react-checkbox",
+      "@radix-ui/react-label",
+      "@radix-ui/react-popover",
+      "@radix-ui/react-separator",
       // @tanstack/react-table は既に最適化済みのため除外
-      'zustand',
-      'recharts',
-      'react-day-picker',
+      "zustand",
+      "recharts",
+      "react-day-picker",
     ],
     // メモリ使用量の最適化
     webpackBuildWorker: true,
   },
-  
+
   // Vercel対応のための設定（本番では削除予定）
   eslint: {
     ignoreDuringBuilds: true,
@@ -89,7 +111,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  
+
   // Webpack設定のカスタマイズ（Vercel対応のため簡略化）
   webpack: (config, { isServer }) => {
     // Vercelデプロイの安定性のため、デフォルト設定を使用

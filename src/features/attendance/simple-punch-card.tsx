@@ -232,62 +232,62 @@ export function SimplePunchCard() {
         <CardContent className="p-6 space-y-6">
           {/* Time Display */}
           <div className="text-center">
-            <div className="text-4xl font-bold font-mono tracking-wider">{timeString}</div>
+            <div className="text-3xl sm:text-4xl font-bold font-mono tracking-wider">{timeString}</div>
             <div className="text-sm text-muted-foreground mt-1">{dateString}</div>
           </div>
 
           {/* 4 Punch Buttons */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Button
               onClick={handleCheckIn}
               disabled={!canCheckIn}
               variant={canCheckIn ? 'default' : 'outline'}
-              className={`h-16 flex flex-col items-center justify-center gap-1 ${
+              className={`h-20 sm:h-16 flex flex-col items-center justify-center gap-1 ${
                 canCheckIn ? 'bg-green-600 hover:bg-green-700' : ''
               }`}
               data-testid="check-in-button"
             >
-              <LogIn className="h-5 w-5" />
-              <span className="text-xs">出勤</span>
+              <LogIn className="h-6 w-6 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-xs">出勤</span>
             </Button>
 
             <Button
               onClick={handleBreakStart}
               disabled={!canStartBreak}
               variant={canStartBreak ? 'default' : 'outline'}
-              className={`h-16 flex flex-col items-center justify-center gap-1 ${
+              className={`h-20 sm:h-16 flex flex-col items-center justify-center gap-1 ${
                 canStartBreak ? 'bg-yellow-600 hover:bg-yellow-700' : ''
               }`}
               data-testid="break-start-button"
             >
-              <Coffee className="h-5 w-5" />
-              <span className="text-xs">休憩開始</span>
+              <Coffee className="h-6 w-6 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-xs">休憩開始</span>
             </Button>
 
             <Button
               onClick={handleBreakEnd}
               disabled={!canEndBreak}
               variant={canEndBreak ? 'default' : 'outline'}
-              className={`h-16 flex flex-col items-center justify-center gap-1 ${
+              className={`h-20 sm:h-16 flex flex-col items-center justify-center gap-1 ${
                 canEndBreak ? 'bg-blue-600 hover:bg-blue-700' : ''
               }`}
               data-testid="break-end-button"
             >
-              <Play className="h-5 w-5" />
-              <span className="text-xs">休憩終了</span>
+              <Play className="h-6 w-6 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-xs">休憩終了</span>
             </Button>
 
             <Button
               onClick={handleCheckOut}
               disabled={!canCheckOut}
               variant={canCheckOut ? 'default' : 'outline'}
-              className={`h-16 flex flex-col items-center justify-center gap-1 ${
+              className={`h-20 sm:h-16 flex flex-col items-center justify-center gap-1 ${
                 canCheckOut ? 'bg-red-600 hover:bg-red-700' : ''
               }`}
               data-testid="check-out-button"
             >
-              <LogOut className="h-5 w-5" />
-              <span className="text-xs">退勤</span>
+              <LogOut className="h-6 w-6 sm:h-5 sm:w-5" />
+              <span className="text-sm sm:text-xs">退勤</span>
             </Button>
           </div>
 

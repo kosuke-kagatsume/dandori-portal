@@ -5,6 +5,11 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  // 本番環境ではデモログインを無効化
+  if (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENV === 'production') {
+    return NextResponse.json({ error: 'Demo login is not available' }, { status: 403 });
+  }
+
   try {
     console.log('Demo login request received');
 
@@ -31,7 +36,7 @@ export async function POST(req: Request) {
     // デモセッションCookieを設定
     cookieStore.set('demo_session', JSON.stringify(demoUser), {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // 本番では到達しない（冒頭で403返却）
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24, // 24時間
@@ -40,7 +45,7 @@ export async function POST(req: Request) {
     // ユーザーロールCookieも設定（middleware用）
     cookieStore.set('user_role', 'admin', {
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // 本番では到達しない（冒頭で403返却）
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24,
@@ -74,7 +79,7 @@ export async function POST(req: Request) {
 
       cookieStore.set('demo_session', JSON.stringify(demoUser), {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: false, // 本番では到達しない（冒頭で403返却）
         sameSite: 'lax',
         path: '/',
         maxAge: 60 * 60 * 24,
@@ -98,6 +103,11 @@ export async function POST(req: Request) {
 
 // デバッグ用GETエンドポイント
 export async function GET() {
+  // 本番環境ではデモログインを無効化
+  if (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENV === 'production') {
+    return NextResponse.json({ error: 'Demo login is not available' }, { status: 403 });
+  }
+
   return NextResponse.json({
     message: 'Demo login endpoint is ready',
     method: 'POST',
