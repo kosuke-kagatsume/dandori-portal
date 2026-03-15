@@ -53,7 +53,14 @@
     "health": "Health Management",
     "certifications": "Certifications",
     "announcements": "Announcements",
-    "profile": "Profile"
+    "profile": "Profile",
+    "categories": {
+      "hrLabor": "HR & Labor",
+      "approvals": "Approvals",
+      "healthCerts": "Health & Certs",
+      "orgAdmin": "Organization",
+      "operations": "Operations"
+    }
   },
   "dashboard": {
     "title": "Dashboard",

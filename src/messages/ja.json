@@ -53,7 +53,14 @@
     "audit": "監査ログ",
     "health": "健康管理",
     "certifications": "資格管理",
-    "profile": "プロフィール"
+    "profile": "プロフィール",
+    "categories": {
+      "hrLabor": "人事・労務",
+      "approvals": "申請・承認",
+      "healthCerts": "健康・資格",
+      "orgAdmin": "組織・管理",
+      "operations": "運用"
+    }
   },
   "dashboard": {
     "title": "ダッシュボード",

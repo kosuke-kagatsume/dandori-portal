@@ -11,6 +11,9 @@ interface UIState {
   sidebarCollapsed: boolean;
   mobileSidebarOpen: boolean;
 
+  // Sidebar category collapse
+  sidebarOpenCategories: string[];
+
   // View preferences
   defaultViewMode: ViewMode;
   itemsPerPage: number;
@@ -33,6 +36,7 @@ interface UIState {
   setItemsPerPage: (count: number) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setGlobalLoading: (loading: boolean) => void;
+  toggleSidebarCategory: (key: string) => void;
 
   // Computed
   getThemeClass: () => string;
@@ -49,6 +53,7 @@ const createUIStore = () => {
       animationsEnabled: true,
       sidebarCollapsed: false,
       mobileSidebarOpen: false,
+      sidebarOpenCategories: ['hrLabor', 'approvals', 'healthCerts', 'orgAdmin', 'operations'],
       defaultViewMode: 'table' as ViewMode,
       itemsPerPage: 10,
       commandPaletteOpen: false,
@@ -103,6 +108,17 @@ const createUIStore = () => {
         set({ globalLoading: loading });
       },
 
+      toggleSidebarCategory: (key: string) => {
+        set((state: UIState) => {
+          const cats = state.sidebarOpenCategories;
+          return {
+            sidebarOpenCategories: cats.includes(key)
+              ? cats.filter(k => k !== key)
+              : [...cats, key],
+          };
+        });
+      },
+
       // Computed
       getThemeClass: () => {
         const { theme } = get();
@@ -134,6 +150,7 @@ const createUIStore = () => {
         density: state.density,
         animationsEnabled: state.animationsEnabled,
         sidebarCollapsed: state.sidebarCollapsed,
+        sidebarOpenCategories: state.sidebarOpenCategories,
         defaultViewMode: state.defaultViewMode,
         itemsPerPage: state.itemsPerPage,
       }),

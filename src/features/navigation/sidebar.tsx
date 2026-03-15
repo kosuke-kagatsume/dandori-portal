@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -14,6 +15,7 @@ import {
   GitBranch,
   FileText,
   ChevronLeft,
+  ChevronDown,
   ClipboardCheck,
   Calculator,
   Car,
@@ -33,6 +35,7 @@ import { useUIStore, useUserStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { hasMenuAccess, type MenuKey, type UserRole } from '@/lib/rbac';
 import { usePermissionStore } from '@/lib/store/permission-store';
+import { NAV_CATEGORIES, UNGROUPED_ITEMS } from './nav-categories';
 import type { User } from '@/types';
 
 const getNavigation = (locale: string, currentUser: User | null) => {
@@ -67,6 +70,8 @@ const getNavigation = (locale: string, currentUser: User | null) => {
   ];
 };
 
+type NavItem = ReturnType<typeof getNavigation>[number];
+
 interface SidebarProps {
   onNavigate?: () => void;
 }
@@ -77,7 +82,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const currentLocale = (params?.locale as string) || 'ja';
   const tNav = useTranslations('navigation');
   const tCommon = useTranslations('common');
-  const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { sidebarCollapsed, toggleSidebar, sidebarOpenCategories, toggleSidebarCategory } = useUIStore();
   const currentUser = useUserStore(state => state.currentUser);
 
   const navigation = getNavigation(currentLocale, currentUser);
@@ -85,21 +90,144 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
 
   // RBAC-based filtering: DB権限があればcanMenu、なければ旧hasMenuAccessにフォールバック
   const filteredNavigation = navigation.filter(item => {
-    // DB権限が解決済みの場合はそちらを使用
     if (permissionStore.resolved) {
       return permissionStore.canMenu(item.menuKey);
     }
-    // フォールバック: 旧ハードコード権限
     const userRoles = currentUser?.roles || [];
     return userRoles.some(role =>
       hasMenuAccess(role as UserRole, item.menuKey)
     );
   });
 
+  // アクティブ判定
+  const isActive = (item: NavItem) => {
+    const normalizedPath = pathname.replace(/^\/[a-z]{2}/, '');
+    const normalizedHref = item.href.replace(/^\/[a-z]{2}/, '');
+    return normalizedPath === normalizedHref || normalizedPath.startsWith(normalizedHref + '/');
+  };
+
+  // アクティブページが属するカテゴリを特定
+  const activeMenuKey = filteredNavigation.find(item => isActive(item))?.menuKey;
+
+  // アクティブページのカテゴリが閉じていたら自動展開
+  useEffect(() => {
+    if (!activeMenuKey || sidebarCollapsed) return;
+    const activeCat = NAV_CATEGORIES.find(cat => cat.items.includes(activeMenuKey));
+    if (activeCat && !sidebarOpenCategories.includes(activeCat.key)) {
+      toggleSidebarCategory(activeCat.key);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMenuKey, sidebarCollapsed]);
+
+  // ナビアイテムレンダリング（共通ヘルパー）
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const active = isActive(item);
+
+    const navLink = (
+      <Link
+        key={item.key}
+        href={item.href as never}
+        prefetch={true}
+        onClick={() => onNavigate?.()}
+        className={cn(
+          'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
+          'hover:bg-accent hover:text-accent-foreground',
+          active
+            ? 'bg-primary text-primary-foreground shadow-sm'
+            : 'text-muted-foreground',
+          sidebarCollapsed ? 'justify-center' : 'justify-start'
+        )}
+      >
+        <Icon className={cn('w-5 h-5', !sidebarCollapsed && 'mr-3')} />
+        {!sidebarCollapsed && (
+          <span>{tNav(item.key)}</span>
+        )}
+      </Link>
+    );
+
+    if (sidebarCollapsed) {
+      return (
+        <Tooltip key={item.key}>
+          <TooltipTrigger asChild>
+            {navLink}
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {tNav(item.key)}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return navLink;
+  };
+
+  // カテゴリ表示（展開モード用）
+  const renderCategoryGroup = () => {
+    // 1. グループ外アイテム（dashboard）
+    const ungroupedItems = filteredNavigation.filter(item =>
+      UNGROUPED_ITEMS.includes(item.menuKey)
+    );
+
+    // 2. カテゴリグループ
+    const categoryGroups = NAV_CATEGORIES.map(category => {
+      const categoryItems = category.items
+        .map(menuKey => filteredNavigation.find(item => item.menuKey === menuKey))
+        .filter((item): item is NavItem => item !== undefined);
+
+      // RBAC で全項目フィルタされたカテゴリは非表示
+      if (categoryItems.length === 0) return null;
+
+      const isOpen = sidebarOpenCategories.includes(category.key);
+
+      return (
+        <div key={category.key} className="mt-1">
+          {/* カテゴリヘッダー */}
+          <button
+            onClick={() => toggleSidebarCategory(category.key)}
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+          >
+            <span>{tNav(`categories.${category.labelKey}`)}</span>
+            <ChevronDown
+              className={cn(
+                'w-3.5 h-3.5 transition-transform duration-200',
+                isOpen && 'rotate-180'
+              )}
+            />
+          </button>
+          {/* 折りたたみコンテンツ: CSS grid-rows アニメーション */}
+          <div
+            className={cn(
+              'grid transition-[grid-template-rows] duration-200 ease-in-out',
+              isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-0.5 pb-1">
+                {categoryItems.map(renderNavItem)}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    });
+
+    return (
+      <>
+        {/* グループ外アイテム */}
+        <div className="space-y-0.5">
+          {ungroupedItems.map(renderNavItem)}
+        </div>
+        {/* カテゴリグループ */}
+        {categoryGroups}
+      </>
+    );
+  };
+
   return (
     <TooltipProvider>
       <aside className={cn(
-        'fixed left-0 top-0 z-40 h-screen bg-card border-r border-border transition-all duration-300',
+        'fixed left-0 top-0 z-40 h-screen bg-card border-r border-border transition-all duration-300 flex flex-col',
         sidebarCollapsed ? 'w-16' : 'w-64'
       )}>
         {/* Logo/Brand */}
@@ -118,51 +246,11 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
 
         {/* Navigation - MountGateでラップしてSSR/CSRの不一致を防ぐ */}
         <MountGate>
-          <nav className="flex-1 px-2 py-4 space-y-1">
-            {filteredNavigation.map((item) => {
-            const Icon = item.icon;
-            // pathnameから/ja/を取り除いて比較
-            const normalizedPath = pathname.replace(/^\/[a-z]{2}/, '');
-            const normalizedHref = item.href.replace(/^\/[a-z]{2}/, '');
-            const isActive = normalizedPath === normalizedHref || normalizedPath.startsWith(normalizedHref + '/');
-            
-            const navItem = (
-              <Link
-                key={item.key}
-                href={item.href as never}
-                prefetch={true}
-                onClick={() => onNavigate?.()}
-                className={cn(
-                  'flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground',
-                  sidebarCollapsed ? 'justify-center' : 'justify-start'
-                )}
-              >
-                <Icon className={cn('w-5 h-5', !sidebarCollapsed && 'mr-3')} />
-                {!sidebarCollapsed && (
-                  <span>{tNav(item.key)}</span>
-                )}
-              </Link>
-            );
-
-            if (sidebarCollapsed) {
-              return (
-                <Tooltip key={item.key}>
-                  <TooltipTrigger asChild>
-                    {navItem}
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    {tNav(item.key)}
-                  </TooltipContent>
-                </Tooltip>
-              );
+          <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+            {sidebarCollapsed
+              ? filteredNavigation.map(renderNavItem)
+              : renderCategoryGroup()
             }
-
-            return navItem;
-          })}
           </nav>
 
           {/* Collapse Toggle - アイコンを常に同じ構造で表示 */}
