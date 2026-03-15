@@ -33,7 +33,7 @@ import {
 } from '@/lib/store';
 import { TenantSwitcher } from './tenant-switcher';
 import { NotificationCenterV2 } from './notification-center-v2';
-import { CertificationNotificationBell } from '@/features/certifications/certification-notification-bell';
+import { useCertificationNotifications } from '@/hooks/use-certification-notifications';
 import { CommandPalette } from './command-palette';
 
 export function Header() {
@@ -50,6 +50,9 @@ export function Header() {
   // currentTenant from useTenantStore() - 将来使用予定 (import removed)
   const { currentUser, _hasHydrated, fetchCurrentUser, isLoading } = useUserStore();
   const { unreadCount } = useNotificationStore();
+  const { notifications: certNotifications, unreadCount: certUnreadCount, loading: certLoading, markAsRead: certMarkAsRead, acknowledge: certAcknowledge } = useCertificationNotifications();
+  const combinedUnreadCount = unreadCount + certUnreadCount;
+  const certificationData = { notifications: certNotifications, unreadCount: certUnreadCount, loading: certLoading, markAsRead: certMarkAsRead, acknowledge: certAcknowledge };
   // SSR/CSRハイドレーション対応: 初期値はnull、マウント後に設定
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -156,19 +159,16 @@ export function Header() {
 
             <Separator orientation="vertical" className="h-6 hidden lg:block" />
 
-            {/* Certification Notifications */}
-            <CertificationNotificationBell />
-
             {/* Notifications */}
-            <NotificationCenterV2>
+            <NotificationCenterV2 certificationData={certificationData}>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
+                {combinedUnreadCount > 0 && (
                   <Badge
                     variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
                   >
-                    {unreadCount}
+                    {combinedUnreadCount}
                   </Badge>
                 )}
               </Button>
