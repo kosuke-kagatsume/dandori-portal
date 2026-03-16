@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -52,6 +52,25 @@ const intervalOptions = [
 export function PunchRoundingPanel() {
   const [rules, setRules] = useState<RoundingRule[]>(defaultRules);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/attendance-settings');
+      const json = await res.json();
+      if (json.success && json.data?.punchRoundingRules) {
+        setRules(json.data.punchRoundingRules as RoundingRule[]);
+      }
+    } catch {
+      // デフォルト値を使用
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const updateRule = (index: number, updates: Partial<RoundingRule>) => {
     setRules(prev => prev.map((rule, i) => i === index ? { ...rule, ...updates } : rule));
@@ -60,15 +79,31 @@ export function PunchRoundingPanel() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // TODO: API連携
-      await new Promise(resolve => setTimeout(resolve, 500));
-      toast.success('打刻丸め設定を保存しました');
+      const res = await fetch('/api/attendance-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ punchRoundingRules: rules }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success('打刻丸め設定を保存しました');
+      } else {
+        toast.error('保存に失敗しました');
+      }
     } catch {
       toast.error('保存に失敗しました');
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

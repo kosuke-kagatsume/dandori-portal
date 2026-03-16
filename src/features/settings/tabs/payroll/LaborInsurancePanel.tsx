@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,7 @@ import {
   TableCell,
   TableRow,
 } from '@/components/ui/table';
-import { Edit, HardHat } from 'lucide-react';
+import { Edit, HardHat, Building2 } from 'lucide-react';
 
 // 労災保険料率用業種
 const WORKERS_COMP_INDUSTRIES = [
@@ -47,7 +47,7 @@ const WORKERS_COMP_INDUSTRIES = [
   { value: 'food_manufacturing', label: '食料品製造業', rate: 6.0 },
 ];
 
-// 雇用保険料率用業種
+// 雇用保険料率用業種（デフォルト値）
 const EMPLOYMENT_INS_INDUSTRIES = [
   { value: 'general', label: '一般事業所', employeeRate: 6.0, employerRate: 9.5 },
   { value: 'agriculture', label: '農林水産・清酒製造', employeeRate: 7.0, employerRate: 10.5 },
@@ -55,18 +55,25 @@ const EMPLOYMENT_INS_INDUSTRIES = [
 ];
 
 interface WorkersCompInsurance {
-  jurisdiction: string;        // 管轄（労働基準監督署）
-  laborInsuranceNumber: string; // 労働保険番号（12桁: 2+1+2+6+3）
-  businessDescription: string;  // 具体的な業務又は作業の内容
-  industryType: string;         // 労災保険料率用業種
-  meritApplicable: boolean;     // メリット制
-  meritRate: number;            // メリット制料率
+  jurisdiction: string;
+  laborInsuranceNumber: string;
+  businessDescription: string;
+  industryType: string;
+  meritApplicable: boolean;
+  meritRate: number;
 }
 
 interface EmploymentInsurance {
-  jurisdiction: string;          // 管轄（ハローワーク）
-  officeNumber: string;          // 事業所番号（4桁+6桁+1桁）
-  industryType: string;          // 雇用保険料率用業種
+  jurisdiction: string;
+  officeNumber: string;
+  industryType: string;
+  customEmployeeRate: number | null;
+  customEmployerRate: number | null;
+}
+
+interface OfficeOption {
+  id: string;
+  name: string;
 }
 
 const defaultWorkersComp: WorkersCompInsurance = {
@@ -82,11 +89,17 @@ const defaultEmployment: EmploymentInsurance = {
   jurisdiction: '',
   officeNumber: '',
   industryType: 'general',
+  customEmployeeRate: null,
+  customEmployerRate: null,
 };
 
 export function LaborInsurancePanel() {
   const [workersComp, setWorkersComp] = useState<WorkersCompInsurance>(defaultWorkersComp);
   const [employment, setEmployment] = useState<EmploymentInsurance>(defaultEmployment);
+
+  // 事業所セレクタ
+  const [officeOptions, setOfficeOptions] = useState<OfficeOption[]>([]);
+  const [selectedOfficeId, setSelectedOfficeId] = useState<string>('');
 
   // 労災保険ダイアログ
   const [wcDialogOpen, setWcDialogOpen] = useState(false);
@@ -95,6 +108,22 @@ export function LaborInsurancePanel() {
   // 雇用保険ダイアログ
   const [empDialogOpen, setEmpDialogOpen] = useState(false);
   const [empForm, setEmpForm] = useState<EmploymentInsurance>(defaultEmployment);
+
+  const fetchOffices = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings/payroll/offices');
+      const json = await res.json();
+      if (json.success && json.data?.offices) {
+        setOfficeOptions(json.data.offices.map((o: { id: string; name: string }) => ({ id: o.id, name: o.name })));
+      }
+    } catch {
+      // フォールバック
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchOffices();
+  }, [fetchOffices]);
 
   const openWcDialog = () => {
     setWcForm({ ...workersComp });
@@ -119,8 +148,39 @@ export function LaborInsurancePanel() {
   const wcIndustry = WORKERS_COMP_INDUSTRIES.find(i => i.value === workersComp.industryType);
   const empIndustry = EMPLOYMENT_INS_INDUSTRIES.find(i => i.value === employment.industryType);
 
+  // 雇用保険料率: カスタム値があればそちらを使用
+  const empEmployeeRate = employment.customEmployeeRate ?? empIndustry?.employeeRate ?? 0;
+  const empEmployerRate = employment.customEmployerRate ?? empIndustry?.employerRate ?? 0;
+
   return (
     <div className="space-y-6">
+      {/* 事業所セレクタ */}
+      {officeOptions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              <div>
+                <CardTitle className="text-base">事業所選択</CardTitle>
+                <CardDescription>労働保険情報を設定する事業所を選択してください</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Select value={selectedOfficeId} onValueChange={setSelectedOfficeId}>
+              <SelectTrigger className="w-[300px]">
+                <SelectValue placeholder="事業所を選択" />
+              </SelectTrigger>
+              <SelectContent>
+                {officeOptions.map(o => (
+                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 労災保険 */}
       <Card>
         <CardHeader>
@@ -211,32 +271,30 @@ export function LaborInsurancePanel() {
             </TableBody>
           </Table>
 
-          {/* 雇用保険料率 */}
-          {empIndustry && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">雇用保険料率</p>
-              <Table>
-                <TableBody>
-                  <TableRow>
-                    <TableCell className="font-medium w-[200px]">/1,000</TableCell>
-                    <TableCell>{empIndustry.label}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">従業員</TableCell>
-                    <TableCell>{empIndustry.employeeRate}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">事業主</TableCell>
-                    <TableCell>{empIndustry.employerRate}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">合計</TableCell>
-                    <TableCell>{empIndustry.employeeRate + empIndustry.employerRate}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          {/* 雇用保険料率（編集可能） */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">雇用保険料率</p>
+            <Table>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="font-medium w-[200px]">/1,000</TableCell>
+                  <TableCell>{empIndustry?.label || '-'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">従業員</TableCell>
+                  <TableCell>{empEmployeeRate}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">事業主</TableCell>
+                  <TableCell>{empEmployerRate}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">合計</TableCell>
+                  <TableCell>{Math.round((empEmployeeRate + empEmployerRate) * 10) / 10}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -327,7 +385,7 @@ export function LaborInsurancePanel() {
               <Switch checked={wcForm.meritApplicable} onCheckedChange={v => setWcForm(f => ({ ...f, meritApplicable: v }))} />
               <span className="text-sm">適用あり</span>
               {wcForm.meritApplicable && (
-                <Input type="number" step={0.001} value={wcForm.meritRate} onChange={e => setWcForm(f => ({ ...f, meritRate: parseFloat(e.target.value) || 0 }))} className="w-24" />
+                <Input type="number" step={0.1} value={wcForm.meritRate} onChange={e => setWcForm(f => ({ ...f, meritRate: parseFloat(e.target.value) || 0 }))} className="w-24" />
               )}
             </div>
           </div>
@@ -343,7 +401,7 @@ export function LaborInsurancePanel() {
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>雇用保険</DialogTitle>
-            <DialogDescription>雇用保険の管轄・事業所番号・業種を設定します</DialogDescription>
+            <DialogDescription>雇用保険の管轄・事業所番号・業種・料率を設定します</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
@@ -389,7 +447,15 @@ export function LaborInsurancePanel() {
             </div>
             <div className="space-y-2">
               <Label>雇用保険料率用業種</Label>
-              <Select value={empForm.industryType} onValueChange={v => setEmpForm(f => ({ ...f, industryType: v }))}>
+              <Select value={empForm.industryType} onValueChange={v => {
+                const industry = EMPLOYMENT_INS_INDUSTRIES.find(i => i.value === v);
+                setEmpForm(f => ({
+                  ...f,
+                  industryType: v,
+                  customEmployeeRate: industry?.employeeRate ?? f.customEmployeeRate,
+                  customEmployerRate: industry?.employerRate ?? f.customEmployerRate,
+                }));
+              }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {EMPLOYMENT_INS_INDUSTRIES.map(i => (
@@ -397,6 +463,32 @@ export function LaborInsurancePanel() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>雇用保険料率（/1,000）</Label>
+              <p className="text-xs text-muted-foreground">小数点第1位まで入力可能</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="text-xs">従業員負担</Label>
+                  <Input
+                    type="number"
+                    step={0.1}
+                    value={empForm.customEmployeeRate ?? EMPLOYMENT_INS_INDUSTRIES.find(i => i.value === empForm.industryType)?.employeeRate ?? 0}
+                    onChange={e => setEmpForm(f => ({ ...f, customEmployeeRate: parseFloat(e.target.value) || 0 }))}
+                    className="w-24"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">事業主負担</Label>
+                  <Input
+                    type="number"
+                    step={0.1}
+                    value={empForm.customEmployerRate ?? EMPLOYMENT_INS_INDUSTRIES.find(i => i.value === empForm.industryType)?.employerRate ?? 0}
+                    onChange={e => setEmpForm(f => ({ ...f, customEmployerRate: parseFloat(e.target.value) || 0 }))}
+                    className="w-24"
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>

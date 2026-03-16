@@ -495,16 +495,20 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                 <FileText className="h-4 w-4 mr-2" />
                 PDF出力
               </Button>
-              <Button variant="outline" size="sm" onClick={handleClosingRequest}>
-                <FileCheck className="h-4 w-4 mr-2" />
-                締め申請
-              </Button>
               {isHR && (
                 <Button variant="outline" size="sm" onClick={handleExportCSV}>
                   <Download className="h-4 w-4 mr-2" />
                   CSV出力
                 </Button>
               )}
+              <Button variant="outline" size="sm" onClick={() => toast.info('一括編集機能は準備中です')} className="text-red-600 border-red-300 hover:bg-red-50">
+                <Edit className="h-4 w-4 mr-2" />
+                一括編集
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleClosingRequest}>
+                <FileCheck className="h-4 w-4 mr-2" />
+                締め申請
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -518,7 +522,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                     <TableHead scope="col" className="w-[60px] text-center sticky left-[60px] bg-muted/50 z-30">編集</TableHead>
                     <TableHead scope="col" className="w-[60px] text-center sticky left-[120px] bg-muted/50 z-30">申請</TableHead>
                     <TableHead scope="col" className="w-[100px] sticky left-[180px] bg-muted/50 z-30">日付</TableHead>
-                    <TableHead scope="col" className="w-[80px] sticky left-[280px] bg-muted/50 z-30">勤怠区分</TableHead>
+                    <TableHead scope="col" className="w-[80px] bg-muted/50">勤怠区分</TableHead>
                     <TableHead scope="col" className="w-[80px] text-center">申請状況</TableHead>
                     <TableHead scope="col" className="w-[100px]">勤務パターン</TableHead>
                     <TableHead scope="col" className="w-[60px] text-center">出勤</TableHead>
@@ -629,7 +633,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                         </TableCell>
 
                         {/* 勤怠区分 */}
-                        <TableCell className={cn("sticky left-[280px] z-10", stickyBg)}>
+                        <TableCell className={cn("z-10", stickyBg)}>
                           <Badge
                             variant="outline"
                             className={cn(
@@ -771,7 +775,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                           <TableCell className={cn("sticky left-[180px] z-10", stickyBg)}>
                             <span className="text-xs text-muted-foreground">{idx + 2}回目</span>
                           </TableCell>
-                          <TableCell className={cn("sticky left-[280px] z-10", stickyBg)} />
+                          <TableCell className={cn("z-10", stickyBg)} />
                           <TableCell />
                           <TableCell />
                           <TableCell className="text-center font-mono text-sm">

@@ -602,10 +602,10 @@ export function TeamAttendance() {
                     <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
                         <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
-                        <TableHead className="w-[60px] text-center">一覧</TableHead>
-                        <TableHead className="w-[80px] text-center">承認申請</TableHead>
-                        <TableHead className="w-[80px] text-center">上長承認</TableHead>
-                        <TableHead className="w-[80px] text-center">勤怠締め</TableHead>
+                        <TableHead className="w-[60px] text-center sticky left-[120px] bg-muted/50 z-30">一覧</TableHead>
+                        <TableHead className="w-[80px] text-center sticky left-[180px] bg-muted/50 z-30">承認申請</TableHead>
+                        <TableHead className="w-[80px] text-center sticky left-[260px] bg-muted/50 z-30">上長承認</TableHead>
+                        <TableHead className="w-[80px] text-center sticky left-[340px] bg-muted/50 z-30">勤怠締め</TableHead>
                         {monthDays.map(day => {
                           const dayOfWeek = getDay(day);
                           const isSunday = dayOfWeek === 0;
@@ -648,7 +648,7 @@ export function TeamAttendance() {
                             </TableCell>
 
                             {/* 一覧リンク */}
-                            <TableCell className="text-center">
+                            <TableCell className="text-center sticky left-[120px] bg-background z-10">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -660,7 +660,7 @@ export function TeamAttendance() {
                             </TableCell>
 
                             {/* 承認申請 */}
-                            <TableCell className="text-center">
+                            <TableCell className="text-center sticky left-[180px] bg-background z-10">
                               {member.closingRequested ? (
                                 <CheckCircle className="h-4 w-4 text-yellow-500 mx-auto" />
                               ) : (
@@ -669,7 +669,7 @@ export function TeamAttendance() {
                             </TableCell>
 
                             {/* 上長承認 */}
-                            <TableCell className="text-center">
+                            <TableCell className="text-center sticky left-[260px] bg-background z-10">
                               {member.managerApproved ? (
                                 <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
                               ) : member.closingRequested ? (
@@ -680,7 +680,7 @@ export function TeamAttendance() {
                             </TableCell>
 
                             {/* 勤怠締め */}
-                            <TableCell className="text-center">
+                            <TableCell className="text-center sticky left-[340px] bg-background z-10">
                               {member.attendanceClosed ? (
                                 <CheckCircle className="h-4 w-4 text-blue-500 mx-auto" />
                               ) : member.managerApproved ? (
@@ -917,7 +917,7 @@ export function TeamAttendance() {
 
       {/* メンバー勤怠詳細ダイアログ */}
       <Dialog open={memberDetailDialogOpen} onOpenChange={setMemberDetailDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+        <DialogContent className="max-w-[900px] max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -957,15 +957,15 @@ export function TeamAttendance() {
 
               {/* D1: 日次一覧（勤怠一覧と同じ項目） */}
               <div className="border rounded-lg overflow-hidden">
-                <ScrollArea className="w-full max-h-[400px]">
+                <ScrollArea className="w-full max-h-[60vh]">
                   <div className="min-w-[1600px]">
                     <Table>
                       <TableHeader className="sticky top-0 z-20 bg-background">
                         <TableRow className="bg-muted/50">
                           <TableHead className="w-[100px] sticky left-0 bg-muted/50 z-30">日付</TableHead>
-                          <TableHead className="text-center w-[70px]">勤怠区分</TableHead>
-                          <TableHead className="text-center w-[60px]">申請状況</TableHead>
-                          <TableHead className="text-center w-[80px]">勤務パターン</TableHead>
+                          <TableHead className="text-center w-[70px] sticky left-[100px] bg-muted/50 z-30">勤怠区分</TableHead>
+                          <TableHead className="text-center w-[60px] sticky left-[170px] bg-muted/50 z-30">申請状況</TableHead>
+                          <TableHead className="text-center w-[80px] sticky left-[230px] bg-muted/50 z-30">勤務パターン</TableHead>
                           <TableHead className="text-center w-[55px]">出勤</TableHead>
                           <TableHead className="text-center w-[55px]">退勤</TableHead>
                           <TableHead className="text-center w-[55px]">休憩入</TableHead>

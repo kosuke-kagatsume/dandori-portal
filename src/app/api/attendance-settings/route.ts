@@ -32,6 +32,8 @@ export async function GET(request: NextRequest) {
           allowEarlyCheckIn: true,
           earlyCheckInMinutes: 30,
           weeklyHolidays: ['saturday', 'sunday'],
+          punchRoundingRules: null,
+          aggregationSettings: null,
         },
         isNew: true,
       });
@@ -57,6 +59,8 @@ export async function GET(request: NextRequest) {
         allowEarlyCheckIn: settings.allowEarlyCheckIn,
         earlyCheckInMinutes: settings.earlyCheckInMinutes,
         weeklyHolidays: settings.weeklyHolidays,
+        punchRoundingRules: settings.punchRoundingRules,
+        aggregationSettings: settings.aggregationSettings,
       },
     });
   } catch (error) {
@@ -93,6 +97,8 @@ export async function PUT(request: NextRequest) {
       allowEarlyCheckIn,
       earlyCheckInMinutes,
       weeklyHolidays,
+      punchRoundingRules,
+      aggregationSettings,
     } = body;
 
     // upsert（存在すれば更新、なければ作成）
@@ -114,6 +120,8 @@ export async function PUT(request: NextRequest) {
         allowEarlyCheckIn,
         earlyCheckInMinutes,
         weeklyHolidays,
+        punchRoundingRules,
+        aggregationSettings,
       },
       create: {
         id: crypto.randomUUID(),
@@ -133,6 +141,8 @@ export async function PUT(request: NextRequest) {
         allowEarlyCheckIn: allowEarlyCheckIn ?? true,
         earlyCheckInMinutes: earlyCheckInMinutes ?? 30,
         weeklyHolidays: weeklyHolidays ?? ['saturday', 'sunday'],
+        punchRoundingRules: punchRoundingRules ?? undefined,
+        aggregationSettings: aggregationSettings ?? undefined,
         updatedAt: new Date(),
       },
     });

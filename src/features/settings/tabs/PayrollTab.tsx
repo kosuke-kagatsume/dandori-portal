@@ -3,10 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCompanySettingsStore } from '@/lib/store/company-settings-store';
 import { DollarSign, Calendar, Loader2 } from 'lucide-react';
@@ -190,34 +188,6 @@ function PayStructureSubTab({ saveSettings }: { saveSettings: () => void }) {
                 <SelectItem value="hourly">時給制</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <Separator />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="standardWorkHours">所定労働時間 / 日 *</Label>
-              <Input
-                id="standardWorkHours"
-                type="number"
-                min="0"
-                max="24"
-                step="0.5"
-                value={payrollSettings.standardWorkHours}
-                onChange={(e) => updatePayrollSettings({ standardWorkHours: parseFloat(e.target.value) })}
-              />
-              <p className="text-sm text-muted-foreground">1日あたりの標準労働時間（時間）</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="standardWorkDays">所定労働日数 / 月 *</Label>
-              <Input
-                id="standardWorkDays"
-                type="number"
-                min="0"
-                max="31"
-                value={payrollSettings.standardWorkDays}
-                onChange={(e) => updatePayrollSettings({ standardWorkDays: parseInt(e.target.value) })}
-              />
-              <p className="text-sm text-muted-foreground">1ヶ月あたりの標準労働日数（日）</p>
-            </div>
           </div>
         </CardContent>
       </Card>

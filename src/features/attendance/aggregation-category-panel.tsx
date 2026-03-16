@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { BarChart3 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface AggregationCategory {
   id: string;
@@ -49,6 +50,12 @@ interface FreeTextMasterItem {
   id: string;
   name: string;
   sortOrder: number;
+}
+
+interface AggregationSettingsData {
+  categories: AggregationCategory[];
+  departments: FreeTextMasterItem[];
+  jobTypes: FreeTextMasterItem[];
 }
 
 const defaultCategories: AggregationCategory[] = [
@@ -67,6 +74,8 @@ export function AggregationCategoryPanel() {
   const [editingItem, setEditingItem] = useState<AggregationCategory | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({ code: '', name: '', description: '', sortOrder: 0, isActive: true });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // 部門マスタ
   const [departments, setDepartments] = useState<FreeTextMasterItem[]>([]);
@@ -80,16 +89,72 @@ export function AggregationCategoryPanel() {
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [editingJobName, setEditingJobName] = useState('');
 
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/attendance-settings');
+      const json = await res.json();
+      if (json.success && json.data?.aggregationSettings) {
+        const data = json.data.aggregationSettings as AggregationSettingsData;
+        if (data.categories?.length) setCategories(data.categories);
+        if (data.departments) setDepartments(data.departments);
+        if (data.jobTypes) setJobTypes(data.jobTypes);
+      }
+    } catch {
+      // デフォルト値を使用
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  const saveToAPI = useCallback(async (
+    newCategories: AggregationCategory[],
+    newDepartments: FreeTextMasterItem[],
+    newJobTypes: FreeTextMasterItem[]
+  ) => {
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/attendance-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          aggregationSettings: {
+            categories: newCategories,
+            departments: newDepartments,
+            jobTypes: newJobTypes,
+          },
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success('集計区分設定を保存しました');
+      } else {
+        toast.error('保存に失敗しました');
+      }
+    } catch {
+      toast.error('保存に失敗しました');
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
+
   const addDepartment = () => {
     if (!deptInput.trim()) return;
-    setDepartments(prev => [...prev, { id: crypto.randomUUID(), name: deptInput.trim(), sortOrder: prev.length + 1 }]);
+    const newDepts = [...departments, { id: crypto.randomUUID(), name: deptInput.trim(), sortOrder: departments.length + 1 }];
+    setDepartments(newDepts);
     setDeptInput('');
+    saveToAPI(categories, newDepts, jobTypes);
   };
 
   const addJobType = () => {
     if (!jobInput.trim()) return;
-    setJobTypes(prev => [...prev, { id: crypto.randomUUID(), name: jobInput.trim(), sortOrder: prev.length + 1 }]);
+    const newJobs = [...jobTypes, { id: crypto.randomUUID(), name: jobInput.trim(), sortOrder: jobTypes.length + 1 }];
+    setJobTypes(newJobs);
     setJobInput('');
+    saveToAPI(categories, departments, newJobs);
   };
 
   const openAddDialog = () => {
@@ -106,23 +171,38 @@ export function AggregationCategoryPanel() {
 
   const handleSave = () => {
     if (!form.code || !form.name) return;
+    let newCategories: AggregationCategory[];
     if (editingItem) {
-      setCategories(prev => prev.map(c => c.id === editingItem.id ? { ...c, ...form } : c));
+      newCategories = categories.map(c => c.id === editingItem.id ? { ...c, ...form } : c);
     } else {
-      setCategories(prev => [...prev, { id: crypto.randomUUID(), ...form }]);
+      newCategories = [...categories, { id: crypto.randomUUID(), ...form }];
     }
+    setCategories(newCategories);
     setDialogOpen(false);
+    saveToAPI(newCategories, departments, jobTypes);
   };
 
   const handleDelete = () => {
     if (!deleteId) return;
-    setCategories(prev => prev.filter(c => c.id !== deleteId));
+    const newCategories = categories.filter(c => c.id !== deleteId);
+    setCategories(newCategories);
     setDeleteId(null);
+    saveToAPI(newCategories, departments, jobTypes);
   };
 
   const toggleActive = (id: string, isActive: boolean) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, isActive } : c));
+    const newCategories = categories.map(c => c.id === id ? { ...c, isActive } : c);
+    setCategories(newCategories);
+    saveToAPI(newCategories, departments, jobTypes);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -136,9 +216,12 @@ export function AggregationCategoryPanel() {
               <CardDescription>勤怠集計のカテゴリ（通常勤務・残業・深夜等）を定義します</CardDescription>
             </div>
           </div>
-          <Button onClick={openAddDialog} size="sm">
-            <Plus className="w-4 h-4 mr-2" />追加
-          </Button>
+          <div className="flex gap-2">
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            <Button onClick={openAddDialog} size="sm">
+              <Plus className="w-4 h-4 mr-2" />追加
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -269,13 +352,17 @@ export function AggregationCategoryPanel() {
                           onChange={e => setEditingDeptName(e.target.value)}
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
-                              setDepartments(prev => prev.map(p => p.id === d.id ? { ...p, name: editingDeptName } : p));
+                              const newDepts = departments.map(p => p.id === d.id ? { ...p, name: editingDeptName } : p);
+                              setDepartments(newDepts);
                               setEditingDeptId(null);
+                              saveToAPI(categories, newDepts, jobTypes);
                             }
                           }}
                           onBlur={() => {
-                            setDepartments(prev => prev.map(p => p.id === d.id ? { ...p, name: editingDeptName } : p));
+                            const newDepts = departments.map(p => p.id === d.id ? { ...p, name: editingDeptName } : p);
+                            setDepartments(newDepts);
                             setEditingDeptId(null);
+                            saveToAPI(categories, newDepts, jobTypes);
                           }}
                           className="h-8"
                           autoFocus
@@ -289,7 +376,11 @@ export function AggregationCategoryPanel() {
                         <Button variant="ghost" size="icon" onClick={() => { setEditingDeptId(d.id); setEditingDeptName(d.name); }}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDepartments(prev => prev.filter(p => p.id !== d.id))}>
+                        <Button variant="ghost" size="icon" onClick={() => {
+                          const newDepts = departments.filter(p => p.id !== d.id);
+                          setDepartments(newDepts);
+                          saveToAPI(categories, newDepts, jobTypes);
+                        }}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
@@ -340,13 +431,17 @@ export function AggregationCategoryPanel() {
                           onChange={e => setEditingJobName(e.target.value)}
                           onKeyDown={e => {
                             if (e.key === 'Enter') {
-                              setJobTypes(prev => prev.map(p => p.id === j.id ? { ...p, name: editingJobName } : p));
+                              const newJobs = jobTypes.map(p => p.id === j.id ? { ...p, name: editingJobName } : p);
+                              setJobTypes(newJobs);
                               setEditingJobId(null);
+                              saveToAPI(categories, departments, newJobs);
                             }
                           }}
                           onBlur={() => {
-                            setJobTypes(prev => prev.map(p => p.id === j.id ? { ...p, name: editingJobName } : p));
+                            const newJobs = jobTypes.map(p => p.id === j.id ? { ...p, name: editingJobName } : p);
+                            setJobTypes(newJobs);
                             setEditingJobId(null);
+                            saveToAPI(categories, departments, newJobs);
                           }}
                           className="h-8"
                           autoFocus
@@ -360,7 +455,11 @@ export function AggregationCategoryPanel() {
                         <Button variant="ghost" size="icon" onClick={() => { setEditingJobId(j.id); setEditingJobName(j.name); }}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setJobTypes(prev => prev.filter(p => p.id !== j.id))}>
+                        <Button variant="ghost" size="icon" onClick={() => {
+                          const newJobs = jobTypes.filter(p => p.id !== j.id);
+                          setJobTypes(newJobs);
+                          saveToAPI(categories, departments, newJobs);
+                        }}>
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
                       </div>
