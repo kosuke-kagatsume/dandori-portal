@@ -10,7 +10,7 @@ export const UserSchema = z.object({
   email: z.string().email(),
   phone: z.string().optional(),
   hireDate: z.string(),
-  unitId: z.string(),
+  unitId: z.string().optional(),
   roles: z.array(z.string()),
   status: z.enum(['active', 'inactive', 'suspended', 'retired']),
   retiredDate: z.string().optional(), // 退職日

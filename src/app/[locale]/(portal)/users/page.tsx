@@ -341,7 +341,7 @@ export default function UsersPage() {
               retiredDate: normalizeDate(retiredDate) || undefined,
               retirementReason: (['voluntary', 'company', 'contract_end', 'retirement_age', 'other'].includes(retirementReason || '') ? retirementReason as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other' : undefined),
               roles: roles ? roles.split(/[;,]/).map(r => r.trim()).filter(Boolean) : ['employee'],
-              unitId: '1',
+              unitId: undefined,
               timezone: 'Asia/Tokyo',
               avatar: '',
             };
