@@ -1,15 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { randomBytes } from 'crypto';
+import bcrypt from 'bcryptjs';
 import { withAuth } from '@/lib/auth/api-auth';
+import { sendEmail } from '@/lib/email/send-email';
+import { getUserInviteEmail } from '@/lib/email/templates/user-invite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// ランダムパスワード生成（12文字）
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
 /**
  * ユーザー招待API
  * テナント管理者がメンバーを招待する際に使用
- * 招待トークンを生成してユーザーを仮登録
+ * ユーザー作成 + 初期パスワード設定 + 招待メール送信
  */
 export async function POST(request: NextRequest) {
   // 認証チェック（adminまたはhr権限が必要）
@@ -19,7 +31,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { email, name, role, tenantId: requestedTenantId } = await request.json();
+    const body = await request.json();
+    const {
+      email,
+      name,
+      role,
+      roles,
+      department,
+      position,
+      employeeNumber,
+      employmentType,
+      hireDate,
+      tenantId: requestedTenantId,
+    } = body;
 
     // 認証ユーザーのテナントIDを使用（リクエストのtenantIdより優先）
     const tenantId = auth.user?.tenantId || requestedTenantId;
@@ -60,52 +84,76 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 招待トークンを生成
-    const inviteToken = randomBytes(32).toString('hex');
-    const inviteExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7日後
+    // パスワード生成 + ハッシュ化
+    const tempPassword = generatePassword();
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    // ユーザーを招待状態で作成
+    // テナント名取得（メールに使用）
+    const tenant = await prisma.tenants.findUnique({
+      where: { id: tenantId },
+      select: { name: true, subdomain: true },
+    });
+
+    const tenantName = tenant?.name || 'Dandori Portal';
+
+    // ユーザーロール決定
     const userRole = role || 'employee';
+    const userRoles = roles || [userRole];
+
+    // ユーザーを作成
     const user = await prisma.users.create({
       data: {
         id: crypto.randomUUID(),
         email,
         name,
         role: userRole,
-        roles: [userRole], // roles配列も設定（必須フィールド）
+        roles: userRoles,
         tenantId,
-        status: 'inactive', // 招待受諾まで無効
+        status: 'active',
+        passwordHash,
+        passwordResetRequired: true,
+        employeeNumber: employeeNumber || undefined,
+        department: department || undefined,
+        position: position || undefined,
+        employmentType: employmentType || undefined,
+        hireDate: hireDate ? new Date(hireDate) : undefined,
+        invitedAt: new Date(),
         updatedAt: new Date(),
-        // 招待トークンは別途管理する必要があります
       },
     });
 
-    // 招待情報を一時保存（メタデータとして扱う）
-    console.log('Invite token for user:', user.id, inviteToken);
-    console.log('Invite expiry:', inviteExpiry);
+    // 招待メール送信
+    const loginUrl = `https://dandori-portal.com/ja/auth/login`;
+    const emailContent = getUserInviteEmail({
+      tenantName,
+      userName: name,
+      email,
+      password: tempPassword,
+      loginUrl,
+    });
 
-    // 招待メール送信 (ここでは招待URLを生成のみ)
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com'}/auth/accept-invite?token=${inviteToken}`;
+    const emailResult = await sendEmail({
+      to: email,
+      subject: emailContent.subject,
+      html: emailContent.html,
+      text: emailContent.text,
+    });
 
-    console.log('User invited successfully:', email);
-    console.log('Invite URL:', inviteUrl);
-
-    // TODO: 実際のメール送信処理を実装 (SES, SendGrid等)
-    // await sendInviteEmail(email, name, inviteUrl, tenantName);
+    if (!emailResult.success) {
+      console.warn(`[Invite] Email sending failed for ${email}:`, emailResult.error);
+    }
 
     return NextResponse.json({
       success: true,
-      message: '招待を作成しました',
+      message: emailResult.success ? '招待メールを送信しました' : 'ユーザーを作成しました（メール送信失敗）',
+      emailSent: emailResult.success,
       user: {
         id: user.id,
         email: user.email,
         name,
-        role: role || 'employee',
+        role: userRole,
         tenantId,
-        invitedAt: new Date().toISOString(),
       },
-      // 開発時のみ招待URLを返す
-      ...(process.env.NODE_ENV !== 'production' && { inviteUrl }),
     });
   } catch (error) {
     console.error('Invite user error:', error);

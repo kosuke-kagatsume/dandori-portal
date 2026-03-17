@@ -89,7 +89,10 @@ export default function UsersPage() {
 
   // 人事(hr)のみ編集可能。経営者・システム管理者は閲覧のみ
   const isHR = currentUser?.roles?.includes('hr');
+  const isAdmin = currentUser?.roles?.includes('admin');
   const isReadOnly = !isHR;
+  // エクスポート・インポートはadminまたはhrのみ
+  const canExportImport = isHR || isAdmin;
 
   // APIからユーザーを取得
   const fetchUsers = useCallback(async () => {
@@ -301,7 +304,7 @@ export default function UsersPage() {
           return;
         }
 
-        // ヘッダー行をスキップ
+        // ヘッダー行をスキップ（※付きヘッダーも対応）
         const dataLines = lines.slice(1);
         const importedUsers: User[] = [];
         let errorCount = 0;
@@ -315,8 +318,8 @@ export default function UsersPage() {
               return;
             }
 
-            // CSV形式: 従業員ID,社員番号,氏名,フリガナ,メール,電話,部署,役職,雇用形態,入社日,生年月日,性別,郵便番号,住所,ステータス,退職日,退職理由,役割
-            const [id, employeeNumber, name, nameKana, email, phone, department, position, employmentType, hireDate, birthDate, gender, postalCode, address, status, retiredDate, retirementReason, roles] = cleanValues;
+            // CSV形式: 従業員ID,※社員番号,※氏名,フリガナ,※メール,電話,※部署,※役職,雇用形態,入社日,生年月日,性別,郵便番号,住所,ステータス,退職日,退職理由,※役割,招待
+            const [id, employeeNumber, name, nameKana, email, phone, department, position, employmentType, hireDate, birthDate, gender, postalCode, address, status, retiredDate, retirementReason, roles, invite] = cleanValues;
 
             // 日付形式の正規化（yyyy/mm/dd → yyyy-mm-dd）
             const normalizeDate = (d: string | undefined) => d ? d.replace(/\//g, '-') : undefined;
@@ -345,6 +348,11 @@ export default function UsersPage() {
               timezone: 'Asia/Tokyo',
               avatar: '',
             };
+
+            // 招待フラグを判定
+            const shouldInvite = invite?.toUpperCase() === 'TRUE' || invite === '✓' || invite === '☑';
+            // @ts-expect-error _invite is a temporary flag for import processing
+            user._invite = shouldInvite;
 
             // 基本的なバリデーション
             if (user.name && user.email) {
@@ -437,21 +445,52 @@ export default function UsersPage() {
               }
             }
 
-            // 新規ユーザーもAPIで作成
+            // 新規ユーザーもAPIで作成（招待フラグ付きは招待APIを使用）
+            let inviteCount = 0;
             for (const user of newUsers) {
               try {
-                const res = await fetchWithRetry('/api/users', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    ...user,
-                    tenantId: currentUser?.tenantId || tenantId,
-                  }),
-                });
-                if (!res.ok) {
-                  const errBody = await res.json().catch(() => null);
-                  console.error(`Import POST error for ${user.name}:`, res.status, errBody);
-                  apiErrorCount++;
+                // @ts-expect-error _invite is a temporary flag for import processing
+                const shouldInvite = user._invite === true;
+                if (shouldInvite) {
+                  // 招待API: ユーザー作成 + パスワード生成 + メール送信
+                  const res = await fetchWithRetry('/api/admin/invite-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      email: user.email,
+                      name: user.name,
+                      role: user.roles?.[0] || 'employee',
+                      roles: user.roles,
+                      department: user.department,
+                      position: user.position,
+                      employeeNumber: user.employeeNumber,
+                      employmentType: user.employmentType,
+                      hireDate: user.hireDate,
+                      tenantId: currentUser?.tenantId || tenantId,
+                    }),
+                  });
+                  if (!res.ok) {
+                    const errBody = await res.json().catch(() => null);
+                    console.error(`Import invite error for ${user.name}:`, res.status, errBody);
+                    apiErrorCount++;
+                  } else {
+                    inviteCount++;
+                  }
+                } else {
+                  // 通常の作成
+                  const res = await fetchWithRetry('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      ...user,
+                      tenantId: currentUser?.tenantId || tenantId,
+                    }),
+                  });
+                  if (!res.ok) {
+                    const errBody = await res.json().catch(() => null);
+                    console.error(`Import POST error for ${user.name}:`, res.status, errBody);
+                    apiErrorCount++;
+                  }
                 }
                 await delay(50);
               } catch (err) {
@@ -465,6 +504,7 @@ export default function UsersPage() {
 
             const parts: string[] = [];
             if (newUsers.length > 0) parts.push(`${newUsers.length}件を新規追加`);
+            if (inviteCount > 0) parts.push(`${inviteCount}件に招待メール送信`);
             if (updatedUsers.length > 0) parts.push(`${updatedUsers.length}件を更新`);
             if (apiErrorCount > 0) parts.push(`${apiErrorCount}件のAPI保存エラー`);
             if (errorCount > 0) parts.push(`${errorCount}件のパースエラー`);
@@ -711,8 +751,8 @@ export default function UsersPage() {
               <SelectItem value="suspended">休職中</SelectItem>
             </SelectContent>
           </Select>
-          {/* 人事以外は編集系操作不可 */}
-          {!isReadOnly && (
+          {/* admin/hrのみエクスポート・インポート表示 */}
+          {canExportImport && (
             <>
               <Button variant="outline" size="sm" onClick={handleExportCSV} className="w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" />

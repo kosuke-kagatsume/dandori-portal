@@ -490,13 +490,13 @@ export const exportUsersToCSV = (
 
     const headers = [
       '従業員ID',
-      '社員番号',
-      '氏名',
+      '※社員番号',
+      '※氏名',
       'フリガナ',
-      'メールアドレス',
+      '※メールアドレス',
       '電話番号',
-      '部署',
-      '役職',
+      '※部署',
+      '※役職',
       '雇用形態',
       '入社日',
       '生年月日',
@@ -506,8 +506,17 @@ export const exportUsersToCSV = (
       'ステータス',
       '退職日',
       '退職理由',
-      '役割',
+      '※役割',
+      '招待',
     ];
+
+    // 日付をYYYY/MM/DD形式に変換
+    const formatDate = (dateStr: string | undefined | null): string => {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    };
 
     const rows = users.map((user) => [
       user.id,
@@ -519,15 +528,16 @@ export const exportUsersToCSV = (
       user.department || '',
       user.position || '',
       user.employmentType || '',
-      user.hireDate,
-      user.birthDate || '',
+      formatDate(user.hireDate),
+      formatDate(user.birthDate),
       user.gender || '',
       user.postalCode || '',
       user.address || '',
       getUserStatusLabel(user.status),
-      user.retiredDate || '',
+      formatDate(user.retiredDate),
       getRetirementReasonLabel(user.retirementReason),
       user.roles.join(', '),
+      '', // 招待列（既存ユーザーは空）
     ]);
 
     const csvString = generateCSVString(headers, rows);
