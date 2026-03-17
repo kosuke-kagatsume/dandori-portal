@@ -113,8 +113,32 @@ export async function POST(request: NextRequest) {
       maxAge: TOKEN_EXPIRY,
     });
 
-    // 注意: x-tenant-id はミドルウェアがサブドメインから設定するため、
-    // ログインAPIでは設定しない（テナントURL問題の原因になる）
+    // テナント情報をCookieに設定
+    // ミドルウェアがサブドメインから解決できない環境（dev.dandori-portal.com等）のフォールバック
+    if (user.tenantId) {
+      cookieStore.set('x-tenant-id', user.tenantId, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: TOKEN_EXPIRY,
+      });
+    }
+    if (user.tenants?.id) {
+      const tenant = await prisma.tenants.findUnique({
+        where: { id: user.tenantId },
+        select: { subdomain: true },
+      });
+      if (tenant?.subdomain) {
+        cookieStore.set('x-subdomain', tenant.subdomain, {
+          httpOnly: false,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+          maxAge: TOKEN_EXPIRY,
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,
