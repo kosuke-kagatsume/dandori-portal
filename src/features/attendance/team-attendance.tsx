@@ -601,11 +601,11 @@ export function TeamAttendance() {
                   <Table>
                     <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
-                        <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
-                        <TableHead className="w-[60px] text-center sticky left-[120px] bg-muted/50 z-30">一覧</TableHead>
-                        <TableHead className="w-[80px] text-center sticky left-[180px] bg-muted/50 z-30">承認申請</TableHead>
-                        <TableHead className="w-[80px] text-center sticky left-[260px] bg-muted/50 z-30">上長承認</TableHead>
-                        <TableHead className="w-[80px] text-center sticky left-[340px] bg-muted/50 z-30">勤怠締め</TableHead>
+                        <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
+                        <TableHead className="w-[50px] min-w-[50px] text-center sticky left-[120px] bg-muted/50 z-30">一覧</TableHead>
+                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[170px] bg-muted/50 z-30">承認申請</TableHead>
+                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[240px] bg-muted/50 z-30">上長承認</TableHead>
+                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[310px] bg-muted/50 z-30">勤怠締め</TableHead>
                         {monthDays.map(day => {
                           const dayOfWeek = getDay(day);
                           const isSunday = dayOfWeek === 0;
@@ -642,13 +642,13 @@ export function TeamAttendance() {
                         filteredData.map((member) => (
                           <TableRow key={member.memberId}>
                             {/* 氏名 */}
-                            <TableCell className="font-medium sticky left-0 bg-background z-10">
+                            <TableCell className="w-[120px] min-w-[120px] font-medium sticky left-0 bg-background z-10">
                               <div className="truncate">{member.memberName}</div>
                               <div className="text-xs text-muted-foreground truncate">{member.department}</div>
                             </TableCell>
 
                             {/* 一覧リンク */}
-                            <TableCell className="text-center sticky left-[120px] bg-background z-10">
+                            <TableCell className="w-[50px] min-w-[50px] text-center sticky left-[120px] bg-background z-10">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -660,7 +660,7 @@ export function TeamAttendance() {
                             </TableCell>
 
                             {/* 承認申請 */}
-                            <TableCell className="text-center sticky left-[180px] bg-background z-10">
+                            <TableCell className="w-[70px] min-w-[70px] text-center sticky left-[170px] bg-background z-10">
                               {member.closingRequested ? (
                                 <CheckCircle className="h-4 w-4 text-yellow-500 mx-auto" />
                               ) : (
@@ -669,7 +669,7 @@ export function TeamAttendance() {
                             </TableCell>
 
                             {/* 上長承認 */}
-                            <TableCell className="text-center sticky left-[260px] bg-background z-10">
+                            <TableCell className="w-[70px] min-w-[70px] text-center sticky left-[240px] bg-background z-10">
                               {member.managerApproved ? (
                                 <CheckCircle className="h-4 w-4 text-green-500 mx-auto" />
                               ) : member.closingRequested ? (
@@ -680,7 +680,7 @@ export function TeamAttendance() {
                             </TableCell>
 
                             {/* 勤怠締め */}
-                            <TableCell className="text-center sticky left-[340px] bg-background z-10">
+                            <TableCell className="w-[70px] min-w-[70px] text-center sticky left-[310px] bg-background z-10">
                               {member.attendanceClosed ? (
                                 <CheckCircle className="h-4 w-4 text-blue-500 mx-auto" />
                               ) : member.managerApproved ? (
@@ -917,7 +917,7 @@ export function TeamAttendance() {
 
       {/* メンバー勤怠詳細ダイアログ */}
       <Dialog open={memberDetailDialogOpen} onOpenChange={setMemberDetailDialogOpen}>
-        <DialogContent className="max-w-[900px] max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[95vw] w-[1400px] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -957,7 +957,7 @@ export function TeamAttendance() {
 
               {/* D1: 日次一覧（勤怠一覧と同じ項目） */}
               <div className="border rounded-lg overflow-hidden">
-                <ScrollArea className="w-full max-h-[60vh]">
+                <ScrollArea className="w-full flex-1 max-h-[calc(90vh-200px)]">
                   <div className="min-w-[1600px]">
                     <Table>
                       <TableHeader className="sticky top-0 z-20 bg-background">

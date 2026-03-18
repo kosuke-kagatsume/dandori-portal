@@ -619,7 +619,7 @@ export function AnnualSettingsPanel() {
         <CardHeader>
           <div>
             <CardTitle className="text-base">所定労働時間</CardTitle>
-            <CardDescription>就業ルールマスタに登録されている全就業ルールの所定労働時間を自動算出</CardDescription>
+            <CardDescription>月別日数表および就業ルールに基づき、就業ルールごとに自動算出する</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -631,12 +631,12 @@ export function AnnualSettingsPanel() {
             workRules.map(rule => {
               let days: number;
               let hours: number;
-              if (rule.type === 'variable' || rule.type === '1month_variable') {
+              if (rule.type === 'monthly_variable' || rule.type === 'yearly_variable') {
                 // 変形労働時間制: 1週所定労働時間×52÷12
                 hours = Math.round((rule.weeklyWorkHours * 52 / 12) * 10) / 10;
                 days = Math.round((hours / (rule.dailyWorkHours || dailyWorkHours)) * 10) / 10;
               } else {
-                // 固定時間制・フレックス: 年所定労働日数合計÷12 × 1日所定労働時間
+                // 通常勤務（固定時間制・フレックス等）: 年所定労働日数合計÷12 × 1日所定労働時間
                 days = Math.round((totalWorkDays / 12) * 10) / 10;
                 hours = Math.round((days * (rule.dailyWorkHours || dailyWorkHours)) * 10) / 10;
               }

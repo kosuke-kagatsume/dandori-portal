@@ -355,7 +355,7 @@ export function ShiftManagement() {
                   <Table>
                     <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
-                        <TableHead className="w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
+                        <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
                         {monthDays.map(day => {
                           const dayOfWeek = getDay(day);
                           const isSunday = dayOfWeek === 0;
@@ -387,7 +387,7 @@ export function ShiftManagement() {
                       ) : (
                         filteredMembers.map(member => (
                           <TableRow key={member.id}>
-                            <TableCell className="font-medium sticky left-0 bg-background z-10">
+                            <TableCell className="w-[120px] min-w-[120px] font-medium sticky left-0 bg-background z-10">
                               <div className="truncate">{member.name}</div>
                               <div className="text-xs text-muted-foreground truncate">{member.department}</div>
                             </TableCell>
