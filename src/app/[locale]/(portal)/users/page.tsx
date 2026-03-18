@@ -36,6 +36,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { VirtualDataTable } from '@/components/ui/common/virtual-data-table';
 import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
@@ -63,6 +71,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [importInputRef, setImportInputRef] = useState<HTMLInputElement | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const router = useRouter();
   const { users, setUsers, retireUser } = useUserStore();
@@ -335,7 +344,7 @@ export default function UsersPage() {
               department: department || '',
               position: position || '',
               employmentType: employmentType || '',
-              hireDate: normalizeDate(hireDate) || new Date().toISOString().split('T')[0],
+              hireDate: normalizeDate(hireDate) || '',
               birthDate: normalizeDate(birthDate) || undefined,
               gender: (gender === '男' ? 'male' : gender === '女' ? 'female' : gender as 'male' | 'female' | 'other' | 'prefer_not_to_say') || undefined,
               postalCode: postalCode || '',
@@ -761,7 +770,7 @@ export default function UsersPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => importInputRef?.click()}
+                onClick={() => setImportDialogOpen(true)}
                 className="w-full sm:w-auto"
               >
                 <Upload className="mr-2 h-4 w-4" />
@@ -771,7 +780,7 @@ export default function UsersPage() {
                 ref={(el) => setImportInputRef(el)}
                 type="file"
                 accept=".csv"
-                onChange={handleImportCSV}
+                onChange={(e) => { handleImportCSV(e); setImportDialogOpen(false); }}
                 style={{ display: 'none' }}
               />
             </>
@@ -863,6 +872,37 @@ export default function UsersPage() {
         user={editingUser}
         onSubmit={handleEditUser}
       />
+
+      {/* CSV Import Instructions Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>ユーザーを一括登録</DialogTitle>
+            <DialogDescription>CSVファイルを選択してください。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <ul className="list-disc pl-5 space-y-1.5">
+              <li>一括登録用のCSVファイルは、[エクスポート]ボタンで出力できます。</li>
+              <li>1行目のヘッダ列を削除すると、登録できません。</li>
+              <li>※は必須項目となります。</li>
+              <li>部署、役職列は、設定＞マスタ管理に登録している名称と一致させてください。</li>
+              <li>権限列には「admin」「executive」「manager」「hr」「employee」を半角英字で入力してください。</li>
+              <li>＜任意項目＞招待メールを送りたいユーザーの招待列に「TRUE」を入力してください。</li>
+              <li>＜任意項目＞日付は「YYYY/MM/DD」形式で入力してください。</li>
+              <li>＜任意項目＞フリガナは全角カタカナで入力してください。</li>
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+              キャンセル
+            </Button>
+            <Button onClick={() => importInputRef?.click()}>
+              <Upload className="mr-2 h-4 w-4" />
+              ファイルを選択
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

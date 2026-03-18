@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import {
   Dialog,
   DialogContent,
@@ -741,8 +741,8 @@ export function WorkRuleMasterPanel() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0 px-6 [&_[data-radix-scroll-area-scrollbar]]:w-4 [&_[data-radix-scroll-area-scrollbar]]:opacity-100 [&_[data-radix-scroll-area-scrollbar]_[data-radix-scroll-area-thumb]]:bg-muted-foreground/40 [&_[data-radix-scroll-area-scrollbar]]:bg-muted/30">
-            <div className="grid gap-4 py-4 pr-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6">
+            <div className="grid gap-4 py-4">
 
               {/* ━━━ A1: ルール名 + 種別 ━━━ */}
               <SectionHeader title="就業ルール名" />
@@ -1460,7 +1460,7 @@ export function WorkRuleMasterPanel() {
               )}
 
             </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter className="px-6 py-4 border-t flex-shrink-0">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>

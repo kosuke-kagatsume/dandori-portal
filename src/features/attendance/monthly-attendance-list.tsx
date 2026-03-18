@@ -518,10 +518,10 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
               <Table>
                 <TableHeader className="sticky top-0 z-20 bg-background">
                   <TableRow className="bg-muted/50">
-                    <TableHead scope="col" className="w-[60px] text-center sticky left-0 bg-muted/50 z-30">詳細</TableHead>
-                    <TableHead scope="col" className="w-[60px] text-center sticky left-[60px] bg-muted/50 z-30">編集</TableHead>
-                    <TableHead scope="col" className="w-[60px] text-center sticky left-[120px] bg-muted/50 z-30">申請</TableHead>
-                    <TableHead scope="col" className="w-[100px] sticky left-[180px] bg-muted/50 z-30">日付</TableHead>
+                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-0 bg-muted/50 z-30">詳細</TableHead>
+                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-[50px] bg-muted/50 z-30">編集</TableHead>
+                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-[100px] bg-muted/50 z-30">申請</TableHead>
+                    <TableHead scope="col" className="w-[100px] min-w-[100px] max-w-[100px] sticky left-[150px] bg-muted/50 z-30">日付</TableHead>
                     <TableHead scope="col" className="w-[80px] bg-muted/50">勤怠区分</TableHead>
                     <TableHead scope="col" className="w-[80px] text-center">申請状況</TableHead>
                     <TableHead scope="col" className="w-[100px]">勤務パターン</TableHead>
@@ -574,7 +574,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                         )}
                       >
                         {/* 詳細 */}
-                        <TableCell className={cn("text-center sticky left-0 z-10", stickyBg)}>
+                        <TableCell className={cn("w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-0 z-10", stickyBg)}>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -587,7 +587,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                         </TableCell>
 
                         {/* 編集 */}
-                        <TableCell className={cn("text-center sticky left-[60px] z-10", stickyBg)}>
+                        <TableCell className={cn("w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-[50px] z-10", stickyBg)}>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -600,7 +600,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                         </TableCell>
 
                         {/* 申請 */}
-                        <TableCell className={cn("text-center sticky left-[120px] z-10", stickyBg)}>
+                        <TableCell className={cn("w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-[100px] z-10", stickyBg)}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-7 w-7" aria-label={`${format(day, 'M月d日')}の申請メニュー`}>
@@ -622,7 +622,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                         </TableCell>
 
                         {/* 日付 */}
-                        <TableCell className={cn("sticky left-[180px] z-10", stickyBg)}>
+                        <TableCell className={cn("w-[100px] min-w-[100px] max-w-[100px] sticky left-[150px] z-10", stickyBg)}>
                           <div className={cn(
                             'font-medium',
                             isSunday && 'text-red-500',
@@ -769,10 +769,10 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                             isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
                           )}
                         >
-                          <TableCell className={cn("sticky left-0 z-10", stickyBg)} />
-                          <TableCell className={cn("sticky left-[60px] z-10", stickyBg)} />
-                          <TableCell className={cn("sticky left-[120px] z-10", stickyBg)} />
-                          <TableCell className={cn("sticky left-[180px] z-10", stickyBg)}>
+                          <TableCell className={cn("w-[50px] min-w-[50px] max-w-[50px] sticky left-0 z-10", stickyBg)} />
+                          <TableCell className={cn("w-[50px] min-w-[50px] max-w-[50px] sticky left-[50px] z-10", stickyBg)} />
+                          <TableCell className={cn("w-[50px] min-w-[50px] max-w-[50px] sticky left-[100px] z-10", stickyBg)} />
+                          <TableCell className={cn("w-[100px] min-w-[100px] max-w-[100px] sticky left-[150px] z-10", stickyBg)}>
                             <span className="text-xs text-muted-foreground">{idx + 2}回目</span>
                           </TableCell>
                           <TableCell className={cn("z-10", stickyBg)} />
