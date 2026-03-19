@@ -600,11 +600,11 @@ export function TeamAttendance() {
                   <Table containerClassName="overflow-visible">
                     <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
-                        <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
-                        <TableHead className="w-[50px] min-w-[50px] text-center sticky left-[120px] bg-muted/50 z-30">一覧</TableHead>
-                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[170px] bg-muted/50 z-30">承認申請</TableHead>
-                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[240px] bg-muted/50 z-30">上長承認</TableHead>
-                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[310px] bg-muted/50 z-30">勤怠締め</TableHead>
+                        <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted z-30">氏名</TableHead>
+                        <TableHead className="w-[50px] min-w-[50px] text-center sticky left-[120px] bg-muted z-30">一覧</TableHead>
+                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[170px] bg-muted z-30">承認申請</TableHead>
+                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[240px] bg-muted z-30">上長承認</TableHead>
+                        <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[310px] bg-muted z-30">勤怠締め</TableHead>
                         {monthDays.map(day => {
                           const dayOfWeek = getDay(day);
                           const isSunday = dayOfWeek === 0;
@@ -929,7 +929,7 @@ export function TeamAttendance() {
           {selectedMember && (
             <div className="flex-1 min-h-0 flex flex-col gap-4">
               {/* サマリー */}
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-4 gap-3 flex-shrink-0">
                 <div className="p-3 bg-muted/50 rounded-lg text-center">
                   <div className="text-xs text-muted-foreground mb-1">出勤日数</div>
                   <div className="text-xl font-bold">{selectedMember.summary.presentDays}日</div>
@@ -954,16 +954,15 @@ export function TeamAttendance() {
               </div>
 
               {/* D1: 日次一覧（勤怠一覧と同じ項目） */}
-              <div className="border rounded-lg overflow-hidden flex-1 min-h-0">
-                <div className="w-full h-full overflow-auto">
+              <div className="border rounded-lg flex-1 min-h-0 overflow-auto">
                   <div className="min-w-[1600px]">
                     <Table containerClassName="overflow-visible">
                       <TableHeader className="sticky top-0 z-20 bg-background">
                         <TableRow className="bg-muted/50">
-                          <TableHead className="w-[100px] sticky left-0 bg-muted/50 z-30">日付</TableHead>
-                          <TableHead className="text-center w-[70px] sticky left-[100px] bg-muted/50 z-30">勤怠区分</TableHead>
-                          <TableHead className="text-center w-[60px] sticky left-[170px] bg-muted/50 z-30">申請状況</TableHead>
-                          <TableHead className="text-center w-[80px] sticky left-[230px] bg-muted/50 z-30">勤務パターン</TableHead>
+                          <TableHead className="w-[100px] sticky left-0 bg-muted z-30">日付</TableHead>
+                          <TableHead className="text-center w-[70px] sticky left-[100px] bg-muted z-30">勤怠区分</TableHead>
+                          <TableHead className="text-center w-[60px] sticky left-[170px] bg-muted z-30">申請状況</TableHead>
+                          <TableHead className="text-center w-[80px] sticky left-[230px] bg-muted z-30">勤務パターン</TableHead>
                           <TableHead className="text-center w-[55px]">出勤</TableHead>
                           <TableHead className="text-center w-[55px]">退勤</TableHead>
                           <TableHead className="text-center w-[55px]">休憩入</TableHead>
@@ -1079,7 +1078,6 @@ export function TeamAttendance() {
                       </TableBody>
                     </Table>
                   </div>
-                </div>
               </div>
             </div>
           )}
