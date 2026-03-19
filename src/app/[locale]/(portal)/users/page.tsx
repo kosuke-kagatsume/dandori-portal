@@ -344,7 +344,7 @@ export default function UsersPage() {
               department: department || '',
               position: position || '',
               employmentType: employmentType || '',
-              hireDate: normalizeDate(hireDate) || '',
+              hireDate: normalizeDate(hireDate) || undefined,
               birthDate: normalizeDate(birthDate) || undefined,
               gender: (gender === '男' ? 'male' : gender === '女' ? 'female' : gender as 'male' | 'female' | 'other' | 'prefer_not_to_say') || undefined,
               postalCode: postalCode || '',
@@ -430,7 +430,7 @@ export default function UsersPage() {
                     department: user.department,
                     position: user.position,
                     employmentType: user.employmentType,
-                    hireDate: user.hireDate,
+                    hireDate: user.hireDate || undefined,
                     birthDate: user.birthDate || undefined,
                     gender: user.gender || undefined,
                     postalCode: user.postalCode || undefined,
@@ -474,7 +474,7 @@ export default function UsersPage() {
                       position: user.position,
                       employeeNumber: user.employeeNumber,
                       employmentType: user.employmentType,
-                      hireDate: user.hireDate,
+                      hireDate: user.hireDate || undefined,
                       tenantId: currentUser?.tenantId || tenantId,
                     }),
                   });
@@ -492,6 +492,7 @@ export default function UsersPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       ...user,
+                      hireDate: user.hireDate || undefined,
                       tenantId: currentUser?.tenantId || tenantId,
                     }),
                   });
@@ -653,10 +654,10 @@ export default function UsersPage() {
       header: '入社日',
       cell: ({ row }) => {
         const user = row.original;
-        const hireDate = new Date(user.hireDate);
+        const hireDateValid = user.hireDate && user.hireDate !== '' && !isNaN(new Date(user.hireDate).getTime()) && new Date(user.hireDate).getFullYear() > 1970;
         return (
           <div>
-            <div className="text-sm">{hireDate.toLocaleDateString('ja-JP')}</div>
+            <div className="text-sm">{hireDateValid ? new Date(user.hireDate!).toLocaleDateString('ja-JP') : '-'}</div>
             {user.status === 'retired' && user.retiredDate && (
               <div className="text-xs text-muted-foreground">
                 退職: {new Date(user.retiredDate).toLocaleDateString('ja-JP')}

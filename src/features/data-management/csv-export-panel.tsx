@@ -123,6 +123,7 @@ export function CSVExportPanel() {
           }
           if (!includePreHire) {
             filteredUsers = filteredUsers.filter(u => {
+              if (!u.hireDate) return true;
               const hireDate = new Date(u.hireDate);
               return hireDate <= new Date();
             });

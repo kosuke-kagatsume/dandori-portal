@@ -106,12 +106,12 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // バリデーション
-    if (!email || !name || !hireDate || !tenantId) {
+    if (!email || !name || !tenantId) {
       return NextResponse.json(
         {
           success: false,
           error: 'Missing required fields',
-          required: ['email', 'name', 'hireDate', 'tenantId'],
+          required: ['email', 'name', 'tenantId'],
         },
         { status: 400 }
       );
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         email,
         name,
         phone,
-        hireDate: new Date(`${hireDate.split('T')[0]}T12:00:00Z`),
+        hireDate: hireDate ? new Date(`${hireDate.split('T')[0]}T12:00:00Z`) : undefined,
         unitId: unitId || undefined,
         tenantId,
         roles,
