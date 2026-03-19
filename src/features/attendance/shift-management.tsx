@@ -26,7 +26,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -350,7 +349,7 @@ export function ShiftManagement() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="w-full max-h-[calc(100vh-250px)] [&>div>div[style]]:!block [&_[data-radix-scroll-area-scrollbar]]:w-3 [&_[data-radix-scroll-area-scrollbar]]:opacity-100">
+              <div className="w-full max-h-[calc(100vh-250px)] overflow-auto">
                 <div className="min-w-[1600px]">
                   <Table>
                     <TableHeader className="sticky top-0 z-20 bg-background">
@@ -444,9 +443,7 @@ export function ShiftManagement() {
                     </TableBody>
                   </Table>
                 </div>
-                <ScrollBar orientation="horizontal" />
-                <ScrollBar orientation="vertical" />
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
 
@@ -549,7 +546,7 @@ export function ShiftManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="w-full max-h-[calc(100vh-250px)] [&>div>div[style]]:!block [&_[data-radix-scroll-area-scrollbar]]:w-3 [&_[data-radix-scroll-area-scrollbar]]:opacity-100">
+              <div className="w-full max-h-[calc(100vh-250px)] overflow-auto">
                 <div className="min-w-[1200px]">
                   {/* タイムライン軸 */}
                   <div className="flex border-b mb-2 sticky top-0 z-20 bg-background">
@@ -639,9 +636,7 @@ export function ShiftManagement() {
                     </div>
                   )}
                 </div>
-                <ScrollBar orientation="horizontal" />
-                <ScrollBar orientation="vertical" />
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
 

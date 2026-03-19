@@ -31,7 +31,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Users,
   Clock,
@@ -596,7 +595,7 @@ export function TeamAttendance() {
 
             {/* 打刻状況タブ - 1ヶ月横スクロール表示 */}
             <TabsContent value="punch">
-              <ScrollArea className="w-full">
+              <div className="w-full max-h-[calc(100vh-320px)] overflow-auto">
                 <div className="min-w-[1600px]">
                   <Table>
                     <TableHeader className="sticky top-0 z-20 bg-background">
@@ -827,8 +826,7 @@ export function TeamAttendance() {
                     </TableBody>
                   </Table>
                 </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+              </div>
             </TabsContent>
 
             {/* 勤怠項目別集計タブ（管理者/人事のみ） */}
@@ -957,7 +955,7 @@ export function TeamAttendance() {
 
               {/* D1: 日次一覧（勤怠一覧と同じ項目） */}
               <div className="border rounded-lg overflow-hidden">
-                <ScrollArea className="w-full flex-1 max-h-[calc(90vh-200px)]">
+                <div className="w-full flex-1 max-h-[calc(90vh-200px)] overflow-auto">
                   <div className="min-w-[1600px]">
                     <Table>
                       <TableHeader className="sticky top-0 z-20 bg-background">
@@ -1081,8 +1079,7 @@ export function TeamAttendance() {
                       </TableBody>
                     </Table>
                   </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
+                </div>
               </div>
             </div>
           )}
