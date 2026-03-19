@@ -72,6 +72,8 @@ export default function UsersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [importInputRef, setImportInputRef] = useState<HTMLInputElement | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importErrorDialogOpen, setImportErrorDialogOpen] = useState(false);
+  const [importErrors, setImportErrors] = useState<{ row: number; name?: string; field: string; message: string }[]>([]);
 
   const router = useRouter();
   const { users, setUsers, retireUser } = useUserStore();
@@ -317,12 +319,15 @@ export default function UsersPage() {
         const dataLines = lines.slice(1);
         const importedUsers: User[] = [];
         let errorCount = 0;
+        const errors: { row: number; name?: string; field: string; message: string }[] = [];
 
         dataLines.forEach((line, index) => {
           try {
             const cleanValues = parseCSVLine(line);
+            const rowNum = index + 2; // ヘッダー行 + 0-indexed
 
             if (cleanValues.length < 6) {
+              errors.push({ row: rowNum, field: '行全体', message: `列数が不足しています（${cleanValues.length}列 / 最低6列必要）` });
               errorCount++;
               return;
             }
@@ -364,13 +369,22 @@ export default function UsersPage() {
             user._invite = shouldInvite;
 
             // 基本的なバリデーション
-            if (user.name && user.email) {
+            const validationErrors: string[] = [];
+            if (!user.name) validationErrors.push('氏名が空です');
+            if (!user.email) validationErrors.push('メールアドレスが空です');
+            if (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) validationErrors.push(`メールアドレスの形式が不正です: ${user.email}`);
+
+            if (validationErrors.length === 0) {
               importedUsers.push(user);
             } else {
+              validationErrors.forEach(msg => {
+                errors.push({ row: rowNum, name: user.name || undefined, field: 'バリデーション', message: msg });
+              });
               errorCount++;
             }
           } catch (error) {
             console.error(`Line ${index + 2} parse error:`, error);
+            errors.push({ row: index + 2, field: '行全体', message: `パースエラー: ${error instanceof Error ? error.message : '不明なエラー'}` });
             errorCount++;
           }
         });
@@ -401,6 +415,7 @@ export default function UsersPage() {
           if (newUsers.length > 0 || updatedUsers.length > 0) {
             // DB APIに永続化（レート制限対策: リトライ付き、リクエスト間に遅延）
             let apiErrorCount = 0;
+            const apiErrors: { row: number; name?: string; field: string; message: string }[] = [];
             const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
             const fetchWithRetry = async (url: string, options: RequestInit, maxRetries = 2): Promise<Response> => {
@@ -444,12 +459,14 @@ export default function UsersPage() {
                 if (!res.ok) {
                   const errBody = await res.json().catch(() => null);
                   console.error(`Import PATCH error for ${user.name} (${user.id}):`, res.status, errBody);
+                  apiErrors.push({ row: 0, name: user.name, field: '更新', message: errBody?.error || errBody?.message || `HTTPエラー ${res.status}` });
                   apiErrorCount++;
                 }
                 // レート制限回避のため少し待つ
                 await delay(50);
               } catch (err) {
                 console.error(`Import PATCH exception for ${user.name}:`, err);
+                apiErrors.push({ row: 0, name: user.name, field: '更新', message: err instanceof Error ? err.message : '通信エラー' });
                 apiErrorCount++;
               }
             }
@@ -481,6 +498,7 @@ export default function UsersPage() {
                   if (!res.ok) {
                     const errBody = await res.json().catch(() => null);
                     console.error(`Import invite error for ${user.name}:`, res.status, errBody);
+                    apiErrors.push({ row: 0, name: user.name, field: '招待', message: errBody?.error || errBody?.message || `HTTPエラー ${res.status}` });
                     apiErrorCount++;
                   } else {
                     inviteCount++;
@@ -499,12 +517,14 @@ export default function UsersPage() {
                   if (!res.ok) {
                     const errBody = await res.json().catch(() => null);
                     console.error(`Import POST error for ${user.name}:`, res.status, errBody);
+                    apiErrors.push({ row: 0, name: user.name, field: '新規作成', message: errBody?.error || errBody?.message || `HTTPエラー ${res.status}` });
                     apiErrorCount++;
                   }
                 }
                 await delay(50);
               } catch (err) {
                 console.error(`Import POST exception for ${user.name}:`, err);
+                apiErrors.push({ row: 0, name: user.name, field: '新規作成', message: err instanceof Error ? err.message : '通信エラー' });
                 apiErrorCount++;
               }
             }
@@ -512,17 +532,29 @@ export default function UsersPage() {
             // DB保存後にリフレッシュ
             await fetchUsers();
 
+            const allErrors = [...errors, ...apiErrors];
             const parts: string[] = [];
             if (newUsers.length > 0) parts.push(`${newUsers.length}件を新規追加`);
             if (inviteCount > 0) parts.push(`${inviteCount}件に招待メール送信`);
             if (updatedUsers.length > 0) parts.push(`${updatedUsers.length}件を更新`);
             if (apiErrorCount > 0) parts.push(`${apiErrorCount}件のAPI保存エラー`);
             if (errorCount > 0) parts.push(`${errorCount}件のパースエラー`);
-            toast.success(`インポート完了: ${parts.join('、')}`);
+
+            if (allErrors.length > 0) {
+              setImportErrors(allErrors);
+              setImportErrorDialogOpen(true);
+              toast.warning(`インポート完了（エラーあり）: ${parts.join('、')}`);
+            } else {
+              toast.success(`インポート完了: ${parts.join('、')}`);
+            }
           } else {
             toast.warning('インポート対象のデータがありません');
           }
         } else {
+          if (errors.length > 0) {
+            setImportErrors(errors);
+            setImportErrorDialogOpen(true);
+          }
           toast.error(`インポートに失敗しました (${errorCount}件のエラー)`);
         }
 
@@ -900,6 +932,45 @@ export default function UsersPage() {
             <Button onClick={() => importInputRef?.click()}>
               <Upload className="mr-2 h-4 w-4" />
               ファイルを選択
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Import Error Detail Dialog */}
+      <Dialog open={importErrorDialogOpen} onOpenChange={setImportErrorDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>インポートエラー詳細</DialogTitle>
+            <DialogDescription>
+              {importErrors.length}件のエラーが発生しました。内容を確認して修正してください。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-background border-b">
+                <tr>
+                  <th className="text-left p-2 font-medium text-muted-foreground w-16">行</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground w-32">対象</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground w-28">項目</th>
+                  <th className="text-left p-2 font-medium text-muted-foreground">エラー内容</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importErrors.map((err, i) => (
+                  <tr key={i} className="border-b last:border-0">
+                    <td className="p-2 text-muted-foreground">{err.row > 0 ? err.row : '-'}</td>
+                    <td className="p-2">{err.name || '-'}</td>
+                    <td className="p-2">{err.field}</td>
+                    <td className="p-2 text-destructive">{err.message}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setImportErrorDialogOpen(false)}>
+              閉じる
             </Button>
           </DialogFooter>
         </DialogContent>
