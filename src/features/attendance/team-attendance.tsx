@@ -597,7 +597,7 @@ export function TeamAttendance() {
             <TabsContent value="punch">
               <div className="w-full max-h-[calc(100vh-320px)] overflow-auto">
                 <div className="min-w-[1600px]">
-                  <Table>
+                  <Table containerClassName="overflow-visible">
                     <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
                         <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
@@ -927,7 +927,7 @@ export function TeamAttendance() {
           </DialogHeader>
 
           {selectedMember && (
-            <div className="space-y-4">
+            <div className="flex-1 min-h-0 flex flex-col gap-4">
               {/* サマリー */}
               <div className="grid grid-cols-4 gap-3">
                 <div className="p-3 bg-muted/50 rounded-lg text-center">
@@ -954,10 +954,10 @@ export function TeamAttendance() {
               </div>
 
               {/* D1: 日次一覧（勤怠一覧と同じ項目） */}
-              <div className="border rounded-lg overflow-hidden">
-                <div className="w-full flex-1 max-h-[calc(90vh-200px)] overflow-auto">
+              <div className="border rounded-lg overflow-hidden flex-1 min-h-0">
+                <div className="w-full h-full overflow-auto">
                   <div className="min-w-[1600px]">
-                    <Table>
+                    <Table containerClassName="overflow-visible">
                       <TableHeader className="sticky top-0 z-20 bg-background">
                         <TableRow className="bg-muted/50">
                           <TableHead className="w-[100px] sticky left-0 bg-muted/50 z-30">日付</TableHead>
@@ -1084,7 +1084,7 @@ export function TeamAttendance() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button variant="outline" onClick={() => setMemberDetailDialogOpen(false)}>
               閉じる
             </Button>

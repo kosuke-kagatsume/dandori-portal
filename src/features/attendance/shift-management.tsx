@@ -351,7 +351,7 @@ export function ShiftManagement() {
             <CardContent className="p-0">
               <div className="w-full max-h-[calc(100vh-250px)] overflow-auto">
                 <div className="min-w-[1600px]">
-                  <Table>
+                  <Table containerClassName="overflow-visible">
                     <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
                         <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>

@@ -515,7 +515,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
         <CardContent className="p-0">
           <div className="w-full max-h-[calc(100vh-280px)] overflow-auto">
             <div className="min-w-[1800px]">
-              <Table>
+              <Table containerClassName="overflow-visible">
                 <TableHeader className="sticky top-0 z-20 bg-background">
                   <TableRow className="bg-muted/50">
                     <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-0 bg-muted/50 z-30">詳細</TableHead>
