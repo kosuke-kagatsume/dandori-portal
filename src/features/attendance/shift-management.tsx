@@ -354,7 +354,7 @@ export function ShiftManagement() {
                   <Table containerClassName="overflow-visible">
                     <TableHeader className="sticky top-0 z-20 bg-background">
                       <TableRow className="bg-muted/50">
-                        <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted/50 z-30">氏名</TableHead>
+                        <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted z-30">氏名</TableHead>
                         {monthDays.map(day => {
                           const dayOfWeek = getDay(day);
                           const isSunday = dayOfWeek === 0;

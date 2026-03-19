@@ -518,10 +518,10 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
               <Table containerClassName="overflow-visible">
                 <TableHeader className="sticky top-0 z-20 bg-background">
                   <TableRow className="bg-muted/50">
-                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-0 bg-muted/50 z-30">詳細</TableHead>
-                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-[50px] bg-muted/50 z-30">編集</TableHead>
-                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-[100px] bg-muted/50 z-30">申請</TableHead>
-                    <TableHead scope="col" className="w-[100px] min-w-[100px] max-w-[100px] sticky left-[150px] bg-muted/50 z-30">日付</TableHead>
+                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-0 bg-muted z-30">詳細</TableHead>
+                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-[50px] bg-muted z-30">編集</TableHead>
+                    <TableHead scope="col" className="w-[50px] min-w-[50px] max-w-[50px] text-center sticky left-[100px] bg-muted z-30">申請</TableHead>
+                    <TableHead scope="col" className="w-[100px] min-w-[100px] max-w-[100px] sticky left-[150px] bg-muted z-30">日付</TableHead>
                     <TableHead scope="col" className="w-[80px] bg-muted/50">勤怠区分</TableHead>
                     <TableHead scope="col" className="w-[80px] text-center">申請状況</TableHead>
                     <TableHead scope="col" className="w-[100px]">勤務パターン</TableHead>
