@@ -41,6 +41,46 @@ export interface PaidLeaveAutoGrantSettings {
   prorateDays: boolean;      // 比例付与するか
   carryOverLimit: number;    // 繰越上限日数
   expiryYears: number;       // 有効期限（年）
+  // B-1: 年度基準の月日
+  fiscalYearMonth: number;
+  fiscalYearDay: number;
+  // B-2: 1.5年目以降の付与日基準
+  subsequentGrantBasis: 'initial' | 'base_date' | 'fixed_date';
+  subsequentGrantMonth?: number;
+  subsequentGrantDay?: number;
+  // B-3: 0.5年目の前倒し付与
+  earlyGrantType: 'none' | 'arbitrary' | 'proportional';
+  // B-4: 有給取得時の労働時間取り扱い
+  deemedTimeAsWorkTime: boolean;
+  deemedTimeInOvertime: boolean;
+  // B-5: 半日単位休暇
+  allowHalfDay: boolean;
+  // B-6: 時間単位休暇
+  allowHourly: boolean;
+  hourlyMaxDays?: number;
+  // B-7: 残数0取得可否
+  allowNegativeBalance: boolean;
+}
+
+// 代休パターン
+export interface CompensatoryDayOffPattern {
+  id: string;
+  name: string;
+  allowHalfDay: boolean;
+  allowHourly: boolean;
+  deemedTimeAsWorkTime: boolean;
+  expiryMonths: number;
+  expiryPeriod: string; // 「Xヶ月後のY月末まで」
+}
+
+// 振替休日パターン
+export interface SubstituteHolidayPattern {
+  id: string;
+  name: string;
+  forwardMonths: number;
+  forwardPeriod: string;   // 「Xヶ月前のY月初から」
+  backwardMonths: number;
+  backwardPeriod: string;  // 「Xヶ月後のY月末まで」
 }
 
 // 法定の有給休暇付与日数テーブル（週5日勤務の場合）
@@ -183,6 +223,8 @@ interface LeaveTypeState {
   leaveTypes: LeaveTypeConfig[];
   paidLeaveGrants: PaidLeaveGrant[];
   autoGrantSettings: PaidLeaveAutoGrantSettings;
+  compensatoryDayOffPatterns: CompensatoryDayOffPattern[];
+  substituteHolidayPatterns: SubstituteHolidayPattern[];
 }
 
 interface LeaveTypeActions {
@@ -205,6 +247,16 @@ interface LeaveTypeActions {
   // 自動付与計算
   calculatePaidLeaveDays: (hireDate: string, weeklyWorkDays?: number) => number;
 
+  // 代休パターン管理
+  addCompensatoryPattern: (pattern: Omit<CompensatoryDayOffPattern, 'id'>) => string;
+  updateCompensatoryPattern: (id: string, updates: Partial<CompensatoryDayOffPattern>) => void;
+  deleteCompensatoryPattern: (id: string) => void;
+
+  // 振替休日パターン管理
+  addSubstitutePattern: (pattern: Omit<SubstituteHolidayPattern, 'id'>) => string;
+  updateSubstitutePattern: (id: string, updates: Partial<SubstituteHolidayPattern>) => void;
+  deleteSubstitutePattern: (id: string) => void;
+
   // データリセット
   resetToDefaults: () => void;
 }
@@ -218,6 +270,15 @@ const defaultAutoGrantSettings: PaidLeaveAutoGrantSettings = {
   prorateDays: true,
   carryOverLimit: 20,
   expiryYears: 2,
+  fiscalYearMonth: 4,
+  fiscalYearDay: 1,
+  subsequentGrantBasis: 'base_date',
+  earlyGrantType: 'none',
+  deemedTimeAsWorkTime: false,
+  deemedTimeInOvertime: false,
+  allowHalfDay: true,
+  allowHourly: false,
+  allowNegativeBalance: false,
 };
 
 export const useLeaveTypeStore = create<LeaveTypeStore>()(
@@ -226,6 +287,8 @@ export const useLeaveTypeStore = create<LeaveTypeStore>()(
       leaveTypes: defaultLeaveTypes,
       paidLeaveGrants: [],
       autoGrantSettings: defaultAutoGrantSettings,
+      compensatoryDayOffPatterns: [],
+      substituteHolidayPatterns: [],
 
       // 休暇種別追加
       addLeaveType: (leaveType) => {
@@ -361,12 +424,56 @@ export const useLeaveTypeStore = create<LeaveTypeStore>()(
         return entry?.days || 0;
       },
 
+      // 代休パターン管理
+      addCompensatoryPattern: (pattern) => {
+        const id = `comp-pat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        set((state) => ({
+          compensatoryDayOffPatterns: [...state.compensatoryDayOffPatterns, { ...pattern, id }],
+        }));
+        return id;
+      },
+      updateCompensatoryPattern: (id, updates) => {
+        set((state) => ({
+          compensatoryDayOffPatterns: state.compensatoryDayOffPatterns.map((p) =>
+            p.id === id ? { ...p, ...updates } : p
+          ),
+        }));
+      },
+      deleteCompensatoryPattern: (id) => {
+        set((state) => ({
+          compensatoryDayOffPatterns: state.compensatoryDayOffPatterns.filter((p) => p.id !== id),
+        }));
+      },
+
+      // 振替休日パターン管理
+      addSubstitutePattern: (pattern) => {
+        const id = `sub-pat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        set((state) => ({
+          substituteHolidayPatterns: [...state.substituteHolidayPatterns, { ...pattern, id }],
+        }));
+        return id;
+      },
+      updateSubstitutePattern: (id, updates) => {
+        set((state) => ({
+          substituteHolidayPatterns: state.substituteHolidayPatterns.map((p) =>
+            p.id === id ? { ...p, ...updates } : p
+          ),
+        }));
+      },
+      deleteSubstitutePattern: (id) => {
+        set((state) => ({
+          substituteHolidayPatterns: state.substituteHolidayPatterns.filter((p) => p.id !== id),
+        }));
+      },
+
       // デフォルトにリセット
       resetToDefaults: () => {
         set({
           leaveTypes: defaultLeaveTypes,
           paidLeaveGrants: [],
           autoGrantSettings: defaultAutoGrantSettings,
+          compensatoryDayOffPatterns: [],
+          substituteHolidayPatterns: [],
         });
       },
     }),

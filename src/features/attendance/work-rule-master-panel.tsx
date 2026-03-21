@@ -46,6 +46,7 @@ import {
 import { Briefcase, Plus, Edit, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store/tenant-store';
+import { useLeaveTypeStore } from '@/lib/store/leave-type-store';
 import type { WorkRule, WorkRuleType } from '@/features/users/user-attendance-tab';
 
 // ── 定数定義 ──────────────────────────────────────────
@@ -78,6 +79,12 @@ const weekdayOptions = ['日曜日', '月曜日', '火曜日', '水曜日', '木
 
 // ── 型定義 ──────────────────────────────────────────
 
+interface AutoBreakRule {
+  id: string;
+  laborMinutes: number;
+  breakMinutes: number;
+}
+
 interface WorkPatternFormData {
   id: string;
   name: string;
@@ -85,6 +92,9 @@ interface WorkPatternFormData {
   contractStartTime: string;
   contractEndTime: string;
   autoBreak: boolean;
+  autoBreakTimeSlot: 'none' | 'specify';
+  autoBreakSlotType: 'scheduled' | 'night';
+  autoBreakRules: AutoBreakRule[];
   amLeaveContractStart: string;
   amLeaveDeemedTime: string;
   pmLeaveContractEnd: string;
@@ -123,6 +133,7 @@ interface WorkRuleFormData {
   paidLeavePattern: string;
   weeklyContractDays: string;
   paidLeaveHourlyUnit: boolean;
+  paidLeaveHourlyHours: string;
   leaveNursingCare: boolean;
   leaveChildCare: boolean;
   leaveYearEnd: boolean;
@@ -188,6 +199,9 @@ const defaultWorkPattern: WorkPatternFormData = {
   contractStartTime: '09:00',
   contractEndTime: '18:00',
   autoBreak: false,
+  autoBreakTimeSlot: 'none',
+  autoBreakSlotType: 'scheduled',
+  autoBreakRules: [],
   amLeaveContractStart: '09:00',
   amLeaveDeemedTime: '04:00',
   pmLeaveContractEnd: '18:00',
@@ -219,6 +233,7 @@ const defaultFormData: WorkRuleFormData = {
   paidLeavePattern: '',
   weeklyContractDays: '5',
   paidLeaveHourlyUnit: false,
+  paidLeaveHourlyHours: '8',
   leaveNursingCare: false,
   leaveChildCare: false,
   leaveYearEnd: false,
@@ -237,8 +252,8 @@ const defaultFormData: WorkRuleFormData = {
   workStartTime: '09:00',
   workEndTime: '18:00',
   lateEarlyTally: 'count',
-  scheduledTallyRange: 'within_scheduled',
-  legalHolidayDesignation: 'auto',
+  scheduledTallyRange: 'contract_range_only',
+  legalHolidayDesignation: 'specify_both',
   managerDayOffDeemedHour: '8',
   managerDayOffDeemedMinute: '0',
   discretionaryScope: 'all',
@@ -279,7 +294,7 @@ function showSection(type: WorkRuleType, section: string): boolean {
     flexScope: ['flextime'],
     variablePeriod: ['monthly_variable', 'yearly_variable'],
     variableScope: ['monthly_variable', 'yearly_variable'],
-    workTime: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
+    workTime: ['shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     workPattern: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     lateEarlyTally: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     scheduledTallyRange: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
@@ -375,25 +390,151 @@ function WorkPatternDialog({
               <span className="text-sm">休憩時間を自動適用する</span>
             </div>
           </div>
+          {form.autoBreak && (
+            <div className="col-span-4 space-y-3 pl-4 border-l-2 border-muted ml-4">
+              {/* 時間帯区分指定 */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">時間帯区分指定</Label>
+                <RadioGroup value={form.autoBreakTimeSlot} onValueChange={(v: 'none' | 'specify') => setForm({ ...form, autoBreakTimeSlot: v })}>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="none" id="abts-none" />
+                    <Label htmlFor="abts-none" className="text-sm">指定しない</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="specify" id="abts-specify" />
+                    <Label htmlFor="abts-specify" className="text-sm">指定する</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              {form.autoBreakTimeSlot === 'specify' && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">区分種別</Label>
+                  <RadioGroup value={form.autoBreakSlotType} onValueChange={(v: 'scheduled' | 'night') => setForm({ ...form, autoBreakSlotType: v })}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="scheduled" id="abst-sched" />
+                      <Label htmlFor="abst-sched" className="text-sm">所定休憩</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="night" id="abst-night" />
+                      <Label htmlFor="abst-night" className="text-sm">深夜所定休憩</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+              {/* 休憩ルールテーブル */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">休憩ルール</Label>
+                {form.autoBreakRules.map((rule, idx) => (
+                  <div key={rule.id} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">労働時間</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={Math.floor(rule.laborMinutes / 60)}
+                      onChange={(e) => {
+                        const rules = [...form.autoBreakRules];
+                        rules[idx] = { ...rules[idx], laborMinutes: parseInt(e.target.value || '0') * 60 + (rules[idx].laborMinutes % 60) };
+                        setForm({ ...form, autoBreakRules: rules });
+                      }}
+                      className="w-16"
+                    />
+                    <span className="text-xs">:</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={rule.laborMinutes % 60}
+                      onChange={(e) => {
+                        const rules = [...form.autoBreakRules];
+                        rules[idx] = { ...rules[idx], laborMinutes: Math.floor(rules[idx].laborMinutes / 60) * 60 + parseInt(e.target.value || '0') };
+                        setForm({ ...form, autoBreakRules: rules });
+                      }}
+                      className="w-16"
+                    />
+                    <span className="text-xs text-muted-foreground">超えたら</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={Math.floor(rule.breakMinutes / 60)}
+                      onChange={(e) => {
+                        const rules = [...form.autoBreakRules];
+                        rules[idx] = { ...rules[idx], breakMinutes: parseInt(e.target.value || '0') * 60 + (rules[idx].breakMinutes % 60) };
+                        setForm({ ...form, autoBreakRules: rules });
+                      }}
+                      className="w-16"
+                    />
+                    <span className="text-xs">:</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={rule.breakMinutes % 60}
+                      onChange={(e) => {
+                        const rules = [...form.autoBreakRules];
+                        rules[idx] = { ...rules[idx], breakMinutes: Math.floor(rules[idx].breakMinutes / 60) * 60 + parseInt(e.target.value || '0') };
+                        setForm({ ...form, autoBreakRules: rules });
+                      }}
+                      className="w-16"
+                    />
+                    <span className="text-xs text-muted-foreground">休憩</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const rules = form.autoBreakRules.filter((_, i) => i !== idx);
+                        setForm({ ...form, autoBreakRules: rules });
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setForm({
+                      ...form,
+                      autoBreakRules: [
+                        ...form.autoBreakRules,
+                        { id: `abr-${Date.now()}`, laborMinutes: 360, breakMinutes: 60 },
+                      ],
+                    });
+                  }}
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  ルールを追加
+                </Button>
+              </div>
+            </div>
+          )}
           <Separator />
           {/* 午前休 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right text-sm">午前休</Label>
-            <div className="col-span-3 flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">契約開始</span>
-              <Input type="time" value={form.amLeaveContractStart} onChange={(e) => setForm({ ...form, amLeaveContractStart: e.target.value })} className="w-32" />
-              <span className="text-sm text-muted-foreground">みなし</span>
-              <Input type="time" value={form.amLeaveDeemedTime} onChange={(e) => setForm({ ...form, amLeaveDeemedTime: e.target.value })} className="w-32" />
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right text-sm pt-2">午前休</Label>
+            <div className="col-span-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-16">契約開始</span>
+                <Input type="time" value={form.amLeaveContractStart} onChange={(e) => setForm({ ...form, amLeaveContractStart: e.target.value })} className="w-32" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-16">みなし</span>
+                <Input type="time" value={form.amLeaveDeemedTime} onChange={(e) => setForm({ ...form, amLeaveDeemedTime: e.target.value })} className="w-32" />
+              </div>
             </div>
           </div>
           {/* 午後休 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right text-sm">午後休</Label>
-            <div className="col-span-3 flex items-center gap-2 flex-wrap">
-              <span className="text-sm text-muted-foreground">契約終了</span>
-              <Input type="time" value={form.pmLeaveContractEnd} onChange={(e) => setForm({ ...form, pmLeaveContractEnd: e.target.value })} className="w-32" />
-              <span className="text-sm text-muted-foreground">みなし</span>
-              <Input type="time" value={form.pmLeaveDeemedTime} onChange={(e) => setForm({ ...form, pmLeaveDeemedTime: e.target.value })} className="w-32" />
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right text-sm pt-2">午後休</Label>
+            <div className="col-span-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-16">契約終了</span>
+                <Input type="time" value={form.pmLeaveContractEnd} onChange={(e) => setForm({ ...form, pmLeaveContractEnd: e.target.value })} className="w-32" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-16">みなし</span>
+                <Input type="time" value={form.pmLeaveDeemedTime} onChange={(e) => setForm({ ...form, pmLeaveDeemedTime: e.target.value })} className="w-32" />
+              </div>
             </div>
           </div>
         </div>
@@ -448,6 +589,7 @@ export function WorkRuleMasterPanel() {
   const [isSaving, setIsSaving] = useState(false);
   const { currentTenant } = useTenantStore();
   const tenantId = currentTenant?.id;
+  const { compensatoryDayOffPatterns, substituteHolidayPatterns } = useLeaveTypeStore();
 
   // 勤務パターンダイアログ
   const [isPatternDialogOpen, setIsPatternDialogOpen] = useState(false);
@@ -481,6 +623,23 @@ export function WorkRuleMasterPanel() {
   const handleOpenEdit = (rule: WorkRuleRecord) => {
     setEditingRule(rule);
     const savedSettings = (rule.settings ?? {}) as Partial<WorkRuleFormData>;
+
+    // 後方互換: 旧値→新値マッピング
+    const migrateScheduledTallyRange = (v?: string) => {
+      if (v === 'within_scheduled') return 'contract_range_only';
+      if (v === 'include_overtime') return 'contract_hours_limit';
+      return v || defaultFormData.scheduledTallyRange;
+    };
+    const migrateLegalHolidayDesignation = (v?: string) => {
+      if (v === 'auto') return 'weekly_1';
+      if (v === 'schedule') return 'specify_both';
+      return v || defaultFormData.legalHolidayDesignation;
+    };
+    const migrateWeeklyContractDays = (v?: string) => {
+      if (v === '5' || v === '6' || v === '7') return '5_plus';
+      return v || defaultFormData.weeklyContractDays;
+    };
+
     setFormData({
       ...defaultFormData,
       ...savedSettings,
@@ -494,6 +653,10 @@ export function WorkRuleMasterPanel() {
       coreTimeEnd: rule.coreTimeEnd || '15:00',
       flexTimeStart: rule.flexTimeStart || '07:00',
       flexTimeEnd: rule.flexTimeEnd || '22:00',
+      scheduledTallyRange: migrateScheduledTallyRange(savedSettings.scheduledTallyRange),
+      legalHolidayDesignation: migrateLegalHolidayDesignation(savedSettings.legalHolidayDesignation),
+      weeklyContractDays: migrateWeeklyContractDays(savedSettings.weeklyContractDays),
+      paidLeaveHourlyHours: savedSettings.paidLeaveHourlyHours || defaultFormData.paidLeaveHourlyHours,
       scheduleRows: (savedSettings.scheduleRows as ScheduleRow[] | undefined) || defaultScheduleRows.map(r => ({ ...r })),
       workPatterns: (savedSettings.workPatterns as WorkPatternFormData[] | undefined) || [],
     });
@@ -1178,12 +1341,12 @@ export function WorkRuleMasterPanel() {
                   <FormField label="集計範囲">
                     <RadioGroup value={formData.scheduledTallyRange} onValueChange={(v) => updateForm({ scheduledTallyRange: v })}>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="within_scheduled" id="str-ws" />
-                        <Label htmlFor="str-ws" className="text-sm">所定内のみ</Label>
+                        <RadioGroupItem value="contract_range_only" id="str-cro" />
+                        <Label htmlFor="str-cro" className="text-sm">勤務パターンの契約時間の開始〜終了の範囲のみ</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="include_overtime" id="str-io" />
-                        <Label htmlFor="str-io" className="text-sm">残業含む</Label>
+                        <RadioGroupItem value="contract_hours_limit" id="str-chl" />
+                        <Label htmlFor="str-chl" className="text-sm">勤務パターンの契約時間の開始〜終了までの時間数分を上限とする</Label>
                       </div>
                     </RadioGroup>
                   </FormField>
@@ -1197,12 +1360,16 @@ export function WorkRuleMasterPanel() {
                   <FormField label="指定方法">
                     <RadioGroup value={formData.legalHolidayDesignation} onValueChange={(v) => updateForm({ legalHolidayDesignation: v })}>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="auto" id="lhd-auto" />
-                        <Label htmlFor="lhd-auto" className="text-sm">自動判定</Label>
+                        <RadioGroupItem value="specify_both" id="lhd-both" />
+                        <Label htmlFor="lhd-both" className="text-sm">所定休日と法定休日を指定</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="schedule" id="lhd-sched" />
-                        <Label htmlFor="lhd-sched" className="text-sm">スケジュールに基づく</Label>
+                        <RadioGroupItem value="weekly_1" id="lhd-w1" />
+                        <Label htmlFor="lhd-w1" className="text-sm">指定せず1週1休</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="monthly_4" id="lhd-m4" />
+                        <Label htmlFor="lhd-m4" className="text-sm">指定せず4週4休</Label>
                       </div>
                     </RadioGroup>
                   </FormField>
@@ -1294,18 +1461,37 @@ export function WorkRuleMasterPanel() {
                   </FormField>
                   <FormField label="週契約日数">
                     <Select value={formData.weeklyContractDays} onValueChange={(v) => updateForm({ weeklyContractDays: v })}>
-                      <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7].map(d => (
-                          <SelectItem key={d} value={String(d)}>{d}日</SelectItem>
-                        ))}
+                        <SelectItem value="1">1日</SelectItem>
+                        <SelectItem value="2">2日</SelectItem>
+                        <SelectItem value="3">3日</SelectItem>
+                        <SelectItem value="4">4日</SelectItem>
+                        <SelectItem value="5_plus">5日以上</SelectItem>
+                        <SelectItem value="auto">勤務実績から自動判別</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
                   <FormField label="時間単位有給">
-                    <div className="flex items-center gap-2">
-                      <Checkbox checked={formData.paidLeaveHourlyUnit} onCheckedChange={(v) => updateForm({ paidLeaveHourlyUnit: v === true })} />
-                      <span className="text-sm">時間単位で取得可能</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox checked={formData.paidLeaveHourlyUnit} onCheckedChange={(v) => updateForm({ paidLeaveHourlyUnit: v === true })} />
+                        <span className="text-sm">時間単位で取得可能</span>
+                      </div>
+                      {formData.paidLeaveHourlyUnit && (
+                        <div className="flex items-center gap-2 pl-6">
+                          <span className="text-sm text-muted-foreground">1日分</span>
+                          <Select value={formData.paidLeaveHourlyHours} onValueChange={(v) => updateForm({ paidLeaveHourlyHours: v })}>
+                            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 12 }, (_, i) => (
+                                <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className="text-sm text-muted-foreground">時間</span>
+                        </div>
+                      )}
                     </div>
                   </FormField>
                   <Separator className="my-2" />
@@ -1343,7 +1529,9 @@ export function WorkRuleMasterPanel() {
                       <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">未設定</SelectItem>
-                        <SelectItem value="auto">自動</SelectItem>
+                        {substituteHolidayPatterns.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </FormField>
@@ -1352,7 +1540,9 @@ export function WorkRuleMasterPanel() {
                       <SelectTrigger><SelectValue placeholder="選択してください" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">未設定</SelectItem>
-                        <SelectItem value="standard">標準</SelectItem>
+                        {compensatoryDayOffPatterns.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </FormField>
