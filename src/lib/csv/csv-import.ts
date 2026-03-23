@@ -155,7 +155,7 @@ export function importEmployees(
   });
 
   // 必須ヘッダーチェック
-  const requiredFields = ['employeeNumber', 'lastName', 'firstName', 'email', 'hireDate'];
+  const requiredFields = ['employeeNumber', 'lastName', 'firstName', 'email', 'hireDate', 'department'];
   const mappedFields = Array.from(headerMap.values());
   const missingFields = requiredFields.filter(f => !mappedFields.includes(f));
 
@@ -198,6 +198,9 @@ export function importEmployees(
     }
     if (!rowData.lastName || !rowData.firstName) {
       rowErrors.push('姓名は必須です');
+    }
+    if (!rowData.department) {
+      rowErrors.push('部署は必須です');
     }
     if (!rowData.email) {
       rowErrors.push('メールアドレスは必須です');

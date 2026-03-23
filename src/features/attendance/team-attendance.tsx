@@ -998,7 +998,7 @@ export function TeamAttendance() {
                           const breakMinutes = record?.totalBreakMinutes || 0;
                           const dateStickyBg = cn(
                             'bg-background',
-                            isToday(day) && 'bg-primary/5',
+                            isToday(day) && 'bg-blue-50 dark:bg-blue-950/20',
                             isSunday && 'bg-red-50 dark:bg-red-950/20',
                             isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
                           );
@@ -1015,7 +1015,7 @@ export function TeamAttendance() {
                               <TableCell className={cn('font-medium text-sm sticky left-0 z-10', dateStickyBg, isSunday && 'text-red-500', isSaturday && 'text-blue-500')}>
                                 {format(day, 'MM/dd')}（{WEEKDAY_LABELS[dayOfWeek]}）
                               </TableCell>
-                              <TableCell className="text-center">
+                              <TableCell className={cn('text-center sticky left-[100px] z-10', dateStickyBg)}>
                                 {isWeekendDay ? (
                                   <Badge variant="outline" className="text-xs">休日</Badge>
                                 ) : record?.status === 'absent' ? (
@@ -1026,10 +1026,10 @@ export function TeamAttendance() {
                                   <Badge variant="outline" className="text-xs">未出勤</Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-center text-xs text-muted-foreground">
+                              <TableCell className={cn('text-center text-xs text-muted-foreground sticky left-[170px] z-10', dateStickyBg)}>
                                 {record?.approvalStatus === 'approved' ? '承認済' : record?.approvalStatus === 'rejected' ? '差戻' : '-'}
                               </TableCell>
-                              <TableCell className="text-center text-xs text-muted-foreground">
+                              <TableCell className={cn('text-center text-xs text-muted-foreground sticky left-[230px] z-10', dateStickyBg)}>
                                 {record?.workPatternName || '-'}
                               </TableCell>
                               <TableCell className="text-center font-mono text-sm">

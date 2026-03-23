@@ -37,7 +37,9 @@ export interface PaidLeaveGrant {
 export interface PaidLeaveAutoGrantSettings {
   enabled: boolean;
   baseDate: 'hire_date' | 'fiscal_year';  // 起算日（入社日基準/年度基準）
-  grantTiming: 'on_base_date' | 'april_1';  // 付与タイミング
+  grantTiming: 'on_base_date' | 'fixed_date';  // 付与タイミング
+  grantTimingMonth?: number;   // 固定日指定時の月
+  grantTimingDay?: number;     // 固定日指定時の日
   prorateDays: boolean;      // 比例付与するか
   carryOverLimit: number;    // 繰越上限日数
   expiryYears: number;       // 有効期限（年）

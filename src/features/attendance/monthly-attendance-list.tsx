@@ -501,7 +501,7 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                   CSV出力
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={() => toast.info('一括編集機能は準備中です')} className="text-red-600 border-red-300 hover:bg-red-50">
+              <Button variant="outline" size="sm" onClick={() => toast.info('一括編集機能は準備中です')}>
                 <Edit className="h-4 w-4 mr-2" />
                 一括編集
               </Button>
@@ -555,10 +555,10 @@ export function MonthlyAttendanceList({ records, onRecordUpdate, onMonthChange }
                     const punchPairs = extractPunchPairs(record?.punchHistory);
                     const hasPunchPairs = punchPairs.length > 0;
 
-                    // B4: sticky列の背景色を行の状態と一致させる
+                    // B4: sticky列の背景色を行の状態と一致させる（不透明色を使用）
                     const stickyBg = cn(
                       'bg-background',
-                      isToday(day) && 'bg-primary/5',
+                      isToday(day) && 'bg-blue-50 dark:bg-blue-950/20',
                       (isSunday || record?.status === 'holiday') && 'bg-red-50 dark:bg-red-950/20',
                       isSaturday && 'bg-blue-50 dark:bg-blue-950/20'
                     );

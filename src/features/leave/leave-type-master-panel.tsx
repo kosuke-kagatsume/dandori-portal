@@ -799,7 +799,7 @@ export function LeaveTypeMasterPanel() {
                 <Label>付与タイミング</Label>
                 <Select
                   value={autoGrantSettings.grantTiming}
-                  onValueChange={(value: 'on_base_date' | 'april_1') =>
+                  onValueChange={(value: 'on_base_date' | 'fixed_date') =>
                     updateAutoGrantSettings({ grantTiming: value })
                   }
                 >
@@ -808,9 +808,38 @@ export function LeaveTypeMasterPanel() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="on_base_date">起算日に付与</SelectItem>
-                    <SelectItem value="april_1">毎年4月1日に付与</SelectItem>
+                    <SelectItem value="fixed_date">固定日指定</SelectItem>
                   </SelectContent>
                 </Select>
+                {autoGrantSettings.grantTiming === 'fixed_date' && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <span className="text-sm text-muted-foreground">毎年</span>
+                    <Select
+                      value={String(autoGrantSettings.grantTimingMonth || 4)}
+                      onValueChange={(v) => updateAutoGrantSettings({ grantTimingMonth: parseInt(v) })}
+                    >
+                      <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-muted-foreground">月</span>
+                    <Select
+                      value={String(autoGrantSettings.grantTimingDay || 1)}
+                      onValueChange={(v) => updateAutoGrantSettings({ grantTimingDay: parseInt(v) })}
+                    >
+                      <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 31 }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-muted-foreground">日に付与</span>
+                  </div>
+                )}
               </div>
 
               {/* B-2: 1.5年目以降の付与日基準 */}
