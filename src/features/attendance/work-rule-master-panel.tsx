@@ -107,6 +107,12 @@ interface WorkPatternFormData {
   amLeaveDeemedTime: string;
   pmLeaveContractEnd: string;
   pmLeaveDeemedTime: string;
+  // フレックスタイム制用
+  patternFlexTimeStart: string;
+  patternFlexTimeEnd: string;
+  patternCoreTimeStart: string;
+  patternCoreTimeEnd: string;
+  fullFlex: boolean;
 }
 
 interface ScheduleRow {
@@ -180,8 +186,10 @@ interface WorkRuleFormData {
   // B: フレックスタイム制
   flexSettlementPeriod: string;
   flexTotalWorkCalc: string;
+  flexTotalWorkHours: string;
   flexLegalFrameCalc: string;
   flexDeficiencyHandling: string;
+  flexDeficiencyCarryOverLimit: string;
   flexScope: string;
   flexStandardWorkTime: string;
   flexDayOffDeemedTime: string;
@@ -216,6 +224,11 @@ const defaultWorkPattern: WorkPatternFormData = {
   amLeaveDeemedTime: '04:00',
   pmLeaveContractEnd: '18:00',
   pmLeaveDeemedTime: '04:00',
+  patternFlexTimeStart: '07:00',
+  patternFlexTimeEnd: '22:00',
+  patternCoreTimeStart: '10:00',
+  patternCoreTimeEnd: '15:00',
+  fullFlex: false,
 };
 
 const defaultScheduleRows: ScheduleRow[] = weekdays.map((day) => ({
@@ -274,10 +287,12 @@ const defaultFormData: WorkRuleFormData = {
   discretionaryDayOffDeemedHour: '8',
   discretionaryDayOffDeemedMinute: '0',
   flexSettlementPeriod: '1month',
-  flexTotalWorkCalc: 'calendar',
-  flexLegalFrameCalc: 'auto',
-  flexDeficiencyHandling: 'carry_forward',
-  flexScope: 'all',
+  flexTotalWorkCalc: 'standard_days',
+  flexTotalWorkHours: '160:00',
+  flexLegalFrameCalc: 'principle',
+  flexDeficiencyHandling: 'settle_at_end',
+  flexDeficiencyCarryOverLimit: '06:00',
+  flexScope: 'weekday_only',
   flexStandardWorkTime: '08:00',
   flexDayOffDeemedTime: '08:00',
   coreTimeStart: '10:00',
@@ -304,17 +319,17 @@ function showSection(type: WorkRuleType, section: string): boolean {
     flexScope: ['flextime'],
     variablePeriod: ['monthly_variable', 'yearly_variable'],
     variableScope: ['monthly_variable', 'yearly_variable'],
-    workTime: ['manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
+    workTime: ['manager', 'discretionary', 'monthly_variable', 'yearly_variable'],
     workPattern: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    lateEarlyTally: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    scheduledTallyRange: ['standard', 'shift', 'flextime', 'monthly_variable', 'yearly_variable'],
+    lateEarlyTally: ['standard', 'shift', 'discretionary', 'monthly_variable', 'yearly_variable'],
+    scheduledTallyRange: ['standard', 'shift', 'monthly_variable', 'yearly_variable'],
     legalHolidayDesignation: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     schedule: ['standard', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     breakPunch: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     leave: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     compensatoryDayOff: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     agreement36: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    unapprovedPunch: ['standard', 'shift', 'flextime', 'monthly_variable', 'yearly_variable'],
+    unapprovedPunch: ['standard', 'shift', 'monthly_variable', 'yearly_variable'],
   };
   return matrix[section]?.includes(type) ?? false;
 }
@@ -334,7 +349,8 @@ function WorkPatternDialog({
   onSave: (data: WorkPatternFormData) => void;
   workRuleType?: WorkRuleType;
 }) {
-  const hideContractFields = workRuleType === 'manager' || workRuleType === 'discretionary';
+  const hideContractFields = workRuleType === 'manager' || workRuleType === 'discretionary' || workRuleType === 'flextime';
+  const isFlex = workRuleType === 'flextime';
   const mergeWithDefaults = (p: WorkPatternFormData | null): WorkPatternFormData => ({
     ...defaultWorkPattern,
     ...(p ?? {}),
@@ -593,6 +609,47 @@ function WorkPatternDialog({
               )}
             </div>
           )}
+          {/* フレックスタイム制: フルフレックス・フレキシブルタイム・コアタイム */}
+          {isFlex && (
+            <>
+              <Separator />
+              <div className="flex items-center gap-4">
+                <Label className="text-right text-sm w-24 shrink-0">フルフレックス</Label>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={form.fullFlex} onCheckedChange={(v) => setForm({ ...form, fullFlex: v === true })} />
+                  <span className="text-sm">フルフレックスタイム制</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <Label className="text-right text-sm w-24 shrink-0 pt-2">フレキシブルタイム</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground w-8">開始</span>
+                    <Input type="time" value={form.patternFlexTimeStart} onChange={(e) => setForm({ ...form, patternFlexTimeStart: e.target.value })} className="w-32" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground w-8">終了</span>
+                    <Input type="time" value={form.patternFlexTimeEnd} onChange={(e) => setForm({ ...form, patternFlexTimeEnd: e.target.value })} className="w-32" />
+                  </div>
+                </div>
+              </div>
+              {!form.fullFlex && (
+                <div className="flex items-start gap-4">
+                  <Label className="text-right text-sm w-24 shrink-0 pt-2">コアタイム</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground w-8">開始</span>
+                      <Input type="time" value={form.patternCoreTimeStart} onChange={(e) => setForm({ ...form, patternCoreTimeStart: e.target.value })} className="w-32" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground w-8">終了</span>
+                      <Input type="time" value={form.patternCoreTimeEnd} onChange={(e) => setForm({ ...form, patternCoreTimeEnd: e.target.value })} className="w-32" />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
           <Separator />
           {/* 午前休 */}
           <div className="flex items-start gap-4">
@@ -735,6 +792,24 @@ export function WorkRuleMasterPanel() {
       if (v === 'workday_only') return 'weekday_only';
       return v || 'weekday_only';
     };
+    const migrateFlexTotalWorkCalc = (v?: string) => {
+      if (v === 'calendar' || v === 'manual') return 'standard_days';
+      return v || defaultFormData.flexTotalWorkCalc;
+    };
+    const migrateFlexLegalFrameCalc = (v?: string) => {
+      if (v === 'auto' || v === 'manual') return 'principle';
+      return v || defaultFormData.flexLegalFrameCalc;
+    };
+    const migrateFlexDeficiencyHandling = (v?: string) => {
+      if (v === 'carry_forward') return 'carry_over';
+      if (v === 'deduct') return 'deduct_monthly';
+      return v || defaultFormData.flexDeficiencyHandling;
+    };
+    const migrateFlexScope = (v?: string) => {
+      if (v === 'all') return 'all_days';
+      if (v === 'workday_only') return 'weekday_only';
+      return v || defaultFormData.flexScope;
+    };
 
     setFormData({
       ...defaultFormData,
@@ -753,6 +828,10 @@ export function WorkRuleMasterPanel() {
       legalHolidayDesignation: migrateLegalHolidayDesignation(savedSettings.legalHolidayDesignation),
       weeklyContractDays: migrateWeeklyContractDays(savedSettings.weeklyContractDays),
       discretionaryScope: migrateDiscretionaryScope(savedSettings.discretionaryScope),
+      flexTotalWorkCalc: migrateFlexTotalWorkCalc(savedSettings.flexTotalWorkCalc),
+      flexLegalFrameCalc: migrateFlexLegalFrameCalc(savedSettings.flexLegalFrameCalc),
+      flexDeficiencyHandling: migrateFlexDeficiencyHandling(savedSettings.flexDeficiencyHandling),
+      flexScope: migrateFlexScope(savedSettings.flexScope),
       paidLeaveHourlyHours: savedSettings.paidLeaveHourlyHours || defaultFormData.paidLeaveHourlyHours,
       scheduleRows: (savedSettings.scheduleRows as ScheduleRow[] | undefined) || defaultScheduleRows.map(r => ({ ...r })),
       workPatterns: (savedSettings.workPatterns as WorkPatternFormData[] | undefined) || [],
@@ -1184,21 +1263,28 @@ export function WorkRuleMasterPanel() {
                   <FormField label="総労働時間計算方法">
                     <RadioGroup value={formData.flexTotalWorkCalc} onValueChange={(v) => updateForm({ flexTotalWorkCalc: v })}>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="calendar" id="ftw-cal" />
-                        <Label htmlFor="ftw-cal" className="text-sm">暦日数から計算</Label>
+                        <RadioGroupItem value="standard_days" id="ftw-std" />
+                        <Label htmlFor="ftw-std" className="text-sm">1日の標準労働時間×清算期間の所定労働日数</Label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="manual" id="ftw-man" />
-                        <Label htmlFor="ftw-man" className="text-sm">手動設定</Label>
+                        <RadioGroupItem value="specify" id="ftw-spec" />
+                        <Label htmlFor="ftw-spec" className="text-sm">指定する</Label>
                       </div>
                     </RadioGroup>
+                    {formData.flexTotalWorkCalc === 'specify' && (
+                      <div className="flex items-center gap-2 mt-2 ml-6">
+                        <Label className="text-sm whitespace-nowrap">総労働時間</Label>
+                        <Input value={formData.flexTotalWorkHours} onChange={(e) => updateForm({ flexTotalWorkHours: e.target.value })} className="w-24" placeholder="160:00" />
+                      </div>
+                    )}
                   </FormField>
                   <FormField label="法定総枠計算方法">
                     <Select value={formData.flexLegalFrameCalc} onValueChange={(v) => updateForm({ flexLegalFrameCalc: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="auto">自動計算</SelectItem>
-                        <SelectItem value="manual">手動設定</SelectItem>
+                        <SelectItem value="principle">原則の計算式</SelectItem>
+                        <SelectItem value="workday_8h">所定労働日数×8時間</SelectItem>
+                        <SelectItem value="principle_with_override">原則の計算式（労使協定で上限を定めている場合、上限値を使用）</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
@@ -1206,10 +1292,18 @@ export function WorkRuleMasterPanel() {
                     <Select value={formData.flexDeficiencyHandling} onValueChange={(v) => updateForm({ flexDeficiencyHandling: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="carry_forward">翌月繰越</SelectItem>
-                        <SelectItem value="deduct">控除</SelectItem>
+                        <SelectItem value="settle_at_end">清算期間の最終月で精算</SelectItem>
+                        <SelectItem value="deduct_monthly">毎月控除</SelectItem>
+                        <SelectItem value="carry_over">翌清算期間に繰越（上限あり）</SelectItem>
+                        <SelectItem value="no_deduction">控除しない</SelectItem>
                       </SelectContent>
                     </Select>
+                    {formData.flexDeficiencyHandling === 'carry_over' && (
+                      <div className="flex items-center gap-2 mt-2 ml-2">
+                        <Label className="text-sm whitespace-nowrap">繰越上限</Label>
+                        <Input value={formData.flexDeficiencyCarryOverLimit} onChange={(e) => updateForm({ flexDeficiencyCarryOverLimit: e.target.value })} className="w-24" placeholder="06:00" />
+                      </div>
+                    )}
                   </FormField>
                 </>
               )}
@@ -1220,8 +1314,9 @@ export function WorkRuleMasterPanel() {
                     <Select value={formData.flexScope} onValueChange={(v) => updateForm({ flexScope: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">全日</SelectItem>
-                        <SelectItem value="workday_only">所定労働日のみ</SelectItem>
+                        <SelectItem value="weekday_only">平日（所定労働日）のみ</SelectItem>
+                        <SelectItem value="include_holiday_work">平日（所定労働日）＋休日出勤</SelectItem>
+                        <SelectItem value="all_days">全日</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
@@ -1230,20 +1325,6 @@ export function WorkRuleMasterPanel() {
                   </FormField>
                   <FormField label="1日休暇みなし労働時間">
                     <Input type="time" value={formData.flexDayOffDeemedTime} onChange={(e) => updateForm({ flexDayOffDeemedTime: e.target.value })} className="w-32" />
-                  </FormField>
-                  <FormField label="コアタイム">
-                    <div className="flex items-center gap-2">
-                      <Input type="time" value={formData.coreTimeStart} onChange={(e) => updateForm({ coreTimeStart: e.target.value })} className="w-32" />
-                      <span>〜</span>
-                      <Input type="time" value={formData.coreTimeEnd} onChange={(e) => updateForm({ coreTimeEnd: e.target.value })} className="w-32" />
-                    </div>
-                  </FormField>
-                  <FormField label="フレキシブルタイム">
-                    <div className="flex items-center gap-2">
-                      <Input type="time" value={formData.flexTimeStart} onChange={(e) => updateForm({ flexTimeStart: e.target.value })} className="w-32" />
-                      <span>〜</span>
-                      <Input type="time" value={formData.flexTimeEnd} onChange={(e) => updateForm({ flexTimeEnd: e.target.value })} className="w-32" />
-                    </div>
                   </FormField>
                 </>
               )}
