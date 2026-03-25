@@ -335,14 +335,20 @@ function WorkPatternDialog({
   workRuleType?: WorkRuleType;
 }) {
   const isManager = workRuleType === 'manager';
-  const [form, setForm] = useState<WorkPatternFormData>(
-    pattern ?? { ...defaultWorkPattern, id: `wp-${Date.now()}` }
-  );
+  const mergeWithDefaults = (p: WorkPatternFormData | null): WorkPatternFormData => ({
+    ...defaultWorkPattern,
+    ...(p ?? {}),
+    id: p?.id || `wp-${Date.now()}`,
+    autoBreakRules: p?.autoBreakRules ?? [],
+    autoBreakTimeRanges: p?.autoBreakTimeRanges ?? [],
+  });
+  const [form, setForm] = useState<WorkPatternFormData>(mergeWithDefaults(pattern));
 
   useEffect(() => {
     if (open) {
-      setForm(pattern ?? { ...defaultWorkPattern, id: `wp-${Date.now()}` });
+      setForm(mergeWithDefaults(pattern));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, pattern]);
 
   const handleSave = () => {
@@ -361,22 +367,22 @@ function WorkPatternDialog({
           <DialogTitle>{pattern ? '勤務パターンを編集' : '勤務パターンを追加'}</DialogTitle>
           <DialogDescription>勤務時間や休憩の設定を定義します</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="space-y-4 py-4">
           {/* パターン名 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right text-sm">パターン名 *</Label>
+          <div className="flex items-center gap-4">
+            <Label className="text-right text-sm w-24 shrink-0">パターン名 *</Label>
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="通常勤務"
-              className="col-span-3"
+              className="flex-1"
             />
           </div>
           {/* 打刻みなし時間の種類 - 管理監督者では非表示 */}
           {!isManager && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-sm">打刻みなし</Label>
-              <div className="col-span-3">
+            <div className="flex items-center gap-4">
+              <Label className="text-right text-sm w-24 shrink-0">打刻みなし</Label>
+              <div className="flex-1">
                 <Select value={form.punchDeemedType} onValueChange={(v) => setForm({ ...form, punchDeemedType: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -391,9 +397,9 @@ function WorkPatternDialog({
           )}
           {/* 契約時間 - 管理監督者では非表示 */}
           {!isManager && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-sm">契約時間</Label>
-              <div className="col-span-3 flex items-center gap-2">
+            <div className="flex items-center gap-4">
+              <Label className="text-right text-sm w-24 shrink-0">契約時間</Label>
+              <div className="flex items-center gap-2">
                 <Input type="time" value={form.contractStartTime} onChange={(e) => setForm({ ...form, contractStartTime: e.target.value })} className="w-32" />
                 <span>〜</span>
                 <Input type="time" value={form.contractEndTime} onChange={(e) => setForm({ ...form, contractEndTime: e.target.value })} className="w-32" />
@@ -401,9 +407,9 @@ function WorkPatternDialog({
             </div>
           )}
           {/* 休憩時間自動適用 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right text-sm">休憩自動適用</Label>
-            <div className="col-span-3 flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <Label className="text-right text-sm w-24 shrink-0">休憩自動適用</Label>
+            <div className="flex items-center gap-2">
               <Checkbox checked={form.autoBreak} onCheckedChange={(v) => setForm({ ...form, autoBreak: v === true })} />
               <span className="text-sm">休憩時間を自動適用する</span>
             </div>
@@ -598,9 +604,9 @@ function WorkPatternDialog({
           )}
           <Separator />
           {/* 午前休 */}
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right text-sm pt-2">午前休</Label>
-            <div className="col-span-3 space-y-2">
+          <div className="flex items-start gap-4">
+            <Label className="text-right text-sm w-24 shrink-0 pt-2">午前休</Label>
+            <div className="space-y-2">
               {/* 契約開始 - 管理監督者では非表示 */}
               {!isManager && (
                 <div className="flex items-center gap-2">
@@ -615,9 +621,9 @@ function WorkPatternDialog({
             </div>
           </div>
           {/* 午後休 */}
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right text-sm pt-2">午後休</Label>
-            <div className="col-span-3 space-y-2">
+          <div className="flex items-start gap-4">
+            <Label className="text-right text-sm w-24 shrink-0 pt-2">午後休</Label>
+            <div className="space-y-2">
               {/* 契約終了 - 管理監督者では非表示 */}
               {!isManager && (
                 <div className="flex items-center gap-2">
