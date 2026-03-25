@@ -266,7 +266,7 @@ const defaultFormData: WorkRuleFormData = {
   legalHolidayDesignation: 'specify_both',
   managerDayOffDeemedHour: '8',
   managerDayOffDeemedMinute: '0',
-  discretionaryScope: 'all',
+  discretionaryScope: 'weekday_only',
   discretionaryPrescribedHour: '8',
   discretionaryPrescribedMinute: '0',
   discretionaryDeemedHour: '8',
@@ -307,14 +307,14 @@ function showSection(type: WorkRuleType, section: string): boolean {
     workTime: ['manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     workPattern: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     lateEarlyTally: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    scheduledTallyRange: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
+    scheduledTallyRange: ['standard', 'shift', 'flextime', 'monthly_variable', 'yearly_variable'],
     legalHolidayDesignation: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     schedule: ['standard', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     breakPunch: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     leave: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     compensatoryDayOff: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     agreement36: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    unapprovedPunch: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
+    unapprovedPunch: ['standard', 'shift', 'flextime', 'monthly_variable', 'yearly_variable'],
   };
   return matrix[section]?.includes(type) ?? false;
 }
@@ -334,7 +334,7 @@ function WorkPatternDialog({
   onSave: (data: WorkPatternFormData) => void;
   workRuleType?: WorkRuleType;
 }) {
-  const isManager = workRuleType === 'manager';
+  const hideContractFields = workRuleType === 'manager' || workRuleType === 'discretionary';
   const mergeWithDefaults = (p: WorkPatternFormData | null): WorkPatternFormData => ({
     ...defaultWorkPattern,
     ...(p ?? {}),
@@ -379,7 +379,7 @@ function WorkPatternDialog({
             />
           </div>
           {/* 打刻みなし時間の種類 - 管理監督者では非表示 */}
-          {!isManager && (
+          {!hideContractFields && (
             <div className="flex items-center gap-4">
               <Label className="text-right text-sm w-24 shrink-0">打刻みなし</Label>
               <div className="flex-1">
@@ -396,7 +396,7 @@ function WorkPatternDialog({
             </div>
           )}
           {/* 契約時間 - 管理監督者では非表示 */}
-          {!isManager && (
+          {!hideContractFields && (
             <div className="flex items-center gap-4">
               <Label className="text-right text-sm w-24 shrink-0">契約時間</Label>
               <div className="flex items-center gap-2">
@@ -533,17 +533,9 @@ function WorkPatternDialog({
                   </div>
                 </>
               )}
-              {/* 指定する → 契約時間範囲外チェック + 時間帯テーブル */}
+              {/* 指定する → 時間帯テーブル */}
               {form.autoBreakTimeSlot === 'specify' && (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={form.autoBreakOutsideContract}
-                      onCheckedChange={(v) => setForm({ ...form, autoBreakOutsideContract: v === true })}
-                    />
-                    <span className="text-sm">契約時間の範囲外に休憩時間を適用する</span>
-                  </div>
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     <Label className="text-sm font-medium">休憩時間帯</Label>
                     {form.autoBreakTimeRanges.map((range, idx) => (
                       <div key={range.id} className="flex items-center gap-2">
@@ -598,7 +590,6 @@ function WorkPatternDialog({
                       時間帯を追加
                     </Button>
                   </div>
-                </>
               )}
             </div>
           )}
@@ -608,7 +599,7 @@ function WorkPatternDialog({
             <Label className="text-right text-sm w-24 shrink-0 pt-2">午前休</Label>
             <div className="space-y-2">
               {/* 契約開始 - 管理監督者では非表示 */}
-              {!isManager && (
+              {!hideContractFields && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground w-16">契約開始</span>
                   <Input type="time" value={form.amLeaveContractStart} onChange={(e) => setForm({ ...form, amLeaveContractStart: e.target.value })} className="w-32" />
@@ -625,7 +616,7 @@ function WorkPatternDialog({
             <Label className="text-right text-sm w-24 shrink-0 pt-2">午後休</Label>
             <div className="space-y-2">
               {/* 契約終了 - 管理監督者では非表示 */}
-              {!isManager && (
+              {!hideContractFields && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground w-16">契約終了</span>
                   <Input type="time" value={form.pmLeaveContractEnd} onChange={(e) => setForm({ ...form, pmLeaveContractEnd: e.target.value })} className="w-32" />
@@ -739,6 +730,11 @@ export function WorkRuleMasterPanel() {
       if (v === '5' || v === '6' || v === '7') return '5_plus';
       return v || defaultFormData.weeklyContractDays;
     };
+    const migrateDiscretionaryScope = (v?: string) => {
+      if (v === 'all') return 'weekday_and_all_holiday';
+      if (v === 'workday_only') return 'weekday_only';
+      return v || 'weekday_only';
+    };
 
     setFormData({
       ...defaultFormData,
@@ -756,6 +752,7 @@ export function WorkRuleMasterPanel() {
       scheduledTallyRange: migrateScheduledTallyRange(savedSettings.scheduledTallyRange),
       legalHolidayDesignation: migrateLegalHolidayDesignation(savedSettings.legalHolidayDesignation),
       weeklyContractDays: migrateWeeklyContractDays(savedSettings.weeklyContractDays),
+      discretionaryScope: migrateDiscretionaryScope(savedSettings.discretionaryScope),
       paidLeaveHourlyHours: savedSettings.paidLeaveHourlyHours || defaultFormData.paidLeaveHourlyHours,
       scheduleRows: (savedSettings.scheduleRows as ScheduleRow[] | undefined) || defaultScheduleRows.map(r => ({ ...r })),
       workPatterns: (savedSettings.workPatterns as WorkPatternFormData[] | undefined) || [],
@@ -1137,8 +1134,9 @@ export function WorkRuleMasterPanel() {
                     <Select value={formData.discretionaryScope} onValueChange={(v) => updateForm({ discretionaryScope: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">全日</SelectItem>
-                        <SelectItem value="workday_only">所定労働日のみ</SelectItem>
+                        <SelectItem value="weekday_only">平日のみ</SelectItem>
+                        <SelectItem value="weekday_and_scheduled_holiday">平日と所定休日のみ</SelectItem>
+                        <SelectItem value="weekday_and_all_holiday">平日と所定休日と法定休日</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
