@@ -29,6 +29,19 @@ export function useHealthRBAC() {
   // 自分のデータのみ閲覧（employee）
   const selfOnly = !canViewAllEmployees && !canViewDepartmentEmployees;
 
+  // ストレスチェック閲覧スコープ（G-3）
+  const stressCheckViewScope: 'all' | 'department' | 'self' =
+    (isExecutive || isHR) ? 'all' :
+    isManager ? 'department' :
+    'self';
+
+  // レポート権限（I-3）
+  const canViewReports = isExecutive || isHR;
+  const canDownloadReports = isHR;
+
+  // 予定管理権限
+  const canManageSchedules = isHR;
+
   // 現在のユーザーの部署
   const userDepartment = currentUser?.department || '';
   const userId = currentUser?.id || '';
@@ -40,10 +53,15 @@ export function useHealthRBAC() {
     canRegisterResults,
     canManageFollowUp,
     selfOnly,
+    stressCheckViewScope,
+    canViewReports,
+    canDownloadReports,
+    canManageSchedules,
     userDepartment,
     userId,
     isHR,
     isAdmin,
     isManager,
+    isExecutive,
   };
 }

@@ -35,7 +35,7 @@ interface HealthMasterState {
 
   // 医療機関操作
   fetchMedicalInstitutions: () => Promise<void>;
-  addMedicalInstitution: (data: HealthMedicalInstitutionInput) => Promise<void>;
+  addMedicalInstitution: (data: HealthMedicalInstitutionInput) => Promise<HealthMedicalInstitution | undefined>;
   updateMedicalInstitution: (id: string, data: Partial<HealthMedicalInstitutionInput>) => Promise<void>;
   deleteMedicalInstitution: (id: string) => Promise<void>;
 
@@ -173,7 +173,7 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
 
   addMedicalInstitution: async (data) => {
     const { tenantId, fetchMedicalInstitutions } = get();
-    if (!tenantId) return;
+    if (!tenantId) return undefined;
 
     set({ isLoading: true, error: null });
     try {
@@ -183,9 +183,12 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         body: JSON.stringify({ tenantId, ...data }),
       });
       if (!res.ok) throw new Error('医療機関の追加に失敗しました');
+      const created = await res.json();
       await fetchMedicalInstitutions();
+      return created as HealthMedicalInstitution;
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      return undefined;
     }
   },
 

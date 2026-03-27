@@ -110,6 +110,52 @@ export function getExportSettings(): {
 }
 
 /**
+ * 和暦変換
+ * 例: R6.4.1, H元.1.8, S64.1.7
+ */
+export function toWareki(date: Date): string {
+  const d = new Date(date);
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+
+  let era: string;
+  let eraYear: number;
+
+  if (y >= 2019 || (y === 2019 && m >= 5)) {
+    era = 'R';
+    eraYear = y - 2018;
+  } else if (y >= 1989 || (y === 1989 && m >= 1 && day >= 8)) {
+    era = 'H';
+    eraYear = y - 1988;
+  } else if (y >= 1926 || (y === 1926 && m >= 12 && day >= 25)) {
+    era = 'S';
+    eraYear = y - 1925;
+  } else {
+    era = 'T';
+    eraYear = y - 1911;
+  }
+
+  const eraYearStr = eraYear === 1 ? '元' : String(eraYear);
+  return `${era}${eraYearStr}.${m}.${day}`;
+}
+
+/**
+ * 指定年度の翌4/1時点の年齢を計算
+ * 例: 令和8年度（2026）→ 2027/4/1時点の年齢
+ */
+export function calculateAgeAtFiscalYearEnd(birthDate: Date, fiscalYear: number): number {
+  const refDate = new Date(fiscalYear + 1, 3, 1); // 翌年4/1
+  const birth = new Date(birthDate);
+  let age = refDate.getFullYear() - birth.getFullYear();
+  const monthDiff = refDate.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && refDate.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+/**
  * 休職履歴レコード
  */
 export interface LeaveOfAbsenceRecord {

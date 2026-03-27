@@ -199,7 +199,7 @@ export default function HealthPage() {
   const currentTenant = useTenantStore(state => state.currentTenant);
   const companyName = currentTenant?.name || '';
   const userRoles = currentUser?.roles || ['employee'];
-  const { canViewAllEmployees, canViewDepartmentEmployees, canManageFollowUp, selfOnly, userDepartment, userId: rbacUserId } = useHealthRBAC();
+  const { canViewAllEmployees, canViewDepartmentEmployees, canManageFollowUp, selfOnly, stressCheckViewScope, canViewReports, canDownloadReports, userDepartment, userId: rbacUserId } = useHealthRBAC();
 
   // 健診予定ストア
   const { schedules, fetchSchedules, updateScheduleStatus, setTenantId: setHealthStoreTenantId } = useHealthStore();
@@ -212,9 +212,6 @@ export default function HealthPage() {
   const [activeTab, setActiveTab] = useState('checkups');
 
   // タブごとに独立したフィルタ状態
-  // 健康診断 - 予定サブタブ
-  const [scheduleSearchQuery, setScheduleSearchQuery] = useState('');
-  const [scheduleFilterDepartment, setScheduleFilterDepartment] = useState<string>('all');
   // 健康診断 - 結果サブタブ
   const [checkupSearchQuery, setCheckupSearchQuery] = useState('');
   const [checkupFilterResult, setCheckupFilterResult] = useState<string>('all');
@@ -402,16 +399,21 @@ export default function HealthPage() {
   // フィルタリングされたストレスチェックデータ
   const filteredStressChecks = useMemo(() => {
     return stressChecks.filter((check) => {
-      const matchesSearch =
-        check.userName.toLowerCase().includes(stressSearchQuery.toLowerCase()) ||
-        (check.department?.toLowerCase().includes(stressSearchQuery.toLowerCase()) ?? false);
+      // G-3: RBAC スコープフィルタ
+      if (stressCheckViewScope === 'self' && check.userId !== rbacUserId) return false;
+      if (stressCheckViewScope === 'department' && check.department !== userDepartment) return false;
+
+      const q = stressSearchQuery.toLowerCase();
+      const matchesSearch = !stressSearchQuery ||
+        check.userName.toLowerCase().includes(q) ||
+        (check.checkDate && format(new Date(check.checkDate), 'yyyy/MM/dd').includes(q));
       const matchesDepartment = stressFilterDepartment === 'all' || check.department === stressFilterDepartment;
       const matchesJudgment = stressFilterJudgment === 'all' ||
         (stressFilterJudgment === 'high_stress' && check.isHighStress) ||
         (stressFilterJudgment === 'normal' && !check.isHighStress);
       return matchesSearch && matchesDepartment && matchesJudgment;
     });
-  }, [stressChecks, stressSearchQuery, stressFilterDepartment, stressFilterJudgment]);
+  }, [stressChecks, stressSearchQuery, stressFilterDepartment, stressFilterJudgment, stressCheckViewScope, rbacUserId, userDepartment]);
 
   // 部門リスト（全データソースから導出）
   const departments = useMemo(() => {
@@ -807,7 +809,7 @@ export default function HealthPage() {
               フォローアップ
             </TabsTrigger>
           )}
-          {canViewAllEmployees && (
+          {canViewReports && (
             <TabsTrigger value="reports">
               <BarChart3 className="mr-2 h-4 w-4" />
               レポート
@@ -821,10 +823,7 @@ export default function HealthPage() {
             schedules={filteredSchedules}
             checkups={checkups}
             departments={departments}
-            scheduleSearchQuery={scheduleSearchQuery}
-            scheduleFilterDepartment={scheduleFilterDepartment}
-            onScheduleSearchQueryChange={setScheduleSearchQuery}
-            onScheduleFilterDepartmentChange={setScheduleFilterDepartment}
+            currentUserId={rbacUserId}
             resultSearchQuery={checkupSearchQuery}
             resultFilterDepartment={checkupFilterDepartment}
             resultFilterResult={checkupFilterResult}
@@ -834,7 +833,6 @@ export default function HealthPage() {
             onViewCheckupDetails={handleViewDetails}
             onRefreshSchedules={() => fetchSchedules()}
             onUpdateScheduleStatus={updateScheduleStatus}
-            onRegisterResult={() => setCheckupRegistrationDialogOpen(true)}
             userRoles={userRoles}
           />
         </TabsContent>
@@ -952,7 +950,7 @@ export default function HealthPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-orange-600" />
-                  再検査対象者リスト
+                  再検査対象者
                 </CardTitle>
                 <CardDescription>精密検査が必要な方</CardDescription>
               </CardHeader>
@@ -1048,7 +1046,7 @@ export default function HealthPage() {
         </TabsContent>}
 
         {/* レポートタブ（hr/admin/executiveのみ） */}
-        {canViewAllEmployees && <TabsContent value="reports">
+        {canViewReports && <TabsContent value="reports">
           {/* 部署フィルタ追加 */}
           <div className="mb-4">
             <Select value={reportFilterDepartment} onValueChange={setReportFilterDepartment}>
@@ -1133,7 +1131,7 @@ export default function HealthPage() {
                   <BarChart3 className="h-5 w-5" />
                   部署別ストレス傾向
                 </CardTitle>
-                <CardDescription>部署ごとのストレス状況比較（高スコア = 高ストレス / 低サポート）</CardDescription>
+                <CardDescription>部署ごとのストレス状況を比較（高スコアほどストレスが高い）</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]">
@@ -1154,7 +1152,7 @@ export default function HealthPage() {
             </Card>
 
             {/* レポート出力 */}
-            <Card className="md:col-span-2">
+            {canDownloadReports && <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle>レポート出力</CardTitle>
                 <CardDescription>各種帳票をダウンロードできます</CardDescription>
@@ -1217,7 +1215,7 @@ export default function HealthPage() {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
+            </Card>}
           </div>
         </TabsContent>}
       </Tabs>

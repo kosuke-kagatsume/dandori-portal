@@ -7,6 +7,7 @@ import {
   validateRequired,
   parseFiscalYear,
 } from '@/lib/api/api-helpers';
+import { getCurrentFiscalYear, toWareki, calculateAgeAtFiscalYearEnd } from '@/lib/utils';
 
 // 健診予定一覧取得
 export async function GET(request: NextRequest) {
@@ -42,10 +43,106 @@ export async function GET(request: NextRequest) {
       where.medicalInstitutionId = medicalInstitutionId;
     }
 
+    // enrichedモード: users/institutions JOINで19列データ返却
+    const enrich = searchParams.get('enrich') === 'true';
+
     const schedules = await prisma.health_checkup_schedules.findMany({
       where,
       orderBy: { scheduledDate: 'asc' },
     });
+
+    if (enrich) {
+      // ユーザー情報取得
+      const userIds = Array.from(new Set(schedules.map(s => s.userId)));
+      const users = userIds.length > 0
+        ? await prisma.users.findMany({
+            where: { id: { in: userIds }, tenantId },
+            select: {
+              id: true,
+              name: true,
+              department: true,
+              birthDate: true,
+              gender: true,
+              insuranceNumber: true,
+              postalCode: true,
+              address: true,
+              phone: true,
+            },
+          })
+        : [];
+      const userMap = new Map(users.map(u => [u.id, u]));
+
+      // 医療機関情報取得
+      const instIds = Array.from(new Set(schedules.map(s => s.medicalInstitutionId).filter((v): v is string => v != null)));
+      const institutions = instIds.length > 0
+        ? await prisma.health_medical_institutions.findMany({
+            where: { id: { in: instIds }, tenantId },
+            select: { id: true, name: true, region: true },
+          })
+        : [];
+      const instMap = new Map(institutions.map(i => [i.id, i]));
+
+      // 検査料金取得
+      const examPrices = await prisma.health_institution_exam_prices.findMany({
+        where: { tenantId, isActive: true },
+        include: { health_checkup_types: { select: { name: true } } },
+      });
+
+      // オプション取得
+      const options = instIds.length > 0
+        ? await prisma.health_institution_options.findMany({
+            where: { institutionId: { in: instIds }, tenantId },
+          })
+        : [];
+
+      const fy = fiscalYear ? parseInt(fiscalYear) : getCurrentFiscalYear();
+
+      const enrichedData = schedules.map(s => {
+        const user = userMap.get(s.userId);
+        const inst = s.medicalInstitutionId ? instMap.get(s.medicalInstitutionId) : null;
+
+        // 基本料金
+        const ep = s.medicalInstitutionId
+          ? examPrices.find(p =>
+              p.institutionId === s.medicalInstitutionId &&
+              p.health_checkup_types.name === s.checkupTypeName
+            )
+          : null;
+
+        // オプション名一覧
+        const selIds = (s.selectedOptionIds as string[] | null) || [];
+        const instOptions = s.medicalInstitutionId
+          ? options.filter(o => o.institutionId === s.medicalInstitutionId)
+          : [];
+        const optionNames = selIds
+          .map(id => instOptions.find(o => o.id === id)?.name || '')
+          .filter(Boolean);
+
+        // 和暦・年齢
+        let birthDateWareki = '';
+        let age = 0;
+        if (user?.birthDate) {
+          birthDateWareki = toWareki(user.birthDate);
+          age = calculateAgeAtFiscalYearEnd(user.birthDate, fy);
+        }
+
+        return {
+          ...s,
+          birthDateWareki,
+          age,
+          gender: user?.gender || null,
+          insuranceNumber: user?.insuranceNumber || null,
+          postalCode: user?.postalCode || null,
+          address: user?.address || null,
+          phone: user?.phone || null,
+          institutionName: inst?.name || null,
+          optionNames,
+          basePrice: ep?.price ?? null,
+        };
+      });
+
+      return successResponse(enrichedData);
+    }
 
     return successResponse(schedules);
   } catch (error) {
@@ -69,6 +166,10 @@ export async function POST(request: NextRequest) {
       status,
       fiscalYear,
       notes,
+      region,
+      selectedOptionIds,
+      totalCost,
+      companyPaidOptionCost,
     } = body;
 
     const validation = validateRequired(body, [
@@ -102,6 +203,10 @@ export async function POST(request: NextRequest) {
         status: status || 'scheduled',
         fiscalYear,
         notes,
+        region,
+        selectedOptionIds: selectedOptionIds || undefined,
+        totalCost: totalCost ?? undefined,
+        companyPaidOptionCost: companyPaidOptionCost ?? undefined,
         updatedAt: new Date(),
       },
     });

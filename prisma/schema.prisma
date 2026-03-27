@@ -1801,6 +1801,7 @@ model users {
   isSecondaryIncome     Boolean              @default(false) // 従たる給与
   displayOrder          Int?                 // 表示順
   employmentStatus      String               @default("active") // active/leave/retired
+  insuranceNumber       String?              // 被保険者整理番号
   attendance            attendance[]
   attendance_punches    attendance_punches[]
   tenants               tenants              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2566,6 +2567,7 @@ model health_institution_options {
   description     String?
   isActive        Boolean  @default(true)
   sortOrder       Int      @default(0)
+  companyPaid     Boolean  @default(false) // 会社負担フラグ
   createdAt       DateTime @default(now())
   updatedAt       DateTime
 
@@ -2596,20 +2598,24 @@ model health_follow_up_records {
 
 // 健診予定
 model health_checkup_schedules {
-  id                   String   @id
-  tenantId             String
-  userId               String
-  userName             String
-  departmentName       String?
-  checkupTypeName      String
-  medicalInstitutionId String?
-  scheduledDate        DateTime @db.Date
-  scheduledTime        String?
-  status               String   @default("scheduled") // scheduled, completed, cancelled
-  fiscalYear           Int
-  notes                String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime
+  id                    String   @id
+  tenantId              String
+  userId                String
+  userName              String
+  departmentName        String?
+  checkupTypeName       String
+  medicalInstitutionId  String?
+  scheduledDate         DateTime @db.Date
+  scheduledTime         String?
+  status                String   @default("scheduled") // scheduled, completed, cancelled
+  fiscalYear            Int
+  notes                 String?
+  region                String?              // 地域
+  selectedOptionIds     Json?                // 選択オプションID配列
+  totalCost             Int?                 // 合計料金
+  companyPaidOptionCost Int?                 // 会社負担オプション合計
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime
 
   @@index([tenantId, scheduledDate])
   @@index([tenantId, userId])

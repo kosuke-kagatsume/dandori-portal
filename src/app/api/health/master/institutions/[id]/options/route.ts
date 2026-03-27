@@ -36,7 +36,7 @@ export async function POST(
     const tenantId = await getTenantIdFromRequest(request);
     const { id: institutionId } = await params;
     const body = await request.json();
-    const { name, code, price, description, isActive, sortOrder } = body;
+    const { name, code, price, description, isActive, sortOrder, companyPaid } = body;
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -71,6 +71,7 @@ export async function POST(
         description,
         isActive: isActive ?? true,
         sortOrder: sortOrder ?? 0,
+        companyPaid: companyPaid ?? false,
         updatedAt: new Date(),
       },
     });
@@ -86,7 +87,7 @@ export async function PUT(request: NextRequest) {
   try {
     const tenantId = await getTenantIdFromRequest(request);
     const body = await request.json();
-    const { id, name, code, price, description, isActive, sortOrder } = body;
+    const { id, name, code, price, description, isActive, sortOrder, companyPaid } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'IDが必要です' }, { status: 400 });
@@ -113,6 +114,7 @@ export async function PUT(request: NextRequest) {
         ...(description !== undefined && { description }),
         ...(isActive !== undefined && { isActive }),
         ...(sortOrder !== undefined && { sortOrder }),
+        ...(companyPaid !== undefined && { companyPaid }),
         updatedAt: new Date(),
       },
     });

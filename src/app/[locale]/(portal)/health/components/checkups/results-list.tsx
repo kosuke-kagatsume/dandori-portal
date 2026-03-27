@@ -20,7 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, FileText, ArrowUpDown, Plus } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Search, FileText, ArrowUpDown, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import type { HealthCheckup, OverallResult, FollowUpStatus } from '@/types/health';
@@ -37,6 +43,8 @@ interface ResultsListProps {
   onViewDetails: (checkup: HealthCheckup) => void;
   isAdmin?: boolean;
   onRegisterResult?: () => void;
+  onEditCheckup?: (checkup: HealthCheckup) => void;
+  onDeleteCheckup?: (id: string) => void;
 }
 
 // 結果バッジの色を取得
@@ -97,7 +105,8 @@ export function ResultsList({
   onFilterResultChange,
   onViewDetails,
   isAdmin,
-  onRegisterResult,
+  onEditCheckup,
+  onDeleteCheckup,
 }: ResultsListProps) {
   const [sortBy, setSortBy] = useState<string>('checkupDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -159,12 +168,7 @@ export function ResultsList({
           <CardTitle>健康診断結果一覧</CardTitle>
           <CardDescription>{filteredCheckups.length}件の健康診断結果</CardDescription>
         </div>
-        {isAdmin && onRegisterResult && (
-          <Button onClick={onRegisterResult}>
-            <Plus className="mr-2 h-4 w-4" />
-            結果登録
-          </Button>
-        )}
+        {/* F-1: 登録ボタン削除（結果登録は予定一覧から行う） */}
       </CardHeader>
       <CardContent>
         {/* フィルター */}
@@ -269,10 +273,34 @@ export function ResultsList({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => onViewDetails(checkup)}>
-                      <FileText className="h-4 w-4 mr-1" />
-                      詳細
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onViewDetails(checkup)}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          詳細表示
+                        </DropdownMenuItem>
+                        {isAdmin && onEditCheckup && (
+                          <DropdownMenuItem onClick={() => onEditCheckup(checkup)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            編集
+                          </DropdownMenuItem>
+                        )}
+                        {isAdmin && onDeleteCheckup && (
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => onDeleteCheckup(checkup.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            削除
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

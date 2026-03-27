@@ -28,7 +28,7 @@ export function InstitutionOptionsTab({ institutionId }: OptionsTabProps) {
   const [options, setOptions] = useState<InstitutionOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
-  const [newForm, setNewForm] = useState({ name: '', code: '', price: '', description: '' });
+  const [newForm, setNewForm] = useState({ name: '', code: '', price: '', description: '', companyPaid: false });
 
   const loadOptions = useCallback(async () => {
     setIsLoading(true);
@@ -51,9 +51,10 @@ export function InstitutionOptionsTab({ institutionId }: OptionsTabProps) {
       code: newForm.code || undefined,
       price: parseInt(newForm.price),
       description: newForm.description || undefined,
+      companyPaid: newForm.companyPaid,
     });
     toast.success('オプション検査を追加しました');
-    setNewForm({ name: '', code: '', price: '', description: '' });
+    setNewForm({ name: '', code: '', price: '', description: '', companyPaid: false });
     setAddingNew(false);
     await loadOptions();
   };
@@ -66,6 +67,11 @@ export function InstitutionOptionsTab({ institutionId }: OptionsTabProps) {
 
   const handleToggleActive = async (item: InstitutionOption) => {
     await updateOption(item.id, { isActive: !item.isActive });
+    await loadOptions();
+  };
+
+  const handleToggleCompanyPaid = async (item: InstitutionOption) => {
+    await updateOption(item.id, { companyPaid: !item.companyPaid });
     await loadOptions();
   };
 
@@ -99,6 +105,7 @@ export function InstitutionOptionsTab({ institutionId }: OptionsTabProps) {
               <TableHead>コード</TableHead>
               <TableHead className="text-right">料金</TableHead>
               <TableHead>説明</TableHead>
+              <TableHead className="w-[80px]">会社負担</TableHead>
               <TableHead className="w-[80px]">有効</TableHead>
               <TableHead className="w-[60px]" />
             </TableRow>
@@ -110,6 +117,12 @@ export function InstitutionOptionsTab({ institutionId }: OptionsTabProps) {
                 <TableCell className="text-sm text-muted-foreground">{item.code || '-'}</TableCell>
                 <TableCell className="text-right">¥{item.price.toLocaleString()}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{item.description || '-'}</TableCell>
+                <TableCell>
+                  <Switch
+                    checked={item.companyPaid}
+                    onCheckedChange={() => handleToggleCompanyPaid(item)}
+                  />
+                </TableCell>
                 <TableCell>
                   <Switch
                     checked={item.isActive}
@@ -168,6 +181,13 @@ export function InstitutionOptionsTab({ institutionId }: OptionsTabProps) {
                 onChange={(e) => setNewForm({ ...newForm, description: e.target.value })}
               />
             </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={newForm.companyPaid}
+              onCheckedChange={(checked) => setNewForm({ ...newForm, companyPaid: checked })}
+            />
+            <Label className="text-xs">会社負担</Label>
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" size="sm" onClick={() => setAddingNew(false)}>キャンセル</Button>

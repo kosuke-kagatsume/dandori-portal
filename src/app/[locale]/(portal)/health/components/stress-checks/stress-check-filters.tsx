@@ -34,7 +34,7 @@ export function StressCheckFilters({
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
         <Input
-          placeholder="氏名・部署で検索..."
+          placeholder="氏名・回答日で検索"
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
           className="pl-10"
@@ -58,7 +58,7 @@ export function StressCheckFilters({
           <SelectValue placeholder="判定" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">すべて</SelectItem>
+          <SelectItem value="all">すべての判定</SelectItem>
           <SelectItem value="high_stress">高ストレス</SelectItem>
           <SelectItem value="normal">正常</SelectItem>
         </SelectContent>

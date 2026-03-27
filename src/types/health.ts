@@ -101,6 +101,7 @@ export interface InstitutionOption {
   description?: string | null;
   isActive: boolean;
   sortOrder: number;
+  companyPaid: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +113,7 @@ export interface InstitutionOptionInput {
   description?: string;
   isActive?: boolean;
   sortOrder?: number;
+  companyPaid?: boolean;
 }
 
 // ============================================================================
@@ -154,6 +156,10 @@ export interface HealthCheckupSchedule {
   status: ScheduleStatus;
   fiscalYear: number;
   notes?: string | null;
+  region?: string | null;
+  selectedOptionIds?: string[] | null;
+  totalCost?: number | null;
+  companyPaidOptionCost?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -169,6 +175,43 @@ export interface HealthCheckupScheduleInput {
   status?: ScheduleStatus;
   fiscalYear: number;
   notes?: string;
+  region?: string;
+  selectedOptionIds?: string[];
+  totalCost?: number;
+  companyPaidOptionCost?: number;
+}
+
+// ============================================================================
+// 予定一覧19列ビュー用 JOIN済みデータ
+// ============================================================================
+
+export interface ScheduleFullListRow {
+  id: string;
+  userName: string;
+  departmentName: string | null;
+  birthDateWareki: string;          // 和暦生年月日
+  age: number;                       // 年度翌4/1時点年齢
+  gender: string | null;
+  insuranceNumber: string | null;    // 被保険者整理番号
+  postalCode: string | null;
+  address: string | null;
+  phone: string | null;
+  region: string | null;             // 地域
+  institutionName: string | null;    // 医療機関名
+  checkupTypeName: string;           // 健診種類
+  scheduledDate: Date;
+  scheduledTime: string | null;
+  optionNames: string[];             // オプション名一覧
+  basePrice: number | null;          // 基本料金
+  companyPaidOptionCost: number | null; // 会社負担オプション代
+  totalCost: number | null;          // 合計
+  status: ScheduleStatus;
+  notes: string | null;
+  // 元データ参照用
+  scheduleId: string;
+  userId: string;
+  medicalInstitutionId: string | null;
+  selectedOptionIds: string[] | null;
 }
 
 // ============================================================================

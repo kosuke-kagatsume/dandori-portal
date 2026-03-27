@@ -50,6 +50,9 @@ export function InstitutionDialog({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('basic');
+  // 新規追加後にeditモードに切り替えるための内部ID
+  const [createdInstitutionId, setCreatedInstitutionId] = useState<string | null>(null);
+  const effectiveEditItem = editItem || (createdInstitutionId ? { id: createdInstitutionId } as HealthMedicalInstitution : null);
 
   // 編集モードの場合、既存データをフォームにセット
   useEffect(() => {
@@ -80,6 +83,7 @@ export function InstitutionDialog({
         sortOrder: 0,
       });
       setActiveTab('basic');
+      setCreatedInstitutionId(null);
     }
   }, [editItem, open]);
 
@@ -91,15 +95,22 @@ export function InstitutionDialog({
 
     setIsSubmitting(true);
     try {
-      if (editItem) {
-        await updateMedicalInstitution(editItem.id, formData);
+      if (editItem || createdInstitutionId) {
+        const idToUpdate = editItem?.id || createdInstitutionId!;
+        await updateMedicalInstitution(idToUpdate, formData);
         toast.success('医療機関を更新しました');
+        onOpenChange(false);
+        onSuccess?.();
       } else {
-        await addMedicalInstitution(formData);
-        toast.success('医療機関を追加しました');
+        const created = await addMedicalInstitution(formData);
+        toast.success('医療機関を追加しました。検査項目・オプションを登録できます');
+        // 新規追加後、3タブモードに切り替え
+        if (created?.id) {
+          setCreatedInstitutionId(created.id);
+          setActiveTab('exam-prices');
+        }
+        onSuccess?.();
       }
-      onOpenChange(false);
-      onSuccess?.();
     } catch (error) {
       console.error('エラー:', error);
       toast.error(editItem ? '更新に失敗しました' : '追加に失敗しました');
@@ -110,59 +121,45 @@ export function InstitutionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={editItem ? 'max-w-2xl' : 'max-w-md'}>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{editItem ? '医療機関の編集' : '医療機関の追加'}</DialogTitle>
+          <DialogTitle>{editItem ? '医療機関の編集' : createdInstitutionId ? '医療機関の編集' : '医療機関の追加'}</DialogTitle>
           <DialogDescription>
-            健診を受ける医療機関を{editItem ? '編集' : '追加'}します
+            健診を受ける医療機関を{editItem || createdInstitutionId ? '編集' : '追加'}します
           </DialogDescription>
         </DialogHeader>
 
-        {editItem ? (
-          // 編集モード: 3タブ表示
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="basic">基本情報</TabsTrigger>
-              <TabsTrigger value="exam-prices">検査項目・料金</TabsTrigger>
-              <TabsTrigger value="options">オプション検査</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="basic">基本情報</TabsTrigger>
+            <TabsTrigger value="exam-prices" disabled={!effectiveEditItem}>検査項目・料金</TabsTrigger>
+            <TabsTrigger value="options" disabled={!effectiveEditItem}>オプション検査</TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="basic" className="space-y-4 py-2">
-              <BasicInfoForm formData={formData} setFormData={setFormData} />
-              <DialogFooter>
-                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                  キャンセル
-                </Button>
-                <Button onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? '保存中...' : '更新'}
-                </Button>
-              </DialogFooter>
-            </TabsContent>
-
-            <TabsContent value="exam-prices" className="py-2">
-              <InstitutionExamPricesTab institutionId={editItem.id} />
-            </TabsContent>
-
-            <TabsContent value="options" className="py-2">
-              <InstitutionOptionsTab institutionId={editItem.id} />
-            </TabsContent>
-          </Tabs>
-        ) : (
-          // 追加モード: 基本情報のみ
-          <>
-            <div className="py-4">
-              <BasicInfoForm formData={formData} setFormData={setFormData} />
-            </div>
+          <TabsContent value="basic" className="space-y-4 py-2">
+            <BasicInfoForm formData={formData} setFormData={setFormData} />
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
                 キャンセル
               </Button>
               <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting ? '保存中...' : '追加'}
+                {isSubmitting ? '保存中...' : (editItem || createdInstitutionId) ? '更新' : '追加'}
               </Button>
             </DialogFooter>
-          </>
-        )}
+          </TabsContent>
+
+          <TabsContent value="exam-prices" className="py-2">
+            {effectiveEditItem && (
+              <InstitutionExamPricesTab institutionId={effectiveEditItem.id} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="options" className="py-2">
+            {effectiveEditItem && (
+              <InstitutionOptionsTab institutionId={effectiveEditItem.id} />
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

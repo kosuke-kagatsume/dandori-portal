@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, FileText, Settings2, ListChecks } from 'lucide-react';
 import type { HealthCheckup, HealthCheckupSchedule, ScheduleStatus } from '@/types/health';
@@ -12,11 +13,7 @@ interface CheckupSubTabsProps {
   schedules: HealthCheckupSchedule[];
   checkups: HealthCheckup[];
   departments: string[];
-  // 予定タブ用フィルタ
-  scheduleSearchQuery: string;
-  scheduleFilterDepartment: string;
-  onScheduleSearchQueryChange: (query: string) => void;
-  onScheduleFilterDepartmentChange: (dept: string) => void;
+  currentUserId: string;
   // 結果タブ用フィルタ
   resultSearchQuery: string;
   resultFilterDepartment: string;
@@ -27,7 +24,6 @@ interface CheckupSubTabsProps {
   onViewCheckupDetails: (checkup: HealthCheckup) => void;
   onRefreshSchedules: () => void;
   onUpdateScheduleStatus?: (id: string, status: ScheduleStatus) => Promise<void>;
-  onRegisterResult?: () => void;
   userRoles: string[];
 }
 
@@ -35,10 +31,7 @@ export function CheckupSubTabs({
   schedules,
   checkups,
   departments,
-  scheduleSearchQuery,
-  scheduleFilterDepartment,
-  onScheduleSearchQueryChange,
-  onScheduleFilterDepartmentChange,
+  currentUserId,
   resultSearchQuery,
   resultFilterDepartment,
   resultFilterResult,
@@ -48,13 +41,18 @@ export function CheckupSubTabs({
   onViewCheckupDetails,
   onRefreshSchedules,
   onUpdateScheduleStatus,
-  onRegisterResult,
   userRoles,
 }: CheckupSubTabsProps) {
   const isAdmin = userRoles.includes('hr') || userRoles.includes('admin');
+  const isHR = userRoles.includes('hr');
+
+  // 予定タブ: ログインユーザー本人のデータのみ（A-5）
+  const mySchedules = useMemo(() => {
+    return schedules.filter(s => s.userId === currentUserId);
+  }, [schedules, currentUserId]);
 
   // タブ数に応じたグリッド
-  const tabCount = isAdmin ? 4 : 2;
+  const tabCount = isHR ? 4 : isAdmin ? 3 : 2;
   const gridClass = `grid-cols-${tabCount}`;
 
   return (
@@ -64,7 +62,7 @@ export function CheckupSubTabs({
           <Calendar className="h-4 w-4" />
           予定
         </TabsTrigger>
-        {isAdmin && (
+        {isHR && (
           <TabsTrigger value="schedule-list" className="gap-2">
             <ListChecks className="h-4 w-4" />
             予定一覧
@@ -83,24 +81,16 @@ export function CheckupSubTabs({
       </TabsList>
 
       <TabsContent value="schedule">
-        <ScheduleList
-          schedules={schedules}
-          departments={departments}
-          searchQuery={scheduleSearchQuery}
-          filterDepartment={scheduleFilterDepartment}
-          onSearchQueryChange={onScheduleSearchQueryChange}
-          onFilterDepartmentChange={onScheduleFilterDepartmentChange}
-          onRefresh={onRefreshSchedules}
-          onUpdateStatus={onUpdateScheduleStatus}
-          isAdmin={isAdmin}
-        />
+        <ScheduleList schedules={mySchedules} />
       </TabsContent>
 
-      {isAdmin && (
+      {isHR && (
         <TabsContent value="schedule-list">
           <ScheduleFullList
             schedules={schedules}
             departments={departments}
+            onRefreshSchedules={onRefreshSchedules}
+            onUpdateScheduleStatus={onUpdateScheduleStatus}
           />
         </TabsContent>
       )}
@@ -117,7 +107,6 @@ export function CheckupSubTabs({
           onFilterResultChange={onResultFilterResultChange}
           onViewDetails={onViewCheckupDetails}
           isAdmin={isAdmin}
-          onRegisterResult={onRegisterResult}
         />
       </TabsContent>
 
