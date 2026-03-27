@@ -126,6 +126,29 @@ export async function PATCH(
       if (resolvedIds.positionId) body.positionId = resolvedIds.positionId;
     }
 
+    // hierarchyモード時: departmentId変更時にunitIdを自動同期
+    if (body.departmentId && body.departmentId !== existingUser.departmentId) {
+      const settings = await prisma.tenant_settings.findUnique({
+        where: { tenantId: existingUser.tenantId },
+        select: { organizationMode: true },
+      });
+      if (settings?.organizationMode === 'hierarchy') {
+        const dept = await prisma.departments.findUnique({
+          where: { id: body.departmentId },
+          select: { name: true },
+        });
+        if (dept) {
+          const matchingUnit = await prisma.org_units.findFirst({
+            where: { tenantId: existingUser.tenantId, name: dept.name, isActive: true },
+            select: { id: true },
+          });
+          if (matchingUnit) {
+            body.unitId = matchingUnit.id;
+          }
+        }
+      }
+    }
+
     // 更新データの準備
     const updateData: Record<string, unknown> = { ...body };
 

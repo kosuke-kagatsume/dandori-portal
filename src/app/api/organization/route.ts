@@ -44,6 +44,13 @@ export async function GET(request: NextRequest) {
   try {
     const tenantId = await getTenantIdFromRequest(request);
 
+    // テナントの組織管理モードを取得
+    const settings = await prisma.tenant_settings.findUnique({
+      where: { tenantId },
+      select: { organizationMode: true },
+    });
+    const mode = settings?.organizationMode ?? 'flat';
+
     // 部門一覧を取得
     const departments = await prisma.departments.findMany({
       where: { tenantId },
@@ -56,7 +63,7 @@ export async function GET(request: NextRequest) {
       orderBy: [{ level: 'asc' }, { name: 'asc' }],
     });
 
-    // メンバー情報を取得（部門に紐づくユーザー）
+    // メンバー情報を取得
     const users = await prisma.users.findMany({
       where: { tenantId },
       select: {
@@ -69,18 +76,22 @@ export async function GET(request: NextRequest) {
         avatar: true,
         hireDate: true,
         department: true,
+        departmentId: true,
         unitId: true,
       },
     });
 
-    // 組織ツリーを構築
-    const organizationTree = buildOrganizationTree(orgUnits, users);
+    // モードに応じてツリーを構築
+    const organizationTree = mode === 'hierarchy'
+      ? buildOrganizationTree(orgUnits, users)
+      : buildFlatOrganizationTree(departments, users);
 
     return successResponse({
       tree: organizationTree,
       departments,
       orgUnits,
       members: users,
+      mode,
     });
   } catch (error) {
     return handleApiError(error, '組織構造の取得');
@@ -122,6 +133,80 @@ function buildOrganizationTree(
     });
 
   return root;
+}
+
+// フラットモード用: departmentsベースで組織ツリーを構築
+function buildFlatOrganizationTree(
+  departments: { id: string; name: string; isActive: boolean }[],
+  users: { id: string; name: string; email: string; position: string | null; role: string | null; status: string; avatar: string | null; hireDate: Date | null; department: string | null; departmentId: string | null; unitId: string | null }[]
+): OrganizationTreeNode {
+  const activeDepts = departments.filter(d => d.isActive);
+
+  // ユーザーをdepartmentIdでグループ化
+  const usersByDept = new Map<string, typeof users>();
+  const unassigned: typeof users = [];
+
+  users.forEach(user => {
+    if (user.departmentId) {
+      const existing = usersByDept.get(user.departmentId) || [];
+      existing.push(user);
+      usersByDept.set(user.departmentId, existing);
+    } else {
+      unassigned.push(user);
+    }
+  });
+
+  const formatMember = (u: typeof users[0]) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    position: u.position || '',
+    role: u.role || 'employee',
+    avatar: u.avatar,
+    isManager: false,
+    joinDate: u.hireDate?.toISOString() || '',
+    status: u.status,
+  });
+
+  // 各部署をノード化
+  const children: OrganizationTreeNode[] = activeDepts.map(dept => {
+    const deptMembers = usersByDept.get(dept.id) || [];
+    return {
+      id: dept.id,
+      name: dept.name,
+      type: 'department',
+      level: 1,
+      memberCount: deptMembers.length,
+      description: '',
+      members: deptMembers.map(formatMember),
+      children: [],
+    };
+  });
+
+  // 未所属ユーザーがいれば「未所属」ノードを追加
+  if (unassigned.length > 0) {
+    children.push({
+      id: 'unassigned',
+      name: '未所属',
+      type: 'department',
+      level: 1,
+      memberCount: unassigned.length,
+      description: '',
+      members: unassigned.map(formatMember),
+      children: [],
+    });
+  }
+
+  return {
+    id: 'company',
+    name: '組織',
+    type: 'company',
+    level: 0,
+    memberCount: users.length,
+    description: '',
+    members: [],
+    children,
+  };
 }
 
 function buildUnitNode(

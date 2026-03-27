@@ -21,13 +21,10 @@ import {
   Building2,
   Users,
   Shield,
-  // BarChart3, // 分析タブ削除に伴い未使用
   TreePine,
   List,
   Download,
-  // Search, // 検索機能で使用予定
-  // Plus, // ヘッダーの追加ボタン削除に伴い未使用
-  // Settings, // 設定ボタンで使用予定
+  Settings2,
 } from 'lucide-react';
 import { OrganizationChart } from '@/components/organization/organization-chart';
 import { UserManagementPanel } from '@/components/organization/user-management-panel';
@@ -56,7 +53,10 @@ export default function OrganizationPage() {
     templateType,
     isLoading,
     error,
+    organizationMode,
     fetchOrganization,
+    fetchOrganizationMode,
+    setOrganizationMode,
     setSelectedMember,
     setSelectedNode,
     setViewMode,
@@ -65,6 +65,32 @@ export default function OrganizationPage() {
     updateMember,
     removeMember,
   } = useOrganizationStore();
+
+  // モード切替
+  const [isChangingMode, setIsChangingMode] = useState(false);
+
+  const handleModeChange = async (mode: string) => {
+    if (mode !== 'flat' && mode !== 'hierarchy') return;
+    if (mode === organizationMode) return;
+
+    const confirmed = window.confirm(
+      mode === 'flat'
+        ? '組織管理モードを「フラット管理」に変更します。部署テーブルベースの表示に切り替わります。'
+        : '組織管理モードを「階層管理」に変更します。組織ユニットベースのツリー表示に切り替わります。'
+    );
+    if (!confirmed) return;
+
+    setIsChangingMode(true);
+    try {
+      await setOrganizationMode(mode);
+      await fetchOrganization();
+      toast.success(`組織管理モードを「${mode === 'flat' ? 'フラット管理' : '階層管理'}」に変更しました`);
+    } catch {
+      toast.error('モード変更に失敗しました');
+    } finally {
+      setIsChangingMode(false);
+    }
+  };
 
   // 組織図のコンテナへのref
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -133,9 +159,10 @@ export default function OrganizationPage() {
   useEffect(() => {
     // Zustand persistのhydration
     useOrganizationStore.persist.rehydrate();
-    // APIから組織データを取得
+    // モード取得 → 組織データ取得
+    fetchOrganizationMode();
     fetchOrganization();
-  }, [fetchOrganization]);
+  }, [fetchOrganization, fetchOrganizationMode]);
 
   // 権限チェック
   const getUserRole = (): UserRole | null => {
@@ -248,6 +275,24 @@ export default function OrganizationPage() {
             組織構造とメンバーの管理、権限設定を行います
           </p>
         </div>
+        {canManageOrganization && (
+          <div className="flex items-center space-x-2">
+            <Settings2 className="h-4 w-4 text-muted-foreground" />
+            <Select
+              value={organizationMode}
+              onValueChange={handleModeChange}
+              disabled={isChangingMode}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="flat">フラット管理</SelectItem>
+                <SelectItem value="hierarchy">階層管理</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -269,7 +314,7 @@ export default function OrganizationPage() {
               <p className="text-2xl font-bold">{organizationStats.activeMembers}</p>
             </div>
             <Badge className="bg-green-100 text-green-800">
-              {Math.round((organizationStats.activeMembers / organizationStats.totalMembers) * 100)}%
+              {organizationStats.totalMembers > 0 ? Math.round((organizationStats.activeMembers / organizationStats.totalMembers) * 100) : 0}%
             </Badge>
           </CardContent>
         </Card>

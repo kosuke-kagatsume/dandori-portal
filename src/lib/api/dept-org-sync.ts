@@ -3,7 +3,17 @@ import { prisma } from '@/lib/prisma';
 /**
  * 部署(departments) ↔ 組織ユニット(org_units) 同期ユーティリティ
  * departments の変更を org_units に反映する
+ * ※ hierarchyモード時のみ同期を実行。flatモードではdepartmentsが直接使われるため同期不要
  */
+
+/** テナントの組織管理モードを取得 */
+async function getOrganizationMode(tenantId: string): Promise<string> {
+  const settings = await prisma.tenant_settings.findUnique({
+    where: { tenantId },
+    select: { organizationMode: true },
+  });
+  return settings?.organizationMode ?? 'flat';
+}
 
 /** 部署作成時に対応する org_unit を作成 */
 export async function syncDepartmentToOrgUnit(
@@ -15,6 +25,9 @@ export async function syncDepartmentToOrgUnit(
     isActive?: boolean;
   }
 ) {
+  // flatモード時は同期スキップ
+  const mode = await getOrganizationMode(tenantId);
+  if (mode !== 'hierarchy') return;
   // 親部署に対応する org_unit の ID を検索
   let parentOrgUnitId: string | null = null;
   let parentLevel = 0;
@@ -77,6 +90,10 @@ export async function syncDepartmentUpdate(
     isActive?: boolean;
   }
 ) {
+  // flatモード時は同期スキップ
+  const mode = await getOrganizationMode(tenantId);
+  if (mode !== 'hierarchy') return;
+
   const orgUnit = await prisma.org_units.findFirst({
     where: { tenantId, name: oldName },
   });
@@ -126,6 +143,10 @@ export async function syncDepartmentDelete(
   tenantId: string,
   departmentName: string
 ) {
+  // flatモード時は同期スキップ
+  const mode = await getOrganizationMode(tenantId);
+  if (mode !== 'hierarchy') return;
+
   const orgUnit = await prisma.org_units.findFirst({
     where: { tenantId, name: departmentName },
   });

@@ -1665,6 +1665,7 @@ model tenant_settings {
   billingEmail      String?
   customPricing     Boolean   @default(false)
   status            String    @default("trial")
+  organizationMode  String    @default("flat") // "flat" | "hierarchy"
   createdAt         DateTime  @default(now())
   updatedAt         DateTime
   tenants           tenants   @relation(fields: [tenantId], references: [id], onDelete: Cascade)

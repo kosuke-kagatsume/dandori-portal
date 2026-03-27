@@ -14,6 +14,26 @@ async function apiFetchOrganization() {
   return result.data;
 }
 
+async function apiFetchOrganizationMode(): Promise<'flat' | 'hierarchy'> {
+  const response = await fetch(`${API_BASE}/mode`);
+  if (!response.ok) {
+    throw new Error('組織管理モードの取得に失敗しました');
+  }
+  const result = await response.json();
+  return result.data.mode;
+}
+
+async function apiSetOrganizationMode(mode: 'flat' | 'hierarchy'): Promise<void> {
+  const response = await fetch(`${API_BASE}/mode`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode }),
+  });
+  if (!response.ok) {
+    throw new Error('組織管理モードの変更に失敗しました');
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function apiCreateDepartment(data: Record<string, unknown>) {
   const response = await fetch(`${API_BASE}/departments`, {
@@ -75,11 +95,14 @@ interface OrganizationStore {
     status: 'active' | 'inactive' | 'all';
   };
   transferHistories: TransferHistory[];
+  organizationMode: 'flat' | 'hierarchy';
 
   // API連携
   isLoading: boolean;
   error: string | null;
   fetchOrganization: () => Promise<void>;
+  fetchOrganizationMode: () => Promise<void>;
+  setOrganizationMode: (mode: 'flat' | 'hierarchy') => Promise<void>;
 
   // Actions
   setOrganizationTree: (tree: OrganizationNode) => void;
@@ -135,8 +158,31 @@ export const useOrganizationStore = create<OrganizationStore>()(
         status: 'active'
       },
       transferHistories: [],
+      organizationMode: 'flat',
       isLoading: false,
       error: null,
+
+      // モード取得
+      fetchOrganizationMode: async () => {
+        try {
+          const mode = await apiFetchOrganizationMode();
+          set({ organizationMode: mode });
+        } catch (error) {
+          console.error('組織管理モードの取得に失敗:', error);
+        }
+      },
+
+      // モード変更
+      setOrganizationMode: async (mode) => {
+        try {
+          await apiSetOrganizationMode(mode);
+          set({ organizationMode: mode });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '組織管理モードの変更に失敗しました';
+          set({ error: errorMessage });
+          throw error;
+        }
+      },
 
       // API連携
       fetchOrganization: async () => {
@@ -503,7 +549,8 @@ export const useOrganizationStore = create<OrganizationStore>()(
         allMembers: state.allMembers,
         viewMode: state.viewMode,
         filters: state.filters,
-        transferHistories: state.transferHistories
+        transferHistories: state.transferHistories,
+        organizationMode: state.organizationMode,
       })
     }
   )

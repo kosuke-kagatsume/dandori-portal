@@ -155,6 +155,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // hierarchyモード時: departmentIdから対応するorg_unitを探してunitIdを自動設定
+    let resolvedUnitId = unitId;
+    if (!unitId && resolvedDepartmentId) {
+      const settings = await prisma.tenant_settings.findUnique({
+        where: { tenantId },
+        select: { organizationMode: true },
+      });
+      if (settings?.organizationMode === 'hierarchy') {
+        // departmentの名前でorg_unitを検索
+        const dept = await prisma.departments.findUnique({
+          where: { id: resolvedDepartmentId },
+          select: { name: true },
+        });
+        if (dept) {
+          const matchingUnit = await prisma.org_units.findFirst({
+            where: { tenantId, name: dept.name, isActive: true },
+            select: { id: true },
+          });
+          if (matchingUnit) {
+            resolvedUnitId = matchingUnit.id;
+          }
+        }
+      }
+    }
+
     // ユーザー作成
     const user = await prisma.users.create({
       data: {
@@ -163,7 +188,7 @@ export async function POST(request: NextRequest) {
         name,
         phone,
         hireDate: hireDate ? new Date(`${hireDate.split('T')[0]}T12:00:00Z`) : undefined,
-        unitId: unitId || undefined,
+        unitId: resolvedUnitId || undefined,
         tenantId,
         roles,
         status,
