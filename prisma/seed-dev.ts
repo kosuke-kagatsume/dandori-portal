@@ -2,192 +2,144 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const TENANT_ID = 'dandori-work-tenant';
+// 既存テナント tenant-006 (subdomain: dandori-work) を使用
+const TENANT_ID = 'tenant-006';
 // bcrypt hash of 'dandori2026'
 const PASSWORD_HASH = '$2b$10$rVi8tYJme3yciDupDVM86uvOs0s85TuipKL34K.y0bEi1Qjl2pjPq';
 
+// 本番組織構造に合わせた部署
 const DEPARTMENTS = [
-  { id: 'dev-dept-corporate', code: 'CORP', name: 'コーポレート部', sortOrder: 1 },
-  { id: 'dev-dept-sales', code: 'SALES', name: '営業部', sortOrder: 2 },
-  { id: 'dev-dept-dev', code: 'DEV', name: '開発部', sortOrder: 3 },
-  { id: 'dev-dept-general', code: 'GA', name: '総務部', sortOrder: 4 },
+  { id: 'dev-dept-corporate', code: 'CORP', name: 'コーポレート', sortOrder: 1 },
+  { id: 'dev-dept-sales', code: 'SALES', name: '営業本部', sortOrder: 2 },
+  { id: 'dev-dept-support', code: 'SUP', name: 'サポート', sortOrder: 3 },
+  { id: 'dev-dept-product', code: 'PROD', name: 'プロダクト', sortOrder: 4 },
+  { id: 'dev-dept-is', code: 'IS', name: 'インサイドセールス', sortOrder: 5 },
+  { id: 'dev-dept-hq', code: 'HQ', name: '企画管理本部', sortOrder: 6 },
 ];
 
+// 本番組織構造に合わせた役職
 const POSITIONS = [
-  { id: 'dev-pos-ceo', name: '代表取締役', level: 5, sortOrder: 1 },
-  { id: 'dev-pos-director', name: '部長', level: 4, sortOrder: 2 },
-  { id: 'dev-pos-manager', name: '課長', level: 3, sortOrder: 3 },
-  { id: 'dev-pos-senior', name: '担当者', level: 2, sortOrder: 4 },
-  { id: 'dev-pos-staff', name: '一般社員', level: 1, sortOrder: 5 },
+  { id: 'dev-pos-executive', name: '役員', level: 5, sortOrder: 1 },
+  { id: 'dev-pos-sysadmin', name: 'システム管理者', level: 4, sortOrder: 2 },
+  { id: 'dev-pos-manager', name: 'マネージャー', level: 3, sortOrder: 3 },
+  { id: 'dev-pos-staff', name: '担当者', level: 2, sortOrder: 4 },
+  { id: 'dev-pos-member', name: 'メンバー', level: 1, sortOrder: 5 },
 ];
 
 const USERS = [
   {
     id: 'dev-user-admin',
     email: 'admin@dandori-work.dev',
-    name: '管理太郎',
-    roles: ['employee', 'admin'],
+    name: 'Dev管理者',
+    roles: ['admin', 'hr'],
     role: 'admin',
-    departmentId: 'dev-dept-corporate',
-    positionId: 'dev-pos-ceo',
-    department: 'コーポレート部',
-    position: '代表取締役',
-    unitId: 'dev-org-corporate',
+    department: 'コーポレート',
+    position: 'システム管理者',
+    employeeNumber: 'D001',
+    birthDate: new Date('1985-06-15'),
+    gender: 'male',
   },
   {
     id: 'dev-user-hr',
     email: 'hr@dandori-work.dev',
-    name: '人事花子',
-    roles: ['employee', 'hr'],
+    name: 'Dev人事',
+    roles: ['hr'],
     role: 'hr',
-    departmentId: 'dev-dept-corporate',
-    positionId: 'dev-pos-senior',
-    department: 'コーポレート部',
+    department: 'コーポレート',
     position: '担当者',
-    unitId: 'dev-org-corporate',
-  },
-  {
-    id: 'dev-user-manager',
-    email: 'manager@dandori-work.dev',
-    name: '営業部長',
-    roles: ['employee', 'manager'],
-    role: 'manager',
-    departmentId: 'dev-dept-sales',
-    positionId: 'dev-pos-director',
-    department: '営業部',
-    position: '部長',
-    unitId: 'dev-org-sales',
-  },
-  {
-    id: 'dev-user-emp1',
-    email: 'employee@dandori-work.dev',
-    name: '社員一郎',
-    roles: ['employee'],
-    role: 'employee',
-    departmentId: 'dev-dept-dev',
-    positionId: 'dev-pos-staff',
-    department: '開発部',
-    position: '一般社員',
-    unitId: 'dev-org-dev',
-  },
-  {
-    id: 'dev-user-emp2',
-    email: 'employee2@dandori-work.dev',
-    name: '社員二郎',
-    roles: ['employee'],
-    role: 'employee',
-    departmentId: 'dev-dept-sales',
-    positionId: 'dev-pos-staff',
-    department: '営業部',
-    position: '一般社員',
-    unitId: 'dev-org-sales',
-  },
-  {
-    id: 'dev-user-emp3',
-    email: 'employee3@dandori-work.dev',
-    name: '社員三子',
-    roles: ['employee'],
-    role: 'employee',
-    departmentId: 'dev-dept-general',
-    positionId: 'dev-pos-staff',
-    department: '総務部',
-    position: '一般社員',
-    unitId: 'dev-org-general',
+    employeeNumber: 'D002',
+    birthDate: new Date('1990-03-22'),
+    gender: 'female',
   },
   {
     id: 'dev-user-executive',
     email: 'executive@dandori-work.dev',
-    name: '経営太郎',
-    roles: ['employee', 'executive'],
+    name: 'Dev役員',
+    roles: ['executive'],
     role: 'executive',
-    departmentId: 'dev-dept-corporate',
-    positionId: 'dev-pos-ceo',
-    department: 'コーポレート部',
-    position: '代表取締役',
-    unitId: 'dev-org-corporate',
+    department: '企画管理本部',
+    position: '役員',
+    employeeNumber: 'D003',
+    birthDate: new Date('1978-11-08'),
+    gender: 'male',
+  },
+  {
+    id: 'dev-user-manager',
+    email: 'manager@dandori-work.dev',
+    name: 'Dev営業部長',
+    roles: ['manager'],
+    role: 'manager',
+    department: '営業本部',
+    position: 'マネージャー',
+    employeeNumber: 'D004',
+    birthDate: new Date('1988-09-03'),
+    gender: 'male',
+  },
+  {
+    id: 'dev-user-emp1',
+    email: 'employee@dandori-work.dev',
+    name: 'Devサポート社員',
+    roles: ['employee'],
+    role: 'employee',
+    department: 'サポート',
+    position: 'メンバー',
+    employeeNumber: 'D005',
+    birthDate: new Date('1995-01-20'),
+    gender: 'female',
+  },
+  {
+    id: 'dev-user-emp2',
+    email: 'employee2@dandori-work.dev',
+    name: 'Devプロダクト社員',
+    roles: ['employee'],
+    role: 'employee',
+    department: 'プロダクト',
+    position: 'メンバー',
+    employeeNumber: 'D006',
+    birthDate: new Date('1992-07-14'),
+    gender: 'male',
+  },
+  {
+    id: 'dev-user-emp3',
+    email: 'employee3@dandori-work.dev',
+    name: 'DevIS社員',
+    roles: ['employee'],
+    role: 'employee',
+    department: 'インサイドセールス',
+    position: 'メンバー',
+    employeeNumber: 'D007',
+    birthDate: new Date('1997-12-01'),
+    gender: 'female',
   },
   {
     id: 'dev-user-applicant',
     email: 'applicant@dandori-work.dev',
-    name: '新入花子',
-    roles: ['applicant'],
-    role: 'applicant',
-    departmentId: 'dev-dept-dev',
-    positionId: 'dev-pos-staff',
-    department: '開発部',
-    position: '一般社員',
-    unitId: 'dev-org-dev',
+    name: 'Dev入社予定',
+    roles: ['employee'],
+    role: 'employee',
+    department: 'コーポレート',
+    position: 'メンバー',
+    employeeNumber: 'D008',
+    birthDate: new Date('2000-04-10'),
+    gender: 'male',
   },
 ];
 
 async function main() {
   console.log('🌱 Dev環境シードデータ投入開始...');
 
-  // 1. テナント作成
-  const tenant = await prisma.tenants.upsert({
-    where: { id: TENANT_ID },
-    update: {},
-    create: {
-      id: TENANT_ID,
-      name: '株式会社ダンドリワーク',
-      subdomain: 'dandori-work',
-      timezone: 'Asia/Tokyo',
-      closingDay: '末',
-      weekStartDay: 1,
-      updatedAt: new Date(),
-    },
-  });
-  console.log('✅ テナント作成:', tenant.name);
-
-  // 2. 組織ユニット作成（会社 → 各部門）
-  const company = await prisma.org_units.upsert({
-    where: { id: 'dev-org-company' },
-    update: {},
-    create: {
-      id: 'dev-org-company',
-      tenantId: TENANT_ID,
-      name: '株式会社ダンドリワーク',
-      type: 'company',
-      level: 0,
-      memberCount: 6,
-      description: '会社全体',
-      isActive: true,
-      updatedAt: new Date(),
-    },
-  });
-
-  const orgUnits = [
-    { id: 'dev-org-corporate', name: 'コーポレート部', memberCount: 2 },
-    { id: 'dev-org-sales', name: '営業部', memberCount: 2 },
-    { id: 'dev-org-dev', name: '開発部', memberCount: 1 },
-    { id: 'dev-org-general', name: '総務部', memberCount: 1 },
-  ];
-
-  for (const unit of orgUnits) {
-    await prisma.org_units.upsert({
-      where: { id: unit.id },
-      update: {},
-      create: {
-        id: unit.id,
-        tenantId: TENANT_ID,
-        name: unit.name,
-        parentId: company.id,
-        type: 'division',
-        level: 1,
-        memberCount: unit.memberCount,
-        description: unit.name,
-        isActive: true,
-        updatedAt: new Date(),
-      },
-    });
+  // テナント tenant-006 が存在するか確認（作成はしない）
+  const tenant = await prisma.tenants.findUnique({ where: { id: TENANT_ID } });
+  if (!tenant) {
+    throw new Error(`テナント ${TENANT_ID} が存在しません。先にメインシードを実行してください。`);
   }
-  console.log('✅ 組織ユニット作成: 会社 + 4部門');
+  console.log('✅ テナント確認:', tenant.name, `(${tenant.subdomain})`);
 
-  // 3. 部署作成
+  // 部署作成（upsert）
   for (const dept of DEPARTMENTS) {
     await prisma.departments.upsert({
       where: { tenantId_code: { tenantId: TENANT_ID, code: dept.code } },
-      update: {},
+      update: { name: dept.name, sortOrder: dept.sortOrder },
       create: {
         id: dept.id,
         tenantId: TENANT_ID,
@@ -199,13 +151,13 @@ async function main() {
       },
     });
   }
-  console.log('✅ 部署作成: 4部署');
+  console.log(`✅ 部署作成/更新: ${DEPARTMENTS.length}部署`);
 
-  // 4. 役職作成
+  // 役職作成（upsert）
   for (const pos of POSITIONS) {
     await prisma.positions.upsert({
       where: { tenantId_name: { tenantId: TENANT_ID, name: pos.name } },
-      update: {},
+      update: { level: pos.level, sortOrder: pos.sortOrder },
       create: {
         id: pos.id,
         tenantId: TENANT_ID,
@@ -217,13 +169,23 @@ async function main() {
       },
     });
   }
-  console.log('✅ 役職作成: 5役職');
+  console.log(`✅ 役職作成/更新: ${POSITIONS.length}役職`);
 
-  // 5. ユーザー作成
+  // ユーザー作成（upsert）
   for (const userData of USERS) {
     await prisma.users.upsert({
       where: { email: userData.email },
-      update: {},
+      update: {
+        name: userData.name,
+        roles: userData.roles,
+        role: userData.role,
+        department: userData.department,
+        position: userData.position,
+        employeeNumber: userData.employeeNumber,
+        birthDate: userData.birthDate,
+        gender: userData.gender,
+        passwordHash: PASSWORD_HASH,
+      },
       create: {
         id: userData.id,
         tenantId: TENANT_ID,
@@ -234,18 +196,18 @@ async function main() {
         passwordHash: PASSWORD_HASH,
         status: 'active',
         hireDate: new Date('2024-04-01'),
-        unitId: userData.unitId,
-        departmentId: userData.departmentId,
-        positionId: userData.positionId,
         department: userData.department,
         position: userData.position,
+        employeeNumber: userData.employeeNumber,
+        birthDate: userData.birthDate,
+        gender: userData.gender,
         updatedAt: new Date(),
       },
     });
   }
-  console.log(`✅ ユーザー作成: ${USERS.length}名（パスワード: dandori2026）`);
+  console.log(`✅ ユーザー作成/更新: ${USERS.length}名（パスワード: dandori2026）`);
 
-  // 6. 勤怠データ作成（過去30日分）
+  // 勤怠データ作成（過去30日分）
   const today = new Date();
   let attendanceCount = 0;
 
@@ -324,12 +286,14 @@ async function main() {
   console.log('📋 ログイン情報:');
   console.log('  テナント: dandori-work（サブドメイン）');
   console.log('  パスワード: dandori2026（全ユーザー共通）');
-  console.log('  admin@dandori-work.dev  - 管理太郎（admin）');
-  console.log('  hr@dandori-work.dev     - 人事花子（hr）');
-  console.log('  manager@dandori-work.dev - 営業部長（manager）');
-  console.log('  employee@dandori-work.dev - 社員一郎（employee）');
-  console.log('  employee2@dandori-work.dev - 社員二郎（employee）');
-  console.log('  employee3@dandori-work.dev - 社員三子（employee）');
+  console.log('  admin@dandori-work.dev     - Dev管理者（admin+hr）');
+  console.log('  hr@dandori-work.dev         - Dev人事（hr）');
+  console.log('  executive@dandori-work.dev  - Dev役員（executive）');
+  console.log('  manager@dandori-work.dev    - Dev営業部長（manager）');
+  console.log('  employee@dandori-work.dev   - Devサポート社員（employee）');
+  console.log('  employee2@dandori-work.dev  - Devプロダクト社員（employee）');
+  console.log('  employee3@dandori-work.dev  - DevIS社員（employee）');
+  console.log('  applicant@dandori-work.dev  - Dev入社予定（employee）');
 }
 
 main()
