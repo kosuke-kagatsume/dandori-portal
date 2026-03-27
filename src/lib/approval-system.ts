@@ -96,7 +96,7 @@ export const organizationHierarchy: { departments: Record<string, Department> } 
 };
 
 // ユーザーの部署とマネージャーを取得
-export function getUserDepartmentInfo(userId: string) {
+export function getUserDepartmentInfo(userId: string, fallbackDepartment?: string) {
   for (const [deptName, dept] of Object.entries(organizationHierarchy.departments)) {
     if (dept.members.includes(userId)) {
       return {
@@ -108,7 +108,20 @@ export function getUserDepartmentInfo(userId: string) {
       };
     }
   }
-  return null;
+
+  // ハードコード組織にないユーザー → フォールバック（人事部マネージャーを承認者に）
+  const hrDept = Object.entries(organizationHierarchy.departments).find(([, dept]) => dept.isHR);
+  const fallbackManager = hrDept
+    ? hrDept[1].manager
+    : { userId: '8', name: '人事部', role: 'manager' };
+
+  return {
+    department: fallbackDepartment || '未設定',
+    manager: fallbackManager,
+    isManager: false,
+    isHR: false,
+    isAdmin: false,
+  };
 }
 
 // 条件分岐ルールの評価
@@ -204,10 +217,6 @@ export function createApprovalFlow(
 ): ApprovalFlow {
   const userInfo = getUserDepartmentInfo(applicantId);
   const steps: ApprovalStep[] = [];
-
-  if (!userInfo) {
-    throw new Error('User department information not found');
-  }
 
   // 条件分岐ルールを評価
   const { needsHR, needsAdmin, appliedRules } = evaluateConditionalRules(requestType, metadata);

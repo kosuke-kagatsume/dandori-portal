@@ -56,13 +56,18 @@ const ApprovalFlowPreview = ({ formData, leaveDays, leaveUnit, currentUserId, le
   void _onBack; // 将来の戻るボタン機能用
   const urgency = leaveDays >= 5 ? 'high' : 'normal';
 
-  const previewFlow = createApprovalFlow(
-    'preview-request',
-    'leave',
-    currentUserId,
-    '田中太郎',
-    urgency
-  );
+  let previewFlow;
+  try {
+    previewFlow = createApprovalFlow(
+      'preview-request',
+      'leave',
+      currentUserId,
+      '田中太郎',
+      urgency
+    );
+  } catch {
+    previewFlow = null;
+  }
 
   const getUnitLabel = (unit: LeaveUnit) => {
     const labels: Record<LeaveUnit, string> = {
@@ -130,7 +135,7 @@ const ApprovalFlowPreview = ({ formData, leaveDays, leaveUnit, currentUserId, le
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {previewFlow.steps.map((step, index) => (
+            {(previewFlow?.steps || []).map((step, index) => (
               <div key={step.id} className="flex items-center gap-4">
                 <div className="flex-shrink-0">
                   <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
@@ -156,7 +161,7 @@ const ApprovalFlowPreview = ({ formData, leaveDays, leaveUnit, currentUserId, le
                   </p>
                 </div>
 
-                {index < previewFlow.steps.length - 1 && (
+                {previewFlow && index < previewFlow.steps.length - 1 && (
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 )}
               </div>

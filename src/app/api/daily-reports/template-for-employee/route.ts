@@ -4,45 +4,20 @@ import {
   handleApiError,
   getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
+import { prisma } from '@/lib/prisma';
+import { getTemplatesForTenant as getTemplatesFromStore } from '@/app/api/daily-report-templates/_store';
 
-// 日報テンプレートのインメモリストアを参照
-// NOTE: 同一プロセス内のインメモリなので、daily-report-templates/route.ts の Map を共有する必要がある
-// Phase 2 で Prisma に移行すれば不要になる
-
-// テンプレート取得用のヘルパー（テンプレートAPIを内部呼び出し）
-async function getTemplatesForTenant(tenantId: string, request: NextRequest) {
-  const origin = new URL(request.url).origin;
-  const res = await fetch(`${origin}/api/daily-report-templates?tenantId=${tenantId}`, {
-    headers: {
-      cookie: request.headers.get('cookie') || '',
-    },
-  });
-  if (!res.ok) return [];
-  const json = await res.json();
-  return json.data?.items || json.data || [];
-}
-
-// 従業員の部署IDを取得するヘルパー
+// 従業員の部署IDを取得するヘルパー（DB直接参照）
 async function getEmployeeDepartmentIds(
-  tenantId: string,
   employeeId: string,
-  request: NextRequest
 ): Promise<string[]> {
-  const origin = new URL(request.url).origin;
   try {
-    const res = await fetch(`${origin}/api/members?tenantId=${tenantId}&id=${employeeId}`, {
-      headers: {
-        cookie: request.headers.get('cookie') || '',
-      },
+    const user = await prisma.users.findUnique({
+      where: { id: employeeId },
+      select: { departmentId: true, department: true },
     });
-    if (!res.ok) return [];
-    const json = await res.json();
-    const member = json.data?.items?.[0] || json.data?.[0];
-    if (!member) return [];
-    // departmentId が単一文字列の場合と配列の場合に対応
-    if (Array.isArray(member.departmentIds)) return member.departmentIds;
-    if (member.departmentId) return [member.departmentId];
-    if (member.department?.id) return [member.department.id];
+    if (!user) return [];
+    if (user.departmentId) return [user.departmentId];
     return [];
   } catch {
     return [];
@@ -81,8 +56,8 @@ export async function GET(request: NextRequest) {
       return successResponse({ template: null });
     }
 
-    // テンプレート一覧を取得
-    const templates: TemplateData[] = await getTemplatesForTenant(tenantId, request);
+    // テンプレート一覧をストアから直接取得（内部fetchではなく直接参照）
+    const templates: TemplateData[] = getTemplatesFromStore(tenantId);
     const activeTemplates = templates.filter((t) => t.isActive);
 
     if (activeTemplates.length === 0) {
@@ -90,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 従業員の部署を取得
-    const employeeDeptIds = await getEmployeeDepartmentIds(tenantId, employeeId, request);
+    const employeeDeptIds = await getEmployeeDepartmentIds(employeeId);
 
     // 部署に一致するテンプレートを探す
     let matched = activeTemplates.find((t) =>
