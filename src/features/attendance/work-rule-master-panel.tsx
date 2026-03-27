@@ -319,9 +319,9 @@ function showSection(type: WorkRuleType, section: string): boolean {
     flexScope: ['flextime'],
     variablePeriod: ['monthly_variable', 'yearly_variable'],
     variableScope: ['monthly_variable', 'yearly_variable'],
-    workTime: ['manager', 'discretionary', 'monthly_variable', 'yearly_variable'],
+    workTime: ['manager', 'monthly_variable', 'yearly_variable'],
     workPattern: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    lateEarlyTally: ['standard', 'shift', 'discretionary', 'monthly_variable', 'yearly_variable'],
+    lateEarlyTally: ['standard', 'shift', 'flextime', 'discretionary', 'monthly_variable', 'yearly_variable'],
     scheduledTallyRange: ['standard', 'shift', 'monthly_variable', 'yearly_variable'],
     legalHolidayDesignation: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     schedule: ['standard', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
@@ -798,16 +798,19 @@ export function WorkRuleMasterPanel() {
     };
     const migrateFlexLegalFrameCalc = (v?: string) => {
       if (v === 'auto' || v === 'manual') return 'principle';
+      if (v === 'principle_with_override') return 'overtime_at_excess';
       return v || defaultFormData.flexLegalFrameCalc;
     };
     const migrateFlexDeficiencyHandling = (v?: string) => {
       if (v === 'carry_forward') return 'carry_over';
-      if (v === 'deduct') return 'deduct_monthly';
+      if (v === 'deduct' || v === 'deduct_monthly') return 'settle_at_end';
+      if (v === 'no_deduction') return 'settle_at_end';
       return v || defaultFormData.flexDeficiencyHandling;
     };
     const migrateFlexScope = (v?: string) => {
-      if (v === 'all') return 'all_days';
+      if (v === 'all' || v === 'all_days') return 'weekday_and_all_holiday';
       if (v === 'workday_only') return 'weekday_only';
+      if (v === 'include_holiday_work') return 'weekday_and_scheduled_holiday';
       return v || defaultFormData.flexScope;
     };
 
@@ -1282,9 +1285,9 @@ export function WorkRuleMasterPanel() {
                     <Select value={formData.flexLegalFrameCalc} onValueChange={(v) => updateForm({ flexLegalFrameCalc: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="principle">原則の計算式</SelectItem>
+                        <SelectItem value="principle">原則通り（暦日）</SelectItem>
                         <SelectItem value="workday_8h">所定労働日数×8時間</SelectItem>
-                        <SelectItem value="principle_with_override">原則の計算式（労使協定で上限を定めている場合、上限値を使用）</SelectItem>
+                        <SelectItem value="overtime_at_excess">所定超過時点で時間外労働とする（法定外判定は別途）</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
@@ -1292,10 +1295,10 @@ export function WorkRuleMasterPanel() {
                     <Select value={formData.flexDeficiencyHandling} onValueChange={(v) => updateForm({ flexDeficiencyHandling: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="settle_at_end">清算期間の最終月で精算</SelectItem>
-                        <SelectItem value="deduct_monthly">毎月控除</SelectItem>
-                        <SelectItem value="carry_over">翌清算期間に繰越（上限あり）</SelectItem>
-                        <SelectItem value="no_deduction">控除しない</SelectItem>
+                        <SelectItem value="settle_at_end">清算期間終了時に精算</SelectItem>
+                        <SelectItem value="carry_over_unlimited">翌清算期間に繰り越し（上限なし）</SelectItem>
+                        <SelectItem value="carry_over">翌清算期間に繰り越し（上限あり）</SelectItem>
+                        <SelectItem value="carry_over_legal_limit">翌清算期間の法定労働時間を上限として繰り越し</SelectItem>
                       </SelectContent>
                     </Select>
                     {formData.flexDeficiencyHandling === 'carry_over' && (
@@ -1314,9 +1317,9 @@ export function WorkRuleMasterPanel() {
                     <Select value={formData.flexScope} onValueChange={(v) => updateForm({ flexScope: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="weekday_only">平日（所定労働日）のみ</SelectItem>
-                        <SelectItem value="include_holiday_work">平日（所定労働日）＋休日出勤</SelectItem>
-                        <SelectItem value="all_days">全日</SelectItem>
+                        <SelectItem value="weekday_only">平日のみ</SelectItem>
+                        <SelectItem value="weekday_and_scheduled_holiday">平日と所定休日のみ</SelectItem>
+                        <SelectItem value="weekday_and_all_holiday">平日と所定休日と法定休日</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
