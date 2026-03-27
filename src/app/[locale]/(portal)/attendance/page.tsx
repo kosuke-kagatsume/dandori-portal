@@ -63,8 +63,21 @@ const LazyAttendanceSummaryTab = lazy(() =>
 );
 
 // メモ化された統計カードコンポーネント
-const StatsCards = memo(({ loading, onLeaveCardClick }: { loading: boolean; onLeaveCardClick?: () => void }) => {
+interface StatsCardsProps {
+  loading: boolean;
+  onLeaveCardClick?: () => void;
+  totalWorkHours: number;
+  scheduledHours: number;
+  overtimeHours: number;
+  leaveDays: number;
+  remoteDays: number;
+}
+
+const StatsCards = memo(({ loading, onLeaveCardClick, totalWorkHours, scheduledHours, overtimeHours, leaveDays, remoteDays }: StatsCardsProps) => {
   if (loading) return <StatCardsLoadingSkeleton />;
+
+  const workProgress = scheduledHours > 0 ? Math.min((totalWorkHours / scheduledHours) * 100, 150) : 0;
+  const overtimeProgress = Math.min((overtimeHours / 45) * 100, 100); // 36協定上限45h
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -74,11 +87,11 @@ const StatsCards = memo(({ loading, onLeaveCardClick }: { loading: boolean; onLe
           <Timer className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">162.5h</div>
+          <div className="text-2xl font-bold">{totalWorkHours.toFixed(1)}h</div>
           <p className="text-xs text-muted-foreground">
-            標準: 160h
+            標準: {scheduledHours.toFixed(0)}h
           </p>
-          <Progress value={101.5} className="mt-2" />
+          <Progress value={workProgress} className="mt-2" />
         </CardContent>
       </Card>
 
@@ -88,11 +101,11 @@ const StatsCards = memo(({ loading, onLeaveCardClick }: { loading: boolean; onLe
           <AlertTriangle className="h-4 w-4 text-orange-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-orange-600">28.5h</div>
+          <div className="text-2xl font-bold text-orange-600">{overtimeHours.toFixed(1)}h</div>
           <p className="text-xs text-muted-foreground">
             36協定上限: 45h
           </p>
-          <Progress value={63.3} className="mt-2" />
+          <Progress value={overtimeProgress} className="mt-2" />
         </CardContent>
       </Card>
 
@@ -106,7 +119,7 @@ const StatsCards = memo(({ loading, onLeaveCardClick }: { loading: boolean; onLe
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">2日</div>
+          <div className="text-2xl font-bold">{leaveDays}日</div>
           <p className="text-xs text-muted-foreground">
             今月取得 → 休暇管理へ
           </p>
@@ -119,7 +132,7 @@ const StatsCards = memo(({ loading, onLeaveCardClick }: { loading: boolean; onLe
           <Home className="h-4 w-4 text-blue-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-blue-600">8日</div>
+          <div className="text-2xl font-bold text-blue-600">{remoteDays}日</div>
           <p className="text-xs text-muted-foreground">
             今月在宅勤務
           </p>
@@ -347,6 +360,37 @@ export default function AttendancePage() {
     fetchRecords(currentUser.id, startDate, endDate).catch(() => {});
   }, [currentUser?.id, fetchRecords]);
 
+  // サマリーカード用の集計値をmonthlyListRecordsから算出
+  const monthlyStats = useMemo(() => {
+    let totalWorkHours = 0;
+    let totalScheduledHours = 0;
+    let totalOvertimeHours = 0;
+    let leaveDays = 0;
+    let remoteDays = 0;
+
+    for (const r of monthlyListRecords) {
+      if (r.status === 'present' || r.status === 'remote' || r.status === 'late' || r.status === 'early_leave') {
+        totalWorkHours += r.workHours || 0;
+        totalScheduledHours += r.scheduledHours || 0;
+        totalOvertimeHours += r.overtime || 0;
+      }
+      if (r.status === 'absent') {
+        leaveDays++;
+      }
+      if (r.workLocation === 'home') {
+        remoteDays++;
+      }
+    }
+
+    return {
+      totalWorkHours: Math.round(totalWorkHours * 10) / 10,
+      scheduledHours: Math.round(totalScheduledHours * 10) / 10,
+      overtimeHours: Math.round(totalOvertimeHours * 10) / 10,
+      leaveDays,
+      remoteDays,
+    };
+  }, [monthlyListRecords]);
+
   // 勤怠記録更新ハンドラー
   const handleRecordUpdate = async (date: string, updates: Record<string, unknown>) => {
     const existingRecord = allHistoryRecords.find(r => r.date === date);
@@ -379,7 +423,15 @@ export default function AttendancePage() {
       </div>
 
       {/* Monthly Status Cards */}
-      <StatsCards loading={loading} onLeaveCardClick={handleLeaveCardClick} />
+      <StatsCards
+        loading={loading}
+        onLeaveCardClick={handleLeaveCardClick}
+        totalWorkHours={monthlyStats.totalWorkHours}
+        scheduledHours={monthlyStats.scheduledHours}
+        overtimeHours={monthlyStats.overtimeHours}
+        leaveDays={monthlyStats.leaveDays}
+        remoteDays={monthlyStats.remoteDays}
+      />
 
       {/* Check-in Section */}
       <div className="flex justify-center">
@@ -458,7 +510,7 @@ export default function AttendancePage() {
         {/* 勤怠集計タブ */}
         <TabsContent value="summary" className="space-y-4">
           <Suspense fallback={<TableLoadingSkeleton />}>
-            <LazyAttendanceSummaryTab />
+            <LazyAttendanceSummaryTab records={monthlyListRecords} onMonthChange={handleMonthChange} />
           </Suspense>
         </TabsContent>
       </Tabs>

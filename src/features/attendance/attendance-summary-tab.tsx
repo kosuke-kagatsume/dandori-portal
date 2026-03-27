@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,77 +22,73 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
+
 // 就業ルールタイプ
 type WorkRuleType = 'fixed' | 'hourly' | 'variable' | 'flex';
 
-interface AttendanceSummaryTabProps {
-  workRuleType?: WorkRuleType;
+// 勤怠一覧のレコード型（page.tsxのmonthlyListRecordsと同じ）
+interface AttendanceRecord {
+  date: string;
+  status: 'present' | 'absent' | 'late' | 'early_leave' | 'remote';
+  checkIn?: string;
+  checkOut?: string;
+  breakStart?: string;
+  breakEnd?: string;
+  breakMinutes?: number;
+  workHours: number;
+  scheduledHours: number;
+  overtime: number;
+  legalOvertime: number;
+  scheduledOvertime: number;
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
+  nightScheduled: number;
+  nightOvertime: number;
+  nightLegalOvertime: number;
+  deemedScheduled: number;
+  deemedOvertime: number;
+  deemedLegalOvertime: number;
+  workLocation?: 'office' | 'home' | 'client' | 'other';
+  workPattern?: string;
+  note?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  punchHistory?: any;
 }
 
-// デモデータ
-const DEMO_DAY_COUNTS = {
-  weekday: { attendance: 18, absence: 1, late: 1, earlyLeave: 0 },
-  scheduledHoliday: { attendance: 0, absence: 0, late: 0, earlyLeave: 0 },
-  legalHoliday: { attendance: 0, absence: 0, late: 0, earlyLeave: 0 },
-};
+interface AttendanceSummaryTabProps {
+  workRuleType?: WorkRuleType;
+  records?: AttendanceRecord[];
+  onMonthChange?: (startDate: string, endDate: string) => void;
+}
 
-const DEMO_LEAVE_COUNTS = {
-  paidLeave: 2,
-  sickLeave: 0,
-  specialLeave: 0,
-  compensatoryLeave: 1,
-  otherLeave: 0,
-};
+// 時間集計の初期値
+const emptyTimeSummary = () => ({
+  total: 0,
+  scheduled: 0,
+  overtime: 0,
+  legalOvertime: 0,
+  nightScheduled: 0,
+  nightOvertime: 0,
+  nightLegalOvertime: 0,
+  late: 0,
+  earlyLeave: 0,
+  break: 0,
+  deemedScheduled: 0,
+  deemedOvertime: 0,
+  deemedLegalOvertime: 0,
+});
 
-const DEMO_TIME_SUMMARY = {
-  weekday: {
-    total: 144.0,
-    scheduled: 136.0,
-    overtime: 8.0,
-    legalOvertime: 4.0,
-    nightScheduled: 0,
-    nightOvertime: 2.5,
-    nightLegalOvertime: 0,
-    late: 0.5,
-    earlyLeave: 0,
-    break: 18.0,
-    deemedScheduled: 0,
-    deemedOvertime: 0,
-    deemedLegalOvertime: 0,
-  },
-  scheduledHoliday: {
-    total: 0,
-    scheduled: 0,
-    overtime: 0,
-    legalOvertime: 0,
-    nightScheduled: 0,
-    nightOvertime: 0,
-    nightLegalOvertime: 0,
-    late: 0,
-    earlyLeave: 0,
-    break: 0,
-    deemedScheduled: 0,
-    deemedOvertime: 0,
-    deemedLegalOvertime: 0,
-  },
-  legalHoliday: {
-    total: 0,
-    scheduled: 0,
-    overtime: 0,
-    legalOvertime: 0,
-    nightScheduled: 0,
-    nightOvertime: 0,
-    nightLegalOvertime: 0,
-    late: 0,
-    earlyLeave: 0,
-    break: 0,
-    deemedScheduled: 0,
-    deemedOvertime: 0,
-    deemedLegalOvertime: 0,
-  },
-};
+// 日付が平日/所定休日/法定休日のどれかを判定（土=所定休日, 日=法定休日, 他=平日）
+function getDayCategory(dateStr: string): 'weekday' | 'scheduledHoliday' | 'legalHoliday' {
+  const d = new Date(dateStr + 'T00:00:00');
+  const dow = d.getDay();
+  if (dow === 0) return 'legalHoliday';
+  if (dow === 6) return 'scheduledHoliday';
+  return 'weekday';
+}
 
-// 1ヶ月単位変形労働制のデモデータ
+// 1ヶ月単位変形労働制のデモデータ（実データ接続は将来対応）
 const DEMO_VARIABLE_WORKING = {
   monthly: {
     standardHours: 177.1,
@@ -108,7 +104,7 @@ const DEMO_VARIABLE_WORKING = {
   ],
 };
 
-// フレックス制のデモデータ
+// フレックス制のデモデータ（実データ接続は将来対応）
 const DEMO_FLEX_TIME = {
   totalWorking: 165.0,
   scheduledTotal: 160.0,
@@ -118,7 +114,7 @@ const DEMO_FLEX_TIME = {
   deductionCarryoverExcess: 0,
 };
 
-export function AttendanceSummaryTab({ workRuleType = 'fixed' }: AttendanceSummaryTabProps) {
+export function AttendanceSummaryTab({ workRuleType = 'fixed', records = [], onMonthChange }: AttendanceSummaryTabProps) {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -133,19 +129,24 @@ export function AttendanceSummaryTab({ workRuleType = 'fixed' }: AttendanceSumma
     return `${format(start, 'yyyy/MM/dd')} ～ ${format(end, 'yyyy/MM/dd')}`;
   }, [currentDate]);
 
-  // Navigate months
+  // 月変更時にデータを再取得
+  const changeMonth = useCallback((newDate: Date) => {
+    setCurrentDate(newDate);
+    if (onMonthChange) {
+      const start = startOfMonth(newDate);
+      const end = endOfMonth(newDate);
+      onMonthChange(format(start, 'yyyy-MM-dd'), format(end, 'yyyy-MM-dd'));
+    }
+  }, [onMonthChange]);
+
   const goToPreviousMonth = () => {
-    setCurrentDate((prev) => {
-      const date = prev || new Date();
-      return new Date(date.getFullYear(), date.getMonth() - 1, 1);
-    });
+    const date = currentDate || new Date();
+    changeMonth(new Date(date.getFullYear(), date.getMonth() - 1, 1));
   };
 
   const goToNextMonth = () => {
-    setCurrentDate((prev) => {
-      const date = prev || new Date();
-      return new Date(date.getFullYear(), date.getMonth() + 1, 1);
-    });
+    const date = currentDate || new Date();
+    changeMonth(new Date(date.getFullYear(), date.getMonth() + 1, 1));
   };
 
   const handleExportPDF = () => {
@@ -155,6 +156,91 @@ export function AttendanceSummaryTab({ workRuleType = 'fixed' }: AttendanceSumma
   const formatHours = (hours: number): string => {
     return hours.toFixed(2);
   };
+
+  // レコードから日数集計を算出
+  const dayCounts = useMemo(() => {
+    const counts = {
+      weekday: { attendance: 0, absence: 0, late: 0, earlyLeave: 0 },
+      scheduledHoliday: { attendance: 0, absence: 0, late: 0, earlyLeave: 0 },
+      legalHoliday: { attendance: 0, absence: 0, late: 0, earlyLeave: 0 },
+    };
+
+    for (const r of records) {
+      const cat = getDayCategory(r.date);
+      switch (r.status) {
+        case 'present':
+        case 'remote':
+          counts[cat].attendance++;
+          break;
+        case 'absent':
+          counts[cat].absence++;
+          break;
+        case 'late':
+          counts[cat].attendance++;
+          counts[cat].late++;
+          break;
+        case 'early_leave':
+          counts[cat].attendance++;
+          counts[cat].earlyLeave++;
+          break;
+      }
+    }
+    return counts;
+  }, [records]);
+
+  // レコードから休暇集計を算出（現状はステータスベースでカウント）
+  const leaveCounts = useMemo(() => {
+    let totalLeave = 0;
+    for (const r of records) {
+      if (r.status === 'absent') totalLeave++;
+    }
+    return {
+      paidLeave: totalLeave,
+      sickLeave: 0,
+      specialLeave: 0,
+      compensatoryLeave: 0,
+      otherLeave: 0,
+    };
+  }, [records]);
+
+  // レコードから時間集計を算出
+  const timeSummary = useMemo(() => {
+    const summary = {
+      weekday: emptyTimeSummary(),
+      scheduledHoliday: emptyTimeSummary(),
+      legalHoliday: emptyTimeSummary(),
+    };
+
+    for (const r of records) {
+      if (r.status === 'absent') continue;
+      const cat = getDayCategory(r.date);
+      const s = summary[cat];
+      s.total += r.workHours || 0;
+      s.scheduled += r.scheduledHours || 0;
+      s.overtime += r.overtime || 0;
+      s.legalOvertime += r.legalOvertime || 0;
+      s.nightScheduled += r.nightScheduled || 0;
+      s.nightOvertime += r.nightOvertime || 0;
+      s.nightLegalOvertime += r.nightLegalOvertime || 0;
+      s.late += (r.lateMinutes || 0) / 60;
+      s.earlyLeave += (r.earlyLeaveMinutes || 0) / 60;
+      s.break += (r.breakMinutes || 0) / 60;
+      s.deemedScheduled += r.deemedScheduled || 0;
+      s.deemedOvertime += r.deemedOvertime || 0;
+      s.deemedLegalOvertime += r.deemedLegalOvertime || 0;
+    }
+
+    return summary;
+  }, [records]);
+
+  // 法定外の合計
+  const totalLegalOvertime = useMemo(() => {
+    return timeSummary.weekday.legalOvertime + timeSummary.scheduledHoliday.legalOvertime;
+  }, [timeSummary]);
+
+  const totalOvertime = useMemo(() => {
+    return timeSummary.weekday.overtime + timeSummary.scheduledHoliday.overtime + timeSummary.legalHoliday.overtime;
+  }, [timeSummary]);
 
   return (
     <div className="space-y-6">
@@ -206,32 +292,24 @@ export function AttendanceSummaryTab({ workRuleType = 'fixed' }: AttendanceSumma
             <TableBody>
               <TableRow>
                 <TableCell className="font-medium">平日</TableCell>
-                <TableCell className="text-center">{DEMO_DAY_COUNTS.weekday.attendance}日</TableCell>
-                <TableCell className="text-center">{DEMO_DAY_COUNTS.weekday.absence}日</TableCell>
-                <TableCell className="text-center">{DEMO_DAY_COUNTS.weekday.late}日</TableCell>
-                <TableCell className="text-center">{DEMO_DAY_COUNTS.weekday.earlyLeave}日</TableCell>
+                <TableCell className="text-center">{dayCounts.weekday.attendance}日</TableCell>
+                <TableCell className="text-center">{dayCounts.weekday.absence}日</TableCell>
+                <TableCell className="text-center">{dayCounts.weekday.late}日</TableCell>
+                <TableCell className="text-center">{dayCounts.weekday.earlyLeave}日</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">所定休日</TableCell>
-                <TableCell className="text-center">
-                  {DEMO_DAY_COUNTS.scheduledHoliday.attendance}日
-                </TableCell>
-                <TableCell className="text-center">
-                  {DEMO_DAY_COUNTS.scheduledHoliday.absence}日
-                </TableCell>
-                <TableCell className="text-center">{DEMO_DAY_COUNTS.scheduledHoliday.late}日</TableCell>
-                <TableCell className="text-center">
-                  {DEMO_DAY_COUNTS.scheduledHoliday.earlyLeave}日
-                </TableCell>
+                <TableCell className="text-center">{dayCounts.scheduledHoliday.attendance}日</TableCell>
+                <TableCell className="text-center">{dayCounts.scheduledHoliday.absence}日</TableCell>
+                <TableCell className="text-center">{dayCounts.scheduledHoliday.late}日</TableCell>
+                <TableCell className="text-center">{dayCounts.scheduledHoliday.earlyLeave}日</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="font-medium">法定休日</TableCell>
-                <TableCell className="text-center">{DEMO_DAY_COUNTS.legalHoliday.attendance}日</TableCell>
-                <TableCell className="text-center">{DEMO_DAY_COUNTS.legalHoliday.absence}日</TableCell>
-                <TableCell className="text-center">{DEMO_DAY_COUNTS.legalHoliday.late}日</TableCell>
-                <TableCell className="text-center">
-                  {DEMO_DAY_COUNTS.legalHoliday.earlyLeave}日
-                </TableCell>
+                <TableCell className="text-center">{dayCounts.legalHoliday.attendance}日</TableCell>
+                <TableCell className="text-center">{dayCounts.legalHoliday.absence}日</TableCell>
+                <TableCell className="text-center">{dayCounts.legalHoliday.late}日</TableCell>
+                <TableCell className="text-center">{dayCounts.legalHoliday.earlyLeave}日</TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -250,23 +328,23 @@ export function AttendanceSummaryTab({ workRuleType = 'fixed' }: AttendanceSumma
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             <div className="p-3 bg-muted/50 rounded-lg text-center">
               <div className="text-xs text-muted-foreground mb-1">有給休暇</div>
-              <div className="text-xl font-bold">{DEMO_LEAVE_COUNTS.paidLeave}日</div>
+              <div className="text-xl font-bold">{leaveCounts.paidLeave}日</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg text-center">
               <div className="text-xs text-muted-foreground mb-1">病気休暇</div>
-              <div className="text-xl font-bold">{DEMO_LEAVE_COUNTS.sickLeave}日</div>
+              <div className="text-xl font-bold">{leaveCounts.sickLeave}日</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg text-center">
               <div className="text-xs text-muted-foreground mb-1">特別休暇</div>
-              <div className="text-xl font-bold">{DEMO_LEAVE_COUNTS.specialLeave}日</div>
+              <div className="text-xl font-bold">{leaveCounts.specialLeave}日</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg text-center">
               <div className="text-xs text-muted-foreground mb-1">代休</div>
-              <div className="text-xl font-bold">{DEMO_LEAVE_COUNTS.compensatoryLeave}日</div>
+              <div className="text-xl font-bold">{leaveCounts.compensatoryLeave}日</div>
             </div>
             <div className="p-3 bg-muted/50 rounded-lg text-center">
               <div className="text-xs text-muted-foreground mb-1">その他休暇</div>
-              <div className="text-xl font-bold">{DEMO_LEAVE_COUNTS.otherLeave}日</div>
+              <div className="text-xl font-bold">{leaveCounts.otherLeave}日</div>
             </div>
           </div>
         </CardContent>
@@ -296,138 +374,34 @@ export function AttendanceSummaryTab({ workRuleType = 'fixed' }: AttendanceSumma
                   <TableHead className="text-right">遅刻</TableHead>
                   <TableHead className="text-right">早退</TableHead>
                   <TableHead className="text-right">休憩</TableHead>
-                  <TableHead className="text-right">休憩みなし所定</TableHead>
-                  <TableHead className="text-right">休憩みなし所定外</TableHead>
-                  <TableHead className="text-right">休憩みなし法定外</TableHead>
+                  <TableHead className="text-right">みなし所定</TableHead>
+                  <TableHead className="text-right">みなし所定外</TableHead>
+                  <TableHead className="text-right">みなし法定外</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">平日</TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.total)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.scheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.overtime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.legalOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.nightScheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.nightOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.nightLegalOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.late)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.earlyLeave)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.break)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.deemedScheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.deemedOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.weekday.deemedLegalOvertime)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">所定休日</TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.total)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.scheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.overtime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.legalOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.nightScheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.nightOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.nightLegalOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.late)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.earlyLeave)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.break)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.deemedScheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.deemedOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.scheduledHoliday.deemedLegalOvertime)}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">法定休日</TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.total)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.scheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.overtime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.legalOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.nightScheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.nightOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.nightLegalOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.late)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.earlyLeave)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.break)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.deemedScheduled)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.deemedOvertime)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatHours(DEMO_TIME_SUMMARY.legalHoliday.deemedLegalOvertime)}
-                  </TableCell>
-                </TableRow>
+                {(['weekday', 'scheduledHoliday', 'legalHoliday'] as const).map((cat) => {
+                  const label = cat === 'weekday' ? '平日' : cat === 'scheduledHoliday' ? '所定休日' : '法定休日';
+                  const s = timeSummary[cat];
+                  return (
+                    <TableRow key={cat}>
+                      <TableCell className="font-medium">{label}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.total)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.scheduled)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.overtime)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.legalOvertime)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.nightScheduled)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.nightOvertime)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.nightLegalOvertime)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.late)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.earlyLeave)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.break)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.deemedScheduled)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.deemedOvertime)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatHours(s.deemedLegalOvertime)}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -447,23 +421,25 @@ export function AttendanceSummaryTab({ workRuleType = 'fixed' }: AttendanceSumma
             <div className="p-4 bg-muted/50 rounded-lg">
               <div className="text-xs text-muted-foreground mb-1">法定外（平日・所定休日）</div>
               <div className="text-2xl font-bold text-orange-600">
-                {formatHours(DEMO_TIME_SUMMARY.weekday.legalOvertime)}h
+                {formatHours(totalLegalOvertime)}h
               </div>
             </div>
             <div className="p-4 bg-muted/50 rounded-lg">
               <div className="text-xs text-muted-foreground mb-1">60時間超法定外（平日・所定休日）</div>
-              <div className="text-2xl font-bold">0.00h</div>
+              <div className="text-2xl font-bold">
+                {formatHours(Math.max(0, totalLegalOvertime - 60))}h
+              </div>
             </div>
             <div className="p-4 bg-muted/50 rounded-lg">
               <div className="text-xs text-muted-foreground mb-1">月間残業時間</div>
               <div className="text-2xl font-bold text-orange-600">
-                {formatHours(DEMO_TIME_SUMMARY.weekday.overtime)}h
+                {formatHours(totalOvertime)}h
               </div>
               <div className="text-xs text-muted-foreground">36協定上限: 45h</div>
             </div>
             <div className="p-4 bg-muted/50 rounded-lg">
               <div className="text-xs text-muted-foreground mb-1">年間残業累計</div>
-              <div className="text-2xl font-bold">180.00h</div>
+              <div className="text-2xl font-bold">-</div>
               <div className="text-xs text-muted-foreground">36協定上限: 360h</div>
             </div>
           </div>

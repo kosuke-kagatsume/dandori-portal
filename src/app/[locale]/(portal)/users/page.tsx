@@ -357,22 +357,41 @@ export default function UsersPage() {
               status: reverseStatusLabel(status || ''),
               retiredDate: normalizeDate(retiredDate) || undefined,
               retirementReason: (['voluntary', 'company', 'contract_end', 'retirement_age', 'other'].includes(retirementReason || '') ? retirementReason as 'voluntary' | 'company' | 'contract_end' | 'retirement_age' | 'other' : undefined),
-              roles: roles ? roles.split(/[;,]/).map(r => r.trim()).filter(Boolean) : ['employee'],
+              roles: roles ? roles.split(/[;,]/).map(r => r.trim()).filter(Boolean) : [],
               unitId: undefined,
               timezone: 'Asia/Tokyo',
               avatar: '',
             };
 
             // 招待フラグを判定
-            const shouldInvite = invite?.toUpperCase() === 'TRUE' || invite === '✓' || invite === '☑';
+            const inviteTrimmed = invite?.trim() || '';
+            const shouldInvite = inviteTrimmed.toUpperCase() === 'TRUE' || inviteTrimmed === '✓' || inviteTrimmed === '☑';
             // @ts-expect-error _invite is a temporary flag for import processing
             user._invite = shouldInvite;
 
-            // 基本的なバリデーション
+            // 基本的なバリデーション（※必須項目チェック）
             const validationErrors: string[] = [];
+            if (!employeeNumber?.trim()) validationErrors.push('社員番号が空です');
             if (!user.name) validationErrors.push('氏名が空です');
             if (!user.email) validationErrors.push('メールアドレスが空です');
             if (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) validationErrors.push(`メールアドレスの形式が不正です: ${user.email}`);
+            if (!department?.trim()) validationErrors.push('部署が空です');
+            if (!position?.trim()) validationErrors.push('役職が空です');
+            if (!user.roles || user.roles.length === 0) validationErrors.push('役割が空です');
+            // 役割の値チェック
+            const validRoles = ['admin', 'executive', 'manager', 'hr', 'employee'];
+            if (user.roles && user.roles.length > 0) {
+              const invalidRoles = user.roles.filter(r => !validRoles.includes(r));
+              if (invalidRoles.length > 0) validationErrors.push(`不正な役割: ${invalidRoles.join(', ')}（admin/executive/manager/hr/employeeのいずれか）`);
+            }
+            // 招待列の全角チェック
+            if (inviteTrimmed && !shouldInvite) {
+              // 全角英字を半角に変換して比較
+              const normalized = inviteTrimmed.replace(/[Ａ-Ｚａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+              if (normalized.toUpperCase() === 'TRUE') {
+                validationErrors.push('招待列は半角で「TRUE」と入力してください（全角不可）');
+              }
+            }
 
             if (validationErrors.length === 0) {
               importedUsers.push(user);
