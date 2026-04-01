@@ -28,6 +28,8 @@ import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
 import { UserPlus, ArrowRightLeft, UserX, ShieldCheck } from 'lucide-react';
 import { UserCombobox } from './user-combobox';
+import { fetchAllMasterData } from '@/lib/api/master-data';
+import type { MasterDepartment, MasterPosition, MasterEmploymentType, MasterWorkRule } from '@/types/master-data';
 
 interface CreateScheduledChangeDialogProps {
   open: boolean;
@@ -35,26 +37,6 @@ interface CreateScheduledChangeDialogProps {
 }
 
 type FormType = 'hire' | 'transfer' | 'retirement';
-
-interface MasterDepartment {
-  id: string;
-  name: string;
-}
-
-interface MasterPosition {
-  id: string;
-  name: string;
-}
-
-interface MasterEmploymentType {
-  id: string;
-  name: string;
-}
-
-interface MasterWorkRule {
-  id: string;
-  name: string;
-}
 
 export function CreateScheduledChangeDialog({
   open,
@@ -74,29 +56,14 @@ export function CreateScheduledChangeDialog({
   // マスタデータ取得
   useEffect(() => {
     if (!open) return;
-    const fetchMasterData = async () => {
-      try {
-        const [deptRes, posRes, etRes, wrRes] = await Promise.all([
-          fetch('/api/master-data/departments'),
-          fetch('/api/master-data/positions'),
-          fetch('/api/master-data/employment-types'),
-          fetch('/api/attendance-master/work-rules?activeOnly=true'),
-        ]);
-        const [deptData, posData, etData, wrData] = await Promise.all([
-          deptRes.json(),
-          posRes.json(),
-          etRes.json(),
-          wrRes.json(),
-        ]);
-        if (deptData.success !== false) setDepartments(deptData.data || []);
-        if (posData.success !== false) setPositions(posData.data || []);
-        if (etData.success !== false) setEmploymentTypes(etData.data || []);
-        if (wrData.success !== false) setWorkRules(wrData.data || []);
-      } catch (e) {
-        console.error('Failed to fetch master data:', e);
-      }
-    };
-    fetchMasterData();
+    fetchAllMasterData()
+      .then(({ departments, positions, employmentTypes, workRules }) => {
+        setDepartments(departments);
+        setPositions(positions);
+        setEmploymentTypes(employmentTypes);
+        setWorkRules(workRules);
+      })
+      .catch((e) => console.error('Failed to fetch master data:', e));
   }, [open]);
 
   // 入社予約フォーム
