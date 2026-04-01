@@ -1687,6 +1687,7 @@ model tenants {
   invoices            invoices[]
   org_units           org_units[]
   pricing_tiers       pricing_tiers[]
+  shift_assignments   shift_assignments[]
   tenant_settings     tenant_settings?
   user_histories      user_histories[]
   users               users[]
@@ -1815,6 +1816,7 @@ model users {
   employee_dependents   employee_dependents[]
   employee_bank_accounts employee_bank_accounts[]
   employee_resident_tax_monthly employee_resident_tax_monthly[]
+  shift_assignments   shift_assignments[]
 
   @@index([email])
   @@index([tenantId])
@@ -2260,6 +2262,27 @@ model work_patterns {
   @@unique([tenantId, code])
   @@index([tenantId])
   @@index([tenantId, isActive])
+}
+
+// シフト割り当て（ユーザー×日付ごとの勤務パターン・勤怠区分）
+model shift_assignments {
+  id             String   @id
+  tenantId       String
+  userId         String
+  date           DateTime @db.Date
+  patternId      String   // work_patterns.id への参照
+  attendanceType String   @default("weekday") // 'weekday' | 'prescribed_holiday' | 'legal_holiday'
+  memo           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+
+  tenants tenants @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user    users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, date])
+  @@index([tenantId, date])
+  @@index([tenantId, userId])
+  @@index([userId, date])
 }
 
 // 残業ルール

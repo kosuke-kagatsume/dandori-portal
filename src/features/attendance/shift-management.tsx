@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useShiftStore, ShiftAssignment } from '@/lib/store/shift-store';
+import { useShiftStore } from '@/lib/store/shift-store';
 import { useUserStore } from '@/lib/store/user-store';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,15 +29,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import {
   ChevronLeft,
   ChevronRight,
   CalendarIcon,
   Download,
   Upload,
   FileText,
-  Save,
   Table as TableIcon,
   GanttChart,
+  Trash2,
+  Wand2,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isWeekend } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -52,9 +63,33 @@ interface TeamMember {
   department: string;
 }
 
+// API取得したシフト割り当て
+interface ApiShiftAssignment {
+  id: string;
+  tenantId: string;
+  userId: string;
+  date: string;
+  patternId: string;
+  attendanceType: string;
+  memo?: string;
+}
+
+// API取得した勤務パターン
+interface ApiWorkPattern {
+  id: string;
+  name: string;
+  code: string;
+  workStartTime: string;
+  workEndTime: string;
+  breakDurationMinutes: number;
+  workingMinutes: number;
+  isNightShift: boolean;
+  isActive: boolean;
+  sortOrder: number;
+}
+
 const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
 
-// 部署リスト（仮）
 const DEPARTMENTS = [
   { value: 'all', label: 'すべての部署' },
   { value: 'sales', label: '営業部' },
@@ -63,11 +98,16 @@ const DEPARTMENTS = [
   { value: 'general', label: '総務部' },
 ];
 
-// 勤怠区分
 const ATTENDANCE_TYPES = [
-  { value: 'weekday', label: '平日', color: 'bg-white' },
-  { value: 'scheduled_holiday', label: '所定休日', color: 'bg-blue-100' },
-  { value: 'legal_holiday', label: '法定休日', color: 'bg-red-100' },
+  { value: 'weekday', label: '平日' },
+  { value: 'prescribed_holiday', label: '所定休日' },
+  { value: 'legal_holiday', label: '法定休日' },
+];
+
+// パターン色のデフォルト（APIのパターンに色がない場合用）
+const PATTERN_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#84cc16',
 ];
 
 export function ShiftManagement() {
@@ -76,18 +116,14 @@ export function ShiftManagement() {
   const tenantId = currentTenant?.id;
   const currentUserRoles = currentUser?.roles || ['employee'];
 
-  // 権限チェック
   const isHR = currentUserRoles.some((role: string) => ['hr', 'executive', 'system_admin'].includes(role));
   const isManager = currentUserRoles.some((role: string) => ['manager', 'hr', 'executive'].includes(role));
   const canEdit = isHR || isManager;
 
-  // 組織階層ベースのフィルタ
   const { getTeamMembersForManager } = useOrganizationStore();
 
-  const {
-    getActiveWorkPatterns,
-    getTeamShifts,
-  } = useShiftStore();
+  // ローカルストアのパターンもフォールバック用に取得
+  const { getActiveWorkPatterns } = useShiftStore();
 
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -96,20 +132,28 @@ export function ShiftManagement() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize dates on client side
+  // API取得データ
+  const [apiShifts, setApiShifts] = useState<ApiShiftAssignment[]>([]);
+  const [apiPatterns, setApiPatterns] = useState<ApiWorkPattern[]>([]);
+
+  // 編集ダイアログ
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<{ userId: string; userName: string; date: string } | null>(null);
+  const [editPatternId, setEditPatternId] = useState<string>('');
+  const [editAttendanceType, setEditAttendanceType] = useState<string>('weekday');
+  const [isSaving, setIsSaving] = useState(false);
+
   useEffect(() => {
     const now = new Date();
     setCurrentDate(now);
     setSelectedDate(now);
   }, []);
 
-  // Fetch team members
+  // チームメンバー取得
   const fetchTeamMembers = useCallback(async () => {
     if (!tenantId) return;
-
     setIsLoading(true);
     try {
-      // E1/F1: 全スタッフ表示のためlimit拡大 + ページネーション
       let allUsers: Array<{ id: string; name: string; department: string | null }> = [];
       let page = 1;
       const pageLimit = 200;
@@ -149,61 +193,94 @@ export function ShiftManagement() {
     fetchTeamMembers();
   }, [fetchTeamMembers]);
 
-  // 有効な勤務パターン
-  const workPatterns = useMemo(() => getActiveWorkPatterns(), [getActiveWorkPatterns]);
+  // APIからシフトデータ取得
+  const fetchShifts = useCallback(async () => {
+    if (!currentDate) return;
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    try {
+      const res = await fetch(`/api/attendance/shifts?year=${year}&month=${month}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data) {
+          setApiShifts(data.data.shifts || []);
+          setApiPatterns(data.data.patterns || []);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch shifts:', error);
+    }
+  }, [currentDate]);
 
-  // 月の日付配列
+  useEffect(() => {
+    fetchShifts();
+  }, [fetchShifts]);
+
+  // 勤務パターン（API優先、ローカルストアフォールバック）
+  const localPatterns = useMemo(() => getActiveWorkPatterns(), [getActiveWorkPatterns]);
+
+  const workPatterns = useMemo(() => {
+    if (apiPatterns.length > 0) {
+      return apiPatterns.map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        startTime: p.workStartTime,
+        endTime: p.workEndTime,
+        breakMinutes: p.breakDurationMinutes,
+        workMinutes: p.workingMinutes,
+        color: PATTERN_COLORS[i % PATTERN_COLORS.length],
+        isNightShift: p.isNightShift,
+      }));
+    }
+    return localPatterns.map(p => ({
+      id: p.id,
+      name: p.name,
+      code: p.code,
+      startTime: p.startTime,
+      endTime: p.endTime,
+      breakMinutes: p.breakMinutes,
+      workMinutes: p.workMinutes,
+      color: p.color,
+      isNightShift: false,
+    }));
+  }, [apiPatterns, localPatterns]);
+
   const monthDays = useMemo(() => {
     if (!currentDate) return [];
-    const start = startOfMonth(currentDate);
-    const end = endOfMonth(currentDate);
-    return eachDayOfInterval({ start, end });
+    return eachDayOfInterval({ start: startOfMonth(currentDate), end: endOfMonth(currentDate) });
   }, [currentDate]);
 
-  // 期間表示
   const periodDisplay = useMemo(() => {
     if (!currentDate) return '';
-    const start = startOfMonth(currentDate);
-    const end = endOfMonth(currentDate);
-    return `${format(start, 'yyyy/MM/dd')} ～ ${format(end, 'yyyy/MM/dd')}`;
+    return `${format(startOfMonth(currentDate), 'yyyy/MM/dd')} ～ ${format(endOfMonth(currentDate), 'yyyy/MM/dd')}`;
   }, [currentDate]);
 
-  // チームシフト
-  const dateToUse = currentDate || new Date();
-  const currentYear = dateToUse.getFullYear();
-  const currentMonth = dateToUse.getMonth() + 1;
-  const teamShifts = useMemo(
-    () => getTeamShifts(currentYear, currentMonth),
-    [getTeamShifts, currentYear, currentMonth]
-  );
+  // シフトマップ（API優先）
+  const shiftMap = useMemo(() => {
+    const map = new Map<string, { patternId: string; attendanceType: string }>();
+    apiShifts.forEach((s) => {
+      const dateStr = typeof s.date === 'string' ? s.date.split('T')[0] : format(new Date(s.date), 'yyyy-MM-dd');
+      map.set(`${s.userId}-${dateStr}`, { patternId: s.patternId, attendanceType: s.attendanceType });
+    });
+    return map;
+  }, [apiShifts]);
 
-  // 権限に応じたメンバー表示フィルタ
+  // 権限フィルタ
   const roleFilteredMembers = useMemo(() => {
     if (isHR) return teamMembers;
     if (isManager && currentUser) {
       const subordinateIds = getTeamMembersForManager(currentUser.id).map(m => m.id);
       return teamMembers.filter(m => subordinateIds.includes(m.id));
     }
-    // 一般: 自部署のみ
     return teamMembers.filter(m => m.department === (currentUser as { department?: string } | null)?.department);
   }, [teamMembers, isHR, isManager, currentUser, getTeamMembersForManager]);
 
-  // フィルタリングされたメンバー
   const filteredMembers = useMemo(() => {
     if (departmentFilter === 'all') return roleFilteredMembers;
     return roleFilteredMembers.filter(m => m.department === DEPARTMENTS.find(d => d.value === departmentFilter)?.label);
   }, [roleFilteredMembers, departmentFilter]);
 
-  // シフトをマップに変換
-  const shiftMap = useMemo(() => {
-    const map = new Map<string, ShiftAssignment>();
-    teamShifts.forEach((shift) => {
-      map.set(`${shift.userId}-${shift.date}`, shift);
-    });
-    return map;
-  }, [teamShifts]);
-
-  // 月移動
   const goToPreviousMonth = () => {
     setCurrentDate(prev => {
       const date = prev || new Date();
@@ -218,32 +295,115 @@ export function ShiftManagement() {
     });
   };
 
-  // Export handlers
-  const handleExportCSV = () => {
-    toast.info('CSV出力機能は準備中です');
-  };
-
-  const handleImportCSV = () => {
-    toast.info('CSV取込機能は準備中です');
-  };
-
-  const handleExportPDF = () => {
-    toast.info('PDF出力機能は準備中です');
-  };
-
-  const handleSave = () => {
-    toast.success('シフトを保存しました');
-  };
-
-  // 日付の勤怠区分を取得
-  const getAttendanceType = (date: Date) => {
+  const getDefaultAttendanceType = (date: Date) => {
     const dayOfWeek = getDay(date);
-    if (dayOfWeek === 0) return 'legal_holiday'; // 日曜 = 法定休日
-    if (dayOfWeek === 6) return 'scheduled_holiday'; // 土曜 = 所定休日
+    if (dayOfWeek === 0) return 'legal_holiday';
+    if (dayOfWeek === 6) return 'prescribed_holiday';
     return 'weekday';
   };
 
-  // 時間帯シフト用 - 時間軸の生成
+  // セルクリック → 編集ダイアログ
+  const handleCellClick = (member: TeamMember, day: Date) => {
+    if (!canEdit) return;
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const existing = shiftMap.get(`${member.id}-${dateStr}`);
+
+    setEditTarget({ userId: member.id, userName: member.name, date: dateStr });
+    setEditPatternId(existing?.patternId || '');
+    setEditAttendanceType(existing?.attendanceType || getDefaultAttendanceType(day));
+    setEditDialogOpen(true);
+  };
+
+  // 保存
+  const handleSaveShift = async () => {
+    if (!editTarget || !editPatternId) {
+      toast.error('勤務パターンを選択してください');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/attendance/shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: editTarget.userId,
+          date: editTarget.date,
+          patternId: editPatternId,
+          attendanceType: editAttendanceType,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success('シフトを登録しました');
+        setEditDialogOpen(false);
+        await fetchShifts(); // リロード
+      } else {
+        const err = await res.json();
+        toast.error(`登録失敗: ${err.error || '不明なエラー'}`);
+      }
+    } catch {
+      toast.error('シフト登録に失敗しました');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 削除
+  const handleDeleteShift = async () => {
+    if (!editTarget) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch(
+        `/api/attendance/shifts?userId=${editTarget.userId}&date=${editTarget.date}`,
+        { method: 'DELETE' }
+      );
+
+      if (res.ok) {
+        toast.success('シフトを削除しました');
+        setEditDialogOpen(false);
+        await fetchShifts();
+      } else {
+        toast.error('削除に失敗しました');
+      }
+    } catch {
+      toast.error('シフト削除に失敗しました');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 自動シフト生成
+  const handleAutoGenerate = async () => {
+    if (!currentDate) return;
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+
+    try {
+      const res = await fetch('/api/attendance/shifts/auto-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year, month, overwrite: false }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.data.message);
+        await fetchShifts();
+      } else {
+        toast.error('自動生成に失敗しました');
+      }
+    } catch {
+      toast.error('自動生成に失敗しました');
+    }
+  };
+
+  const handleExportCSV = () => toast.info('CSV出力機能は準備中です');
+  const handleImportCSV = () => toast.info('CSV取込機能は準備中です');
+  const handleExportPDF = () => toast.info('PDF出力機能は準備中です');
+
+  // 時間帯シフト用
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let i = 0; i < 24; i++) {
@@ -252,7 +412,6 @@ export function ShiftManagement() {
     return slots;
   }, []);
 
-  // 勤務時間をピクセル位置に変換
   const getTimePosition = (time: string) => {
     const [hours, minutes] = time.split(':').map(Number);
     return ((hours * 60 + minutes) / (24 * 60)) * 100;
@@ -261,9 +420,7 @@ export function ShiftManagement() {
   const getTimeWidth = (startTime: string, endTime: string) => {
     const [startH, startM] = startTime.split(':').map(Number);
     const [endH, endM] = endTime.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-    return ((endMinutes - startMinutes) / (24 * 60)) * 100;
+    return (((endH * 60 + endM) - (startH * 60 + startM)) / (24 * 60)) * 100;
   };
 
   if (isLoading) {
@@ -279,7 +436,6 @@ export function ShiftManagement() {
 
   return (
     <div className="space-y-4">
-      {/* タブ */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="pattern" className="flex items-center gap-2">
@@ -297,7 +453,6 @@ export function ShiftManagement() {
           <Card>
             <CardHeader className="pb-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                {/* 期間表示 */}
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
                     <ChevronLeft className="h-4 w-4" />
@@ -310,7 +465,6 @@ export function ShiftManagement() {
                   </Button>
                 </div>
 
-                {/* フィルタ & アクションボタン */}
                 <div className="flex flex-wrap items-center gap-2">
                   <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                     <SelectTrigger className="w-[150px]">
@@ -339,9 +493,9 @@ export function ShiftManagement() {
                         <FileText className="h-4 w-4 mr-2" />
                         PDF出力
                       </Button>
-                      <Button size="sm" onClick={handleSave}>
-                        <Save className="h-4 w-4 mr-2" />
-                        保存
+                      <Button size="sm" onClick={handleAutoGenerate}>
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        自動生成
                       </Button>
                     </>
                   )}
@@ -352,9 +506,9 @@ export function ShiftManagement() {
               <div className="w-full max-h-[calc(100vh-250px)] overflow-auto">
                 <div className="min-w-[1600px]">
                   <Table containerClassName="overflow-visible">
-                    <TableHeader className="sticky top-0 z-20 bg-background">
-                      <TableRow className="bg-muted/50">
-                        <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted z-30">氏名</TableHead>
+                    <TableHeader className="sticky top-0 z-40 bg-background shadow-sm">
+                      <TableRow className="bg-muted">
+                        <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted z-50">氏名</TableHead>
                         {monthDays.map(day => {
                           const dayOfWeek = getDay(day);
                           const isSunday = dayOfWeek === 0;
@@ -395,7 +549,6 @@ export function ShiftManagement() {
                               const shift = shiftMap.get(`${member.id}-${dateStr}`);
                               const dayOfWeek = getDay(day);
                               const isWeekendDay = isWeekend(day);
-                              const attendanceType = getAttendanceType(day);
                               const pattern = shift
                                 ? workPatterns.find(p => p.id === shift.patternId)
                                 : null;
@@ -406,8 +559,10 @@ export function ShiftManagement() {
                                   className={cn(
                                     'text-center p-1 text-[10px]',
                                     dayOfWeek === 0 && 'bg-red-50 dark:bg-red-950/20',
-                                    dayOfWeek === 6 && 'bg-blue-50 dark:bg-blue-950/20'
+                                    dayOfWeek === 6 && 'bg-blue-50 dark:bg-blue-950/20',
+                                    canEdit && 'cursor-pointer hover:bg-muted/50 transition-colors'
                                   )}
+                                  onClick={() => handleCellClick(member, day)}
                                 >
                                   {pattern ? (
                                     <div className="space-y-0.5">
@@ -415,7 +570,7 @@ export function ShiftManagement() {
                                         'text-[9px] text-muted-foreground',
                                         isWeekendDay && 'text-gray-400'
                                       )}>
-                                        {ATTENDANCE_TYPES.find(t => t.value === attendanceType)?.label}
+                                        {ATTENDANCE_TYPES.find(t => t.value === (shift?.attendanceType || getDefaultAttendanceType(day)))?.label}
                                       </div>
                                       <Badge
                                         variant="outline"
@@ -473,7 +628,6 @@ export function ShiftManagement() {
           <Card>
             <CardHeader className="pb-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                {/* 日付選択 */}
                 <div className="flex items-center gap-2">
                   <Popover>
                     <PopoverTrigger asChild>
@@ -517,7 +671,6 @@ export function ShiftManagement() {
                   </Button>
                 </div>
 
-                {/* フィルタ & アクションボタン */}
                 <div className="flex flex-wrap items-center gap-2">
                   <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                     <SelectTrigger className="w-[150px]">
@@ -536,12 +689,6 @@ export function ShiftManagement() {
                     <FileText className="h-4 w-4 mr-2" />
                     PDF出力
                   </Button>
-                  {canEdit && (
-                    <Button size="sm" onClick={handleSave}>
-                      <Save className="h-4 w-4 mr-2" />
-                      保存
-                    </Button>
-                  )}
                 </div>
               </div>
             </CardHeader>
@@ -597,17 +744,17 @@ export function ShiftManagement() {
                           </div>
 
                           {/* シフトバー */}
-                          {shift && pattern && shift.startTime && shift.endTime && pattern.workMinutes > 0 && (
+                          {pattern && pattern.startTime && pattern.endTime && pattern.workMinutes > 0 && (
                             <div
                               className="absolute top-2 bottom-2 rounded flex items-center justify-center text-white text-xs font-medium shadow-sm"
                               style={{
-                                left: `${getTimePosition(shift.startTime)}%`,
-                                width: `${getTimeWidth(shift.startTime, shift.endTime)}%`,
+                                left: `${getTimePosition(pattern.startTime)}%`,
+                                width: `${getTimeWidth(pattern.startTime, pattern.endTime)}%`,
                                 backgroundColor: pattern.color,
                               }}
                             >
                               <span className="truncate px-1">
-                                {shift.startTime}-{shift.endTime}
+                                {pattern.startTime}-{pattern.endTime}
                               </span>
                             </div>
                           )}
@@ -620,7 +767,7 @@ export function ShiftManagement() {
                           )}
 
                           {/* 休日 */}
-                          {isWeekend(selectedDate || new Date()) && (
+                          {isWeekend(selectedDate || new Date()) && !shift && (
                             <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-xs">
                               休日
                             </div>
@@ -663,6 +810,89 @@ export function ShiftManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* シフト編集ダイアログ */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>シフト登録</DialogTitle>
+            <DialogDescription>
+              {editTarget && `${editTarget.userName} - ${editTarget.date}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* 勤務パターン選択 */}
+            <div className="space-y-2">
+              <Label className="font-medium">勤務パターン</Label>
+              <RadioGroup value={editPatternId} onValueChange={setEditPatternId}>
+                <div className="space-y-2 max-h-[200px] overflow-auto">
+                  {workPatterns.map((pattern) => (
+                    <div
+                      key={pattern.id}
+                      className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted"
+                    >
+                      <RadioGroupItem value={pattern.id} id={`pattern-${pattern.id}`} />
+                      <Label
+                        htmlFor={`pattern-${pattern.id}`}
+                        className="flex items-center gap-2 cursor-pointer flex-1"
+                      >
+                        <div
+                          className="w-3 h-3 rounded-sm"
+                          style={{ backgroundColor: pattern.color }}
+                        />
+                        <span>{pattern.name}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {pattern.startTime}-{pattern.endTime}
+                        </span>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </RadioGroup>
+            </div>
+
+            {/* 勤怠区分選択 */}
+            <div className="space-y-2">
+              <Label className="font-medium">勤怠区分</Label>
+              <Select value={editAttendanceType} onValueChange={setEditAttendanceType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ATTENDANCE_TYPES.map(type => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-between sm:justify-between">
+            {shiftMap.has(`${editTarget?.userId}-${editTarget?.date}`) && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteShift}
+                disabled={isSaving}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                削除
+              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                キャンセル
+              </Button>
+              <Button onClick={handleSaveShift} disabled={isSaving || !editPatternId}>
+                {isSaving ? '保存中...' : '登録'}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
