@@ -51,6 +51,7 @@ export function SimplePunchCard() {
     checkOut,
     checkAndResetForNewDay,
     checkAndResetForUserChange,
+    syncTodayFromApi,
   } = useAttendanceStore();
 
   const { attendanceSettings } = useCompanySettingsStore();
@@ -81,6 +82,13 @@ export function SimplePunchCard() {
       checkAndResetForUserChange(currentUserId);
     }
   }, [currentUserId, checkAndResetForUserChange]);
+
+  // マウント時にAPIから最新の打刻状態を同期（複数デバイス間同期対応）
+  useEffect(() => {
+    if (currentUserId && tenantId) {
+      syncTodayFromApi(currentUserId, tenantId);
+    }
+  }, [currentUserId, tenantId, syncTodayFromApi]);
 
   // 日報テンプレート取得
   useEffect(() => {

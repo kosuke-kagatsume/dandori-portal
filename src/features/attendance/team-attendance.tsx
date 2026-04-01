@@ -598,8 +598,8 @@ export function TeamAttendance() {
               <div className="w-full max-h-[calc(100vh-320px)] overflow-auto">
                 <div className="min-w-[1600px]">
                   <Table containerClassName="overflow-visible">
-                    <TableHeader className="sticky top-0 z-20 bg-background">
-                      <TableRow className="bg-muted/50">
+                    <TableHeader className="sticky top-0 z-40 bg-background shadow-sm">
+                      <TableRow className="bg-muted">
                         <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted z-30">氏名</TableHead>
                         <TableHead className="w-[50px] min-w-[50px] text-center sticky left-[120px] bg-muted z-30">一覧</TableHead>
                         <TableHead className="w-[70px] min-w-[70px] text-center sticky left-[170px] bg-muted z-30">承認申請</TableHead>
@@ -834,8 +834,8 @@ export function TeamAttendance() {
               <div className="border rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader className="sticky top-0 z-20 bg-background">
-                      <TableRow className="bg-muted/50">
+                    <TableHeader className="sticky top-0 z-40 bg-background shadow-sm">
+                      <TableRow className="bg-muted">
                         <TableHead>氏名</TableHead>
                         <TableHead>部署</TableHead>
                         <TableHead className="text-right">所定日数</TableHead>
@@ -957,8 +957,8 @@ export function TeamAttendance() {
               <div className="border rounded-lg flex-1 min-h-0 overflow-auto">
                   <div className="min-w-[1600px]">
                     <Table containerClassName="overflow-visible">
-                      <TableHeader className="sticky top-0 z-20 bg-background">
-                        <TableRow className="bg-muted/50">
+                      <TableHeader className="sticky top-0 z-40 bg-background shadow-sm">
+                        <TableRow className="bg-muted">
                           <TableHead className="w-[100px] sticky left-0 bg-muted z-30">日付</TableHead>
                           <TableHead className="text-center w-[70px] sticky left-[100px] bg-muted z-30">勤怠区分</TableHead>
                           <TableHead className="text-center w-[60px] sticky left-[170px] bg-muted z-30">申請状況</TableHead>

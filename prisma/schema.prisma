@@ -267,6 +267,7 @@ model attendance_punches {
   punchOrder   Int        @default(1) // 同日内の打刻順序（1組目、2組目...）
   workLocation String?    // 'office' | 'home' | 'client' | 'other'
   location     Json?      // GPS座標
+  deviceType   String?    // 'web' | 'mobile'（User-Agentから自動判定）
   memo         String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime

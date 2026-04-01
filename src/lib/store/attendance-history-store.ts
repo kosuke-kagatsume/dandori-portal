@@ -85,6 +85,7 @@ function normalizeApiRecord(record: Record<string, unknown>): Record<string, unk
     punchTime: string;
     punchOrder: number;
     workLocation?: string;
+    deviceType?: string;
     memo?: string;
   }> | undefined;
 
@@ -92,7 +93,7 @@ function normalizeApiRecord(record: Record<string, unknown>): Record<string, unk
     id: p.id,
     type: p.punchType as PunchType,
     time: formatTimeToHHmm(p.punchTime) || '',
-    method: 'web' as PunchMethod,
+    method: (p.deviceType === 'mobile' ? 'mobile' : 'web') as PunchMethod,
     createdAt: p.punchTime,
   }));
 
@@ -120,6 +121,12 @@ export type PunchType = 'check_in' | 'check_out' | 'break_start' | 'break_end';
 
 // 打刻方法
 export type PunchMethod = 'manual' | 'web' | 'mobile' | 'ic_card' | 'biometric';
+
+// デバイス種別を判定（ブラウザ側）
+function detectPunchMethod(): PunchMethod {
+  if (typeof navigator === 'undefined') return 'web';
+  return /Mobile|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'mobile' : 'web';
+}
 
 // 打刻履歴レコード（P.2 複数打刻の履歴保存）
 export interface PunchRecord {
@@ -387,7 +394,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           id: `punch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: 'check_in',
           time: timeString,
-          method: 'web',
+          method: detectPunchMethod(),
           location: workLocation,
           createdAt: now.toISOString(),
         };
@@ -439,7 +446,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             id: `punch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: 'check_out',
             time: timeString,
-            method: 'web',
+            method: detectPunchMethod(),
             location: todayRecord.workLocation,
             note: memo,
             createdAt: now.toISOString(),
@@ -478,7 +485,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
           id: `punch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: 'break_start',
           time: timeString,
-          method: 'web',
+          method: detectPunchMethod(),
           location: todayRecord?.workLocation,
           createdAt: now.toISOString(),
         };
@@ -520,7 +527,7 @@ export const useAttendanceHistoryStore = create<AttendanceHistoryStore>()(
             id: `punch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: 'break_end',
             time: timeString,
-            method: 'web',
+            method: detectPunchMethod(),
             location: todayRecord.workLocation,
             createdAt: now.toISOString(),
           };

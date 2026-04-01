@@ -123,7 +123,7 @@ const APPLICATION_TYPES = [
 const PUNCH_METHOD_LABELS: Record<PunchMethod, string> = {
   manual: '手動',
   web: 'PC',
-  mobile: 'GPS',
+  mobile: 'スマホ',
   ic_card: 'IC',
   biometric: '生体',
 };

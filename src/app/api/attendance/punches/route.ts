@@ -137,6 +137,11 @@ export async function POST(request: NextRequest) {
     const today = getTodayDateString();
     const dateForDb = new Date(today);
 
+    // User-Agentからデバイス種別を判定
+    const userAgent = request.headers.get('user-agent') || '';
+    const isMobile = /Mobile|Android|iPhone|iPad|iPod/i.test(userAgent);
+    const deviceType = isMobile ? 'mobile' : 'web';
+
     // トランザクションで処理
     const result = await prisma.$transaction(async (tx) => {
       // 1. 今日のattendanceレコードを取得または作成
@@ -200,6 +205,7 @@ export async function POST(request: NextRequest) {
           punchOrder,
           workLocation: punchType === 'check_in' ? workLocation : null,
           location,
+          deviceType,
           memo,
           updatedAt: new Date(),
         },
