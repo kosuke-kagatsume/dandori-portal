@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, lazy, memo, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy, memo, useMemo, useCallback } from 'react';
 // 勤怠ストアはlazyロードされた子コンポーネントで使用
 import {
   Clock,
@@ -193,6 +193,12 @@ export default function AttendancePage() {
   // 打刻ストアの今日の状態を監視
   const { todayStatus } = useAttendanceStore();
 
+  // allHistoryRecordsをRefで保持（依存配列に入れるとupsertループが発生するため）
+  const historyRecordsRef = useRef(allHistoryRecords);
+  useEffect(() => {
+    historyRecordsRef.current = allHistoryRecords;
+  }, [allHistoryRecords]);
+
   // 打刻ストアの変更を勤怠一覧ストアに同期
   const syncPunchToHistory = useCallback(() => {
     if (!currentUser?.id || !todayStatus.recordDate) return;
@@ -221,8 +227,8 @@ export default function AttendancePage() {
       const [outH, outM] = lastCheckOut.split(':').map(Number);
       if (!isNaN(inH) && !isNaN(inM) && !isNaN(outH) && !isNaN(outM)) {
         workMinutes = Math.max(0, (outH * 60 + outM) - (inH * 60 + inM) - totalBreakMinutes);
-        // B2: 今日のレコードから所定労働時間を取得
-        const todayRecord = allHistoryRecords.find(r => r.date === today);
+        // B2: 今日のレコードから所定労働時間を取得（Refから参照してループ防止）
+        const todayRecord = historyRecordsRef.current.find(r => r.date === today);
         const todayScheduledMinutes = todayRecord?.workPatternWorkingMinutes || 480;
         overtimeMinutes = Math.max(0, workMinutes - todayScheduledMinutes);
       }
@@ -246,7 +252,7 @@ export default function AttendancePage() {
               todayStatus.status === 'onBreak' ? 'present' : 'absent',
       memo: todayStatus.memo,
     });
-  }, [currentUser, todayStatus, addOrUpdateRecord, allHistoryRecords]);
+  }, [currentUser, todayStatus, addOrUpdateRecord]);
 
   // 打刻状態が変わったら勤怠一覧を同期
   useEffect(() => {
