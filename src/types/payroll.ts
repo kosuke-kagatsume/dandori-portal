@@ -181,3 +181,113 @@ export interface PayrollCalculationParams {
   absenceDays: number;
   paidLeaveDays: number;
 }
+
+// ============================================================================
+// 給与設定マスタ（settings/payroll 配下）
+// ============================================================================
+
+// 事業所
+export interface Office {
+  id: string;
+  name: string;
+  nameKana?: string;
+  isHeadquarters?: boolean;
+  postalCode?: string;
+  prefecture?: string;
+  address1?: string;
+  address1Kana?: string;
+  address2?: string;
+  address2Kana?: string;
+  tel?: string;
+  fax?: string;
+  url?: string;
+  ownerTitle?: string;
+  ownerName?: string;
+  ownerNameKana?: string;
+  sortOrder?: number;
+  socialInsuranceSettings?: Record<string, unknown>;
+  laborInsuranceSettings?: Record<string, unknown>;
+}
+
+/** セレクトボックス用（id + name のみ） */
+export interface OfficeOption {
+  id: string;
+  name: string;
+}
+
+export type OfficePayload = Omit<Office, 'id' | 'socialInsuranceSettings' | 'laborInsuranceSettings'>;
+
+// 給与全般設定
+export interface PayrollGeneralSettings {
+  paymentDay?: number;
+  paymentDayType?: string;
+  closingDay?: number;
+  defaultPayType?: string;
+  standardWorkHours?: number;
+  standardWorkDays?: number;
+  enableHealthInsurance?: boolean;
+  enablePensionInsurance?: boolean;
+  enableEmploymentInsurance?: boolean;
+  enableIncomeTax?: boolean;
+  enableResidentTax?: boolean;
+}
+
+// 住民税（市区町村）
+export interface Municipality {
+  id: string;
+  code: string;
+  name: string;
+  prefectureName: string;
+  isActive: boolean;
+}
+
+// 手当項目
+export interface AllowanceItem {
+  id: string;
+  code: string;
+  name: string;
+  isTaxable?: boolean;
+  itemType?: string;
+  calculationType?: string;
+  defaultAmount?: number;
+  isInsuranceTarget?: boolean;
+  isBaseCalculation?: boolean;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+// 控除項目（設定マスタ）
+export interface DeductionMasterItem {
+  id: string;
+  code: string;
+  name: string;
+  deductionCategory?: string;
+  calculationType?: string;
+  defaultAmount?: number;
+  rate?: number;
+  isPreTax?: boolean;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+// 給与カテゴリ
+export interface PayCategory {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+// 締め日グループ
+export interface ClosingDayGroup {
+  id: string;
+  name: string;
+  closingDay?: number;
+  paymentMonth?: string;
+  paymentDay?: number;
+  isDefault?: boolean;
+  sortOrder?: number;
+  isActive?: boolean;
+}
