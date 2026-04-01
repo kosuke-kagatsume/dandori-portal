@@ -24,11 +24,11 @@ import {
   TreePine,
   List,
   Download,
-  Settings2,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { OrganizationChart } from '@/components/organization/organization-chart';
 import { UserManagementPanel } from '@/components/organization/user-management-panel';
-// import { TransferHistoryPanel } from '@/components/organization/transfer-history-panel'; // F6: 異動タブ削除に伴い未使用
+import { TransferHistoryPanel } from '@/components/organization/transfer-history-panel';
 import { DepartmentManagementPanel } from '@/components/organization/department-management-panel';
 // import { AddTransferDialog } from '@/components/organization/add-transfer-dialog'; // 異動登録ボタン削除に伴い未使用
 import { useOrganizationStore, type ChartTemplateType } from '@/lib/store/organization-store';
@@ -53,10 +53,7 @@ export default function OrganizationPage() {
     templateType,
     isLoading,
     error,
-    organizationMode,
     fetchOrganization,
-    fetchOrganizationMode,
-    setOrganizationMode,
     setSelectedMember,
     setSelectedNode,
     setViewMode,
@@ -65,32 +62,6 @@ export default function OrganizationPage() {
     updateMember,
     removeMember,
   } = useOrganizationStore();
-
-  // モード切替
-  const [isChangingMode, setIsChangingMode] = useState(false);
-
-  const handleModeChange = async (mode: string) => {
-    if (mode !== 'flat' && mode !== 'hierarchy') return;
-    if (mode === organizationMode) return;
-
-    const confirmed = window.confirm(
-      mode === 'flat'
-        ? '組織管理モードを「フラット管理」に変更します。部署テーブルベースの表示に切り替わります。'
-        : '組織管理モードを「階層管理」に変更します。組織ユニットベースのツリー表示に切り替わります。'
-    );
-    if (!confirmed) return;
-
-    setIsChangingMode(true);
-    try {
-      await setOrganizationMode(mode);
-      await fetchOrganization();
-      toast.success(`組織管理モードを「${mode === 'flat' ? 'フラット管理' : '階層管理'}」に変更しました`);
-    } catch {
-      toast.error('モード変更に失敗しました');
-    } finally {
-      setIsChangingMode(false);
-    }
-  };
 
   // 組織図のコンテナへのref
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -159,10 +130,9 @@ export default function OrganizationPage() {
   useEffect(() => {
     // Zustand persistのhydration
     useOrganizationStore.persist.rehydrate();
-    // モード取得 → 組織データ取得
-    fetchOrganizationMode();
+    // 組織データ取得
     fetchOrganization();
-  }, [fetchOrganization, fetchOrganizationMode]);
+  }, [fetchOrganization]);
 
   // 権限チェック
   const getUserRole = (): UserRole | null => {
@@ -275,24 +245,6 @@ export default function OrganizationPage() {
             組織構造とメンバーの管理、権限設定を行います
           </p>
         </div>
-        {canManageOrganization && (
-          <div className="flex items-center space-x-2">
-            <Settings2 className="h-4 w-4 text-muted-foreground" />
-            <Select
-              value={organizationMode}
-              onValueChange={handleModeChange}
-              disabled={isChangingMode}
-            >
-              <SelectTrigger className="w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="flat">フラット管理</SelectItem>
-                <SelectItem value="hierarchy">階層管理</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
 
       {/* Stats Cards */}
@@ -348,10 +300,14 @@ export default function OrganizationPage() {
           fetchOrganization();
         }
       }} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">組織図</TabsTrigger>
           <TabsTrigger value="departments">部門管理</TabsTrigger>
           <TabsTrigger value="members">メンバー</TabsTrigger>
+          <TabsTrigger value="transfers" className="flex items-center space-x-1">
+            <ArrowRightLeft className="h-4 w-4" />
+            <span>異動</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* 組織図タブ */}
@@ -365,28 +321,18 @@ export default function OrganizationPage() {
                 </CardTitle>
                 
                 <div className="flex items-center space-x-2">
-                  {/* F1: 5表示モード統合セレクト */}
+                  {/* F1: 4表示モード統合セレクト */}
                   <Select
-                    value={viewMode === 'list' ? 'list' : templateType}
+                    value={templateType}
                     onValueChange={(value) => {
-                      if (value === 'list') {
-                        setViewMode('list');
-                      } else {
-                        setViewMode('tree');
-                        setTemplateType(value as ChartTemplateType);
-                      }
+                      setViewMode('tree');
+                      setTemplateType(value as ChartTemplateType);
                     }}
                   >
                     <SelectTrigger className="w-52">
                       <SelectValue placeholder="表示モード" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="list">
-                        <div className="flex items-center space-x-2">
-                          <List className="h-4 w-4" />
-                          <span>リスト</span>
-                        </div>
-                      </SelectItem>
                       <SelectItem value="pyramid-with-names">
                         <div className="flex items-center space-x-2">
                           <TreePine className="h-4 w-4" />
@@ -520,7 +466,10 @@ export default function OrganizationPage() {
           />
         </TabsContent>
 
-        {/* 異動タブ削除: F6 */}
+        {/* 異動タブ */}
+        <TabsContent value="transfers">
+          <TransferHistoryPanel />
+        </TabsContent>
       </Tabs>
     </div>
   );

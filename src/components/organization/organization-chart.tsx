@@ -194,54 +194,45 @@ export function OrganizationChart({
                 </div>
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">
-                  {node.memberCount}人
-                </Badge>
-                <Badge variant="outline">
-                  レベル {node.level}
-                </Badge>
-              </div>
+              {showNames && (
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary">
+                    {node.memberCount}人
+                  </Badge>
+                  <Badge variant="outline">
+                    レベル {node.level}
+                  </Badge>
+                </div>
+              )}
             </div>
           </CardHeader>
           
-          {/* Members */}
-          {node.members.length > 0 && (
+          {/* Members - 名前ありモードのみ表示 */}
+          {showNames && node.members.length > 0 && (
             <CardContent className="pt-0">
-              {showNames ? (
-                // 名前ありモード: 詳細表示
-                <div className="space-y-2">
-                  {node.headMember && (
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        責任者
-                      </h4>
-                      {renderMember(node.headMember)}
-                    </div>
-                  )}
+              <div className="space-y-2">
+                {node.headMember && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                      責任者
+                    </h4>
+                    {renderMember(node.headMember)}
+                  </div>
+                )}
 
-                  {node.members.filter(m => m.id !== node.headMember?.id).length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        メンバー ({node.members.filter(m => m.id !== node.headMember?.id).length}人)
-                      </h4>
-                      <div className="grid gap-2">
-                        {node.members
-                          .filter(m => m.id !== node.headMember?.id)
-                          .map(renderMember)}
-                      </div>
+                {node.members.filter(m => m.id !== node.headMember?.id).length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">
+                      メンバー ({node.members.filter(m => m.id !== node.headMember?.id).length}人)
+                    </h4>
+                    <div className="grid gap-2">
+                      {node.members
+                        .filter(m => m.id !== node.headMember?.id)
+                        .map(renderMember)}
                     </div>
-                  )}
-                </div>
-              ) : (
-                // 名前なしモード: コンパクト表示
-                <div className="flex flex-wrap gap-2">
-                  {node.headMember && renderMember(node.headMember)}
-                  {node.members
-                    .filter(m => m.id !== node.headMember?.id)
-                    .map(renderMember)}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           )}
         </Card>

@@ -140,11 +140,20 @@ export function UserManagementPanel({
         const matchesDept = selectedDepartment === 'all' || member.department === selectedDepartment;
         return matchesSearch && matchesStatus && matchesDept;
       })
-      .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999));
+      .sort((a, b) => {
+        // 1. 役職順
+        const posCompare = (a.position ?? '').localeCompare(b.position ?? '', 'ja');
+        if (posCompare !== 0) return posCompare;
+        // 2. 社員番号順
+        const empCompare = (a.employeeNumber ?? '').localeCompare(b.employeeNumber ?? '');
+        if (empCompare !== 0) return empCompare;
+        // 3. 表示順
+        return (a.displayOrder ?? 999) - (b.displayOrder ?? 999);
+      });
   }, [members, searchQuery, selectedStatus, selectedDepartment]);
 
   const handleAddMember = () => {
-    if (onMemberAdd && newMember.name && newMember.email) {
+    if (onMemberAdd && newMember.name) {
       onMemberAdd(newMember);
       setNewMember({
         name: '',
@@ -212,19 +221,6 @@ export function UserManagementPanel({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="email">メールアドレス</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={newMember.email}
-                        onChange={(e) => setNewMember(prev => ({ ...prev, email: e.target.value }))}
-                        placeholder="yamada@company.com"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
                       <Label htmlFor="position">役職</Label>
                       <Input
                         id="position"
@@ -233,28 +229,8 @@ export function UserManagementPanel({
                         placeholder="エンジニア"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="role">権限レベル</Label>
-                      <Select
-                        value={newMember.role}
-                        onValueChange={(value: UserRole) => 
-                          setNewMember(prev => ({ ...prev, role: value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(roleLabels).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="joinDate">入社日</Label>
@@ -276,16 +252,6 @@ export function UserManagementPanel({
                         placeholder="0"
                       />
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="isManager"
-                      checked={newMember.isManager}
-                      onChange={(e) => setNewMember(prev => ({ ...prev, isManager: e.target.checked }))}
-                      className="rounded"
-                    />
-                    <Label htmlFor="isManager">管理職</Label>
                   </div>
                   
                   <div className="flex justify-end space-x-2">
@@ -315,10 +281,10 @@ export function UserManagementPanel({
             
             <Select value={selectedStatus} onValueChange={(value: OrganizationMember['status'] | 'all') => setSelectedStatus(value)}>
               <SelectTrigger className="w-32">
-                <SelectValue placeholder="状態で絞り込み" />
+                <SelectValue placeholder="ステータスで絞り込み" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべての状態</SelectItem>
+                <SelectItem value="all">すべてのステータス</SelectItem>
                 {Object.entries(statusLabels).map(([value, label]) => (
                   <SelectItem key={value} value={value}>
                     {label}
@@ -359,7 +325,7 @@ export function UserManagementPanel({
               <TableRow>
                 <TableHead>ユーザー</TableHead>
                 <TableHead>役職</TableHead>
-                <TableHead>状態</TableHead>
+                <TableHead>ステータス</TableHead>
                 <TableHead>入社日</TableHead>
                 <TableHead className="text-center">表示順</TableHead>
                 <TableHead className="text-right">操作</TableHead>

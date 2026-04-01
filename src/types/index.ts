@@ -365,6 +365,7 @@ export interface OrganizationMember {
   joinDate: string;
   status: 'active' | 'inactive' | 'leave' | 'suspended' | 'retired';
   department?: string; // 所属部署名
+  employeeNumber?: string; // 社員番号
   displayOrder?: number; // 部署内表示順（小さい順に表示）
 }
 

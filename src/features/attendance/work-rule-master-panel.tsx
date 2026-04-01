@@ -324,7 +324,7 @@ function showSection(type: WorkRuleType, section: string): boolean {
     lateEarlyTally: ['standard', 'shift', 'flextime', 'discretionary', 'monthly_variable', 'yearly_variable'],
     scheduledTallyRange: ['standard', 'shift', 'monthly_variable', 'yearly_variable'],
     legalHolidayDesignation: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
-    schedule: ['standard', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
+    schedule: ['standard', 'manager', 'discretionary', 'flextime'],
     breakPunch: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     leave: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     compensatoryDayOff: ['standard', 'shift', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
@@ -609,6 +609,14 @@ function WorkPatternDialog({
               )}
             </div>
           )}
+          {/* 契約時間外適用 */}
+          <div className="flex items-center gap-4">
+            <Label className="text-right text-sm w-24 shrink-0">契約時間外適用</Label>
+            <div className="flex items-center gap-2">
+              <Checkbox checked={form.autoBreakOutsideContract} onCheckedChange={(v) => setForm({ ...form, autoBreakOutsideContract: v === true })} />
+              <span className="text-sm">契約時間外にも休憩を適用する</span>
+            </div>
+          </div>
           {/* フレックスタイム制: フルフレックス・フレキシブルタイム・コアタイム */}
           {isFlex && (
             <>
@@ -1341,7 +1349,7 @@ export function WorkRuleMasterPanel() {
                       <Select value={formData.monthlyStartDay} onValueChange={(v) => updateForm({ monthlyStartDay: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {Array.from({ length: 28 }, (_, i) => (
+                          {Array.from({ length: 31 }, (_, i) => (
                             <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}日</SelectItem>
                           ))}
                         </SelectContent>
@@ -1377,9 +1385,8 @@ export function WorkRuleMasterPanel() {
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="proportional">按分</SelectItem>
-                        <SelectItem value="round_up">切り上げ</SelectItem>
-                        <SelectItem value="round_down">切り捨て</SelectItem>
+                        <SelectItem value="proportional">按分する</SelectItem>
+                        <SelectItem value="no_proportional">按分しない（切り捨て）</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormField>
@@ -1394,6 +1401,7 @@ export function WorkRuleMasterPanel() {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="weekday_only">平日のみ</SelectItem>
                       <SelectItem value="all">全日</SelectItem>
                       <SelectItem value="workday_only">所定労働日のみ</SelectItem>
                     </SelectContent>
@@ -1438,23 +1446,28 @@ export function WorkRuleMasterPanel() {
                           <span className="text-sm">分</span>
                         </div>
                       </FormField>
-                      <FormField label="休憩時間">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            value={formData.breakMinutes}
-                            onChange={(e) => updateForm({ breakMinutes: parseInt(e.target.value || '0') })}
-                            className="w-20"
-                          />
-                          <span className="text-sm">分</span>
-                        </div>
-                      </FormField>
-                      <FormField label="始業時刻">
-                        <Input type="time" value={formData.workStartTime} onChange={(e) => updateForm({ workStartTime: e.target.value })} className="w-32" />
-                      </FormField>
-                      <FormField label="終業時刻">
-                        <Input type="time" value={formData.workEndTime} onChange={(e) => updateForm({ workEndTime: e.target.value })} className="w-32" />
-                      </FormField>
+                      {/* 変形労働制では休憩・始終業を非表示（所定労働時間のみ残す） */}
+                      {t !== 'monthly_variable' && t !== 'yearly_variable' && (
+                        <>
+                          <FormField label="休憩時間">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={formData.breakMinutes}
+                                onChange={(e) => updateForm({ breakMinutes: parseInt(e.target.value || '0') })}
+                                className="w-20"
+                              />
+                              <span className="text-sm">分</span>
+                            </div>
+                          </FormField>
+                          <FormField label="始業時刻">
+                            <Input type="time" value={formData.workStartTime} onChange={(e) => updateForm({ workStartTime: e.target.value })} className="w-32" />
+                          </FormField>
+                          <FormField label="終業時刻">
+                            <Input type="time" value={formData.workEndTime} onChange={(e) => updateForm({ workEndTime: e.target.value })} className="w-32" />
+                          </FormField>
+                        </>
+                      )}
                     </>
                   )}
                 </>
