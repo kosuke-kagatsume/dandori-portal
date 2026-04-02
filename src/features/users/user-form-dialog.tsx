@@ -529,7 +529,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
 
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
-                役職権限 *
+                権限 *
               </Label>
               <div className="col-span-3">
                 <Select
@@ -537,7 +537,7 @@ export function UserFormDialog({ open, onOpenChange, user, onSubmit }: UserFormD
                   value={watchRoles?.[0] || 'employee'}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="役職権限を選択" />
+                    <SelectValue placeholder="権限を選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {roleOptions.map((role) => (

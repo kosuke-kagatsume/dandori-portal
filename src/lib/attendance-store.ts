@@ -272,24 +272,28 @@ export const useAttendanceStore = create<AttendanceStore>()(
                   ? new Date(attendance.checkIn).toLocaleTimeString('ja-JP', {
                       hour: '2-digit',
                       minute: '2-digit',
+                      timeZone: 'Asia/Tokyo',
                     })
                   : undefined,
                 checkOut: attendance.checkOut
                   ? new Date(attendance.checkOut).toLocaleTimeString('ja-JP', {
                       hour: '2-digit',
                       minute: '2-digit',
+                      timeZone: 'Asia/Tokyo',
                     })
                   : undefined,
                 breakStart: attendance.breakStart
                   ? new Date(attendance.breakStart).toLocaleTimeString('ja-JP', {
                       hour: '2-digit',
                       minute: '2-digit',
+                      timeZone: 'Asia/Tokyo',
                     })
                   : undefined,
                 breakEnd: attendance.breakEnd
                   ? new Date(attendance.breakEnd).toLocaleTimeString('ja-JP', {
                       hour: '2-digit',
                       minute: '2-digit',
+                      timeZone: 'Asia/Tokyo',
                     })
                   : undefined,
                 totalBreakTime: attendance.totalBreakMinutes || 0,

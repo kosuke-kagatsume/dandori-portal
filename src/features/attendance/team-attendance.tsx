@@ -326,7 +326,7 @@ export function TeamAttendance() {
               <div className="w-full max-h-[calc(100vh-320px)] overflow-auto">
                 <div className="min-w-[1600px]">
                   <Table containerClassName="overflow-visible">
-                    <TableHeader className="sticky top-0 z-40 bg-background shadow-sm">
+                    <TableHeader className="sticky top-0 z-50 bg-muted shadow-md">
                       <TableRow className="bg-muted">
                         <TableHead className="w-[120px] min-w-[120px] sticky left-0 bg-muted z-30">氏名</TableHead>
                         <TableHead className="w-[50px] min-w-[50px] text-center sticky left-[120px] bg-muted z-30">一覧</TableHead>
@@ -441,7 +441,7 @@ export function TeamAttendance() {
                 <div className="border rounded-lg overflow-hidden">
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader className="sticky top-0 z-40 bg-background shadow-sm">
+                      <TableHeader className="sticky top-0 z-50 bg-muted shadow-md">
                         <TableRow className="bg-muted">
                           <TableHead>氏名</TableHead>
                           <TableHead>部署</TableHead>

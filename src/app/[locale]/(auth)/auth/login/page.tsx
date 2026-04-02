@@ -140,6 +140,14 @@ function ActualLoginForm() {
                 ログイン
               </Button>
             </form>
+            <div className="text-right">
+              <a
+                href={`/${locale}/auth/forgot-password`}
+                className="text-sm text-primary hover:underline"
+              >
+                パスワードを忘れた方
+              </a>
+            </div>
           </CardContent>
 
           <CardFooter>

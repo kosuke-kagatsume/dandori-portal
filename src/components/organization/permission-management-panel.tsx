@@ -113,6 +113,15 @@ const roleLabels: Record<UserRole, string> = {
   applicant: '応募者',
 };
 
+const roleEnglishLabels: Record<string, string> = {
+  employee: 'employee',
+  manager: 'manager',
+  hr: 'hr',
+  admin: 'admin',
+  executive: 'executive',
+  applicant: 'applicant',
+};
+
 // scope から level を変換
 function scopeToLevel(scope: string): 'self' | 'team' | 'department' | 'company' | 'system' {
   const mapping: Record<string, 'self' | 'team' | 'department' | 'company' | 'system'> = {
@@ -404,7 +413,12 @@ export function PermissionManagementPanel({
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <div>
-                            <CardTitle className="text-lg">{role.name}</CardTitle>
+                            <CardTitle className="text-lg">
+                              {role.name}
+                              {roleEnglishLabels[role.code] && (
+                                <span className="ml-2 text-sm font-normal text-muted-foreground">{roleEnglishLabels[role.code]}</span>
+                              )}
+                            </CardTitle>
                             <p className="text-sm text-muted-foreground mt-1">
                               {role.description || '説明なし'}
                             </p>

@@ -131,12 +131,12 @@ export function parseCSVUsers(text: string, tenantId: string): ParsedCSVResult {
       if (user.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) validationErrors.push(`メールアドレスの形式が不正です: ${user.email}`);
       if (!department?.trim()) validationErrors.push('部署が空です');
       if (!position?.trim()) validationErrors.push('役職が空です');
-      if (!user.roles || user.roles.length === 0) validationErrors.push('役割が空です');
+      if (!user.roles || user.roles.length === 0) validationErrors.push('権限が空です');
 
       const validRoles = ['admin', 'executive', 'manager', 'hr', 'employee'];
       if (user.roles && user.roles.length > 0) {
         const invalidRoles = user.roles.filter(r => !validRoles.includes(r));
-        if (invalidRoles.length > 0) validationErrors.push(`不正な役割: ${invalidRoles.join(', ')}（admin/executive/manager/hr/employeeのいずれか）`);
+        if (invalidRoles.length > 0) validationErrors.push(`不正な権限: ${invalidRoles.join(', ')}（admin/executive/manager/hr/employeeのいずれか）`);
       }
 
       if (inviteTrimmed && !shouldInvite) {

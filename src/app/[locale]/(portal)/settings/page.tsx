@@ -128,7 +128,7 @@ const settingCategories: SettingCategory[] = [
     description: '部署、役職、雇用形態',
     icon: Database,
     badge: '管理者',
-    requiresRole: ['admin'],
+    requiresRole: ['admin', 'hr'],
   },
   {
     id: 'data-import',
@@ -168,7 +168,7 @@ const settingCategories: SettingCategory[] = [
     description: 'ロール・メニュー権限設定',
     icon: Lock,
     badge: '管理者',
-    requiresRole: ['admin'],
+    requiresRole: ['admin', 'hr'],
   },
 ];
 

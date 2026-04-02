@@ -65,6 +65,7 @@ export async function GET(request: NextRequest) {
       const timeString = new Date(punch.punchTime).toLocaleTimeString('ja-JP', {
         hour: '2-digit',
         minute: '2-digit',
+        timeZone: 'Asia/Tokyo',
       });
 
       switch (punch.punchType) {
