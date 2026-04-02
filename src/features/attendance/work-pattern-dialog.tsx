@@ -238,14 +238,16 @@ export function WorkPatternDialog({ open, onOpenChange, pattern, onSave, workRul
               )}
             </div>
           )}
-          {/* 契約時間外適用 */}
-          <div className="flex items-center gap-4">
-            <Label className="text-right text-sm w-24 shrink-0">契約時間外適用</Label>
-            <div className="flex items-center gap-2">
-              <Checkbox checked={form.autoBreakOutsideContract} onCheckedChange={(v) => setForm({ ...form, autoBreakOutsideContract: v === true })} />
-              <span className="text-sm">契約時間外にも休憩を適用する</span>
+          {/* 契約時間外適用 — 休憩自動適用ON + 時間帯区分「指定する」の場合のみ表示 */}
+          {form.autoBreak && form.autoBreakTimeSlot === 'specify' && (
+            <div className="flex items-center gap-4">
+              <Label className="text-right text-sm w-24 shrink-0">契約時間外適用</Label>
+              <div className="flex items-center gap-2">
+                <Checkbox checked={form.autoBreakOutsideContract} onCheckedChange={(v) => setForm({ ...form, autoBreakOutsideContract: v === true })} />
+                <span className="text-sm">契約時間外にも休憩を適用する</span>
+              </div>
             </div>
-          </div>
+          )}
           {/* フレックスタイム制用フィールド */}
           {isFlex && (
             <>

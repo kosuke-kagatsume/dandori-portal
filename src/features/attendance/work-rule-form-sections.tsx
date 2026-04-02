@@ -349,8 +349,8 @@ export function WorkRuleFormSections({
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="proportional">按分する</SelectItem>
-                <SelectItem value="no_proportional">按分しない（切り捨て）</SelectItem>
+                <SelectItem value="proportional">原則通り（端数週の暦日数÷7×法定労働時間）</SelectItem>
+                <SelectItem value="period_start">変形期間の初日から週を起算</SelectItem>
               </SelectContent>
             </Select>
           </FormField>
@@ -366,8 +366,8 @@ export function WorkRuleFormSections({
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="weekday_only">平日のみ</SelectItem>
-              <SelectItem value="all">全日</SelectItem>
-              <SelectItem value="workday_only">所定労働日のみ</SelectItem>
+              <SelectItem value="weekday_and_scheduled">平日と所定休日のみ</SelectItem>
+              <SelectItem value="weekday_and_all_holidays">平日と所定休日と法定休日</SelectItem>
             </SelectContent>
           </Select>
         </FormField>
@@ -387,7 +387,7 @@ export function WorkRuleFormSections({
               </div>
             </FormField>
           )}
-          {(t === 'standard' || t === 'shift' || t === 'monthly_variable' || t === 'yearly_variable') && (
+          {(t === 'standard' || t === 'shift') && (
             <>
               <FormField label="所定労働時間">
                 <div className="flex items-center gap-2">
@@ -397,22 +397,18 @@ export function WorkRuleFormSections({
                   <span className="text-sm">分</span>
                 </div>
               </FormField>
-              {t !== 'monthly_variable' && t !== 'yearly_variable' && (
-                <>
-                  <FormField label="休憩時間">
-                    <div className="flex items-center gap-2">
-                      <Input type="number" value={formData.breakMinutes} onChange={(e) => updateForm({ breakMinutes: parseInt(e.target.value || '0') })} className="w-20" />
-                      <span className="text-sm">分</span>
-                    </div>
-                  </FormField>
-                  <FormField label="始業時刻">
-                    <Input type="time" value={formData.workStartTime} onChange={(e) => updateForm({ workStartTime: e.target.value })} className="w-32" />
-                  </FormField>
-                  <FormField label="終業時刻">
-                    <Input type="time" value={formData.workEndTime} onChange={(e) => updateForm({ workEndTime: e.target.value })} className="w-32" />
-                  </FormField>
-                </>
-              )}
+              <FormField label="休憩時間">
+                <div className="flex items-center gap-2">
+                  <Input type="number" value={formData.breakMinutes} onChange={(e) => updateForm({ breakMinutes: parseInt(e.target.value || '0') })} className="w-20" />
+                  <span className="text-sm">分</span>
+                </div>
+              </FormField>
+              <FormField label="始業時刻">
+                <Input type="time" value={formData.workStartTime} onChange={(e) => updateForm({ workStartTime: e.target.value })} className="w-32" />
+              </FormField>
+              <FormField label="終業時刻">
+                <Input type="time" value={formData.workEndTime} onChange={(e) => updateForm({ workEndTime: e.target.value })} className="w-32" />
+              </FormField>
             </>
           )}
         </>
