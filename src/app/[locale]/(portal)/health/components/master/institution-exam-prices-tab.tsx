@@ -99,7 +99,7 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">検査項目・料金設定</h4>
+        <h4 className="text-sm font-medium">健診種別・料金設定</h4>
         {availableTypes.length > 0 && (
           <Button variant="outline" size="sm" onClick={() => setAddingNew(true)} disabled={addingNew}>
             <Plus className="mr-1 h-3 w-3" />
@@ -110,13 +110,13 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
 
       {prices.length === 0 && !addingNew ? (
         <p className="text-sm text-muted-foreground text-center py-4">
-          検査項目が設定されていません
+          健診種別が設定されていません
         </p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>検査種別</TableHead>
+              <TableHead>健診種別</TableHead>
               <TableHead className="text-right">料金</TableHead>
               <TableHead>備考</TableHead>
               <TableHead className="w-[80px]">有効</TableHead>

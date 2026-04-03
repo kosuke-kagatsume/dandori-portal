@@ -227,6 +227,29 @@ export function DashboardContent() {
     };
     fetchOnboardingAlerts();
   }, [canViewAll, canManageSystem]);
+
+  // 特定業務従事者 健診アラート（HR・管理者のみ）
+  const [specialWorkerAlerts, setSpecialWorkerAlerts] = useState<{
+    id: string; name: string; department: string | null; position: string | null;
+    lastCheckupDate: string | null; monthsElapsed: number; isWarning: boolean;
+  }[]>([]);
+
+  useEffect(() => {
+    if (currentUserRole !== 'hr' && currentUserRole !== 'admin') return;
+    const fetchSpecialWorkerAlerts = async () => {
+      try {
+        const res = await fetch('/api/health/special-workers/upcoming');
+        const result = await res.json();
+        if (result.success) {
+          setSpecialWorkerAlerts(result.data || []);
+        }
+      } catch {
+        // silent
+      }
+    };
+    fetchSpecialWorkerAlerts();
+  }, [currentUserRole]);
+
   const canManageUsers = permissions.manageUsers;
 
   // マウント完了までローディング表示
@@ -386,6 +409,76 @@ export function DashboardContent() {
                 <Link href="/ja/onboarding-admin">
                   <Button variant="link" className="text-amber-700">
                     他 {upcomingDeadlineApplications.length - 5} 件を表示
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 特定業務従事者 健診アラート（HR・管理者のみ） */}
+      {(currentUserRole === 'hr' || currentUserRole === 'admin') && specialWorkerAlerts.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-orange-600" />
+                <CardTitle className="text-lg text-orange-900 dark:text-orange-100">
+                  特定業務従事者 健康診断受診アラート
+                </CardTitle>
+                <Badge variant="secondary" className="bg-orange-200 text-orange-800">
+                  {specialWorkerAlerts.length}名
+                </Badge>
+              </div>
+              <Link href="/ja/health">
+                <Button variant="outline" size="sm" className="text-orange-700 border-orange-300 hover:bg-orange-100">
+                  健康管理へ
+                </Button>
+              </Link>
+            </div>
+            <CardDescription className="text-orange-700 dark:text-orange-300">
+              受診から4ヶ月以上経過した特定業務従事者がいます（6ヶ月以内に再受診が必要）
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              {specialWorkerAlerts.slice(0, 5).map((w) => (
+                <div
+                  key={w.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-orange-900/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-orange-200 dark:bg-orange-800 flex items-center justify-center">
+                      <Activity className="h-4 w-4 text-orange-700 dark:text-orange-300" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{w.name}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {[w.department, w.position].filter(Boolean).join(' / ') || '-'}
+                        {w.lastCheckupDate && ` / 前回: ${new Date(w.lastCheckupDate).getFullYear()}/${new Date(w.lastCheckupDate).getMonth() + 1}/${new Date(w.lastCheckupDate).getDate()}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    {w.isWarning ? (
+                      <Badge variant="destructive">
+                        {w.monthsElapsed < 0 ? '未受診' : `${w.monthsElapsed}ヶ月経過`}
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-amber-200 text-amber-800">
+                        {w.monthsElapsed}ヶ月経過
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {specialWorkerAlerts.length > 5 && (
+              <div className="mt-3 text-center">
+                <Link href="/ja/health">
+                  <Button variant="link" className="text-orange-700">
+                    他 {specialWorkerAlerts.length - 5} 名を表示
                   </Button>
                 </Link>
               </div>

@@ -128,6 +128,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ...s,
+          birthDate: user?.birthDate?.toISOString() || null,
           birthDateWareki,
           age,
           gender: user?.gender || null,

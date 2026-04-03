@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Search, Download, ArrowUpDown, Plus, MoreHorizontal, FileText, XCircle } from 'lucide-react';
+import { Search, Download, ArrowUpDown, Plus, MoreHorizontal, FileText, XCircle, ClipboardEdit } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import type { HealthCheckupSchedule, ScheduleStatus } from '@/types/health';
@@ -34,7 +34,8 @@ import { useHealthMasterStore } from '@/lib/store/health-master-store';
 import { getCurrentFiscalYear } from '@/lib/utils';
 import { ScheduleDialog } from './schedule-dialog';
 
-interface EnrichedSchedule extends HealthCheckupSchedule {
+export interface EnrichedSchedule extends HealthCheckupSchedule {
+  birthDate?: string | null;
   birthDateWareki?: string;
   age?: number;
   gender?: string | null;
@@ -52,6 +53,7 @@ interface ScheduleFullListProps {
   departments: string[];
   onRefreshSchedules?: () => void;
   onUpdateScheduleStatus?: (id: string, status: ScheduleStatus) => Promise<void>;
+  onRegisterResult?: (schedule: EnrichedSchedule) => void;
 }
 
 // 年度リスト生成（現在年度 ± 2年）
@@ -65,6 +67,7 @@ export function ScheduleFullList({
   departments,
   onRefreshSchedules,
   onUpdateScheduleStatus,
+  onRegisterResult,
 }: ScheduleFullListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('all');
@@ -282,7 +285,7 @@ export function ScheduleFullList({
                 <SelectValue placeholder="医療機関" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">すべての機関</SelectItem>
+                <SelectItem value="all">すべての医療機関</SelectItem>
                 {institutionNames.map(([id, name]) => (
                   <SelectItem key={id} value={id}>{name}</SelectItem>
                 ))}
@@ -336,7 +339,7 @@ export function ScheduleFullList({
                     <TableRow key={s.id}>
                       <TableCell className="font-medium whitespace-nowrap">{s.userName}</TableCell>
                       <TableCell className="whitespace-nowrap">{s.departmentName || '-'}</TableCell>
-                      <TableCell className="whitespace-nowrap">{s.birthDateWareki || '-'}</TableCell>
+                      <TableCell className="whitespace-nowrap">{s.birthDate ? (() => { const d = new Date(s.birthDate); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; })() : '-'}</TableCell>
                       <TableCell className="text-right">{s.age != null ? s.age : '-'}</TableCell>
                       <TableCell>{s.gender === 'male' ? '男' : s.gender === 'female' ? '女' : s.gender || '-'}</TableCell>
                       <TableCell className="whitespace-nowrap">{s.insuranceNumber || '-'}</TableCell>
@@ -374,6 +377,12 @@ export function ScheduleFullList({
                               <FileText className="mr-2 h-4 w-4" />
                               詳細表示
                             </DropdownMenuItem>
+                            {onRegisterResult && (
+                              <DropdownMenuItem onClick={() => onRegisterResult(s)}>
+                                <ClipboardEdit className="mr-2 h-4 w-4" />
+                                結果登録
+                              </DropdownMenuItem>
+                            )}
                             {s.status === 'scheduled' && (
                               <DropdownMenuItem onClick={() => handleCancelSchedule(s.id)}>
                                 <XCircle className="mr-2 h-4 w-4" />

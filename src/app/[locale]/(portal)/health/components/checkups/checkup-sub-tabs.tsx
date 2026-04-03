@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, FileText, Settings2, ListChecks } from 'lucide-react';
 import type { HealthCheckup, HealthCheckupSchedule, ScheduleStatus } from '@/types/health';
 import { ScheduleList } from './schedule-list';
-import { ScheduleFullList } from './schedule-full-list';
+import { ScheduleFullList, type EnrichedSchedule } from './schedule-full-list';
 import { ResultsList } from './results-list';
 import { HealthMasterPanel } from '../master/health-master-panel';
 
@@ -25,6 +25,11 @@ interface CheckupSubTabsProps {
   onRefreshSchedules: () => void;
   onUpdateScheduleStatus?: (id: string, status: ScheduleStatus) => Promise<void>;
   userRoles: string[];
+  // 結果登録（予定一覧から）
+  onRegisterResult?: (schedule: EnrichedSchedule) => void;
+  // 結果編集・削除
+  onEditCheckup?: (checkup: HealthCheckup) => void;
+  onDeleteCheckup?: (checkupId: string) => void;
 }
 
 export function CheckupSubTabs({
@@ -42,6 +47,9 @@ export function CheckupSubTabs({
   onRefreshSchedules,
   onUpdateScheduleStatus,
   userRoles,
+  onRegisterResult,
+  onEditCheckup,
+  onDeleteCheckup,
 }: CheckupSubTabsProps) {
   const isAdmin = userRoles.includes('hr') || userRoles.includes('admin');
   const isHR = userRoles.includes('hr');
@@ -91,6 +99,7 @@ export function CheckupSubTabs({
             departments={departments}
             onRefreshSchedules={onRefreshSchedules}
             onUpdateScheduleStatus={onUpdateScheduleStatus}
+            onRegisterResult={onRegisterResult}
           />
         </TabsContent>
       )}
@@ -107,6 +116,8 @@ export function CheckupSubTabs({
           onFilterResultChange={onResultFilterResultChange}
           onViewDetails={onViewCheckupDetails}
           isAdmin={isAdmin}
+          onEditCheckup={onEditCheckup}
+          onDeleteCheckup={onDeleteCheckup}
         />
       </TabsContent>
 

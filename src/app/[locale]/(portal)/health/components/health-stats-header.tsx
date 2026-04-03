@@ -6,8 +6,6 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
-  Brain,
-  Activity,
 } from 'lucide-react';
 
 interface HealthStatsHeaderProps {
@@ -16,8 +14,6 @@ interface HealthStatsHeaderProps {
   completionRate: number;
   requiresReexam: number;
   requiresTreatment: number;
-  highStress: number;
-  stressCheckCompletionRate: number;
 }
 
 export function HealthStatsHeader({
@@ -26,11 +22,9 @@ export function HealthStatsHeader({
   completionRate,
   requiresReexam,
   requiresTreatment,
-  highStress,
-  stressCheckCompletionRate,
 }: HealthStatsHeaderProps) {
   return (
-    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">対象社員</CardTitle>
@@ -72,28 +66,6 @@ export function HealthStatsHeader({
         <CardContent>
           <div className="text-2xl font-bold text-red-600">{requiresTreatment}名</div>
           <p className="text-xs text-muted-foreground">医療機関受診推奨</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">高ストレス者</CardTitle>
-          <Brain className="h-4 w-4 text-purple-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-purple-600">{highStress}名</div>
-          <p className="text-xs text-muted-foreground">面談対象者</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">ストレスチェック</CardTitle>
-          <Activity className="h-4 w-4 text-blue-600" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-blue-600">{stressCheckCompletionRate}%</div>
-          <p className="text-xs text-muted-foreground">回答率</p>
         </CardContent>
       </Card>
     </div>

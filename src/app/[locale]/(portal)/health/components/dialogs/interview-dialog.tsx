@@ -65,12 +65,11 @@ export function InterviewDialog({ open, onOpenChange, userName, record, onRecord
             <Label>面談種別</Label>
             <Select
               value={record.interviewType}
-              onValueChange={(value: 'stress_interview' | 'health_guidance' | 'return_to_work') =>
+              onValueChange={(value: 'health_guidance' | 'return_to_work') =>
                 onRecordChange({ ...record, interviewType: value })}
             >
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="stress_interview">ストレスチェック面談</SelectItem>
                 <SelectItem value="health_guidance">保健指導</SelectItem>
                 <SelectItem value="return_to_work">復職面談</SelectItem>
               </SelectContent>

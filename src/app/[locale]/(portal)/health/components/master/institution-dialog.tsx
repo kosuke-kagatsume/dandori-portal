@@ -132,7 +132,7 @@ export function InstitutionDialog({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic">基本情報</TabsTrigger>
-            <TabsTrigger value="exam-prices" disabled={!effectiveEditItem}>検査項目・料金</TabsTrigger>
+            <TabsTrigger value="exam-prices" disabled={!effectiveEditItem}>健診種別・料金</TabsTrigger>
             <TabsTrigger value="options" disabled={!effectiveEditItem}>オプション検査</TabsTrigger>
           </TabsList>
 

@@ -276,7 +276,7 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
                 <div>
                   <span className="text-muted-foreground">生年月日: </span>
                   {selectedUser.birthDate
-                    ? `${toWareki(new Date(selectedUser.birthDate))} (${format(new Date(selectedUser.birthDate), 'yyyy/MM/dd')})`
+                    ? (() => { const d = new Date(selectedUser.birthDate); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}（${toWareki(d)}）`; })()
                     : '-'}
                 </div>
                 <div>

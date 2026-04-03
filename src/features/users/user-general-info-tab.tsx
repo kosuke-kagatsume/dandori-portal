@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Edit, Check, X, User, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store';
@@ -135,6 +136,7 @@ export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGene
     employmentType: user.employmentType || '',
     hireDate: user.hireDate || '',
     status: user.status || 'active',
+    isSpecialWorker: user.isSpecialWorker || false,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -229,6 +231,7 @@ export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGene
           employmentType: workForm.employmentType || undefined,
           hireDate: workForm.hireDate || undefined,
           status: workForm.status,
+          isSpecialWorker: workForm.isSpecialWorker,
         }),
       });
 
@@ -274,6 +277,7 @@ export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGene
       employmentType: user.employmentType || '',
       hireDate: user.hireDate || '',
       status: user.status || 'active',
+      isSpecialWorker: user.isSpecialWorker || false,
     });
     setEditingWork(false);
   };
@@ -554,6 +558,18 @@ export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGene
                 </>
               );
             })()}
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">特定業務従事者</p>
+              {editingWork ? (
+                <Switch
+                  checked={workForm.isSpecialWorker}
+                  onCheckedChange={(checked) => setWorkForm(f => ({ ...f, isSpecialWorker: checked }))}
+                  className="mt-1"
+                />
+              ) : (
+                <p className="text-sm mt-1">{user.isSpecialWorker ? '対象' : '対象外'}</p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -6,21 +6,19 @@ import { Button } from '@/components/ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Heart, TrendingUp, BarChart3, Download, FileText } from 'lucide-react';
+import { Heart, TrendingUp, Download, FileText } from 'lucide-react';
 import {
-  Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend,
   PieChart, Pie, Cell, LineChart, Line,
+  CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend,
 } from 'recharts';
 import { getFiscalYear, getCurrentFiscalYear } from '@/lib/utils';
-import { resultColorMap, resultLabelMap, checkupToExport, stressCheckToExport, checkupToPDF, stressCheckToPDF } from '@/lib/health/health-helpers';
-import { exportHealthCheckupsToCSV, exportFindingsListToCSV, exportStressChecksToCSV } from '@/lib/csv/csv-export';
-import { downloadIndustrialPhysicianReportPDF, downloadHighStressListPDF, downloadHealthCheckupSummaryPDF } from '@/lib/pdf/health-report-pdf';
-import type { HealthCheckup, StressCheck } from '@/types/health';
+import { resultColorMap, resultLabelMap, checkupToExport, checkupToPDF } from '@/lib/health/health-helpers';
+import { exportHealthCheckupsToCSV, exportFindingsListToCSV } from '@/lib/csv/csv-export';
+import { downloadIndustrialPhysicianReportPDF, downloadHealthCheckupSummaryPDF } from '@/lib/pdf/health-report-pdf';
+import type { HealthCheckup } from '@/types/health';
 
 interface Props {
   checkups: HealthCheckup[];
-  stressChecks: StressCheck[];
-  filteredStressChecks: StressCheck[];
   departments: string[];
   filterDepartment: string;
   onFilterDepartmentChange: (value: string) => void;
@@ -29,7 +27,7 @@ interface Props {
 }
 
 export function ReportContent({
-  checkups, stressChecks, filteredStressChecks, departments,
+  checkups, departments,
   filterDepartment, onFilterDepartmentChange,
   canDownloadReports, companyName,
 }: Props) {
@@ -64,41 +62,16 @@ export function ReportContent({
       }));
   }, [filtered]);
 
-  const stressByDepartmentData = useMemo(() => {
-    const stressFiltered = filterDepartment === 'all'
-      ? stressChecks
-      : stressChecks.filter(s => s.department === filterDepartment);
-    const byDept: Record<string, { factors: number[]; response: number[]; support: number[] }> = {};
-    stressFiltered.forEach(s => {
-      const dept = s.department || '未設定';
-      if (!byDept[dept]) byDept[dept] = { factors: [], response: [], support: [] };
-      byDept[dept].factors.push(s.stressFactorsScore);
-      byDept[dept].response.push(s.stressResponseScore);
-      byDept[dept].support.push(s.socialSupportScore);
-    });
-    const avg = (arr: number[]) => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
-    return Object.entries(byDept).map(([dept, data]) => ({
-      department: dept,
-      stressFactors: avg(data.factors),
-      stressResponse: avg(data.response),
-      support: avg(data.support),
-    }));
-  }, [stressChecks, filterDepartment]);
-
   const handleExportHealthCheckups = () => exportHealthCheckupsToCSV(checkups.map(checkupToExport));
   const handleExportFindingsList = () => exportFindingsListToCSV(checkups.map(checkupToExport));
-  const handleExportStressChecks = () => exportStressChecksToCSV(filteredStressChecks.map(stressCheckToExport));
 
   const handleExportIndustrialPhysicianReportPDF = async () => {
     await downloadIndustrialPhysicianReportPDF(
       checkups.map(checkupToPDF),
-      filteredStressChecks.map(stressCheckToPDF),
+      [],
       getCurrentFiscalYear(),
       companyName,
     );
-  };
-  const handleExportHighStressListPDF = async () => {
-    await downloadHighStressListPDF(filteredStressChecks.map(stressCheckToPDF), getCurrentFiscalYear());
   };
   const handleExportHealthCheckupSummaryPDF = async () => {
     await downloadHealthCheckupSummaryPDF(checkups.map(checkupToPDF), getCurrentFiscalYear());
@@ -177,33 +150,6 @@ export function ReportContent({
           </CardContent>
         </Card>
 
-        {/* 部署別ストレス傾向 */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              部署別ストレス傾向
-            </CardTitle>
-            <CardDescription>部署ごとのストレス状況を比較（高スコアほどストレスが高い）</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stressByDepartmentData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="department" />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="stressFactors" fill="#f97316" name="ストレス要因" />
-                  <Bar dataKey="stressResponse" fill="#ef4444" name="心身の反応" />
-                  <Bar dataKey="support" fill="#22c55e" name="周囲のサポート" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* レポート出力 */}
         {canDownloadReports && (
           <Card className="md:col-span-2">
@@ -212,13 +158,11 @@ export function ReportContent({
               <CardDescription>各種帳票をダウンロードできます</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   { label: '健康診断結果一覧', format: 'CSV形式', icon: Download, onClick: handleExportHealthCheckups },
                   { label: '有所見者リスト', format: 'CSV形式', icon: Download, onClick: handleExportFindingsList },
-                  { label: 'ストレスチェック結果', format: 'CSV形式', icon: Download, onClick: handleExportStressChecks },
                   { label: '産業医報告書', format: 'PDF形式', icon: FileText, onClick: handleExportIndustrialPhysicianReportPDF },
-                  { label: '高ストレス者一覧', format: 'PDF形式', icon: FileText, onClick: handleExportHighStressListPDF },
                   { label: '健診サマリー', format: 'PDF形式', icon: FileText, onClick: handleExportHealthCheckupSummaryPDF },
                 ].map(({ label, format, icon: Icon, onClick }) => (
                   <Button key={label} variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={onClick}>

@@ -1805,6 +1805,7 @@ model users {
   displayOrder          Int?                 // 表示順
   employmentStatus      String               @default("active") // active/leave/retired
   insuranceNumber       String?              // 被保険者整理番号
+  isSpecialWorker       Boolean              @default(false) // 特定業務従事者
   attendance            attendance[]
   attendance_punches    attendance_punches[]
   tenants               tenants              @relation(fields: [tenantId], references: [id], onDelete: Cascade)

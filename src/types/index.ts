@@ -29,6 +29,7 @@ export const UserSchema = z.object({
   myNumber: z.string().optional(), // マイナンバー
   taxClassification: z.string().optional(), // 甲/乙区分
   isSecondaryIncome: z.boolean().optional(), // 従たる給与
+  isSpecialWorker: z.boolean().optional(), // 特定業務従事者
   displayOrder: z.number().optional(), // 表示順
   employmentStatus: z.string().optional(), // active/leave/retired
   birthDate: z.string().optional(), // 生年月日
