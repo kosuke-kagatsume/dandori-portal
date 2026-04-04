@@ -1257,7 +1257,7 @@ model pay_slips {
   allowancesJson        String?  // 詳細な手当情報（JSON）
   grossPay              Int      @default(0)  // 総支給額
 
-  // 控除項目
+  // 控除項目（従業員負担）
   healthInsurance       Int      @default(0)  // 健康保険料
   pensionInsurance      Int      @default(0)  // 厚生年金
   employmentInsurance   Int      @default(0)  // 雇用保険
@@ -1266,6 +1266,11 @@ model pay_slips {
   otherDeductions       Int      @default(0)  // その他控除
   deductionsJson        String?  // 詳細な控除情報（JSON）
   totalDeductions       Int      @default(0)  // 総控除額
+
+  // 社会保険料（会社負担）
+  healthInsuranceEmployer     Int @default(0)  // 健康保険料（会社負担）
+  pensionInsuranceEmployer    Int @default(0)  // 厚生年金（会社負担）
+  employmentInsuranceEmployer Int @default(0)  // 雇用保険（会社負担）
 
   // 勤怠情報
   workingDays           Int      @default(0)  // 所定勤務日数
@@ -1311,12 +1316,17 @@ model bonus_slips {
   specialBonus          Int      @default(0)  // 特別加算
   grossBonus            Int      @default(0)  // 総支給額
 
-  // 控除項目
+  // 控除項目（従業員負担）
   healthInsurance       Int      @default(0)
   pensionInsurance      Int      @default(0)
   employmentInsurance   Int      @default(0)
   incomeTax             Int      @default(0)
   totalDeductions       Int      @default(0)
+
+  // 社会保険料（会社負担）
+  healthInsuranceEmployer     Int @default(0)
+  pensionInsuranceEmployer    Int @default(0)
+  employmentInsuranceEmployer Int @default(0)
 
   // 査定情報
   performanceRating     String?  // S, A, B, C, D

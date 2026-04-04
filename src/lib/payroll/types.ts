@@ -55,7 +55,7 @@ export interface PayrollCalculation {
   lateNightHours: number;
   holidayWorkHours: number;
 
-  // 控除額
+  // 控除額（従業員負担）
   healthInsurance: number;
   pension: number;
   employmentInsurance: number;
@@ -66,6 +66,11 @@ export interface PayrollCalculation {
   loanRepayment: number;
   otherDeductions: number;
   totalDeductions: number;
+
+  // 社会保険料（会社負担）
+  healthInsuranceEmployer: number;
+  pensionInsuranceEmployer: number;
+  employmentInsuranceEmployer: number;
 
   // 差引支給額
   netSalary: number;
@@ -92,13 +97,18 @@ export interface BonusCalculation {
   specialAllowance: number;
   totalGrossBonus: number;
 
-  // 控除額
+  // 控除額（従業員負担）
   healthInsurance: number;
   pension: number;
   employmentInsurance: number;
   incomeTax: number;
   residentTax: number;
   totalDeductions: number;
+
+  // 社会保険料（会社負担��
+  healthInsuranceEmployer: number;
+  pensionInsuranceEmployer: number;
+  employmentInsuranceEmployer: number;
 
   // 差引支給額
   netBonus: number;

@@ -34,6 +34,13 @@ export interface PaySlip {
     otherDeductions: number;    // その他控除
   };
 
+  // 社会保険料（会社負担）
+  employerInsurance: {
+    healthInsuranceEmployer: number;    // 健康保険料（会社負担）
+    pensionInsuranceEmployer: number;   // 厚生年金（会社負担）
+    employmentInsuranceEmployer: number; // 雇用保険（会社負担）
+  };
+
   // 勤怠情報
   attendance: {
     workingDays: number;        // 勤務日数
@@ -120,6 +127,13 @@ export interface Bonus {
     pensionInsurance: number;
     employmentInsurance: number;
     incomeTax: number;
+  };
+
+  // 社会保険料（会社負担）
+  employerInsurance: {
+    healthInsuranceEmployer: number;
+    pensionInsuranceEmployer: number;
+    employmentInsuranceEmployer: number;
   };
 
   grossAmount: number;          // 総支給額

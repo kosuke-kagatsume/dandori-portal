@@ -187,10 +187,15 @@ const createPayrollStore = () => {
 
             const grossSalary = master.basicSalary + totalAllowances + overtimePay + lateNightPay + holidayPay;
 
-            // 社会保険料計算
+            // 社会保険料計算（従業員負担）
             const healthInsurance = Math.round(grossSalary * INSURANCE_RATES.health.employee);
             const pension = Math.round(grossSalary * INSURANCE_RATES.pension.employee);
             const employmentInsurance = Math.round(grossSalary * INSURANCE_RATES.employment.employee);
+
+            // 社会保険料計算（会社負担）
+            const healthInsuranceEmployer = Math.round(grossSalary * INSURANCE_RATES.health.employer);
+            const pensionInsuranceEmployer = Math.round(grossSalary * INSURANCE_RATES.pension.employer);
+            const employmentInsuranceEmployer = Math.round(grossSalary * INSURANCE_RATES.employment.employer);
 
             // 源泉徴収税額計算（源泉徴収税額表を使用）
             const taxableIncome = grossSalary - (healthInsurance + pension + employmentInsurance);
@@ -242,7 +247,7 @@ const createPayrollStore = () => {
               lateNightHours,
               holidayWorkHours,
 
-              // 控除額
+              // 控除額（従業員負担）
               healthInsurance,
               pension,
               employmentInsurance,
@@ -253,6 +258,11 @@ const createPayrollStore = () => {
               loanRepayment,
               otherDeductions,
               totalDeductions,
+
+              // 社会保険料（会社負担）
+              healthInsuranceEmployer,
+              pensionInsuranceEmployer,
+              employmentInsuranceEmployer,
 
               // 差引支給額
               netSalary,
@@ -328,10 +338,15 @@ const createPayrollStore = () => {
             // 総支給額
             const totalGrossBonus = basicBonus + positionBonus + performanceBonus + specialAllowance;
 
-            // 控除額計算（社会保険料）
+            // 控除額計算（社会保険料・従業員負担）
             const healthInsurance = Math.round(totalGrossBonus * INSURANCE_RATES.health.employee);
             const pension = Math.round(totalGrossBonus * INSURANCE_RATES.pension.employee);
             const employmentInsurance = Math.round(totalGrossBonus * INSURANCE_RATES.employment.employee);
+
+            // 社会保険料（会社負担）
+            const healthInsuranceEmployer = Math.round(totalGrossBonus * INSURANCE_RATES.health.employer);
+            const pensionInsuranceEmployer = Math.round(totalGrossBonus * INSURANCE_RATES.pension.employer);
+            const employmentInsuranceEmployer = Math.round(totalGrossBonus * INSURANCE_RATES.employment.employer);
 
             // 源泉徴収税額（賞与用税率表を使用）
             const taxableBonus = totalGrossBonus - (healthInsurance + pension + employmentInsurance);
@@ -370,13 +385,18 @@ const createPayrollStore = () => {
               specialAllowance,
               totalGrossBonus,
 
-              // 控除額
+              // 控除額（従業員負担）
               healthInsurance,
               pension,
               employmentInsurance,
               incomeTax,
               residentTax,
               totalDeductions,
+
+              // 社会保険料（会社負担）
+              healthInsuranceEmployer,
+              pensionInsuranceEmployer,
+              employmentInsuranceEmployer,
 
               // 差引支給額
               netBonus,

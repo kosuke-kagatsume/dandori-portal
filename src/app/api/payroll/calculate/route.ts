@@ -177,10 +177,15 @@ export async function POST(request: NextRequest) {
         lateNightAllowance +
         holidayAllowance;
 
-      // 社会保険料計算
+      // 社会保険料計算（従業員負担）
       const healthInsurance = Math.floor(grossPay * INSURANCE_RATES.health.employee);
       const pensionInsurance = Math.floor(grossPay * INSURANCE_RATES.pension.employee);
       const employmentInsurance = Math.floor(grossPay * INSURANCE_RATES.employment.employee);
+
+      // 社会保険料計算（会社負担）
+      const healthInsuranceEmployer = Math.floor(grossPay * INSURANCE_RATES.health.employer);
+      const pensionInsuranceEmployer = Math.floor(grossPay * INSURANCE_RATES.pension.employer);
+      const employmentInsuranceEmployer = Math.floor(grossPay * INSURANCE_RATES.employment.employer);
 
       // 所得税計算（簡易）
       const taxableAmount = grossPay - healthInsurance - pensionInsurance - employmentInsurance;
@@ -240,6 +245,9 @@ export async function POST(request: NextRequest) {
               healthInsurance,
               pensionInsurance,
               employmentInsurance,
+              healthInsuranceEmployer,
+              pensionInsuranceEmployer,
+              employmentInsuranceEmployer,
               incomeTax,
               residentTax,
               otherDeductions,
@@ -279,6 +287,9 @@ export async function POST(request: NextRequest) {
               healthInsurance,
               pensionInsurance,
               employmentInsurance,
+              healthInsuranceEmployer,
+              pensionInsuranceEmployer,
+              employmentInsuranceEmployer,
               incomeTax,
               residentTax,
               otherDeductions,

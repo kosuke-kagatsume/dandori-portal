@@ -3,6 +3,7 @@
  */
 
 import { PaySlip, SalaryMaster, PayrollCalculationParams } from '@/types/payroll';
+import { INSURANCE_RATES } from '@/lib/payroll/types';
 
 // 日本の税率テーブル（2025年）
 const INCOME_TAX_RATES = [
@@ -110,6 +111,11 @@ export class PayrollCalculator {
       paymentDate: this.getPaymentDate(params.period),
       earnings,
       deductions,
+      employerInsurance: {
+        healthInsuranceEmployer: socialInsurance.healthEmployer,
+        pensionInsuranceEmployer: socialInsurance.pensionEmployer,
+        employmentInsuranceEmployer: socialInsurance.employmentEmployer,
+      },
       attendance: {
         workingDays: params.workingDays,
         actualWorkingDays: params.workingDays - params.absenceDays,
@@ -194,28 +200,42 @@ export class PayrollCalculator {
   }
 
   /**
-   * 社会保険料の計算
+   * 社会保険料の計算（従業員負担 + 会社負担）
    */
   private static calculateSocialInsurance(grossPay: number): {
     health: number;
     pension: number;
     employment: number;
     total: number;
+    healthEmployer: number;
+    pensionEmployer: number;
+    employmentEmployer: number;
+    totalEmployer: number;
   } {
     // 標準報酬月額を取得
     const range = STANDARD_MONTHLY_REMUNERATION.find(
       (r) => grossPay >= r.min && grossPay < r.max
     ) || STANDARD_MONTHLY_REMUNERATION[STANDARD_MONTHLY_REMUNERATION.length - 1];
 
+    // 従業員負担
     const health = Math.floor(grossPay * range.healthRate);
     const pension = Math.floor(grossPay * range.pensionRate);
-    const employment = Math.floor(grossPay * 0.003); // 雇用保険料率 0.3%
+    const employment = Math.floor(grossPay * INSURANCE_RATES.employment.employee);
+
+    // 会社負担
+    const healthEmployer = Math.floor(grossPay * INSURANCE_RATES.health.employer);
+    const pensionEmployer = Math.floor(grossPay * INSURANCE_RATES.pension.employer);
+    const employmentEmployer = Math.floor(grossPay * INSURANCE_RATES.employment.employer);
 
     return {
       health,
       pension,
       employment,
       total: health + pension + employment,
+      healthEmployer,
+      pensionEmployer,
+      employmentEmployer,
+      totalEmployer: healthEmployer + pensionEmployer + employmentEmployer,
     };
   }
 
@@ -270,6 +290,11 @@ export class PayrollCalculator {
       employmentInsurance: number;
       incomeTax: number;
     };
+    employerInsurance: {
+      healthInsuranceEmployer: number;
+      pensionInsuranceEmployer: number;
+      employmentInsuranceEmployer: number;
+    };
     netAmount: number;
   } {
     const baseAmount = basicSalary * months;
@@ -299,6 +324,11 @@ export class PayrollCalculator {
       performanceAmount,
       grossAmount,
       deductions,
+      employerInsurance: {
+        healthInsuranceEmployer: socialInsurance.healthEmployer,
+        pensionInsuranceEmployer: socialInsurance.pensionEmployer,
+        employmentInsuranceEmployer: socialInsurance.employmentEmployer,
+      },
       netAmount: grossAmount - totalDeductions,
     };
   }
