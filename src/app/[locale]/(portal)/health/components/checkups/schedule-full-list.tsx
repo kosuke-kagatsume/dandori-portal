@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { Search, Download, ArrowUpDown, Plus, MoreHorizontal, FileText, XCircle, ClipboardEdit } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -221,6 +222,24 @@ export function ScheduleFullList({
     </TableHead>
   );
 
+  // ステータス表示ロジック
+  const getStatusDisplay = (schedule: EnrichedSchedule): { label: string; variant: 'default' | 'secondary' | 'destructive' } => {
+    if (schedule.status === 'cancelled') {
+      return { label: 'キャンセル', variant: 'destructive' };
+    }
+    if (schedule.status === 'completed') {
+      return { label: '受診済', variant: 'secondary' };
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const scheduledDate = new Date(schedule.scheduledDate);
+    scheduledDate.setHours(0, 0, 0, 0);
+    if (scheduledDate <= today) {
+      return { label: '受診済', variant: 'secondary' };
+    }
+    return { label: '予約済', variant: 'default' };
+  };
+
   const fiscalYearOptions = getFiscalYearOptions();
 
   return (
@@ -301,6 +320,7 @@ export function ScheduleFullList({
               <TableHeader>
                 <TableRow>
                   <SortableHeader field="userName">氏名</SortableHeader>
+                  <TableHead className="whitespace-nowrap">ステータス</TableHead>
                   <SortableHeader field="departmentName">部署</SortableHeader>
                   <TableHead className="whitespace-nowrap">生年月日</TableHead>
                   <SortableHeader field="age">年齢</SortableHeader>
@@ -324,13 +344,13 @@ export function ScheduleFullList({
               <TableBody>
                 {isLoadingEnriched ? (
                   <TableRow>
-                    <TableCell colSpan={19} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={20} className="text-center py-8 text-muted-foreground">
                       読み込み中...
                     </TableCell>
                   </TableRow>
                 ) : filteredSchedules.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={19} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={20} className="text-center text-muted-foreground py-8">
                       該当する予定がありません
                     </TableCell>
                   </TableRow>
@@ -338,6 +358,12 @@ export function ScheduleFullList({
                   filteredSchedules.map((s) => (
                     <TableRow key={s.id}>
                       <TableCell className="font-medium whitespace-nowrap">{s.userName}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {(() => {
+                          const st = getStatusDisplay(s);
+                          return <Badge variant={st.variant}>{st.label}</Badge>;
+                        })()}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap">{s.departmentName || '-'}</TableCell>
                       <TableCell className="whitespace-nowrap">{s.birthDate ? (() => { const d = new Date(s.birthDate); return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`; })() : '-'}</TableCell>
                       <TableCell className="text-right">{s.age != null ? s.age : '-'}</TableCell>

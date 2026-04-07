@@ -37,6 +37,7 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
     updateExamPrice,
     deleteExamPrice,
     getActiveCheckupTypes,
+    fetchCheckupTypes,
   } = useHealthMasterStore();
 
   const [prices, setPrices] = useState<InstitutionExamPrice[]>([]);
@@ -55,7 +56,11 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
 
   useEffect(() => {
     loadPrices();
-  }, [loadPrices]);
+    // 健診種別マスタが未取得なら取得
+    if (checkupTypes.length === 0) {
+      fetchCheckupTypes();
+    }
+  }, [loadPrices, checkupTypes.length, fetchCheckupTypes]);
 
   const handleAdd = async () => {
     if (!newForm.checkupTypeId || !newForm.price) {
@@ -100,12 +105,10 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium">健診種別・料金設定</h4>
-        {availableTypes.length > 0 && (
-          <Button variant="outline" size="sm" onClick={() => setAddingNew(true)} disabled={addingNew}>
-            <Plus className="mr-1 h-3 w-3" />
-            追加
-          </Button>
-        )}
+        <Button variant="outline" size="sm" onClick={() => setAddingNew(true)} disabled={addingNew}>
+          <Plus className="mr-1 h-3 w-3" />
+          追加
+        </Button>
       </div>
 
       {prices.length === 0 && !addingNew ? (
@@ -156,42 +159,55 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
 
       {addingNew && (
         <div className="border rounded-lg p-4 space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">検査種別 *</Label>
-              <Select value={newForm.checkupTypeId} onValueChange={(v) => setNewForm({ ...newForm, checkupTypeId: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableTypes.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">料金 *</Label>
-              <Input
-                type="number"
-                placeholder="10000"
-                value={newForm.price}
-                onChange={(e) => setNewForm({ ...newForm, price: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">備考</Label>
-              <Input
-                placeholder="備考"
-                value={newForm.notes}
-                onChange={(e) => setNewForm({ ...newForm, notes: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setAddingNew(false)}>キャンセル</Button>
-            <Button size="sm" onClick={handleAdd}>追加</Button>
-          </div>
+          {availableTypes.length === 0 ? (
+            <>
+              <p className="text-sm text-muted-foreground text-center py-2">
+                追加可能な健診種別がありません。先に「管理＞健診種別」で種別を登録してください。
+              </p>
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => setAddingNew(false)}>閉じる</Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">検査種別 *</Label>
+                  <Select value={newForm.checkupTypeId} onValueChange={(v) => setNewForm({ ...newForm, checkupTypeId: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTypes.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">料金 *</Label>
+                  <Input
+                    type="number"
+                    placeholder="10000"
+                    value={newForm.price}
+                    onChange={(e) => setNewForm({ ...newForm, price: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">備考</Label>
+                  <Input
+                    placeholder="備考"
+                    value={newForm.notes}
+                    onChange={(e) => setNewForm({ ...newForm, notes: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setAddingNew(false)}>キャンセル</Button>
+                <Button size="sm" onClick={handleAdd}>追加</Button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

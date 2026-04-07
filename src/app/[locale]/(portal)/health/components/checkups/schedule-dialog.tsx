@@ -32,7 +32,7 @@ import { toast } from 'sonner';
 import { useHealthMasterStore } from '@/lib/store/health-master-store';
 import { useHealthStore } from '@/lib/store/health-store';
 import { useUserStore } from '@/lib/store/user-store';
-import type { InstitutionOption } from '@/types/health';
+import type { InstitutionOption, InstitutionExamPrice } from '@/types/health';
 
 interface ScheduleDialogProps {
   open: boolean;
@@ -45,7 +45,7 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
   const users = useUserStore((state) => state.users);
   const tenantId = currentUser?.tenantId;
 
-  const { medicalInstitutions, fetchAll, setTenantId, fetchOptions } = useHealthMasterStore();
+  const { medicalInstitutions, fetchAll, setTenantId, fetchOptions, fetchExamPrices, checkupTypes } = useHealthMasterStore();
   const { addSchedule } = useHealthStore();
 
   // フォームデータ
@@ -59,6 +59,7 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
   const [notes, setNotes] = useState('');
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [institutionOptions, setInstitutionOptions] = useState<InstitutionOption[]>([]);
+  const [institutionExamPrices, setInstitutionExamPrices] = useState<InstitutionExamPrice[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -115,28 +116,30 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
     return active.filter(i => i.region === selectedRegion);
   }, [medicalInstitutions, selectedRegion]);
 
-  // 医療機関→健診種類（C-6）
-  const selectedInstitution = useMemo(() => {
-    return medicalInstitutions.find(i => i.id === selectedInstitutionId) || null;
-  }, [medicalInstitutions, selectedInstitutionId]);
-
-  const checkupTypeNames = useMemo(() => {
-    if (!selectedInstitution?.examPrices) return [];
-    return selectedInstitution.examPrices
-      .filter(p => p.isActive)
-      .map(p => p.checkupTypeName || '')
-      .filter(Boolean);
-  }, [selectedInstitution]);
-
-  // 医療機関選択→オプション取得（C-7）
+  // 医療機関選択→検査料金・オプション取得（C-6, C-7）
   useEffect(() => {
     if (selectedInstitutionId) {
+      fetchExamPrices(selectedInstitutionId).then(setInstitutionExamPrices);
       fetchOptions(selectedInstitutionId).then(setInstitutionOptions);
     } else {
+      setInstitutionExamPrices([]);
       setInstitutionOptions([]);
     }
     setSelectedOptionIds([]);
-  }, [selectedInstitutionId, fetchOptions]);
+  }, [selectedInstitutionId, fetchExamPrices, fetchOptions]);
+
+  const checkupTypeNames = useMemo(() => {
+    if (institutionExamPrices.length === 0) return [];
+    return institutionExamPrices
+      .filter(p => p.isActive)
+      .map(p => {
+        // checkupTypeName があればそれを使う、なければ checkupTypes マスタから名前を引く
+        if (p.checkupTypeName) return p.checkupTypeName;
+        const ct = checkupTypes.find(t => t.id === p.checkupTypeId);
+        return ct?.name || '';
+      })
+      .filter(Boolean);
+  }, [institutionExamPrices, checkupTypes]);
 
   const activeOptions = useMemo(() => {
     return institutionOptions.filter(o => o.isActive);
@@ -144,12 +147,13 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
 
   // 料金計算
   const basePrice = useMemo(() => {
-    if (!selectedInstitution?.examPrices || !checkupTypeName) return 0;
-    const ep = selectedInstitution.examPrices.find(
-      p => p.checkupTypeName === checkupTypeName && p.isActive
-    );
+    if (institutionExamPrices.length === 0 || !checkupTypeName) return 0;
+    const ep = institutionExamPrices.find(p => {
+      const name = p.checkupTypeName || checkupTypes.find(t => t.id === p.checkupTypeId)?.name || '';
+      return name === checkupTypeName && p.isActive;
+    });
     return ep?.price || 0;
-  }, [selectedInstitution, checkupTypeName]);
+  }, [institutionExamPrices, checkupTypeName, checkupTypes]);
 
   const optionsCost = useMemo(() => {
     return activeOptions
@@ -176,6 +180,7 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
     setNotes('');
     setSelectedOptionIds([]);
     setInstitutionOptions([]);
+    setInstitutionExamPrices([]);
   };
 
   const handleSubmit = async () => {

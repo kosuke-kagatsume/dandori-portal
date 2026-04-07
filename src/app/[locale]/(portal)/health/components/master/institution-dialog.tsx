@@ -132,8 +132,8 @@ export function InstitutionDialog({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic">基本情報</TabsTrigger>
-            <TabsTrigger value="exam-prices" disabled={!effectiveEditItem}>健診種別・料金</TabsTrigger>
-            <TabsTrigger value="options" disabled={!effectiveEditItem}>オプション検査</TabsTrigger>
+            <TabsTrigger value="exam-prices">健診種別・料金</TabsTrigger>
+            <TabsTrigger value="options">オプション検査</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4 py-2">
@@ -149,14 +149,22 @@ export function InstitutionDialog({
           </TabsContent>
 
           <TabsContent value="exam-prices" className="py-2">
-            {effectiveEditItem && (
+            {effectiveEditItem ? (
               <InstitutionExamPricesTab institutionId={effectiveEditItem.id} />
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                先に基本情報を保存してください
+              </p>
             )}
           </TabsContent>
 
           <TabsContent value="options" className="py-2">
-            {effectiveEditItem && (
+            {effectiveEditItem ? (
               <InstitutionOptionsTab institutionId={effectiveEditItem.id} />
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                先に基本情報を保存してください
+              </p>
             )}
           </TabsContent>
         </Tabs>

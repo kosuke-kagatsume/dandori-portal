@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Table,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import type { HealthCheckupSchedule } from '@/types/health';
+import type { HealthCheckupSchedule, InstitutionOption } from '@/types/health';
 import { useHealthMasterStore } from '@/lib/store/health-master-store';
 
 interface ScheduleListProps {
@@ -20,7 +20,7 @@ interface ScheduleListProps {
 }
 
 export function ScheduleList({ schedules }: ScheduleListProps) {
-  const { getActiveMedicalInstitutions } = useHealthMasterStore();
+  const { getActiveMedicalInstitutions, fetchOptions } = useHealthMasterStore();
   const institutions = getActiveMedicalInstitutions();
 
   // 医療機関ID→名前マップ
@@ -31,6 +31,39 @@ export function ScheduleList({ schedules }: ScheduleListProps) {
     }
     return map;
   }, [institutions]);
+
+  // 医療機関別オプションキャッシュ
+  const [optionsMap, setOptionsMap] = useState<Map<string, InstitutionOption[]>>(new Map());
+
+  // スケジュールに含まれる医療機関のオプションを取得
+  useEffect(() => {
+    const institutionIds = new Set<string>();
+    for (const s of schedules) {
+      if (s.medicalInstitutionId && s.selectedOptionIds?.length) {
+        institutionIds.add(s.medicalInstitutionId);
+      }
+    }
+    if (institutionIds.size === 0) return;
+
+    const loadOptions = async () => {
+      const newMap = new Map<string, InstitutionOption[]>();
+      for (const id of Array.from(institutionIds)) {
+        if (!optionsMap.has(id)) {
+          const opts = await fetchOptions(id);
+          newMap.set(id, opts);
+        }
+      }
+      if (newMap.size > 0) {
+        setOptionsMap(prev => {
+          const merged = new Map(prev);
+          newMap.forEach((v, k) => merged.set(k, v));
+          return merged;
+        });
+      }
+    };
+    loadOptions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schedules, fetchOptions]);
 
   // 受診日 desc ソート（A-7）
   const sortedSchedules = useMemo(() => {
@@ -45,13 +78,12 @@ export function ScheduleList({ schedules }: ScheduleListProps) {
   // オプション名を解決
   const getOptionNames = (schedule: HealthCheckupSchedule): string => {
     if (!schedule.selectedOptionIds || schedule.selectedOptionIds.length === 0) return '-';
-    // 将来: optionIdから名前を引く（今はIDを表示）
-    const inst = institutions.find(i => i.id === schedule.medicalInstitutionId);
-    if (!inst?.options) return schedule.selectedOptionIds.join(', ');
+    const opts = optionsMap.get(schedule.medicalInstitutionId || '');
+    if (!opts) return '-';
     const names = schedule.selectedOptionIds
-      .map(id => inst.options?.find(o => o.id === id)?.name || id)
+      .map(id => opts.find(o => o.id === id)?.name || id)
       .filter(Boolean);
-    return names.length > 0 ? names.join(', ') : '-';
+    return names.length > 0 ? names.join('、') : '-';
   };
 
   return (
