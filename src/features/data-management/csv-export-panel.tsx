@@ -6,44 +6,25 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Download,
-  Users,
-  Clock,
-  FileSpreadsheet,
-  FileText,
-  Info,
-  CheckCircle,
-  Settings2,
+  Download, Users, Clock, FileSpreadsheet, FileText, Info, CheckCircle, Settings2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportUsersToCSV, exportAttendanceToCSV } from '@/lib/csv/csv-export';
 import { useUserStore } from '@/lib/store/user-store';
 import { useAttendanceHistoryStore } from '@/lib/store/attendance-history-store';
+import { ExportDialog, type ExportOptions, type ExportType as AttendanceExportType } from './export-dialog';
 
-type ExportType = 'employee' | 'monthly' | 'attendance-csv' | 'attendance-pdf';
+type ExportType = 'employee' | AttendanceExportType;
 
 interface ExportConfig {
   id: ExportType;
@@ -85,118 +66,132 @@ const exportConfigs: ExportConfig[] = [
 ];
 
 export function CSVExportPanel() {
-  const [showExportDialog, setShowExportDialog] = useState(false);
-  const [selectedExport, setSelectedExport] = useState<ExportType | null>(null);
-  const [exporting, setExporting] = useState(false);
-
-  // Export options state
+  // 従業員エクスポートダイアログ
+  const [showEmployeeDialog, setShowEmployeeDialog] = useState(false);
+  const [employeeExporting, setEmployeeExporting] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [includeRetired, setIncludeRetired] = useState(false);
   const [includePreHire, setIncludePreHire] = useState(false);
-  const [includeActualPunch, setIncludeActualPunch] = useState(true);
-  const [timeFormat, setTimeFormat] = useState<'time' | 'hour_minute' | 'decimal' | 'minutes'>('time');
 
-  // Stores
+  // 勤怠系エクスポートダイアログ（共通）
+  const [attendanceDialogType, setAttendanceDialogType] = useState<AttendanceExportType | null>(null);
+  const [attendanceExporting, setAttendanceExporting] = useState(false);
+
   const { users } = useUserStore();
   const { records: attendanceRecords } = useAttendanceHistoryStore();
 
-  const activeConfig = selectedExport ? exportConfigs.find(c => c.id === selectedExport) : null;
-
-  // 年の選択肢を生成
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
-  // エクスポート実行
-  const handleExport = useCallback(async () => {
-    if (!selectedExport) return;
+  const openExportDialog = (type: ExportType) => {
+    if (type === 'employee') {
+      setShowEmployeeDialog(true);
+    } else {
+      setAttendanceDialogType(type);
+    }
+  };
 
-    setExporting(true);
-
+  // 従業員エクスポート
+  const handleEmployeeExport = useCallback(async () => {
+    setEmployeeExporting(true);
     try {
-      switch (selectedExport) {
-        case 'employee': {
-          // 従業員データフィルタリング
-          let filteredUsers = [...users];
-
-          if (!includeRetired) {
-            filteredUsers = filteredUsers.filter(u => u.status !== 'retired');
-          }
-          if (!includePreHire) {
-            filteredUsers = filteredUsers.filter(u => {
-              if (!u.hireDate) return true;
-              const hireDate = new Date(u.hireDate);
-              return hireDate <= new Date();
-            });
-          }
-
-          if (filteredUsers.length === 0) {
-            toast.error('エクスポートするデータがありません');
-            return;
-          }
-
-          const result = exportUsersToCSV(filteredUsers, `employees_${selectedYear}${String(selectedMonth).padStart(2, '0')}.csv`);
-          if (result.success) {
-            toast.success(`${result.recordCount}件の従業員データをエクスポートしました`);
-          } else {
-            toast.error(result.error || 'エクスポートに失敗しました');
-          }
-          break;
-        }
-
-        case 'monthly':
-        case 'attendance-csv': {
-          // 月別勤怠データフィルタリング
-          const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
-          const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-31`;
-
-          const filteredRecords = attendanceRecords.filter(r =>
-            r.date >= startDate && r.date <= endDate
-          );
-
-          if (filteredRecords.length === 0) {
-            toast.error('エクスポートするデータがありません');
-            return;
-          }
-
-          const filename = selectedExport === 'monthly'
-            ? `monthly_${selectedYear}${String(selectedMonth).padStart(2, '0')}.csv`
-            : `attendance_${selectedYear}${String(selectedMonth).padStart(2, '0')}.csv`;
-
-          const result = exportAttendanceToCSV(filteredRecords, filename);
-          if (result.success) {
-            toast.success(`${result.recordCount}件の勤怠データをエクスポートしました`);
-          } else {
-            toast.error(result.error || 'エクスポートに失敗しました');
-          }
-          break;
-        }
-
-        case 'attendance-pdf': {
-          // PDFエクスポートはブラウザ印刷機能を使用
-          toast.info('PDF出力はブラウザの印刷機能を使用してください', {
-            description: '勤怠一覧画面から印刷ダイアログを開き、「PDFとして保存」を選択してください',
-          });
-          break;
-        }
+      let filteredUsers = [...users];
+      if (!includeRetired) {
+        filteredUsers = filteredUsers.filter(u => u.status !== 'retired');
+      }
+      if (!includePreHire) {
+        filteredUsers = filteredUsers.filter(u => {
+          if (!u.hireDate) return true;
+          return new Date(u.hireDate) <= new Date();
+        });
+      }
+      if (filteredUsers.length === 0) {
+        toast.error('エクスポートするデータがありません');
+        return;
+      }
+      const result = exportUsersToCSV(filteredUsers, `employees_${selectedYear}${String(selectedMonth).padStart(2, '0')}.csv`);
+      if (result.success) {
+        toast.success(`${result.recordCount}件の従業員データをエクスポートしました`);
+      } else {
+        toast.error(result.error || 'エクスポートに失敗しました');
       }
     } catch (error) {
       console.error('Export error:', error);
       toast.error('エクスポートに失敗しました');
     } finally {
-      setExporting(false);
-      setShowExportDialog(false);
+      setEmployeeExporting(false);
+      setShowEmployeeDialog(false);
     }
-  }, [selectedExport, selectedYear, selectedMonth, includeRetired, includePreHire, users, attendanceRecords]);
+  }, [users, includeRetired, includePreHire, selectedYear, selectedMonth]);
 
-  // ダイアログを開く
-  const openExportDialog = (exportType: ExportType) => {
-    setSelectedExport(exportType);
-    setShowExportDialog(true);
-  };
+  // 勤怠系エクスポート
+  const handleAttendanceExport = useCallback(async (options: ExportOptions) => {
+    if (!attendanceDialogType) return;
+    setAttendanceExporting(true);
+    try {
+      const yearMonth = options.periodType === 'single' ? options.yearMonth : options.yearMonthFrom;
+      const [y, m] = (yearMonth || '').split('-');
+
+      if (attendanceDialogType === 'attendance-pdf') {
+        toast.info('PDF出力機能は準備中です', {
+          description: '現在はブラウザの印刷機能をご利用ください',
+        });
+        return;
+      }
+
+      // 勤怠データフィルタリング
+      let startDate: string;
+      let endDate: string;
+
+      if (options.periodType === 'single') {
+        startDate = `${y}-${m}-01`;
+        endDate = `${y}-${m}-31`;
+      } else {
+        const [fy, fm] = (options.yearMonthFrom || '').split('-');
+        const [ty, tm] = (options.yearMonthTo || '').split('-');
+        startDate = `${fy}-${fm}-01`;
+        endDate = `${ty}-${tm}-31`;
+      }
+
+      let filteredRecords = attendanceRecords.filter(r =>
+        r.date >= startDate && r.date <= endDate
+      );
+
+      // 従業員フィルタ
+      if (options.unitType === 'employee' && !options.selectedEmployees.includes('all')) {
+        filteredRecords = filteredRecords.filter(r =>
+          options.selectedEmployees.includes(r.userId || '')
+        );
+      }
+
+      if (filteredRecords.length === 0) {
+        toast.error('エクスポートするデータがありません');
+        return;
+      }
+
+      const prefix = attendanceDialogType === 'monthly' ? 'monthly' : 'attendance';
+      const filename = `${prefix}_${y}${m}.csv`;
+      const result = exportAttendanceToCSV(filteredRecords, filename);
+      if (result.success) {
+        toast.success(`${result.recordCount}件の勤怠データをエクスポートしました`);
+      } else {
+        toast.error(result.error || 'エクスポートに失敗しました');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('エクスポートに失敗しました');
+    } finally {
+      setAttendanceExporting(false);
+      setAttendanceDialogType(null);
+    }
+  }, [attendanceDialogType, attendanceRecords]);
+
+  const activeAttendanceConfig = attendanceDialogType
+    ? exportConfigs.find(c => c.id === attendanceDialogType)
+    : null;
 
   return (
     <div className="space-y-6">
-      {/* 説明 */}
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
@@ -205,7 +200,6 @@ export function CSVExportPanel() {
         </AlertDescription>
       </Alert>
 
-      {/* エクスポートカード一覧 */}
       <div className="grid gap-4 sm:grid-cols-2">
         {exportConfigs.map(config => (
           <Card key={config.id} className="cursor-pointer hover:border-primary/50 transition-colors">
@@ -217,9 +211,7 @@ export function CSVExportPanel() {
                   </div>
                   <div>
                     <CardTitle className="text-base">{config.title}</CardTitle>
-                    <CardDescription className="text-sm">
-                      {config.description}
-                    </CardDescription>
+                    <CardDescription className="text-sm">{config.description}</CardDescription>
                   </div>
                 </div>
                 <Badge variant={config.format === 'csv' ? 'default' : 'secondary'}>
@@ -228,10 +220,7 @@ export function CSVExportPanel() {
               </div>
             </CardHeader>
             <CardContent>
-              <Button
-                className="w-full"
-                onClick={() => openExportDialog(config.id)}
-              >
+              <Button className="w-full" onClick={() => openExportDialog(config.id)}>
                 <Download className="mr-2 h-4 w-4" />
                 エクスポート
               </Button>
@@ -240,157 +229,80 @@ export function CSVExportPanel() {
         ))}
       </div>
 
-      {/* エクスポートダイアログ */}
-      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+      {/* 従業員エクスポートダイアログ */}
+      <Dialog open={showEmployeeDialog} onOpenChange={setShowEmployeeDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings2 className="h-5 w-5" />
-              {activeConfig?.title}エクスポート
+              従業員データエクスポート
             </DialogTitle>
-            <DialogDescription>
-              エクスポートオプションを選択してください
-            </DialogDescription>
+            <DialogDescription>エクスポートオプションを選択してください</DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
-            {/* 年月選択 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>対象年</Label>
-                <Select
-                  value={String(selectedYear)}
-                  onValueChange={(v) => setSelectedYear(parseInt(v))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {years.map(year => (
-                      <SelectItem key={year} value={String(year)}>
-                        {year}年
-                      </SelectItem>
+                      <SelectItem key={year} value={String(year)}>{year}年</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>対象月</Label>
-                <Select
-                  value={String(selectedMonth)}
-                  onValueChange={(v) => setSelectedMonth(parseInt(v))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                      <SelectItem key={month} value={String(month)}>
-                        {month}月
-                      </SelectItem>
+                      <SelectItem key={month} value={String(month)}>{month}月</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
-            {/* 従業員エクスポートオプション */}
-            {selectedExport === 'employee' && (
-              <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium text-sm">フィルターオプション</h4>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="include-retired" className="text-sm">退職者を含める</Label>
-                  <Switch
-                    id="include-retired"
-                    checked={includeRetired}
-                    onCheckedChange={setIncludeRetired}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="include-pre-hire" className="text-sm">入社前社員を含める</Label>
-                  <Switch
-                    id="include-pre-hire"
-                    checked={includePreHire}
-                    onCheckedChange={setIncludePreHire}
-                  />
-                </div>
+            <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+              <h4 className="font-medium text-sm">フィルターオプション</h4>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="include-retired" className="text-sm">退職者を含める</Label>
+                <Switch id="include-retired" checked={includeRetired} onCheckedChange={setIncludeRetired} />
               </div>
-            )}
-
-            {/* 勤怠エクスポートオプション */}
-            {(selectedExport === 'monthly' || selectedExport === 'attendance-csv') && (
-              <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium text-sm">出力オプション</h4>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="include-actual-punch" className="text-sm">実打刻時間を含める</Label>
-                  <Switch
-                    id="include-actual-punch"
-                    checked={includeActualPunch}
-                    onCheckedChange={setIncludeActualPunch}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">時間フォーマット</Label>
-                  <Select
-                    value={timeFormat}
-                    onValueChange={(v) => setTimeFormat(v as 'time' | 'hour_minute' | 'decimal' | 'minutes')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="time">時間:分（例: 1:30）</SelectItem>
-                      <SelectItem value="hour_minute">時間+分（例: 1.30）</SelectItem>
-                      <SelectItem value="decimal">小数点（例: 1.50）</SelectItem>
-                      <SelectItem value="minutes">分（例: 90）</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="include-pre-hire" className="text-sm">入社前社員を含める</Label>
+                <Switch id="include-pre-hire" checked={includePreHire} onCheckedChange={setIncludePreHire} />
               </div>
-            )}
-
-            {/* PDFオプション */}
-            {selectedExport === 'attendance-pdf' && (
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  PDF出力は勤怠一覧画面からブラウザの印刷機能を使用して行います。
-                  「エクスポート」ボタンをクリックすると、印刷プレビュー画面が開きます。
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* データ件数プレビュー */}
+            </div>
             <div className="p-3 bg-primary/5 rounded-lg flex items-center justify-between">
               <span className="text-sm">エクスポート対象</span>
-              <span className="font-medium">
-                {selectedExport === 'employee' && `約${users.length}件`}
-                {(selectedExport === 'monthly' || selectedExport === 'attendance-csv') && `約${attendanceRecords.length}件`}
-                {selectedExport === 'attendance-pdf' && 'ブラウザ印刷'}
-              </span>
+              <span className="font-medium">約{users.length}件</span>
             </div>
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowExportDialog(false)}>
-              キャンセル
-            </Button>
-            <Button onClick={handleExport} disabled={exporting}>
-              {exporting ? (
-                <>
-                  <span className="animate-spin mr-2">⟳</span>
-                  エクスポート中...
-                </>
+            <Button variant="outline" onClick={() => setShowEmployeeDialog(false)}>キャンセル</Button>
+            <Button onClick={handleEmployeeExport} disabled={employeeExporting}>
+              {employeeExporting ? (
+                <><span className="animate-spin mr-2">⟳</span>エクスポート中...</>
               ) : (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  エクスポート
-                </>
+                <><CheckCircle className="mr-2 h-4 w-4" />エクスポート</>
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 勤怠系共通エクスポートダイアログ */}
+      <ExportDialog
+        open={!!attendanceDialogType}
+        onOpenChange={(open) => { if (!open) setAttendanceDialogType(null); }}
+        title={activeAttendanceConfig?.title || ''}
+        exportType={attendanceDialogType || 'monthly'}
+        onExport={handleAttendanceExport}
+        exporting={attendanceExporting}
+        estimatedCount={attendanceRecords.length}
+      />
     </div>
   );
 }

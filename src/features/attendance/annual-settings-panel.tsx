@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type {
-  HolidaySetting, RegularHoliday, AnnualHoliday, CompanyHoliday, WorkRule, PayrollMonth,
+  HolidaySetting, RegularHoliday, AnnualHoliday, CompanyHoliday, WorkRule, PayrollMonth, PlannedLeaveDate,
 } from '@/lib/attendance/annual-settings-helpers';
 import {
   DAY_LABELS, DAY_TYPE_LABELS, MONTH_NAMES, defaultHolidaySettings, calculateMonthlyDays,
 } from '@/lib/attendance/annual-settings-helpers';
-import { HolidaySettingsDialog, CustomHolidayDialog, DailyHoursDialog } from '@/features/attendance/annual-settings-dialogs';
+import { HolidaySettingsDialog, CustomHolidayDialog, DailyHoursDialog, PlannedLeaveDialog } from '@/features/attendance/annual-settings-dialogs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +39,11 @@ export function AnnualSettingsPanel() {
   const [regularForm, setRegularForm] = useState({ startMonth: '', startDay: '', endMonth: '', endDay: '', name: '' });
   const [annualForm, setAnnualForm] = useState({ date: '', name: '' });
 
+  // 計画的付与
+  const [plannedLeaveDates, setPlannedLeaveDates] = useState<PlannedLeaveDate[]>([]);
+  const [plannedLeaveDialogOpen, setPlannedLeaveDialogOpen] = useState(false);
+  const [plannedLeaveForm, setPlannedLeaveForm] = useState({ date: '', name: '' });
+
   // 1日の所定労働時間ダイアログ
   const [dailyHoursDialogOpen, setDailyHoursDialogOpen] = useState(false);
   const [tempDailyHours, setTempDailyHours] = useState(8.0);
@@ -68,6 +73,24 @@ export function AnnualSettingsPanel() {
     }
   }, []);
 
+  // 計画的付与日取得
+  const fetchPlannedLeave = useCallback(async (year: number) => {
+    try {
+      const res = await fetch(`/api/attendance-master/planned-leave?fiscalYear=${year}`);
+      const json = await res.json();
+      if (json.success && json.data?.dates) {
+        setPlannedLeaveDates(json.data.dates.map((d: Record<string, unknown>) => ({
+          id: d.id as string,
+          date: new Date(d.date as string).toISOString().split('T')[0],
+          name: d.name as string,
+          fiscalYear: d.fiscalYear as number,
+        })));
+      }
+    } catch {
+      // フォールバック
+    }
+  }, []);
+
   // 就業ルール取得
   const fetchWorkRules = useCallback(async () => {
     try {
@@ -86,13 +109,13 @@ export function AnnualSettingsPanel() {
   }, []);
 
   useEffect(() => {
-    Promise.all([fetchHolidays(selectedYear), fetchWorkRules()]).finally(() => setIsLoading(false));
-  }, [fetchHolidays, fetchWorkRules, selectedYear]);
+    Promise.all([fetchHolidays(selectedYear), fetchPlannedLeave(selectedYear), fetchWorkRules()]).finally(() => setIsLoading(false));
+  }, [fetchHolidays, fetchPlannedLeave, fetchWorkRules, selectedYear]);
 
   const handleYearChange = (year: number) => {
     setSelectedYear(year);
     setIsLoading(true);
-    fetchHolidays(year).finally(() => setIsLoading(false));
+    Promise.all([fetchHolidays(year), fetchPlannedLeave(year)]).finally(() => setIsLoading(false));
   };
 
   const monthlyDays = useMemo(() =>
@@ -178,6 +201,29 @@ export function AnnualSettingsPanel() {
       const res = await fetch(`/api/attendance-master/holidays?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) { setAnnualHolidays(prev => prev.filter(h => h.id !== id)); toast.success('削除しました'); }
+    } catch { toast.error('削除に失敗しました'); }
+  };
+
+  // 計画的付与日 CRUD
+  const addPlannedLeave = async () => {
+    if (!plannedLeaveForm.date || !plannedLeaveForm.name.trim()) return;
+    try {
+      const res = await fetch('/api/attendance-master/planned-leave', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: plannedLeaveForm.date, name: plannedLeaveForm.name.trim(), fiscalYear: selectedYear }),
+      });
+      const json = await res.json();
+      if (json.success) { toast.success('計画的付与日を登録しました'); fetchPlannedLeave(selectedYear); }
+      else { toast.error(json.error || '保存に失敗しました'); }
+    } catch { toast.error('保存に失敗しました'); }
+    setPlannedLeaveForm({ date: '', name: '' });
+  };
+
+  const removePlannedLeave = async (id: string) => {
+    try {
+      const res = await fetch(`/api/attendance-master/planned-leave?id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) { setPlannedLeaveDates(prev => prev.filter(d => d.id !== id)); toast.success('削除しました'); }
     } catch { toast.error('削除に失敗しました'); }
   };
 
@@ -276,6 +322,38 @@ export function AnnualSettingsPanel() {
               </Table>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 計画的付与設定 */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">計画的付与設定</CardTitle>
+              <CardDescription>会社が指定する有給休暇（年5日分）を設定します</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setPlannedLeaveDialogOpen(true)}><Edit className="w-4 h-4 mr-2" />編集</Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {plannedLeaveDates.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-3">計画的付与日が登録されていません。</p>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>月日</TableHead><TableHead>名称</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {plannedLeaveDates
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .map(d => (
+                    <TableRow key={d.id}>
+                      <TableCell>{new Date(d.date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}</TableCell>
+                      <TableCell>{d.name}</TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -488,6 +566,12 @@ export function AnnualSettingsPanel() {
       <DailyHoursDialog
         open={dailyHoursDialogOpen} onOpenChange={setDailyHoursDialogOpen}
         hours={tempDailyHours} onHoursChange={setTempDailyHours} onSave={saveDailyHours}
+      />
+      <PlannedLeaveDialog
+        open={plannedLeaveDialogOpen} onOpenChange={setPlannedLeaveDialogOpen}
+        plannedLeaveDates={plannedLeaveDates}
+        form={plannedLeaveForm} onFormChange={setPlannedLeaveForm}
+        onAdd={addPlannedLeave} onRemove={removePlannedLeave}
       />
     </div>
   );

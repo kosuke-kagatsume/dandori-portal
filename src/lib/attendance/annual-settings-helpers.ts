@@ -38,6 +38,13 @@ export interface PayrollMonth {
   status: 'confirmed' | 'unconfirmed';
 }
 
+export interface PlannedLeaveDate {
+  id: string;
+  date: string;
+  name: string;
+  fiscalYear: number;
+}
+
 export interface CompanyHoliday {
   id: string;
   date: string;

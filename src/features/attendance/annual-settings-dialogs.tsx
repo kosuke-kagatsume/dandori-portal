@@ -1,6 +1,6 @@
 'use client';
 
-import type { DayType, HolidaySetting, RegularHoliday, AnnualHoliday } from '@/lib/attendance/annual-settings-helpers';
+import type { DayType, HolidaySetting, RegularHoliday, AnnualHoliday, PlannedLeaveDate } from '@/lib/attendance/annual-settings-helpers';
 import { DAY_LABELS } from '@/lib/attendance/annual-settings-helpers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -233,6 +233,76 @@ export function DailyHoursDialog({ open, onOpenChange, hours, onHoursChange, onS
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>キャンセル</Button>
           <Button onClick={onSave}>更新する</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── 計画的付与設定ダイアログ ──────────────────────────────────────────
+
+interface PlannedLeaveForm { date: string; name: string; }
+
+interface PlannedLeaveDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  plannedLeaveDates: PlannedLeaveDate[];
+  form: PlannedLeaveForm;
+  onFormChange: (form: PlannedLeaveForm) => void;
+  onAdd: () => void;
+  onRemove: (id: string) => void;
+}
+
+export function PlannedLeaveDialog({
+  open, onOpenChange, plannedLeaveDates,
+  form, onFormChange, onAdd, onRemove,
+}: PlannedLeaveDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] !flex !flex-col p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-2 flex-shrink-0">
+          <DialogTitle>計画的付与設定</DialogTitle>
+          <DialogDescription>会社が指定する計画付与日を入力し「追加」をクリックしてください。</DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 space-y-4 py-4">
+          {/* 登録済み一覧 */}
+          {plannedLeaveDates.length > 0 && (
+            <div className="space-y-1 max-h-[250px] overflow-y-auto">
+              {plannedLeaveDates
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map(d => (
+                  <div key={d.id} className="flex items-center justify-between rounded-lg border px-3 py-1.5">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm">
+                        {new Date(d.date).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' })}
+                      </span>
+                      <span className="text-sm font-medium">{d.name}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onRemove(d.id)}>
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {/* 追加フォーム */}
+          <div className="flex items-end gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">計画的付与日</Label>
+              <Input type="date" value={form.date} onChange={e => onFormChange({ ...form, date: e.target.value })} className="h-9" />
+            </div>
+            <div className="space-y-1 flex-1">
+              <Label className="text-xs">名称</Label>
+              <Input value={form.name} onChange={e => onFormChange({ ...form, name: e.target.value })} placeholder="例：有給休暇計画付与" className="h-9" />
+            </div>
+            <Button onClick={onAdd} size="sm" disabled={!form.date || !form.name.trim()}>
+              <Plus className="w-4 h-4 mr-1" />追加
+            </Button>
+          </div>
+        </div>
+        <DialogFooter className="px-6 py-4 border-t flex-shrink-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>閉じる</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
