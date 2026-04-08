@@ -275,7 +275,7 @@ export function showSection(type: WorkRuleType, section: string): boolean {
     flexScope: ['flextime'],
     variablePeriod: ['monthly_variable', 'yearly_variable'],
     variableScope: ['monthly_variable', 'yearly_variable'],
-    workTime: ['standard', 'shift', 'manager'],
+    workTime: ['manager'],
     workPattern: ['standard', 'shift', 'manager', 'discretionary', 'flextime', 'monthly_variable', 'yearly_variable'],
     lateEarlyTally: ['standard', 'shift', 'flextime', 'discretionary', 'monthly_variable', 'yearly_variable'],
     scheduledTallyRange: ['standard', 'shift', 'monthly_variable', 'yearly_variable'],

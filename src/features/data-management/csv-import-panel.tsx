@@ -44,12 +44,10 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  importEmployees,
   importAttendance,
   importLeaveUsage,
   importLeaveGrant,
   importTransferReservation,
-  generateEmployeeTemplate,
   generateAttendanceTemplate,
   generateLeaveUsageTemplate,
   generateLeaveGrantTemplate,
@@ -60,7 +58,7 @@ import {
   type CSVImportOptions,
 } from '@/lib/csv/csv-import';
 
-type ImportType = 'employee' | 'attendance' | 'leave-usage' | 'leave-grant' | 'transfer-reservation';
+type ImportType = 'attendance' | 'leave-usage' | 'leave-grant' | 'transfer-reservation';
 
 interface ImportConfig {
   id: ImportType;
@@ -75,16 +73,6 @@ interface ImportConfig {
 }
 
 const importConfigs: ImportConfig[] = [
-  {
-    id: 'employee',
-    title: '従業員データ',
-    description: '従業員の基本情報をインポート',
-    icon: <Users className="h-5 w-5" />,
-    maxRows: 3000,
-    templateGenerator: generateEmployeeTemplate,
-    templateFilename: 'employee_template.csv',
-    importFunction: importEmployees,
-  },
   {
     id: 'attendance',
     title: '日次勤怠データ',
@@ -128,7 +116,7 @@ const importConfigs: ImportConfig[] = [
 ];
 
 export function CSVImportPanel() {
-  const [activeTab, setActiveTab] = useState<ImportType>('employee');
+  const [activeTab, setActiveTab] = useState<ImportType>('attendance');
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [importResult, setImportResult] = useState<CSVImportResult | null>(null);
   const [importing, setImporting] = useState(false);
@@ -209,7 +197,7 @@ export function CSVImportPanel() {
 
       {/* タブ */}
       <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as ImportType); handleReset(); }}>
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
           {importConfigs.map(config => (
             <TabsTrigger key={config.id} value={config.id} className="flex items-center gap-2">
               {config.icon}

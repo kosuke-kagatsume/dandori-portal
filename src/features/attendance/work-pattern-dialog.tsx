@@ -27,7 +27,7 @@ interface Props {
 }
 
 export function WorkPatternDialog({ open, onOpenChange, pattern, onSave, workRuleType = 'standard' }: Props) {
-  const hideContractFields = workRuleType === 'manager' || workRuleType === 'discretionary' || workRuleType === 'flextime';
+  const hideContractFields = workRuleType === 'manager' || workRuleType === 'discretionary';
   const isFlex = workRuleType === 'flextime';
 
   const mergeWithDefaults = (p: WorkPatternFormData | null): WorkPatternFormData => ({
@@ -144,7 +144,7 @@ export function WorkPatternDialog({ open, onOpenChange, pattern, onSave, workRul
                       <div key={rule.id} className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground whitespace-nowrap">労働時間</span>
                         <Input
-                          type="number" min="0"
+                          type="number" min="0" max="12"
                           value={Math.floor(rule.laborMinutes / 60)}
                           onChange={(e) => {
                             const rules = [...form.autoBreakRules];
@@ -166,7 +166,7 @@ export function WorkPatternDialog({ open, onOpenChange, pattern, onSave, workRul
                         />
                         <span className="text-xs text-muted-foreground whitespace-nowrap">超えたら</span>
                         <Input
-                          type="number" min="0"
+                          type="number" min="0" max="3"
                           value={Math.floor(rule.breakMinutes / 60)}
                           onChange={(e) => {
                             const rules = [...form.autoBreakRules];
