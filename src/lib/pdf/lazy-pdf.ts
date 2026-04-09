@@ -6,6 +6,8 @@
 import type { PayrollData, BonusData } from '@/types/pdf';
 import type { LeaveRequest } from '@/lib/store/leave-management-store';
 import type { PerformanceEvaluation } from '@/lib/payroll/performance-evaluation-types';
+import type { AttendanceRecord } from '@/lib/store/attendance-history-store';
+import type { ExportOptions } from '@/features/data-management/export-dialog';
 
 export async function generatePayrollPDFLazy(data: PayrollData) {
   const { generatePayrollPDF } = await import('./payroll-pdf');
@@ -25,4 +27,13 @@ export async function generateLeavePDFLazy(data: LeaveRequest[]) {
 export async function generateEvaluationPDFLazy(data: PerformanceEvaluation) {
   const { generateEvaluationPDF } = await import('./evaluation-pdf');
   return generateEvaluationPDF(data);
+}
+
+export async function generateAttendancePDFLazy(
+  records: AttendanceRecord[],
+  options: ExportOptions,
+  users: { id: string; name: string; employeeNumber?: string; department?: string }[],
+) {
+  const { generateAttendancePDF } = await import('./attendance-pdf');
+  return generateAttendancePDF(records, options, users);
 }

@@ -132,14 +132,7 @@ export function CSVExportPanel() {
       const yearMonth = options.periodType === 'single' ? options.yearMonth : options.yearMonthFrom;
       const [y, m] = (yearMonth || '').split('-');
 
-      if (attendanceDialogType === 'attendance-pdf') {
-        toast.info('PDF出力機能は準備中です', {
-          description: '現在はブラウザの印刷機能をご利用ください',
-        });
-        return;
-      }
-
-      // 勤怠データフィルタリング
+      // 勤怠データフィルタリング（PDF/CSV共通）
       let startDate: string;
       let endDate: string;
 
@@ -157,7 +150,6 @@ export function CSVExportPanel() {
         r.date >= startDate && r.date <= endDate
       );
 
-      // 従業員フィルタ
       if (options.unitType === 'employee' && !options.selectedEmployees.includes('all')) {
         filteredRecords = filteredRecords.filter(r =>
           options.selectedEmployees.includes(r.userId || '')
@@ -169,6 +161,25 @@ export function CSVExportPanel() {
         return;
       }
 
+      // PDF出力
+      if (attendanceDialogType === 'attendance-pdf') {
+        const { generateAttendancePDFLazy } = await import('@/lib/pdf/lazy-pdf');
+        const userInfos = users.map(u => ({
+          id: u.id,
+          name: u.name || '',
+          employeeNumber: u.employeeNumber || undefined,
+          department: u.department || undefined,
+        }));
+        const pdf = await generateAttendancePDFLazy(filteredRecords, options, userInfos);
+        const ymStr = options.periodType === 'single'
+          ? (yearMonth || '').replace('-', '')
+          : `${(options.yearMonthFrom || '').replace('-', '')}_${(options.yearMonthTo || '').replace('-', '')}`;
+        pdf.save(`出勤簿_${ymStr}.pdf`);
+        toast.success('出勤簿PDFをダウンロードしました');
+        return;
+      }
+
+      // CSV出力
       const prefix = attendanceDialogType === 'monthly' ? 'monthly' : 'attendance';
       const filename = `${prefix}_${y}${m}.csv`;
       const result = exportAttendanceToCSV(filteredRecords, filename);
@@ -184,7 +195,7 @@ export function CSVExportPanel() {
       setAttendanceExporting(false);
       setAttendanceDialogType(null);
     }
-  }, [attendanceDialogType, attendanceRecords]);
+  }, [attendanceDialogType, attendanceRecords, users]);
 
   const activeAttendanceConfig = attendanceDialogType
     ? exportConfigs.find(c => c.id === attendanceDialogType)
