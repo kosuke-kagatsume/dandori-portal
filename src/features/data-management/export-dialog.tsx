@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -11,7 +14,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Settings2, CheckCircle } from 'lucide-react';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
+import { Settings2, CheckCircle, Search, X, ChevronDown } from 'lucide-react';
 import { MonthPicker, MonthRangePicker } from '@/components/ui/month-range-picker';
 import { useUserStore } from '@/lib/store/user-store';
 
@@ -65,6 +71,143 @@ const defaultOptions: ExportOptions = {
   timeFormat: 'time',
   includeYearMonth: true,
 };
+
+// ── 従業員マルチセレクト ──────────────────────────────────────────
+
+interface EmployeeOption {
+  id: string;
+  label: string;
+}
+
+function EmployeeMultiSelect({
+  employees,
+  selected,
+  onChange,
+}: {
+  employees: EmployeeOption[];
+  selected: string[];
+  onChange: (value: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const isAll = selected.includes('all') || selected.length === 0;
+
+  const filtered = useMemo(() => {
+    if (!search) return employees;
+    const q = search.toLowerCase();
+    return employees.filter(e => e.label.toLowerCase().includes(q));
+  }, [employees, search]);
+
+  const toggleAll = () => {
+    onChange(['all']);
+  };
+
+  const toggleEmployee = (id: string) => {
+    if (isAll) {
+      // 「全て」から個別選択に切り替え
+      onChange([id]);
+      return;
+    }
+    const next = selected.includes(id)
+      ? selected.filter(s => s !== id)
+      : [...selected.filter(s => s !== 'all'), id];
+    onChange(next.length === 0 ? ['all'] : next);
+  };
+
+  const removeEmployee = (id: string) => {
+    const next = selected.filter(s => s !== id);
+    onChange(next.length === 0 ? ['all'] : next);
+  };
+
+  const selectedLabels = useMemo(() => {
+    if (isAll) return [];
+    return selected
+      .map(id => employees.find(e => e.id === id))
+      .filter((e): e is EmployeeOption => !!e);
+  }, [selected, employees, isAll]);
+
+  useEffect(() => {
+    if (open) {
+      setSearch('');
+      setTimeout(() => searchRef.current?.focus(), 100);
+    }
+  }, [open]);
+
+  return (
+    <div className="space-y-2">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal h-auto min-h-10"
+          >
+            <span className="text-sm truncate">
+              {isAll ? '全て' : `${selectedLabels.length}名選択中`}
+            </span>
+            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <div className="p-2 border-b">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchRef}
+                placeholder="名前で検索..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-8 h-8"
+              />
+            </div>
+          </div>
+          <div className="max-h-[200px] overflow-y-auto p-1">
+            <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer">
+              <Checkbox
+                checked={isAll}
+                onCheckedChange={toggleAll}
+              />
+              <span className="text-sm font-medium">全て</span>
+            </label>
+            {filtered.map(e => (
+              <label key={e.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer">
+                <Checkbox
+                  checked={!isAll && selected.includes(e.id)}
+                  onCheckedChange={() => toggleEmployee(e.id)}
+                />
+                <span className="text-sm">{e.label}</span>
+              </label>
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-2">該当なし</p>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* 選択済みバッジ */}
+      {selectedLabels.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selectedLabels.map(e => (
+            <Badge key={e.id} variant="secondary" className="gap-1 pr-1">
+              <span className="text-xs">{e.label}</span>
+              <button
+                type="button"
+                onClick={() => removeEmployee(e.id)}
+                className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── コンポーネント ──────────────────────────────────────────
 
@@ -164,20 +307,11 @@ export function ExportDialog({
             </RadioGroup>
 
             {options.unitType === 'employee' ? (
-              <Select
-                value={options.selectedEmployees[0] || 'all'}
-                onValueChange={(v) => update('selectedEmployees', [v])}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="従業員を選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">全て</SelectItem>
-                  {employeeOptions.map(e => (
-                    <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <EmployeeMultiSelect
+                employees={employeeOptions}
+                selected={options.selectedEmployees}
+                onChange={(v) => update('selectedEmployees', v)}
+              />
             ) : (
               <Select
                 value={options.selectedClosingDay}

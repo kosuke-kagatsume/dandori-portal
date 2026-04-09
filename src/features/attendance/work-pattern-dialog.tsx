@@ -27,7 +27,7 @@ interface Props {
 }
 
 export function WorkPatternDialog({ open, onOpenChange, pattern, onSave, workRuleType = 'standard' }: Props) {
-  const hideContractFields = workRuleType === 'manager' || workRuleType === 'discretionary';
+  const hideContractFields = workRuleType === 'manager' || workRuleType === 'discretionary' || workRuleType === 'flextime';
   const isFlex = workRuleType === 'flextime';
 
   const mergeWithDefaults = (p: WorkPatternFormData | null): WorkPatternFormData => ({
