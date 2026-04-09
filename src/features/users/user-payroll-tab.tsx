@@ -9,23 +9,23 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
-import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Banknote, Building, Edit, ShieldAlert, Heart, Loader2 } from 'lucide-react';
+import { Banknote, Edit, ShieldAlert, Heart, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store';
 import type { User } from '@/types';
 import {
-  type ClosingDayGroup, type PayCategory, type Municipality,
+  type ClosingDayGroup, type Municipality,
   type AllowanceItem, type DeductionItem, type EmployeeDependent,
-  type ResidentTaxMonthly, type SalarySettings, taxClassLabels,
+  type ResidentTaxMonthly, type SalarySettings,
 } from '@/lib/payroll/payroll-types';
 import { EditableField, SectionEditButtons } from './payroll/payroll-ui-helpers';
 import { SalaryDeductionContent } from './payroll/salary-deduction-content';
 import { TransferContent } from './payroll/transfer-content';
+import { IncomeTaxSection } from './payroll/income-tax-section';
+import { ResidentTaxSection } from './payroll/resident-tax-section';
+import { DependentDetailsSection } from './payroll/dependent-details-section';
 
 interface UserPayrollTabProps {
   user: User;
@@ -34,6 +34,12 @@ interface UserPayrollTabProps {
   onEdit?: () => void;
 }
 
+const paymentTypeLabels: Record<string, string> = {
+  monthly: '月給',
+  daily: '日給',
+  hourly: '時給',
+};
+
 export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) {
   const { currentTenant } = useTenantStore();
   const tenantId = currentTenant?.id;
@@ -41,7 +47,6 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
 
   // ── マスタデータ ──────────────────────────────────────────
   const [closingDayGroups, setClosingDayGroups] = useState<ClosingDayGroup[]>([]);
-  const [payCategories, setPayCategories] = useState<PayCategory[]>([]);
   const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
   const [allowanceItems, setAllowanceItems] = useState<AllowanceItem[]>([]);
   const [deductionItems, setDeductionItems] = useState<DeductionItem[]>([]);
@@ -54,20 +59,16 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
   // ── 編集状態 ──────────────────────────────────────────
   const [editingBusiness, setEditingBusiness] = useState(false);
   const [editingDependent, setEditingDependent] = useState(false);
-  const [editingTax, setEditingTax] = useState(false);
   const [myNumberDialogOpen, setMyNumberDialogOpen] = useState(false);
   const [myNumberInput, setMyNumberInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const [businessForm, setBusinessForm] = useState({
-    paymentType: '', basicSalary: '', closingDayGroupId: '', payCategoryId: '', grade: '',
+    paymentType: '', closingDayGroupId: '',
   });
   const [dependentForm, setDependentForm] = useState({
     hasSpouse: false, spouseIsDependent: false,
     generalDependents: 0, specificDependents: 0, elderlyDependents: 0, under16Dependents: 0,
-  });
-  const [taxForm, setTaxForm] = useState({
-    municipalityId: '', isSecondaryIncome: false, taxClassification: '',
   });
 
   // ── データ取得 ──────────────────────────────────────────
@@ -83,7 +84,7 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
         fetch(`${base}/allowance-items?tenantId=${tenantId}&activeOnly=true`),
         fetch(`${base}/deduction-items?tenantId=${tenantId}&activeOnly=true`),
       ]);
-      const [cdg, pc, mun, ai, di] = await Promise.all([
+      const [cdg, _pc, mun, ai, di] = await Promise.all([
         cdgRes.ok ? cdgRes.json() : { data: [] },
         pcRes.ok ? pcRes.json() : { data: [] },
         munRes.ok ? munRes.json() : { data: [] },
@@ -91,7 +92,7 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
         diRes.ok ? diRes.json() : { data: [] },
       ]);
       setClosingDayGroups(cdg.data || []);
-      setPayCategories(pc.data || []);
+      // payCategories removed from UI (#5)
       setMunicipalities(mun.data || []);
       setAllowanceItems(ai.data || []);
       setDeductionItems(di.data || []);
@@ -140,10 +141,7 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
   const startEditBusiness = () => {
     setBusinessForm({
       paymentType: salarySettings?.paymentType || payroll?.workType || '',
-      basicSalary: String(salarySettings?.basicSalary ?? payroll?.basicSalary ?? ''),
       closingDayGroupId: salarySettings?.closingDayGroupId || '',
-      payCategoryId: salarySettings?.payCategoryId || '',
-      grade: String(salarySettings?.socialInsuranceGrade ?? ''),
     });
     setEditingBusiness(true);
   };
@@ -156,10 +154,7 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           paymentType: businessForm.paymentType,
-          basicSalary: parseInt(businessForm.basicSalary) || 0,
           closingDayGroupId: businessForm.closingDayGroupId || null,
-          payCategoryId: businessForm.payCategoryId || null,
-          socialInsuranceGrade: parseInt(businessForm.grade) || null,
         }),
       });
       if (!res.ok) throw new Error();
@@ -209,41 +204,6 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
 
   // ── 住民税・所得税 CRUD ──────────────────────────────────────────
 
-  const startEditTax = () => {
-    setTaxForm({
-      municipalityId: salarySettings?.municipalityId || '',
-      isSecondaryIncome: user.isSecondaryIncome ?? false,
-      taxClassification: user.taxClassification || '',
-    });
-    setEditingTax(true);
-  };
-
-  const saveTax = async () => {
-    setIsSaving(true);
-    try {
-      await fetch(`/api/users/${user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isSecondaryIncome: taxForm.isSecondaryIncome,
-          taxClassification: taxForm.taxClassification || null,
-        }),
-      });
-      await fetch(`/api/users/${user.id}/salary-settings`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ municipalityId: taxForm.municipalityId || null }),
-      });
-      toast.success('住民税・所得税情報を保存しました');
-      setEditingTax(false);
-      await fetchSalarySettings();
-    } catch {
-      toast.error('保存に失敗しました');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   // ── マイナンバー保存 ──────────────────────────────────────────
 
   const saveMyNumber = async () => {
@@ -271,9 +231,8 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
 
   // ── ヘルパー ──────────────────────────────────────────
 
-  const currentMunicipality = municipalities.find(m => m.id === (salarySettings?.municipalityId || taxForm.municipalityId));
+  const currentMunicipality = municipalities.find(m => m.id === salarySettings?.municipalityId);
   const currentClosingGroup = closingDayGroups.find(g => g.id === (salarySettings?.closingDayGroupId || businessForm.closingDayGroupId));
-  const currentPayCategory = payCategories.find(c => c.id === (salarySettings?.payCategoryId || businessForm.payCategoryId));
   const canEdit = isHR && !isReadOnly;
 
   // ══════════════════════════════════════════════════════════════
@@ -314,7 +273,7 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <EditableField
                 label="給与形態"
-                value={editingBusiness ? businessForm.paymentType : (salarySettings?.paymentType || payroll?.workType || '')}
+                value={editingBusiness ? businessForm.paymentType : (paymentTypeLabels[salarySettings?.paymentType || payroll?.workType || ''] || salarySettings?.paymentType || payroll?.workType || '')}
                 isEditing={editingBusiness}
                 onChange={(v) => setBusinessForm(f => ({ ...f, paymentType: v }))}
                 type="select"
@@ -325,15 +284,6 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
                 ]}
               />
               <EditableField
-                label="基本給"
-                value={editingBusiness
-                  ? businessForm.basicSalary
-                  : (salarySettings?.basicSalary != null ? `¥${salarySettings.basicSalary.toLocaleString()}` : (payroll?.basicSalary != null ? `¥${payroll.basicSalary.toLocaleString()}` : ''))}
-                isEditing={editingBusiness}
-                onChange={(v) => setBusinessForm(f => ({ ...f, basicSalary: v }))}
-                type="number"
-              />
-              <EditableField
                 label="締め日グループ"
                 value={editingBusiness ? businessForm.closingDayGroupId : (currentClosingGroup?.name || '')}
                 isEditing={editingBusiness}
@@ -341,24 +291,13 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
                 type="select"
                 selectOptions={closingDayGroups.map(g => ({ value: g.id, label: g.name }))}
               />
-              <EditableField
-                label="給与カテゴリ"
-                value={editingBusiness ? businessForm.payCategoryId : (currentPayCategory?.name || '')}
-                isEditing={editingBusiness}
-                onChange={(v) => setBusinessForm(f => ({ ...f, payCategoryId: v }))}
-                type="select"
-                selectOptions={payCategories.map(c => ({ value: c.id, label: c.name }))}
-              />
-              <EditableField
-                label="等級"
-                value={editingBusiness ? businessForm.grade : String(salarySettings?.socialInsuranceGrade ?? '')}
-                isEditing={editingBusiness}
-                onChange={(v) => setBusinessForm(f => ({ ...f, grade: v }))}
-                type="number"
-              />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">雇用形態</p>
-                <p className="text-sm mt-1">{user.employmentType || '未設定'}</p>
+                <p className="text-sm font-medium text-muted-foreground">部門</p>
+                <p className="text-sm mt-1">{user.department || '未設定'}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">職種</p>
+                <p className="text-sm mt-1">{user.position || '未設定'}</p>
               </div>
             </div>
           </CardContent>
@@ -446,77 +385,25 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
           </CardContent>
         </Card>
 
-        {/* B4: 住民税・所得税 */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Building className="h-5 w-5" />
-                <div>
-                  <CardTitle className="text-base">住民税・所得税</CardTitle>
-                  <CardDescription>税金関連設定</CardDescription>
-                </div>
-              </div>
-              {canEdit && (
-                <SectionEditButtons
-                  isEditing={editingTax} isSaving={isSaving}
-                  onEdit={startEditTax} onSave={saveTax}
-                  onCancel={() => setEditingTax(false)}
-                />
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {editingTax ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-xs">市区町村</Label>
-                  <Select value={taxForm.municipalityId} onValueChange={(v) => setTaxForm(f => ({ ...f, municipalityId: v }))}>
-                    <SelectTrigger className="h-8"><SelectValue placeholder="選択してください" /></SelectTrigger>
-                    <SelectContent>
-                      {municipalities.map(m => (
-                        <SelectItem key={m.id} value={m.id}>{m.prefectureName} {m.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-2 pt-5">
-                  <Switch checked={taxForm.isSecondaryIncome} onCheckedChange={(v) => setTaxForm(f => ({ ...f, isSecondaryIncome: v }))} />
-                  <Label className="text-xs">従たる給与</Label>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">甲乙区分</Label>
-                  <Select value={taxForm.taxClassification} onValueChange={(v) => setTaxForm(f => ({ ...f, taxClassification: v }))}>
-                    <SelectTrigger className="h-8"><SelectValue placeholder="選択" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kou">甲欄</SelectItem>
-                      <SelectItem value="otsu">乙欄</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">市区町村</p>
-                  <p className="text-sm mt-1">
-                    {currentMunicipality ? `${currentMunicipality.prefectureName} ${currentMunicipality.name}` : (payroll?.residentTaxCity || '未設定')}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">従たる給与</p>
-                  <p className="text-sm mt-1">{user.isSecondaryIncome ? 'あり' : 'なし'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">甲乙区分</p>
-                  <p className="text-sm mt-1">
-                    {user.taxClassification ? taxClassLabels[user.taxClassification] || user.taxClassification : (payroll?.incomeTaxType ? (payroll.incomeTaxType === 'otsu' ? '乙欄' : '甲欄') : '未設定')}
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* B4a: 扶養親族詳細 */}
+        <DependentDetailsSection userId={user.id} canEdit={canEdit} />
+
+        {/* B4b: 所得税 */}
+        <IncomeTaxSection
+          userId={user.id}
+          canEdit={canEdit}
+          fallbackTaxClassification={user.taxClassification || undefined}
+          fallbackIsSecondaryIncome={user.isSecondaryIncome}
+        />
+
+        {/* B4c: 住民税 */}
+        <ResidentTaxSection
+          userId={user.id}
+          canEdit={canEdit}
+          municipalities={municipalities}
+          fallbackMunicipalityId={currentMunicipality?.id}
+          fallbackMunicipalityName={currentMunicipality ? `${currentMunicipality.prefectureName} ${currentMunicipality.name}` : payroll?.residentTaxCity}
+        />
 
         {/* B5: マイナンバー */}
         <Card>

@@ -68,6 +68,48 @@ export async function POST(
 }
 
 /**
+ * PUT /api/users/[id]/leave-of-absence - 休職履歴更新
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: userId } = await params;
+    const body = await request.json();
+    const tenantId = await getTenantIdFromRequest(request);
+
+    const { recordId, startDate, endDate, leaveType, payCalcMethod, notes } = body;
+    if (!recordId) {
+      return errorResponse('recordIdが必要です', 400);
+    }
+
+    const existing = await prisma.leave_of_absence_history.findFirst({
+      where: { id: recordId, tenantId, userId },
+    });
+    if (!existing) {
+      return errorResponse('休職履歴が見つかりません', 404);
+    }
+
+    const record = await prisma.leave_of_absence_history.update({
+      where: { id: recordId },
+      data: {
+        ...(startDate && { startDate: new Date(startDate) }),
+        ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+        ...(leaveType && { leaveType }),
+        ...(payCalcMethod !== undefined && { payCalcMethod: payCalcMethod || null }),
+        ...(notes !== undefined && { notes: notes || null }),
+        updatedAt: new Date(),
+      },
+    });
+
+    return successResponse(record);
+  } catch (error) {
+    return handleApiError(error, '休職履歴の更新');
+  }
+}
+
+/**
  * DELETE /api/users/[id]/leave-of-absence - 休職履歴削除
  */
 export async function DELETE(

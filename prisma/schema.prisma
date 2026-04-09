@@ -1827,6 +1827,9 @@ model users {
   employee_dependents   employee_dependents[]
   employee_bank_accounts employee_bank_accounts[]
   employee_resident_tax_monthly employee_resident_tax_monthly[]
+  employee_dependent_details employee_dependent_details[] @relation("dependentDetails")
+  employee_income_tax_info employee_income_tax_info[] @relation("incomeTaxInfo")
+  employee_resident_tax employee_resident_tax[] @relation("residentTax")
   shift_assignments   shift_assignments[]
 
   @@index([email])
@@ -2987,6 +2990,66 @@ model employee_dependents {
 
   @@unique([tenantId, userId])
   @@index([tenantId])
+  @@index([userId])
+}
+
+// 従業員扶養親族詳細
+model employee_dependent_details {
+  id                String   @id
+  tenantId          String
+  userId            String
+  dependentType     String   // spouse:配偶者, general:一般, specific:特定, elderly:老人, under16:16歳未満
+  name              String   // 氏名
+  nameKana          String?  // フリガナ
+  birthDate         DateTime? // 生年月日
+  relationship      String?  // 続柄
+  isLivingTogether  Boolean  @default(true) // 同居
+  annualIncome      Int?     // 年間所得
+  disabilityGrade   String   @default("none") // none/general/special/fellow_living_special
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  user              users    @relation("dependentDetails", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId])
+  @@index([userId])
+}
+
+// 従業員所得税情報
+model employee_income_tax_info {
+  id                String   @id
+  tenantId          String
+  userId            String
+  taxClassification String   @default("kou") // kou:甲欄, otsu:乙欄
+  isSecondaryIncome Boolean  @default(false) // 従たる給与
+  isDisasterVictim  Boolean  @default(false) // 災害者
+  isForeigner       Boolean  @default(false) // 外国人
+  disabilityGrade   String   @default("none") // none/general/special/fellow_living_special
+  widowCategory     String   @default("none") // none/widow/single_parent
+  isWorkingStudent  Boolean  @default(false) // 勤労学生
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  user              users    @relation("incomeTaxInfo", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+  @@index([userId])
+}
+
+// 従業員住民税情報
+model employee_resident_tax {
+  id                String   @id
+  tenantId          String
+  userId            String
+  fiscalYear        Int      // 年度
+  municipalityId    String?  // 市区町村マスタID
+  collectionMethod  String   @default("special") // special:特別徴収, ordinary:普通徴収
+  monthlyAmounts    Json?    // { m1: number, ..., m12: number }
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  user              users    @relation("residentTax", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, fiscalYear])
+  @@index([tenantId, userId])
   @@index([userId])
 }
 

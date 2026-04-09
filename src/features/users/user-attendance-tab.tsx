@@ -23,7 +23,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Edit, ArrowRightLeft, PauseCircle, Briefcase, Plus } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Edit, ArrowRightLeft, PauseCircle, Briefcase, Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store';
 import { useUserStore } from '@/lib/store/user-store';
@@ -133,6 +140,8 @@ export function UserAttendanceTab({
     payCalcMethod: '',
     notes: '',
   });
+  const [editingLeaveId, setEditingLeaveId] = useState<string | null>(null);
+  const [deleteLeaveId, setDeleteLeaveId] = useState<string | null>(null);
 
   // 就業ルール一覧取得
   const fetchWorkRules = useCallback(async () => {
@@ -263,28 +272,59 @@ export function UserAttendanceTab({
     }
   };
 
-  const handleAddLeaveHistory = async () => {
+  const handleSaveLeaveHistory = async () => {
     if (!leaveForm.startDate || !leaveForm.leaveType) {
       toast.error('休職開始日と休職種別は必須です');
       return;
     }
     setIsSaving(true);
     try {
+      const isEdit = !!editingLeaveId;
       const res = await fetch(`/api/users/${user.id}/leave-of-absence`, {
-        method: 'POST',
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(leaveForm),
+        body: JSON.stringify(isEdit ? { recordId: editingLeaveId, ...leaveForm } : leaveForm),
       });
-      if (!res.ok) throw new Error('追加に失敗しました');
-      toast.success('休職履歴を追加しました');
+      if (!res.ok) throw new Error();
+      toast.success(isEdit ? '休職履歴を更新しました' : '休職履歴を追加しました');
       setLeaveDialogOpen(false);
+      setEditingLeaveId(null);
       setLeaveForm({ startDate: '', endDate: '', leaveType: '', payCalcMethod: '', notes: '' });
       await fetchLeaveHistory();
     } catch {
-      toast.error('休職履歴の追加に失敗しました');
+      toast.error('休職履歴の保存に失敗しました');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleDeleteLeaveHistory = async (recordId: string) => {
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/users/${user.id}/leave-of-absence?recordId=${recordId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error();
+      toast.success('休職履歴を削除しました');
+      setDeleteLeaveId(null);
+      await fetchLeaveHistory();
+    } catch {
+      toast.error('休職履歴の削除に失敗しました');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const startEditLeave = (record: typeof leaveHistory[0]) => {
+    setEditingLeaveId(record.id);
+    setLeaveForm({
+      startDate: record.startDate.split('T')[0],
+      endDate: record.endDate ? record.endDate.split('T')[0] : '',
+      leaveType: record.leaveType,
+      payCalcMethod: record.payCalcMethod || '',
+      notes: record.notes || '',
+    });
+    setLeaveDialogOpen(true);
   };
 
   return (
@@ -498,7 +538,11 @@ export function UserAttendanceTab({
               <CardTitle className="text-base">休職履歴</CardTitle>
             </div>
             {!isReadOnly && (
-              <Button variant="outline" size="sm" onClick={() => setLeaveDialogOpen(true)}>
+              <Button variant="outline" size="sm" onClick={() => {
+                setEditingLeaveId(null);
+                setLeaveForm({ startDate: '', endDate: '', leaveType: '', payCalcMethod: '', notes: '' });
+                setLeaveDialogOpen(true);
+              }}>
                 <Plus className="mr-2 h-4 w-4" />
                 追加
               </Button>
@@ -516,6 +560,7 @@ export function UserAttendanceTab({
                   <TableHead>終了日</TableHead>
                   <TableHead>種別</TableHead>
                   <TableHead>備考</TableHead>
+                  {!isReadOnly && <TableHead className="w-[50px]" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -533,6 +578,27 @@ export function UserAttendanceTab({
                       {leaveTypeOptions.find(o => o.value === record.leaveType)?.label || record.leaveType}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{record.notes || '-'}</TableCell>
+                    {!isReadOnly && (
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => startEditLeave(record)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              編集
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteLeaveId(record.id)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              削除
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -639,11 +705,14 @@ export function UserAttendanceTab({
         </DialogContent>
       </Dialog>
 
-      {/* 休職履歴追加ダイアログ */}
-      <Dialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+      {/* 休職履歴追加・編集ダイアログ */}
+      <Dialog open={leaveDialogOpen} onOpenChange={(open) => {
+        setLeaveDialogOpen(open);
+        if (!open) setEditingLeaveId(null);
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>休職履歴の追加</DialogTitle>
+            <DialogTitle>{editingLeaveId ? '休職履歴の編集' : '休職履歴の追加'}</DialogTitle>
             <DialogDescription>休職情報を入力してください</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -705,12 +774,28 @@ export function UserAttendanceTab({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLeaveDialogOpen(false)}>キャンセル</Button>
-            <Button onClick={handleAddLeaveHistory} disabled={isSaving}>
-              {isSaving ? '追加中...' : '追加'}
+            <Button onClick={handleSaveLeaveHistory} disabled={isSaving}>
+              {isSaving ? '保存中...' : (editingLeaveId ? '更新' : '追加')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 休職履歴削除確認 */}
+      <AlertDialog open={!!deleteLeaveId} onOpenChange={(open) => { if (!open) setDeleteLeaveId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>休職履歴の削除</AlertDialogTitle>
+            <AlertDialogDescription>この休職履歴を削除してもよろしいですか？この操作は取り消せません。</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteLeaveId && handleDeleteLeaveHistory(deleteLeaveId)} disabled={isSaving}>
+              {isSaving ? '削除中...' : '削除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

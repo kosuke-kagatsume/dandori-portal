@@ -400,6 +400,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
         const userRoles = currentUser?.roles || [];
         const isHRRole = userRoles.includes('hr');
         const isExecutive = userRoles.includes('executive');
+        const isAdminOnly = userRoles.includes('admin') && !isHRRole && !isExecutive;
         const visibleTabs = [
           { value: 'basic', label: '基本情報' },
           { value: 'saas', label: 'SaaS利用' },
@@ -426,6 +427,7 @@ export default function UserDetailPage({ params }: { params: { id: string; local
           <UserGeneralInfoTab
             user={user}
             isReadOnly={isReadOnly}
+            isAdminOnly={isAdminOnly}
             onEdit={() => setEditDialogOpen(true)}
             onUserUpdated={(updatedUser) => {
               setUsers(users.map((u) => (u.id === updatedUser.id ? updatedUser : u)));

@@ -21,6 +21,7 @@ import type { User as UserType } from '@/types';
 interface UserGeneralInfoTabProps {
   user: UserType;
   isReadOnly: boolean;
+  isAdminOnly?: boolean;
   onEdit?: () => void;
   onUserUpdated?: (user: UserType) => void;
 }
@@ -108,7 +109,7 @@ function EditableField({ label, value, isEditing, onChange, type = 'text', selec
   );
 }
 
-export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGeneralInfoTabProps) {
+export function UserGeneralInfoTab({ user, isReadOnly, isAdminOnly, onUserUpdated }: UserGeneralInfoTabProps) {
   const { currentTenant } = useTenantStore();
   const tenantId = currentTenant?.id;
 
@@ -284,8 +285,8 @@ export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGene
 
   return (
     <div className="space-y-4">
-      {/* 基本情報セクション */}
-      <Card>
+      {/* 基本情報セクション（admin権限のみの場合は非表示） */}
+      {!isAdminOnly && <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -380,7 +381,7 @@ export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGene
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* 業務情報セクション */}
       <Card>
@@ -538,18 +539,20 @@ export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGene
               </div>
             )}
             {/* 所定労働日数/時間（月平均）は勤怠タブの就業ルールセクションに移動 */}
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">特定業務従事者</p>
-              {editingWork ? (
-                <Switch
-                  checked={workForm.isSpecialWorker}
-                  onCheckedChange={(checked) => setWorkForm(f => ({ ...f, isSpecialWorker: checked }))}
-                  className="mt-1"
-                />
-              ) : (
-                <p className="text-sm mt-1">{user.isSpecialWorker ? '対象' : '対象外'}</p>
-              )}
-            </div>
+            {!isAdminOnly && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">特定業務従事者</p>
+                {editingWork ? (
+                  <Switch
+                    checked={workForm.isSpecialWorker}
+                    onCheckedChange={(checked) => setWorkForm(f => ({ ...f, isSpecialWorker: checked }))}
+                    className="mt-1"
+                  />
+                ) : (
+                  <p className="text-sm mt-1">{user.isSpecialWorker ? '対象' : '対象外'}</p>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
