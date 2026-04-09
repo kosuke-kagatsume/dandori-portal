@@ -391,6 +391,32 @@ export function UserAttendanceTab({
                   </div>
                 )}
               </div>
+              {/* 所定労働日数/時間（月平均） — 年度設定から算出 */}
+              <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t">
+                <div>
+                  <p className="text-muted-foreground">所定労働日数（月平均）</p>
+                  <p className="font-medium">
+                    {(() => {
+                      const defaultWorkDays = [21, 19, 21, 20, 22, 21, 21, 21, 22, 21, 20, 21];
+                      const avgDays = Math.round((defaultWorkDays.reduce((s, d) => s + d, 0) / 12) * 10) / 10;
+                      return `${avgDays}日`;
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">所定労働時間（月平均）</p>
+                  <p className="font-medium">
+                    {(() => {
+                      const dailyMinutes = workRule.standardWorkHours;
+                      const dailyHours = dailyMinutes / 60;
+                      const defaultWorkDays = [21, 19, 21, 20, 22, 21, 21, 21, 22, 21, 20, 21];
+                      const avgDays = Math.round((defaultWorkDays.reduce((s, d) => s + d, 0) / 12) * 10) / 10;
+                      const avgHours = Math.round((avgDays * dailyHours) * 10) / 10;
+                      return `${avgHours}時間`;
+                    })()}
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">

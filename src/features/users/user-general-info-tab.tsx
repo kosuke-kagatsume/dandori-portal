@@ -537,27 +537,7 @@ export function UserGeneralInfoTab({ user, isReadOnly, onUserUpdated }: UserGene
                 </p>
               </div>
             )}
-            {/* 所定労働時間（年度設定から自動算出） */}
-            {(() => {
-              // 月別日数表のデフォルト所定労働日数合計
-              const defaultWorkDays = [21, 19, 21, 20, 22, 21, 21, 21, 22, 21, 20, 21];
-              const totalWorkDays = defaultWorkDays.reduce((s, d) => s + d, 0);
-              const dailyHours = 8;
-              const avgDays = Math.round((totalWorkDays / 12) * 10) / 10;
-              const avgHours = Math.round((avgDays * dailyHours) * 10) / 10;
-              return (
-                <>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">所定労働日数（月平均）</p>
-                    <p className="text-sm mt-1">{avgDays}日</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">所定労働時間（月平均）</p>
-                    <p className="text-sm mt-1">{avgHours}時間</p>
-                  </div>
-                </>
-              );
-            })()}
+            {/* 所定労働日数/時間（月平均）は勤怠タブの就業ルールセクションに移動 */}
             <div>
               <p className="text-sm font-medium text-muted-foreground">特定業務従事者</p>
               {editingWork ? (
