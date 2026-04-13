@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import {
   successResponse,
-  errorResponse,
   handleApiError,
   getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
@@ -17,11 +16,10 @@ export async function GET(
   try {
     const { id: userId } = await params;
     const tenantId = await getTenantIdFromRequest(request);
-    const { searchParams } = new URL(request.url);
-    const fiscalYear = parseInt(searchParams.get('fiscalYear') || '') || new Date().getFullYear();
 
+    // fiscalYear=0 を固定キーとして使用（1ユーザー1レコード）
     const record = await prisma.employee_resident_tax.findUnique({
-      where: { tenantId_userId_fiscalYear: { tenantId, userId, fiscalYear } },
+      where: { tenantId_userId_fiscalYear: { tenantId, userId, fiscalYear: 0 } },
     });
 
     return successResponse(record);
@@ -41,28 +39,25 @@ export async function PUT(
     const { id: userId } = await params;
     const body = await request.json();
     const tenantId = await getTenantIdFromRequest(request);
-    const fiscalYear = body.fiscalYear || new Date().getFullYear();
-
-    if (!fiscalYear) {
-      return errorResponse('fiscalYearが必要です', 400);
-    }
 
     const record = await prisma.employee_resident_tax.upsert({
-      where: { tenantId_userId_fiscalYear: { tenantId, userId, fiscalYear } },
+      where: { tenantId_userId_fiscalYear: { tenantId, userId, fiscalYear: 0 } },
       create: {
         id: `ert-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
         tenantId,
         userId,
-        fiscalYear,
-        municipalityId: body.municipalityId || null,
-        collectionMethod: body.collectionMethod || 'special',
-        monthlyAmounts: body.monthlyAmounts || null,
+        fiscalYear: 0,
+        reportMunicipalityId: body.reportMunicipalityId || null,
+        paymentMunicipalityId: body.paymentMunicipalityId || null,
+        addressNumber: body.addressNumber || null,
+        recipientNumber: body.recipientNumber || null,
         updatedAt: new Date(),
       },
       update: {
-        ...(body.municipalityId !== undefined && { municipalityId: body.municipalityId || null }),
-        ...(body.collectionMethod !== undefined && { collectionMethod: body.collectionMethod }),
-        ...(body.monthlyAmounts !== undefined && { monthlyAmounts: body.monthlyAmounts }),
+        ...(body.reportMunicipalityId !== undefined && { reportMunicipalityId: body.reportMunicipalityId || null }),
+        ...(body.paymentMunicipalityId !== undefined && { paymentMunicipalityId: body.paymentMunicipalityId || null }),
+        ...(body.addressNumber !== undefined && { addressNumber: body.addressNumber || null }),
+        ...(body.recipientNumber !== undefined && { recipientNumber: body.recipientNumber || null }),
         updatedAt: new Date(),
       },
     });

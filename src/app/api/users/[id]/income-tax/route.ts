@@ -52,6 +52,7 @@ export async function PUT(
         disabilityGrade: body.disabilityGrade || 'none',
         widowCategory: body.widowCategory || 'none',
         isWorkingStudent: body.isWorkingStudent ?? false,
+        residencyStatus: body.residencyStatus || 'resident',
         updatedAt: new Date(),
       },
       update: {
@@ -62,6 +63,7 @@ export async function PUT(
         ...(body.disabilityGrade !== undefined && { disabilityGrade: body.disabilityGrade }),
         ...(body.widowCategory !== undefined && { widowCategory: body.widowCategory }),
         ...(body.isWorkingStudent !== undefined && { isWorkingStudent: body.isWorkingStudent }),
+        ...(body.residencyStatus !== undefined && { residencyStatus: body.residencyStatus }),
         updatedAt: new Date(),
       },
     });

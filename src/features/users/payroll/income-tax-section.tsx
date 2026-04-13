@@ -20,6 +20,7 @@ interface IncomeTaxInfo {
   disabilityGrade: string;
   widowCategory: string;
   isWorkingStudent: boolean;
+  residencyStatus: string;
 }
 
 interface IncomeTaxSectionProps {
@@ -46,6 +47,12 @@ const widowCategoryLabels: Record<string, string> = {
 const taxClassLabels: Record<string, string> = {
   kou: '甲欄',
   otsu: '乙欄',
+  hei: '丙欄（日雇い等）',
+};
+
+const residencyStatusLabels: Record<string, string> = {
+  resident: '居住者',
+  non_resident: '非居住者',
 };
 
 export function IncomeTaxSection({ userId, canEdit, fallbackTaxClassification, fallbackIsSecondaryIncome }: IncomeTaxSectionProps) {
@@ -60,6 +67,7 @@ export function IncomeTaxSection({ userId, canEdit, fallbackTaxClassification, f
     disabilityGrade: 'none',
     widowCategory: 'none',
     isWorkingStudent: false,
+    residencyStatus: 'resident',
   });
 
   const fetchData = useCallback(async () => {
@@ -83,6 +91,7 @@ export function IncomeTaxSection({ userId, canEdit, fallbackTaxClassification, f
       disabilityGrade: data?.disabilityGrade || 'none',
       widowCategory: data?.widowCategory || 'none',
       isWorkingStudent: data?.isWorkingStudent ?? false,
+      residencyStatus: data?.residencyStatus || 'resident',
     });
     setEditing(true);
   };
@@ -133,12 +142,13 @@ export function IncomeTaxSection({ userId, canEdit, fallbackTaxClassification, f
         {editing ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <Label className="text-xs">甲乙区分</Label>
+              <Label className="text-xs">税額表区分</Label>
               <Select value={form.taxClassification} onValueChange={(v) => setForm(f => ({ ...f, taxClassification: v }))}>
                 <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="kou">甲欄</SelectItem>
                   <SelectItem value="otsu">乙欄</SelectItem>
+                  <SelectItem value="hei">丙欄（日雇い等）</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -180,11 +190,22 @@ export function IncomeTaxSection({ userId, canEdit, fallbackTaxClassification, f
               <Switch checked={form.isWorkingStudent} onCheckedChange={(v) => setForm(f => ({ ...f, isWorkingStudent: v }))} />
               <Label className="text-xs">勤労学生</Label>
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">居住者区分</Label>
+              <Select value={form.residencyStatus} onValueChange={(v) => setForm(f => ({ ...f, residencyStatus: v }))}>
+                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(residencyStatusLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">甲乙区分</p>
+              <p className="text-sm font-medium text-muted-foreground">税額表区分</p>
               <p className="text-sm mt-1">{taxClass ? taxClassLabels[taxClass] || taxClass : '未設定'}</p>
             </div>
             <div>
@@ -210,6 +231,10 @@ export function IncomeTaxSection({ userId, canEdit, fallbackTaxClassification, f
             <div>
               <p className="text-sm font-medium text-muted-foreground">勤労学生</p>
               <p className="text-sm mt-1">{data?.isWorkingStudent ? '対象' : '対象外'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">居住者区分</p>
+              <p className="text-sm mt-1">{residencyStatusLabels[data?.residencyStatus || 'resident']}</p>
             </div>
           </div>
         )}

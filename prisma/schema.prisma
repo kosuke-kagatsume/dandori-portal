@@ -3019,8 +3019,9 @@ model employee_income_tax_info {
   id                String   @id
   tenantId          String
   userId            String
-  taxClassification String   @default("kou") // kou:甲欄, otsu:乙欄
+  taxClassification String   @default("kou") // kou:甲欄, otsu:乙欄, hei:丙欄
   isSecondaryIncome Boolean  @default(false) // 従たる給与
+  residencyStatus   String   @default("resident") // resident:居住者, non_resident:非居住者
   isDisasterVictim  Boolean  @default(false) // 災害者
   isForeigner       Boolean  @default(false) // 外国人
   disabilityGrade   String   @default("none") // none/general/special/fellow_living_special
@@ -3037,16 +3038,20 @@ model employee_income_tax_info {
 
 // 従業員住民税情報
 model employee_resident_tax {
-  id                String   @id
-  tenantId          String
-  userId            String
-  fiscalYear        Int      // 年度
-  municipalityId    String?  // 市区町村マスタID
-  collectionMethod  String   @default("special") // special:特別徴収, ordinary:普通徴収
-  monthlyAmounts    Json?    // { m1: number, ..., m12: number }
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime
-  user              users    @relation("residentTax", fields: [userId], references: [id], onDelete: Cascade)
+  id                       String   @id
+  tenantId                 String
+  userId                   String
+  fiscalYear               Int      @default(0) // 年度（レガシー、未使用）
+  municipalityId           String?  // 市区町村マスタID（レガシー）
+  collectionMethod         String   @default("special") // レガシー
+  monthlyAmounts           Json?    // レガシー
+  reportMunicipalityId     String?  // 給与支払報告書提出先市町村ID
+  paymentMunicipalityId    String?  // 納付先市町村ID
+  addressNumber            String?  // 宛名番号
+  recipientNumber          String?  // 受給者番号
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime
+  user                     users    @relation("residentTax", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, userId, fiscalYear])
   @@index([tenantId, userId])
