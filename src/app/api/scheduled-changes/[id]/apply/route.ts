@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantIdFromRequest } from '@/lib/api/api-helpers';
 import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -144,8 +145,20 @@ export async function POST(
           },
         }),
       ]);
+    } else if (existing.type === 'hire') {
+      // 入社予約の場合、ユーザーレコードを作成
+      const hireUserId = await createUserFromHire(existing, tenantId);
+
+      await prisma.scheduled_changes.update({
+        where: { id },
+        data: {
+          status: 'applied',
+          userId: hireUserId,
+          updatedAt: new Date(),
+        },
+      });
     } else {
-      // 異動以外はステータスのみ更新
+      // 退職等はステータスのみ更新
       await prisma.scheduled_changes.update({
         where: { id },
         data: {
@@ -175,4 +188,73 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+/**
+ * 入社予約データからユーザーレコードを作成
+ * 同じメールアドレスのユーザーが既に存在する場合は既存IDを返す
+ */
+async function createUserFromHire(
+  change: {
+    hireName: string | null;
+    hireEmail: string | null;
+    hireDepartment: string | null;
+    hirePosition: string | null;
+    hireRole: string | null;
+    hireEmployeeNumber: string | null;
+    effectiveDate: Date;
+  },
+  tenantId: string,
+): Promise<string> {
+  if (!change.hireEmail || !change.hireName) {
+    throw new Error('入社予約に氏名またはメールアドレスがありません');
+  }
+
+  // 同じメールアドレスのユーザーが既に存在する場合はそのIDを返す
+  const existingUser = await prisma.users.findFirst({
+    where: { email: change.hireEmail, tenantId },
+  });
+  if (existingUser) {
+    return existingUser.id;
+  }
+
+  // 部門名からdepartmentIdを逆引き
+  let departmentId: string | undefined;
+  if (change.hireDepartment) {
+    const dept = await prisma.departments.findFirst({
+      where: { tenantId, name: change.hireDepartment, isActive: true },
+    });
+    if (dept) departmentId = dept.id;
+  }
+
+  // 役職名からpositionIdを逆引き
+  let positionId: string | undefined;
+  if (change.hirePosition) {
+    const pos = await prisma.positions.findFirst({
+      where: { tenantId, name: change.hirePosition, isActive: true },
+    });
+    if (pos) positionId = pos.id;
+  }
+
+  const userId = crypto.randomUUID();
+  await prisma.users.create({
+    data: {
+      id: userId,
+      tenantId,
+      email: change.hireEmail,
+      name: change.hireName,
+      employeeNumber: change.hireEmployeeNumber || undefined,
+      department: change.hireDepartment || undefined,
+      departmentId: departmentId || undefined,
+      position: change.hirePosition || undefined,
+      positionId: positionId || undefined,
+      hireDate: change.effectiveDate.toISOString().split('T')[0],
+      roles: [change.hireRole || 'employee'],
+      status: 'active',
+      timezone: 'Asia/Tokyo',
+      updatedAt: new Date(),
+    },
+  });
+
+  return userId;
 }
