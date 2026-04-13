@@ -1831,6 +1831,7 @@ model users {
   employee_income_tax_info employee_income_tax_info[] @relation("incomeTaxInfo")
   employee_resident_tax employee_resident_tax[] @relation("residentTax")
   shift_assignments   shift_assignments[]
+  onboarding_application onboarding_applications[] @relation("onboardingUser")
 
   @@index([email])
   @@index([tenantId])
@@ -2790,6 +2791,7 @@ model onboarding_applications {
   approvedBy      String?
   accessToken     String?   @unique
   hrNotes         String?
+  userId          String?   // 承認完了時に作成されたユーザーID
   createdAt       DateTime  @default(now())
   updatedAt       DateTime
 
@@ -2797,6 +2799,7 @@ model onboarding_applications {
   family_info     onboarding_family_info?
   bank_account    onboarding_bank_account?
   commute_route   onboarding_commute_route?
+  created_user    users?    @relation("onboardingUser", fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([tenantId])
   @@index([tenantId, status])
