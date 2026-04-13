@@ -4,7 +4,8 @@ import { successResponse, handleApiError, getTenantIdFromRequest } from '@/lib/a
 import crypto from 'crypto';
 
 /**
- * GET /api/users/[id]/resident-tax-monthly - 住民税月額を取得（最新年度）
+ * GET /api/users/[id]/resident-tax-monthly - 住民税月額を取得
+ * ?fiscalYear=2026 で年度指定、省略時は最新年度
  */
 export async function GET(
   request: NextRequest,
@@ -13,11 +14,20 @@ export async function GET(
   try {
     const tenantId = await getTenantIdFromRequest(request);
     const { id: userId } = await params;
+    const { searchParams } = new URL(request.url);
+    const fiscalYearParam = searchParams.get('fiscalYear');
 
-    const record = await prisma.employee_resident_tax_monthly.findFirst({
-      where: { tenantId, userId },
-      orderBy: { fiscalYear: 'desc' },
-    });
+    let record;
+    if (fiscalYearParam) {
+      record = await prisma.employee_resident_tax_monthly.findUnique({
+        where: { tenantId_userId_fiscalYear: { tenantId, userId, fiscalYear: parseInt(fiscalYearParam) } },
+      });
+    } else {
+      record = await prisma.employee_resident_tax_monthly.findFirst({
+        where: { tenantId, userId },
+        orderBy: { fiscalYear: 'desc' },
+      });
+    }
 
     return successResponse(record);
   } catch (error) {
@@ -66,7 +76,7 @@ export async function POST(
 }
 
 /**
- * PATCH /api/users/[id]/resident-tax-monthly - 住民税月額を更新
+ * PATCH /api/users/[id]/resident-tax-monthly - 住民税月額を更新（年度指定）
  */
 export async function PATCH(
   request: NextRequest,
@@ -76,11 +86,11 @@ export async function PATCH(
     const tenantId = await getTenantIdFromRequest(request);
     const { id: userId } = await params;
     const body = await request.json();
+    const fiscalYear = body.fiscalYear;
 
-    // 最新年度のレコードを検索
-    const existing = await prisma.employee_resident_tax_monthly.findFirst({
-      where: { tenantId, userId },
-      orderBy: { fiscalYear: 'desc' },
+    // 指定年度のレコードを検索
+    const existing = await prisma.employee_resident_tax_monthly.findUnique({
+      where: { tenantId_userId_fiscalYear: { tenantId, userId, fiscalYear } },
     });
 
     if (!existing) {
@@ -90,10 +100,11 @@ export async function PATCH(
       );
     }
 
+    const { fiscalYear: _fy, ...updateData } = body;
     const record = await prisma.employee_resident_tax_monthly.update({
       where: { id: existing.id },
       data: {
-        ...body,
+        ...updateData,
         updatedAt: new Date(),
       },
     });

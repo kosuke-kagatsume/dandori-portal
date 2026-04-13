@@ -114,6 +114,9 @@ export function UserAttendanceTab({
   const { currentTenant } = useTenantStore();
   const tenantId = currentTenant?.id;
 
+  // 月別所定労働日数（年度設定から取得）
+  const [monthlyWorkDays, setMonthlyWorkDays] = useState<number[] | null>(null);
+
   // 就業ルール選択ダイアログ
   const [workRuleDialogOpen, setWorkRuleDialogOpen] = useState(false);
   const [availableWorkRules, setAvailableWorkRules] = useState<{ id: string; name: string; type: string }[]>([]);
@@ -174,9 +177,24 @@ export function UserAttendanceTab({
     }
   }, [user.id]);
 
+  const fetchMonthlyWorkDays = useCallback(async () => {
+    if (!tenantId) return;
+    try {
+      const year = new Date().getFullYear();
+      const res = await fetch(`/api/attendance-master/monthly-work-days?fiscalYear=${year}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          setMonthlyWorkDays(json.data.map((d: { workDays: number }) => d.workDays));
+        }
+      }
+    } catch { /* */ }
+  }, [tenantId]);
+
   useEffect(() => {
     fetchLeaveHistory();
-  }, [fetchLeaveHistory]);
+    fetchMonthlyWorkDays();
+  }, [fetchLeaveHistory, fetchMonthlyWorkDays]);
 
   useEffect(() => {
     if (workRuleDialogOpen) {
@@ -437,8 +455,8 @@ export function UserAttendanceTab({
                   <p className="text-muted-foreground">所定労働日数（月平均）</p>
                   <p className="font-medium">
                     {(() => {
-                      const defaultWorkDays = [21, 19, 21, 20, 22, 21, 21, 21, 22, 21, 20, 21];
-                      const avgDays = Math.round((defaultWorkDays.reduce((s, d) => s + d, 0) / 12) * 10) / 10;
+                      const days = monthlyWorkDays || [21, 19, 21, 20, 22, 21, 21, 21, 22, 21, 20, 21];
+                      const avgDays = Math.round((days.reduce((s, d) => s + d, 0) / 12) * 10) / 10;
                       return `${avgDays}日`;
                     })()}
                   </p>
@@ -447,10 +465,9 @@ export function UserAttendanceTab({
                   <p className="text-muted-foreground">所定労働時間（月平均）</p>
                   <p className="font-medium">
                     {(() => {
-                      const dailyMinutes = workRule.standardWorkHours;
-                      const dailyHours = dailyMinutes / 60;
-                      const defaultWorkDays = [21, 19, 21, 20, 22, 21, 21, 21, 22, 21, 20, 21];
-                      const avgDays = Math.round((defaultWorkDays.reduce((s, d) => s + d, 0) / 12) * 10) / 10;
+                      const dailyHours = workRule.standardWorkHours / 60;
+                      const days = monthlyWorkDays || [21, 19, 21, 20, 22, 21, 21, 21, 22, 21, 20, 21];
+                      const avgDays = Math.round((days.reduce((s, d) => s + d, 0) / 12) * 10) / 10;
                       const avgHours = Math.round((avgDays * dailyHours) * 10) / 10;
                       return `${avgHours}時間`;
                     })()}

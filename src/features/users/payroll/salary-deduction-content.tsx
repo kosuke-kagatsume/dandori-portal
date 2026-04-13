@@ -1,17 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Banknote, Train, Shield, Landmark, Briefcase, Building, Umbrella } from 'lucide-react';
-import { toast } from 'sonner';
-import { SectionEditButtons } from './payroll-ui-helpers';
+import { Banknote, Train, Shield, Landmark, Briefcase, Umbrella } from 'lucide-react';
 import {
   type AllowanceItem, type DeductionItem, type SalarySettings, type ResidentTaxMonthly,
-  commuteMethodLabels, deductionCategoryLabels, residentTaxMonthKeys, residentTaxMonthLabels,
+  commuteMethodLabels, deductionCategoryLabels,
 } from '@/lib/payroll/payroll-types';
+import { ResidentTaxMonthlySection } from './resident-tax-monthly-section';
 
 interface PayrollInfo {
   commuteMethod?: string;
@@ -36,51 +33,6 @@ export function SalaryDeductionContent({
   userId, salarySettings, payroll, allowanceItems, deductionItems,
   residentTax, canEdit, onResidentTaxSaved,
 }: Props) {
-  const [editingResidentTax, setEditingResidentTax] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [residentTaxForm, setResidentTaxForm] = useState({
-    fiscalYear: new Date().getFullYear(),
-    month6: 0, month7: 0, month8: 0, month9: 0,
-    month10: 0, month11: 0, month12: 0,
-    month1: 0, month2: 0, month3: 0,
-    month4: 0, month5: 0,
-  });
-
-  const startEditResidentTax = () => {
-    if (residentTax) {
-      setResidentTaxForm({
-        fiscalYear: residentTax.fiscalYear,
-        month6: residentTax.month6, month7: residentTax.month7,
-        month8: residentTax.month8, month9: residentTax.month9,
-        month10: residentTax.month10, month11: residentTax.month11,
-        month12: residentTax.month12, month1: residentTax.month1,
-        month2: residentTax.month2, month3: residentTax.month3,
-        month4: residentTax.month4, month5: residentTax.month5,
-      });
-    }
-    setEditingResidentTax(true);
-  };
-
-  const saveResidentTax = async () => {
-    setIsSaving(true);
-    try {
-      const method = residentTax ? 'PATCH' : 'POST';
-      const res = await fetch(`/api/users/${userId}/resident-tax-monthly`, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(residentTaxForm),
-      });
-      if (!res.ok) throw new Error();
-      toast.success('住民税月額を保存しました');
-      setEditingResidentTax(false);
-      onResidentTaxSaved();
-    } catch {
-      toast.error('保存に失敗しました');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <div className="space-y-4">
       {/* C1: 支給項目 */}
@@ -270,58 +222,12 @@ export function SalaryDeductionContent({
       </Card>
 
       {/* C7: 住民税月額 */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Building className="h-5 w-5" />
-              <div>
-                <CardTitle className="text-base">住民税月額</CardTitle>
-                <CardDescription>6月〜翌5月の12ヶ月分</CardDescription>
-              </div>
-            </div>
-            {canEdit && (
-              <SectionEditButtons
-                isEditing={editingResidentTax} isSaving={isSaving}
-                onEdit={startEditResidentTax} onSave={saveResidentTax}
-                onCancel={() => setEditingResidentTax(false)}
-              />
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {residentTaxMonthLabels.map(m => (
-                  <TableHead key={m} className="text-center text-xs px-1">{m}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                {editingResidentTax ? (
-                  residentTaxMonthKeys.map(key => (
-                    <TableCell key={key} className="px-1">
-                      <Input
-                        type="number" className="h-7 text-xs w-16"
-                        value={residentTaxForm[key]}
-                        onChange={(e) => setResidentTaxForm(f => ({ ...f, [key]: parseInt(e.target.value) || 0 }))}
-                      />
-                    </TableCell>
-                  ))
-                ) : (
-                  residentTaxMonthKeys.map(key => (
-                    <TableCell key={key} className="text-center text-xs px-1">
-                      {residentTax ? `¥${residentTax[key].toLocaleString()}` : '-'}
-                    </TableCell>
-                  ))
-                )}
-              </TableRow>
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <ResidentTaxMonthlySection
+        userId={userId}
+        initialData={residentTax}
+        canEdit={canEdit}
+        onSaved={onResidentTaxSaved}
+      />
 
       {/* C8: 控除項目 */}
       <Card>
