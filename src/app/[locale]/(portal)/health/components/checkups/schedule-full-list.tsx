@@ -34,6 +34,7 @@ import type { HealthCheckupSchedule, ScheduleStatus } from '@/types/health';
 import { useHealthMasterStore } from '@/lib/store/health-master-store';
 import { getCurrentFiscalYear } from '@/lib/utils';
 import { ScheduleDialog } from './schedule-dialog';
+import { ScheduleDetailDialog } from '../dialogs/schedule-detail-dialog';
 
 export interface EnrichedSchedule extends HealthCheckupSchedule {
   birthDate?: string | null;
@@ -77,6 +78,8 @@ export function ScheduleFullList({
   const [sortBy, setSortBy] = useState<string>('scheduledDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [detailSchedule, setDetailSchedule] = useState<EnrichedSchedule | null>(null);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
 
   // enrichedデータ取得
   const [enrichedSchedules, setEnrichedSchedules] = useState<EnrichedSchedule[]>([]);
@@ -399,17 +402,20 @@ export function ScheduleFullList({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            {/* 詳細表示: 全ステータスで表示 */}
+                            <DropdownMenuItem onClick={() => { setDetailSchedule(s); setShowDetailDialog(true); }}>
                               <FileText className="mr-2 h-4 w-4" />
                               詳細表示
                             </DropdownMenuItem>
-                            {onRegisterResult && (
+                            {/* 結果登録: 受診済のみ */}
+                            {getStatusDisplay(s).label === '受診済' && onRegisterResult && (
                               <DropdownMenuItem onClick={() => onRegisterResult(s)}>
                                 <ClipboardEdit className="mr-2 h-4 w-4" />
                                 結果登録
                               </DropdownMenuItem>
                             )}
-                            {s.status === 'scheduled' && (
+                            {/* キャンセル: 予約済のみ */}
+                            {getStatusDisplay(s).label === '予約済' && (
                               <DropdownMenuItem onClick={() => handleCancelSchedule(s.id)}>
                                 <XCircle className="mr-2 h-4 w-4" />
                                 キャンセル
@@ -432,6 +438,16 @@ export function ScheduleFullList({
       <ScheduleDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
+        onSuccess={() => {
+          onRefreshSchedules?.();
+          fetchEnriched();
+        }}
+      />
+
+      <ScheduleDetailDialog
+        open={showDetailDialog}
+        onOpenChange={setShowDetailDialog}
+        schedule={detailSchedule}
         onSuccess={() => {
           onRefreshSchedules?.();
           fetchEnriched();

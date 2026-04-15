@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,9 +37,10 @@ interface ScheduleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  prefilledUser?: { userId: string; userName: string; departmentName: string } | null;
 }
 
-export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialogProps) {
+export function ScheduleDialog({ open, onOpenChange, onSuccess, prefilledUser }: ScheduleDialogProps) {
   const currentUser = useUserStore((state) => state.currentUser);
   const users = useUserStore((state) => state.users);
   const tenantId = currentUser?.tenantId;
@@ -55,7 +55,8 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
   const [selectedInstitutionId, setSelectedInstitutionId] = useState('');
   const [checkupTypeName, setCheckupTypeName] = useState('');
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>();
-  const [scheduledTime, setScheduledTime] = useState('');
+  const [scheduledTimeHour, setScheduledTimeHour] = useState('');
+  const [scheduledTimeMinute, setScheduledTimeMinute] = useState('');
   const [notes, setNotes] = useState('');
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [institutionOptions, setInstitutionOptions] = useState<InstitutionOption[]>([]);
@@ -70,6 +71,14 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
       fetchAll();
     }
   }, [open, tenantId, setTenantId, fetchAll]);
+
+  // 特定業務従事者からの事前入力
+  useEffect(() => {
+    if (prefilledUser && open) {
+      setSelectedDepartment(prefilledUser.departmentName);
+      setSelectedUserId(prefilledUser.userId);
+    }
+  }, [prefilledUser, open]);
 
   // 部署一覧（C-2）
   const departments = useMemo(() => {
@@ -176,7 +185,8 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
     setSelectedInstitutionId('');
     setCheckupTypeName('');
     setScheduledDate(undefined);
-    setScheduledTime('');
+    setScheduledTimeHour('');
+    setScheduledTimeMinute('');
     setNotes('');
     setSelectedOptionIds([]);
     setInstitutionOptions([]);
@@ -198,7 +208,7 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
         checkupTypeName,
         medicalInstitutionId: selectedInstitutionId || undefined,
         scheduledDate,
-        scheduledTime: scheduledTime || undefined,
+        scheduledTime: scheduledTimeHour && scheduledTimeMinute ? `${scheduledTimeHour}:${scheduledTimeMinute}` : undefined,
         fiscalYear: getFiscalYear(scheduledDate),
         notes: notes || undefined,
         region: selectedRegion || undefined,
@@ -407,11 +417,26 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess }: ScheduleDialog
             </div>
             <div className="space-y-2">
               <Label>予定時間</Label>
-              <Input
-                type="time"
-                value={scheduledTime}
-                onChange={(e) => setScheduledTime(e.target.value)}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={scheduledTimeHour} onValueChange={setScheduledTimeHour}>
+                  <SelectTrigger><SelectValue placeholder="時" /></SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 16 }, (_, i) => i + 7).map(h => (
+                      <SelectItem key={h} value={String(h).padStart(2, '0')}>
+                        {String(h).padStart(2, '0')}時
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={scheduledTimeMinute} onValueChange={setScheduledTimeMinute}>
+                  <SelectTrigger><SelectValue placeholder="分" /></SelectTrigger>
+                  <SelectContent>
+                    {['00', '15', '30', '45'].map(m => (
+                      <SelectItem key={m} value={m}>{m}分</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 

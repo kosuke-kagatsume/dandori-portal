@@ -118,8 +118,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // checkupDate日付バリデーション
-    const parsedCheckupDate = new Date(body.checkupDate);
+    // checkupDate日付バリデーション（YYYY-MM-DD文字列をUTC正午でパースしタイムゾーンずれを防止）
+    const parsedCheckupDate = (() => {
+      const cd = body.checkupDate;
+      if (typeof cd === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(cd)) {
+        const [y, m, d] = cd.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+      }
+      return new Date(cd);
+    })();
     if (isNaN(parsedCheckupDate.getTime())) {
       return NextResponse.json(
         { error: 'Invalid checkupDate format' },

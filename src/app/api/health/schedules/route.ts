@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
         const ep = s.medicalInstitutionId
           ? examPrices.find(p =>
               p.institutionId === s.medicalInstitutionId &&
-              p.health_checkup_types.name === s.checkupTypeName
+              (p.checkupTypeName === s.checkupTypeName || p.health_checkup_types?.name === s.checkupTypeName)
             )
           : null;
 
@@ -184,8 +184,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    // 日付バリデーション
-    const parsedScheduledDate = new Date(scheduledDate);
+    // 日付バリデーション（YYYY-MM-DD文字列をUTC正午でパースしタイムゾーンずれを防止）
+    const parsedScheduledDate = (() => {
+      if (typeof scheduledDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(scheduledDate)) {
+        const [y, m, d] = scheduledDate.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+      }
+      return new Date(scheduledDate);
+    })();
     if (isNaN(parsedScheduledDate.getTime())) {
       return NextResponse.json({ error: '予定日の日付形式が不正です' }, { status: 400 });
     }

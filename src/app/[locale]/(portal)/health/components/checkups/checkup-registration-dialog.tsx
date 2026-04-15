@@ -23,20 +23,23 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { cn, getFiscalYear } from '@/lib/utils';
+import { cn, getFiscalYear, formatDateForAPI } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useHealthMasterStore } from '@/lib/store/health-master-store';
 import { useUserStore } from '@/lib/store/user-store';
-import type { OverallResult, InstitutionExamPrice, InstitutionOption } from '@/types/health';
+import type { HealthCheckup, OverallResult, InstitutionExamPrice, InstitutionOption } from '@/types/health';
+import type { EnrichedSchedule } from './schedule-full-list';
 
 interface CheckupRegistrationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenantId: string;
   onSuccess?: () => void;
+  editCheckup?: HealthCheckup | null;
+  prefilledSchedule?: EnrichedSchedule | null;
 }
 
 const bloodTypes = ['A', 'B', 'O', 'AB'] as const;
@@ -46,6 +49,8 @@ export function CheckupRegistrationDialog({
   onOpenChange,
   tenantId,
   onSuccess,
+  editCheckup,
+  prefilledSchedule,
 }: CheckupRegistrationDialogProps) {
   const {
     getActiveMedicalInstitutions,
@@ -93,6 +98,46 @@ export function CheckupRegistrationDialog({
   const [optionsList, setOptionsList] = useState<InstitutionOption[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 編集モード: editCheckup が渡されたらフォームに反映
+  useEffect(() => {
+    if (editCheckup && open) {
+      setFormData({
+        userId: editCheckup.userId,
+        userName: editCheckup.userName,
+        department: editCheckup.department || '',
+        checkupDate: new Date(editCheckup.checkupDate),
+        medicalInstitutionId: '',
+        selectedExamTypeId: editCheckup.selectedExamTypeId || '',
+        overallResult: editCheckup.overallResult,
+        requiresReexam: editCheckup.requiresReexam,
+        requiresTreatment: editCheckup.requiresTreatment,
+        requiresGuidance: editCheckup.requiresGuidance,
+        height: editCheckup.height?.toString() || '',
+        weight: editCheckup.weight?.toString() || '',
+        bloodPressureSystolic: editCheckup.bloodPressureSystolic?.toString() || '',
+        bloodPressureDiastolic: editCheckup.bloodPressureDiastolic?.toString() || '',
+        bloodType: editCheckup.bloodType || '',
+        doctorOpinion: editCheckup.doctorOpinion || '',
+        selectedOptionIds: editCheckup.selectedOptionIds || [],
+      });
+    }
+  }, [editCheckup, open]);
+
+  // 予定一覧からの結果登録: メンバー情報を自動反映
+  useEffect(() => {
+    if (prefilledSchedule && !editCheckup && open) {
+      setFormData(prev => ({
+        ...prev,
+        userId: prefilledSchedule.userId,
+        userName: prefilledSchedule.userName,
+        department: prefilledSchedule.departmentName || '',
+        checkupDate: prefilledSchedule.scheduledDate ? new Date(prefilledSchedule.scheduledDate) : undefined,
+        medicalInstitutionId: prefilledSchedule.medicalInstitutionId || '',
+        selectedOptionIds: (prefilledSchedule.selectedOptionIds as string[] | null) || [],
+      }));
+    }
+  }, [prefilledSchedule, editCheckup, open]);
+
   // 医療機関選択時にカスケードで検査項目/オプションを取得
   const loadInstitutionDetails = useCallback(async (institutionId: string) => {
     if (!institutionId) {
@@ -119,7 +164,7 @@ export function CheckupRegistrationDialog({
     let total = 0;
     // 検査項目料金
     if (formData.selectedExamTypeId) {
-      const price = examPrices.find(p => p.checkupTypeId === formData.selectedExamTypeId);
+      const price = examPrices.find(p => p.id === formData.selectedExamTypeId);
       if (price) total += price.price;
     }
     // オプション料金
@@ -139,41 +184,45 @@ export function CheckupRegistrationDialog({
     setIsSubmitting(true);
     try {
       const institution = institutions.find(i => i.id === formData.medicalInstitutionId);
-      const res = await fetch('/api/health/checkups', {
-        method: 'POST',
+      const isEdit = !!editCheckup;
+      const url = isEdit ? `/api/health/checkups/${editCheckup.id}` : '/api/health/checkups';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const payload: Record<string, unknown> = {
+        ...(isEdit ? {} : { tenantId, userId: formData.userId, userName: formData.userName }),
+        department: formData.department || undefined,
+        checkupDate: formatDateForAPI(formData.checkupDate),
+        checkupType: formData.selectedExamTypeId
+          ? checkupTypes.find(t => t.id === formData.selectedExamTypeId)?.code || 'regular'
+          : 'regular',
+        medicalInstitution: institution?.name || (isEdit ? undefined : ''),
+        ...(!isEdit && { fiscalYear: getFiscalYear(formData.checkupDate) }),
+        overallResult: formData.overallResult,
+        requiresReexam: formData.requiresReexam,
+        requiresTreatment: formData.requiresTreatment,
+        requiresGuidance: formData.requiresGuidance,
+        height: formData.height ? parseFloat(formData.height) : undefined,
+        weight: formData.weight ? parseFloat(formData.weight) : undefined,
+        bmi: formData.height && formData.weight
+          ? parseFloat((parseFloat(formData.weight) / Math.pow(parseFloat(formData.height) / 100, 2)).toFixed(1))
+          : undefined,
+        bloodPressureSystolic: formData.bloodPressureSystolic ? parseInt(formData.bloodPressureSystolic) : undefined,
+        bloodPressureDiastolic: formData.bloodPressureDiastolic ? parseInt(formData.bloodPressureDiastolic) : undefined,
+        bloodType: formData.bloodType || undefined,
+        selectedExamTypeId: formData.selectedExamTypeId || undefined,
+        selectedOptionIds: formData.selectedOptionIds.length > 0 ? formData.selectedOptionIds : undefined,
+        totalCost: totalCost > 0 ? totalCost : undefined,
+        doctorOpinion: formData.doctorOpinion || undefined,
+      };
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tenantId,
-          userId: formData.userId,
-          userName: formData.userName,
-          department: formData.department || undefined,
-          checkupDate: formData.checkupDate.toISOString(),
-          checkupType: formData.selectedExamTypeId
-            ? checkupTypes.find(t => t.id === formData.selectedExamTypeId)?.code || 'regular'
-            : 'regular',
-          medicalInstitution: institution?.name || '',
-          fiscalYear: getFiscalYear(formData.checkupDate),
-          overallResult: formData.overallResult,
-          requiresReexam: formData.requiresReexam,
-          requiresTreatment: formData.requiresTreatment,
-          requiresGuidance: formData.requiresGuidance,
-          height: formData.height ? parseFloat(formData.height) : undefined,
-          weight: formData.weight ? parseFloat(formData.weight) : undefined,
-          bmi: formData.height && formData.weight
-            ? parseFloat((parseFloat(formData.weight) / Math.pow(parseFloat(formData.height) / 100, 2)).toFixed(1))
-            : undefined,
-          bloodPressureSystolic: formData.bloodPressureSystolic ? parseInt(formData.bloodPressureSystolic) : undefined,
-          bloodPressureDiastolic: formData.bloodPressureDiastolic ? parseInt(formData.bloodPressureDiastolic) : undefined,
-          bloodType: formData.bloodType || undefined,
-          selectedExamTypeId: formData.selectedExamTypeId || undefined,
-          selectedOptionIds: formData.selectedOptionIds.length > 0 ? formData.selectedOptionIds : undefined,
-          totalCost: totalCost > 0 ? totalCost : undefined,
-          doctorOpinion: formData.doctorOpinion || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error('登録に失敗しました');
-      toast.success('健診結果を登録しました');
+      if (!res.ok) throw new Error(isEdit ? '更新に失敗しました' : '登録に失敗しました');
+      toast.success(isEdit ? '健診結果を更新しました' : '健診結果を登録しました');
       onOpenChange(false);
       resetForm();
       onSuccess?.();
@@ -221,8 +270,8 @@ export function CheckupRegistrationDialog({
     <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) resetForm(); }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>健診結果登録</DialogTitle>
-          <DialogDescription>健康診断の結果を登録します</DialogDescription>
+          <DialogTitle>{editCheckup ? '健診結果編集' : '健診結果登録'}</DialogTitle>
+          <DialogDescription>{editCheckup ? '健康診断の結果を編集します' : '健康診断の結果を登録します'}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
@@ -308,9 +357,9 @@ export function CheckupRegistrationDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {examPrices.filter(p => p.isActive).map((price) => {
-                    const typeName = checkupTypes.find(t => t.id === price.checkupTypeId)?.name || price.checkupTypeId;
+                    const typeName = price.checkupTypeName || checkupTypes.find(t => t.id === price.checkupTypeId)?.name || '-';
                     return (
-                      <SelectItem key={price.id} value={price.checkupTypeId}>
+                      <SelectItem key={price.id} value={price.id}>
                         {typeName} (¥{price.price.toLocaleString()})
                       </SelectItem>
                     );
@@ -460,7 +509,7 @@ export function CheckupRegistrationDialog({
             キャンセル
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? '登録中...' : '登録'}
+            {isSubmitting ? (editCheckup ? '更新中...' : '登録中...') : (editCheckup ? '更新' : '登録')}
           </Button>
         </DialogFooter>
       </DialogContent>

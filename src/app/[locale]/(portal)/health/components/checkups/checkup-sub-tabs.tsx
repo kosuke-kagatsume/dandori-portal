@@ -30,6 +30,8 @@ interface CheckupSubTabsProps {
   // 結果編集・削除
   onEditCheckup?: (checkup: HealthCheckup) => void;
   onDeleteCheckup?: (checkupId: string) => void;
+  // URL直接遷移用
+  initialSubtab?: string;
 }
 
 export function CheckupSubTabs({
@@ -50,13 +52,14 @@ export function CheckupSubTabs({
   onRegisterResult,
   onEditCheckup,
   onDeleteCheckup,
+  initialSubtab,
 }: CheckupSubTabsProps) {
   const isAdmin = userRoles.includes('hr') || userRoles.includes('admin');
   const isHR = userRoles.includes('hr');
 
   // 予定タブ: ログインユーザー本人のデータのみ（A-5）
   const mySchedules = useMemo(() => {
-    return schedules.filter(s => s.userId === currentUserId);
+    return schedules.filter(s => s.userId === currentUserId && s.status !== 'cancelled');
   }, [schedules, currentUserId]);
 
   // タブ数に応じたグリッド
@@ -64,7 +67,7 @@ export function CheckupSubTabs({
   const gridClass = `grid-cols-${tabCount}`;
 
   return (
-    <Tabs defaultValue="schedule" className="space-y-4">
+    <Tabs defaultValue={initialSubtab || 'schedule'} className="space-y-4">
       <TabsList className={`grid w-full max-w-lg ${gridClass}`}>
         <TabsTrigger value="schedule" className="gap-2">
           <Calendar className="h-4 w-4" />

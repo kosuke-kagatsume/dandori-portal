@@ -82,7 +82,7 @@ const formatDate = (date: Date | string): string => {
  */
 export const generateIndustrialPhysicianReportPDF = async (
   checkups: HealthCheckupForPDF[],
-  stressChecks: StressCheckForPDF[],
+  _stressChecks: StressCheckForPDF[],
   fiscalYear: number,
   companyName: string = '株式会社サンプル'
 ): Promise<jsPDF> => {
@@ -203,101 +203,14 @@ export const generateIndustrialPhysicianReportPDF = async (
   }
   yPos += 10;
 
-  // === 3. ストレスチェック実施状況 ===
+  // === 3. 産業医所見 ===
   if (yPos > 220) {
     doc.addPage();
     yPos = 20;
   }
 
   doc.setFontSize(14);
-  doc.text('3. ストレスチェック実施状況', 20, yPos);
-  yPos += 8;
-
-  doc.setFontSize(10);
-  const totalStress = stressChecks.length;
-  const highStressCount = stressChecks.filter(s => s.isHighStress).length;
-  const interviewRequestedCount = stressChecks.filter(s => s.interviewRequested).length;
-  const interviewCompletedCount = stressChecks.filter(s => s.interviewCompleted).length;
-
-  doc.text(`受検者数: ${totalStress}名`, 25, yPos);
-  yPos += 6;
-  doc.text(`高ストレス者数: ${highStressCount}名 (${totalStress > 0 ? ((highStressCount / totalStress) * 100).toFixed(1) : '0.0'}%)`, 25, yPos);
-  yPos += 6;
-  doc.text(`面談希望者数: ${interviewRequestedCount}名`, 25, yPos);
-  yPos += 6;
-  doc.text(`面談実施済み: ${interviewCompletedCount}名`, 25, yPos);
-  yPos += 10;
-
-  // 平均スコア
-  if (totalStress > 0) {
-    const avgFactors = stressChecks.reduce((sum, s) => sum + s.stressFactorsScore, 0) / totalStress;
-    const avgResponse = stressChecks.reduce((sum, s) => sum + s.stressResponseScore, 0) / totalStress;
-    const avgSupport = stressChecks.reduce((sum, s) => sum + s.socialSupportScore, 0) / totalStress;
-    const avgTotal = stressChecks.reduce((sum, s) => sum + s.totalScore, 0) / totalStress;
-
-    doc.text('平均スコア:', 25, yPos);
-    yPos += 5;
-    doc.text(`  ストレス要因: ${avgFactors.toFixed(1)}点`, 30, yPos);
-    yPos += 5;
-    doc.text(`  ストレス反応: ${avgResponse.toFixed(1)}点`, 30, yPos);
-    yPos += 5;
-    doc.text(`  周囲のサポート: ${avgSupport.toFixed(1)}点`, 30, yPos);
-    yPos += 5;
-    doc.text(`  総合スコア: ${avgTotal.toFixed(1)}点`, 30, yPos);
-    yPos += 10;
-  }
-
-  // === 4. 高ストレス者一覧 ===
-  if (yPos > 200) {
-    doc.addPage();
-    yPos = 20;
-  }
-
-  doc.setFontSize(14);
-  doc.text('4. 高ストレス者一覧', 20, yPos);
-  yPos += 8;
-
-  doc.setFontSize(9);
-  const highStressList = stressChecks.filter(s => s.isHighStress);
-
-  if (highStressList.length === 0) {
-    doc.text('該当者なし', 25, yPos);
-    yPos += 6;
-  } else {
-    // ヘッダー
-    doc.text('氏名', 25, yPos);
-    doc.text('所属', 60, yPos);
-    doc.text('総合スコア', 100, yPos);
-    doc.text('面談希望', 130, yPos);
-    doc.text('面談実施', 155, yPos);
-    yPos += 2;
-    doc.line(25, yPos, pageWidth - 20, yPos);
-    yPos += 4;
-
-    highStressList.forEach((stress) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-
-      doc.text(stress.userName, 25, yPos);
-      doc.text(stress.departmentName || '-', 60, yPos);
-      doc.text(`${stress.totalScore}点`, 100, yPos);
-      doc.text(stress.interviewRequested ? 'あり' : 'なし', 130, yPos);
-      doc.text(stress.interviewCompleted ? '済' : '未', 155, yPos);
-      yPos += 5;
-    });
-  }
-  yPos += 10;
-
-  // === 5. 産業医所見 ===
-  if (yPos > 220) {
-    doc.addPage();
-    yPos = 20;
-  }
-
-  doc.setFontSize(14);
-  doc.text('5. 産業医所見・意見', 20, yPos);
+  doc.text('3. 産業医所見・意見', 20, yPos);
   yPos += 8;
 
   doc.setFontSize(10);

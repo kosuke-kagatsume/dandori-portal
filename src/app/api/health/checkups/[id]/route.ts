@@ -95,10 +95,16 @@ export async function PUT(
       findings,
     } = body;
 
-    // 日付バリデーション
+    // 日付バリデーション（YYYY-MM-DD文字列をUTC正午でパースしタイムゾーンずれを防止）
+    let parsedCheckupDate: Date | undefined;
     if (checkupDate) {
-      const d = new Date(checkupDate);
-      if (isNaN(d.getTime())) {
+      if (typeof checkupDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(checkupDate)) {
+        const [y, m, d] = checkupDate.split('-').map(Number);
+        parsedCheckupDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+      } else {
+        parsedCheckupDate = new Date(checkupDate);
+      }
+      if (isNaN(parsedCheckupDate.getTime())) {
         return NextResponse.json({ error: 'Invalid checkupDate format' }, { status: 400 });
       }
     }
@@ -127,7 +133,7 @@ export async function PUT(
       return tx.health_checkups.update({
         where: { id },
         data: {
-          checkupDate: checkupDate ? new Date(checkupDate) : undefined,
+          checkupDate: parsedCheckupDate || undefined,
           checkupType,
           medicalInstitution,
           overallResult,

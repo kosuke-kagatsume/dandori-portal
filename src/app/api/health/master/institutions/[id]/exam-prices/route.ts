@@ -41,13 +41,17 @@ export async function POST(
     const tenantId = await getTenantIdFromRequest(request);
     const { id: institutionId } = await params;
     const body = await request.json();
-    const { checkupTypeId, price, isActive, notes } = body;
+    const { checkupTypeId, checkupTypeName, price, isActive, notes } = body;
 
-    if (!checkupTypeId || price === undefined) {
+    if (!checkupTypeId && !checkupTypeName) {
       return NextResponse.json(
-        { error: '検査種別ID、料金は必須です' },
+        { error: '検査種別（IDまたは名前）は必須です' },
         { status: 400 }
       );
+    }
+
+    if (price === undefined) {
+      return NextResponse.json({ error: '料金は必須です' }, { status: 400 });
     }
 
     if (typeof price !== 'number' || !Number.isFinite(price) || price < 0) {
@@ -65,12 +69,21 @@ export async function POST(
       return NextResponse.json({ error: '医療機関が見つかりません' }, { status: 404 });
     }
 
-    // 検査種別のテナント検証
-    const checkupType = await prisma.health_checkup_types.findFirst({
-      where: { id: checkupTypeId, tenantId },
-    });
-    if (!checkupType) {
-      return NextResponse.json({ error: '検査種別が見つかりません' }, { status: 404 });
+    // checkupTypeId指定時はテナント検証、checkupTypeName指定時は名前をそのまま使用
+    let resolvedCheckupTypeId: string | null = null;
+    let resolvedCheckupTypeName: string | null = null;
+
+    if (checkupTypeId) {
+      const checkupType = await prisma.health_checkup_types.findFirst({
+        where: { id: checkupTypeId, tenantId },
+      });
+      if (!checkupType) {
+        return NextResponse.json({ error: '検査種別が見つかりません' }, { status: 404 });
+      }
+      resolvedCheckupTypeId = checkupTypeId;
+      resolvedCheckupTypeName = checkupType.name;
+    } else {
+      resolvedCheckupTypeName = checkupTypeName;
     }
 
     const examPrice = await prisma.health_institution_exam_prices.create({
@@ -78,7 +91,8 @@ export async function POST(
         id: crypto.randomUUID(),
         tenantId,
         institutionId,
-        checkupTypeId,
+        checkupTypeId: resolvedCheckupTypeId,
+        checkupTypeName: resolvedCheckupTypeName,
         price,
         isActive: isActive ?? true,
         notes,

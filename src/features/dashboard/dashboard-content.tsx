@@ -431,9 +431,9 @@ export function DashboardContent() {
                   {specialWorkerAlerts.length}名
                 </Badge>
               </div>
-              <Link href="/ja/health">
+              <Link href="/ja/health?tab=checkups&subtab=master">
                 <Button variant="outline" size="sm" className="text-orange-700 border-orange-300 hover:bg-orange-100">
-                  健康管理へ
+                  特定業務従事者を確認
                 </Button>
               </Link>
             </div>
@@ -456,7 +456,12 @@ export function DashboardContent() {
                       <p className="font-medium text-gray-900 dark:text-gray-100">{w.name}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         {[w.department, w.position].filter(Boolean).join(' / ') || '-'}
-                        {w.lastCheckupDate && ` / 前回: ${new Date(w.lastCheckupDate).getFullYear()}/${new Date(w.lastCheckupDate).getMonth() + 1}/${new Date(w.lastCheckupDate).getDate()}`}
+                        {w.lastCheckupDate && (() => {
+                          const last = new Date(w.lastCheckupDate);
+                          const deadline = new Date(last);
+                          deadline.setMonth(deadline.getMonth() + 6);
+                          return ` / 前回: ${last.getFullYear()}/${last.getMonth() + 1}/${last.getDate()} / 期限: ${deadline.getFullYear()}/${deadline.getMonth() + 1}/${deadline.getDate()}`;
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -476,7 +481,7 @@ export function DashboardContent() {
             </div>
             {specialWorkerAlerts.length > 5 && (
               <div className="mt-3 text-center">
-                <Link href="/ja/health">
+                <Link href="/ja/health?tab=checkups&subtab=master">
                   <Button variant="link" className="text-orange-700">
                     他 {specialWorkerAlerts.length - 5} 名を表示
                   </Button>

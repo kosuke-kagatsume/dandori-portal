@@ -48,6 +48,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 予約済みの予定がある従業員を除外対象として取得
+    const scheduledUsers = workerIds.length > 0
+      ? await prisma.health_checkup_schedules.findMany({
+          where: {
+            userId: { in: workerIds },
+            tenantId,
+            status: 'scheduled',
+          },
+          select: { userId: true },
+        })
+      : [];
+    const scheduledUserIds = new Set(scheduledUsers.map(s => s.userId));
+
     const now = new Date();
     const upcoming: {
       id: string;
@@ -60,6 +73,9 @@ export async function GET(request: NextRequest) {
     }[] = [];
 
     for (const w of workers) {
+      // 予約済み予定がある場合はアラート対象外
+      if (scheduledUserIds.has(w.id)) continue;
+
       const lastDate = lastCheckupMap.get(w.id);
       if (!lastDate) {
         // 受診記録なし → 即時対象

@@ -57,10 +57,16 @@ export async function PUT(
       return NextResponse.json({ error: '健診予定が見つかりません' }, { status: 404 });
     }
 
-    // 日付バリデーション
+    // 日付バリデーション（YYYY-MM-DD文字列をUTC正午でパースしタイムゾーンずれを防止）
+    let parsedScheduledDate: Date | undefined;
     if (scheduledDate !== undefined) {
-      const d = new Date(scheduledDate);
-      if (isNaN(d.getTime())) {
+      if (typeof scheduledDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(scheduledDate)) {
+        const [y, m, d] = scheduledDate.split('-').map(Number);
+        parsedScheduledDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+      } else {
+        parsedScheduledDate = new Date(scheduledDate);
+      }
+      if (isNaN(parsedScheduledDate.getTime())) {
         return NextResponse.json({ error: '予定日の日付形式が不正です' }, { status: 400 });
       }
     }
@@ -72,7 +78,7 @@ export async function PUT(
         ...(departmentName !== undefined && { departmentName }),
         ...(checkupTypeName !== undefined && { checkupTypeName }),
         ...(medicalInstitutionId !== undefined && { medicalInstitutionId }),
-        ...(scheduledDate !== undefined && { scheduledDate: new Date(scheduledDate) }),
+        ...(parsedScheduledDate !== undefined && { scheduledDate: parsedScheduledDate }),
         ...(scheduledTime !== undefined && { scheduledTime }),
         ...(status !== undefined && { status }),
         ...(fiscalYear !== undefined && { fiscalYear }),

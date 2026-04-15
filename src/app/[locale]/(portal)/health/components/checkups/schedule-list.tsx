@@ -65,11 +65,13 @@ export function ScheduleList({ schedules }: ScheduleListProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schedules, fetchOptions]);
 
-  // 受診日 desc ソート（A-7）
+  // キャンセル除外 + 受診日 desc ソート
   const sortedSchedules = useMemo(() => {
-    return [...schedules].sort((a, b) =>
-      new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime()
-    );
+    return [...schedules]
+      .filter(s => s.status !== 'cancelled')
+      .sort((a, b) =>
+        new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime()
+      );
   }, [schedules]);
 
   const today = new Date();

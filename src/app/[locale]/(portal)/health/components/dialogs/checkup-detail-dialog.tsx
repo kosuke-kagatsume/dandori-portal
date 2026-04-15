@@ -11,7 +11,13 @@ import { ja } from 'date-fns/locale';
 import { getFiscalYear } from '@/lib/utils';
 import { getResultBadgeColor, getResultLabel, checkupToPDF } from '@/lib/health/health-helpers';
 import { downloadHealthCheckupSummaryPDF } from '@/lib/pdf/health-report-pdf';
-import type { HealthCheckup } from '@/types/health';
+import type { HealthCheckup, CheckupType } from '@/types/health';
+
+const checkupTypeLabels: Record<CheckupType, string> = {
+  regular: '定期健康診断',
+  hiring: '雇入時健診',
+  specific: '特定業務健診',
+};
 
 interface Props {
   open: boolean;
@@ -55,6 +61,10 @@ export function CheckupDetailDialog({ open, onOpenChange, checkup }: Props) {
                   <div className="flex justify-between">
                     <span className="text-sm">医療機関</span>
                     <span>{checkup.medicalInstitution}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">検査種別</span>
+                    <span>{checkupTypeLabels[checkup.checkupType] || checkup.checkupType}</span>
                   </div>
                 </div>
               </div>

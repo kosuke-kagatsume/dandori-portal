@@ -34,7 +34,7 @@ export function FollowUpContent({
             <AlertTriangle className="h-5 w-5 text-orange-600" />
             要再検査者リスト
           </CardTitle>
-          <CardDescription>精密検査が必要な方</CardDescription>
+          <CardDescription>要検査対象者</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

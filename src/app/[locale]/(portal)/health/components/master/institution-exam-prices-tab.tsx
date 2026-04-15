@@ -43,7 +43,8 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
   const [prices, setPrices] = useState<InstitutionExamPrice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [addingNew, setAddingNew] = useState(false);
-  const [newForm, setNewForm] = useState({ checkupTypeId: '', price: '', notes: '' });
+  const [inputMode, setInputMode] = useState<'select' | 'manual'>('select');
+  const [newForm, setNewForm] = useState({ checkupTypeId: '', checkupTypeName: '', price: '', notes: '' });
 
   const activeCheckupTypes = getActiveCheckupTypes();
 
@@ -63,17 +64,30 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
   }, [loadPrices, checkupTypes.length, fetchCheckupTypes]);
 
   const handleAdd = async () => {
-    if (!newForm.checkupTypeId || !newForm.price) {
-      toast.error('検査種別と料金は必須です');
+    if (inputMode === 'select' && !newForm.checkupTypeId) {
+      toast.error('検査種別を選択してください');
       return;
     }
-    await addExamPrice(institutionId, {
-      checkupTypeId: newForm.checkupTypeId,
+    if (inputMode === 'manual' && !newForm.checkupTypeName.trim()) {
+      toast.error('検査種別名を入力してください');
+      return;
+    }
+    if (!newForm.price) {
+      toast.error('料金は必須です');
+      return;
+    }
+    const payload: Record<string, unknown> = {
       price: parseInt(newForm.price),
       notes: newForm.notes || undefined,
-    });
+    };
+    if (inputMode === 'select') {
+      payload.checkupTypeId = newForm.checkupTypeId;
+    } else {
+      payload.checkupTypeName = newForm.checkupTypeName.trim();
+    }
+    await addExamPrice(institutionId, payload as { checkupTypeId?: string; checkupTypeName?: string; price: number; notes?: string });
     toast.success('検査項目料金を追加しました');
-    setNewForm({ checkupTypeId: '', price: '', notes: '' });
+    setNewForm({ checkupTypeId: '', checkupTypeName: '', price: '', notes: '' });
     setAddingNew(false);
     await loadPrices();
   };
@@ -128,7 +142,7 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
           </TableHeader>
           <TableBody>
             {prices.map((item) => {
-              const typeName = checkupTypes.find(t => t.id === item.checkupTypeId)?.name || item.checkupTypeId;
+              const typeName = item.checkupTypeName || checkupTypes.find(t => t.id === item.checkupTypeId)?.name || item.checkupTypeId || '-';
               return (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{typeName}</TableCell>
@@ -159,20 +173,31 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
 
       {addingNew && (
         <div className="border rounded-lg p-4 space-y-3">
-          {availableTypes.length === 0 ? (
-            <>
-              <p className="text-sm text-muted-foreground text-center py-2">
-                追加可能な健診種別がありません。先に「管理＞健診種別」で種別を登録してください。
-              </p>
-              <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={() => setAddingNew(false)}>閉じる</Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">検査種別 *</Label>
+          <div className="flex gap-2 mb-2">
+            <Button
+              variant={inputMode === 'select' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setInputMode('select')}
+            >
+              マスタから選択
+            </Button>
+            <Button
+              variant={inputMode === 'manual' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setInputMode('manual')}
+            >
+              手動入力
+            </Button>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">検査種別 *</Label>
+              {inputMode === 'select' ? (
+                availableTypes.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">
+                    追加可能な種別なし。手動入力に切り替えてください。
+                  </p>
+                ) : (
                   <Select value={newForm.checkupTypeId} onValueChange={(v) => setNewForm({ ...newForm, checkupTypeId: v })}>
                     <SelectTrigger>
                       <SelectValue placeholder="選択" />
@@ -183,31 +208,37 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">料金 *</Label>
-                  <Input
-                    type="number"
-                    placeholder="10000"
-                    value={newForm.price}
-                    onChange={(e) => setNewForm({ ...newForm, price: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">備考</Label>
-                  <Input
-                    placeholder="備考"
-                    value={newForm.notes}
-                    onChange={(e) => setNewForm({ ...newForm, notes: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setAddingNew(false)}>キャンセル</Button>
-                <Button size="sm" onClick={handleAdd}>追加</Button>
-              </div>
-            </>
-          )}
+                )
+              ) : (
+                <Input
+                  placeholder="検査種別名を入力"
+                  value={newForm.checkupTypeName}
+                  onChange={(e) => setNewForm({ ...newForm, checkupTypeName: e.target.value })}
+                />
+              )}
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">料金 *</Label>
+              <Input
+                type="number"
+                placeholder="10000"
+                value={newForm.price}
+                onChange={(e) => setNewForm({ ...newForm, price: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">備考</Label>
+              <Input
+                placeholder="備考"
+                value={newForm.notes}
+                onChange={(e) => setNewForm({ ...newForm, notes: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setAddingNew(false)}>キャンセル</Button>
+            <Button size="sm" onClick={handleAdd}>追加</Button>
+          </div>
         </div>
       )}
     </div>

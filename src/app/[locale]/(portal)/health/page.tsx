@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useUserStore } from '@/lib/store/user-store';
 import { useHealthStore } from '@/lib/store/health-store';
 import { useTenantStore } from '@/lib/store/tenant-store';
@@ -9,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Heart, Clock, BarChart3 } from 'lucide-react';
 import { useHealthRBAC } from '@/lib/hooks/use-health-rbac';
 import type { HealthCheckup } from '@/types/health';
+import type { EnrichedSchedule } from './components/checkups/schedule-full-list';
 import {
   type FollowUpRecord, type InterviewRecord,
   mapAPICheckups,
@@ -34,14 +36,16 @@ export default function HealthPage() {
   const currentTenant = useTenantStore(state => state.currentTenant);
   const companyName = currentTenant?.name || '';
   const userRoles = currentUser?.roles || ['employee'];
-  const { canViewAllEmployees, canViewDepartmentEmployees, canManageFollowUp, selfOnly, canViewReports, canDownloadReports, userDepartment, userId: rbacUserId } = useHealthRBAC();
+  const { canViewAllEmployees, canViewDepartmentEmployees, canManageFollowUp, selfOnly, scheduleOnly, canViewReports, canDownloadReports, userDepartment, userId: rbacUserId } = useHealthRBAC();
 
   const { schedules, fetchSchedules, updateScheduleStatus, setTenantId: setHealthStoreTenantId } = useHealthStore();
 
   // データ状態
   const [checkups, setCheckups] = useState<HealthCheckup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('checkups');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'checkups');
+  const initialSubtab = searchParams.get('subtab') || undefined;
 
   // フィルタ状態
   const [checkupSearchQuery, setCheckupSearchQuery] = useState('');
@@ -66,6 +70,7 @@ export default function HealthPage() {
     interviewDate: undefined, interviewType: 'stress_interview', doctorName: '', notes: '', outcome: '', nextAction: '',
   });
   const [checkupRegistrationDialogOpen, setCheckupRegistrationDialogOpen] = useState(false);
+  const [prefilledSchedule, setPrefilledSchedule] = useState<EnrichedSchedule | null>(null);
 
   // ── RBAC ──────────────────────────────────
 
@@ -241,8 +246,8 @@ export default function HealthPage() {
 
   // ── 描画 ──────────────────────────────────
 
-  // 非HR/admin権限: 予定タブのみ表示
-  if (selfOnly) {
+  // 予定タブのみ表示（employee / admin / executive）
+  if (selfOnly || scheduleOnly) {
     return (
       <div className="space-y-6">
         <div>
@@ -275,13 +280,13 @@ export default function HealthPage() {
         <TabsContent value="checkups">
           <CheckupSubTabs
             schedules={filteredSchedules} checkups={checkups} departments={departments}
-            currentUserId={rbacUserId}
+            currentUserId={rbacUserId} initialSubtab={initialSubtab}
             resultSearchQuery={checkupSearchQuery} resultFilterDepartment={checkupFilterDepartment} resultFilterResult={checkupFilterResult}
             onResultSearchQueryChange={setCheckupSearchQuery} onResultFilterDepartmentChange={setCheckupFilterDepartment} onResultFilterResultChange={setCheckupFilterResult}
             onViewCheckupDetails={(c) => { setSelectedCheckup(c); setDetailDialogOpen(true); }}
             onRefreshSchedules={() => fetchSchedules()} onUpdateScheduleStatus={updateScheduleStatus}
             userRoles={userRoles}
-            onRegisterResult={() => setCheckupRegistrationDialogOpen(true)}
+            onRegisterResult={(schedule) => { setSelectedCheckup(null); setPrefilledSchedule(schedule); setCheckupRegistrationDialogOpen(true); }}
             onEditCheckup={(c) => { setSelectedCheckup(c); setCheckupRegistrationDialogOpen(true); }}
             onDeleteCheckup={async (id) => {
               if (!confirm('この健診結果を削除しますか？')) return;
@@ -332,8 +337,11 @@ export default function HealthPage() {
         userName={selectedInterviewUser?.name} record={interviewRecord} onRecordChange={setInterviewRecord} onSave={handleSaveInterview}
       />
       <CheckupRegistrationDialog
-        open={checkupRegistrationDialogOpen} onOpenChange={setCheckupRegistrationDialogOpen}
+        open={checkupRegistrationDialogOpen}
+        onOpenChange={(v) => { setCheckupRegistrationDialogOpen(v); if (!v) { setSelectedCheckup(null); setPrefilledSchedule(null); } }}
         tenantId={tenantId} onSuccess={fetchData}
+        editCheckup={selectedCheckup}
+        prefilledSchedule={prefilledSchedule}
       />
     </div>
   );

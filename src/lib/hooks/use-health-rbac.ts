@@ -11,22 +11,25 @@ export function useHealthRBAC() {
   const isManager = roles.includes('manager');
   const isExecutive = roles.includes('executive');
 
-  // hr/admin: 全データ閲覧・マスタ管理可
-  const canViewAllEmployees = isHR || isAdmin || isExecutive;
+  // hr: 全データ閲覧・マスタ管理可
+  const canViewAllEmployees = isHR;
 
   // manager: 自部署のみ閲覧
   const canViewDepartmentEmployees = isManager;
 
-  // マスタ管理権限（hr/adminのみ）
-  const canManageMaster = isHR || isAdmin;
+  // admin/executive: 健康管理は予定タブ（自分の予定）のみ
+  const scheduleOnly = (isAdmin || isExecutive) && !isHR;
 
-  // 結果登録権限（hr/adminのみ）
-  const canRegisterResults = isHR || isAdmin;
+  // マスタ管理権限（hrのみ）
+  const canManageMaster = isHR;
 
-  // フォローアップ管理権限（hr/admin/manager）
-  const canManageFollowUp = isHR || isAdmin || isManager;
+  // 結果登録権限（hrのみ）
+  const canRegisterResults = isHR;
 
-  // 自分のデータのみ閲覧（employee）
+  // フォローアップ管理権限（hr/manager）
+  const canManageFollowUp = isHR || isManager;
+
+  // 自分のデータのみ閲覧（employee, admin, executive）
   const selfOnly = !canViewAllEmployees && !canViewDepartmentEmployees;
 
   // レポート権限（I-3）
@@ -47,6 +50,7 @@ export function useHealthRBAC() {
     canRegisterResults,
     canManageFollowUp,
     selfOnly,
+    scheduleOnly,
     canViewReports,
     canDownloadReports,
     canManageSchedules,

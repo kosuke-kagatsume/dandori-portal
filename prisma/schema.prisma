@@ -2597,7 +2597,8 @@ model health_institution_exam_prices {
   id              String   @id
   tenantId        String
   institutionId   String
-  checkupTypeId   String
+  checkupTypeId   String?
+  checkupTypeName String?
   price           Int
   isActive        Boolean  @default(true)
   notes           String?
@@ -2605,9 +2606,9 @@ model health_institution_exam_prices {
   updatedAt       DateTime
 
   health_medical_institutions health_medical_institutions @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  health_checkup_types        health_checkup_types        @relation(fields: [checkupTypeId], references: [id], onDelete: Cascade)
+  health_checkup_types        health_checkup_types?       @relation(fields: [checkupTypeId], references: [id], onDelete: Cascade)
 
-  @@unique([institutionId, checkupTypeId])
+  @@unique([institutionId, checkupTypeName])
   @@index([tenantId])
 }
 

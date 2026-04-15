@@ -7,6 +7,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Date を YYYY-MM-DD 文字列に変換（タイムゾーンずれ防止用）
+ * JSON.stringifyでUTC ISO文字列になる問題を回避する
+ */
+export function formatDateForAPI(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
  * 日本の会計年度を取得（4月起算）
  * 1-3月は前年度扱い
  */

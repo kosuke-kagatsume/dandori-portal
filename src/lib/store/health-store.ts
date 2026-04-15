@@ -138,10 +138,16 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
 
     set({ isLoading: true, error: null });
     try {
+      // scheduledDate が Date の場合、YYYY-MM-DD文字列に変換（タイムゾーンずれ防止）
+      const payload = { tenantId, ...data };
+      if (payload.scheduledDate instanceof Date) {
+        const d = payload.scheduledDate;
+        payload.scheduledDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
       const res = await fetch('/api/health/schedules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId, ...data }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('健診予定の登録に失敗しました');
       await fetchSchedules(filters.fiscalYear);
@@ -155,10 +161,15 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
 
     set({ isLoading: true, error: null });
     try {
+      const payload = { ...data };
+      if (payload.scheduledDate instanceof Date) {
+        const d = payload.scheduledDate;
+        payload.scheduledDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
       const res = await fetch(`/api/health/schedules/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('健診予定の更新に失敗しました');
       await fetchSchedules(filters.fiscalYear);

@@ -71,17 +71,18 @@ export interface InstitutionExamPrice {
   id: string;
   tenantId: string;
   institutionId: string;
-  checkupTypeId: string;
+  checkupTypeId: string | null;
+  checkupTypeName?: string | null;
   price: number;
   isActive: boolean;
   notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
-  checkupTypeName?: string;
 }
 
 export interface InstitutionExamPriceInput {
-  checkupTypeId: string;
+  checkupTypeId?: string;
+  checkupTypeName?: string;
   price: number;
   isActive?: boolean;
   notes?: string;

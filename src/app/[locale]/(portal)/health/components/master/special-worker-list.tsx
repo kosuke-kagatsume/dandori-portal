@@ -27,7 +27,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { Plus, Trash2, RefreshCw, UserCheck } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, UserCheck, CalendarPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUserStore } from '@/lib/store/user-store';
 import {
@@ -40,6 +40,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScheduleDialog } from '../checkups/schedule-dialog';
 
 interface SpecialWorker {
   id: string;
@@ -60,6 +62,8 @@ export function SpecialWorkerList() {
   const [isLoading, setIsLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<SpecialWorker | null>(null);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [prefilledUser, setPrefilledUser] = useState<{ userId: string; userName: string; departmentName: string } | null>(null);
 
   const fetchWorkers = useCallback(async () => {
     if (!tenantId) return;
@@ -187,13 +191,30 @@ export function SpecialWorkerList() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setRemoveTarget(w)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPrefilledUser({ userId: w.id, userName: w.name, departmentName: w.department || '' });
+                              setShowScheduleDialog(true);
+                            }}
+                          >
+                            <CalendarPlus className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>予定登録</TooltipContent>
+                      </Tooltip>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRemoveTarget(w)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               );
@@ -249,6 +270,14 @@ export function SpecialWorkerList() {
           </Command>
         </DialogContent>
       </Dialog>
+
+      {/* 予定登録ダイアログ */}
+      <ScheduleDialog
+        open={showScheduleDialog}
+        onOpenChange={(v) => { setShowScheduleDialog(v); if (!v) setPrefilledUser(null); }}
+        onSuccess={fetchWorkers}
+        prefilledUser={prefilledUser}
+      />
 
       {/* 削除確認ダイアログ */}
       <AlertDialog open={!!removeTarget} onOpenChange={(open) => !open && setRemoveTarget(null)}>

@@ -129,7 +129,31 @@ export function InstitutionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={async (tab) => {
+          // 新規追加で基本情報未保存の場合、他タブ遷移時に自動保存
+          if (!editItem && !createdInstitutionId && tab !== 'basic') {
+            if (!formData.name) {
+              toast.error('医療機関名を入力してから他タブに切り替えてください');
+              return;
+            }
+            setIsSubmitting(true);
+            try {
+              const created = await addMedicalInstitution(formData);
+              if (created?.id) {
+                setCreatedInstitutionId(created.id);
+                toast.success('基本情報を保存しました');
+                onSuccess?.();
+              }
+            } catch {
+              toast.error('基本情報の保存に失敗しました');
+              setIsSubmitting(false);
+              return;
+            } finally {
+              setIsSubmitting(false);
+            }
+          }
+          setActiveTab(tab);
+        }} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic">基本情報</TabsTrigger>
             <TabsTrigger value="exam-prices">健診種別・料金</TabsTrigger>
@@ -153,7 +177,7 @@ export function InstitutionDialog({
               <InstitutionExamPricesTab institutionId={effectiveEditItem.id} />
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">
-                先に基本情報を保存してください
+                基本情報タブで医療機関名を入力してください
               </p>
             )}
           </TabsContent>
@@ -163,7 +187,7 @@ export function InstitutionDialog({
               <InstitutionOptionsTab institutionId={effectiveEditItem.id} />
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">
-                先に基本情報を保存してください
+                基本情報タブで医療機関名を入力してください
               </p>
             )}
           </TabsContent>
