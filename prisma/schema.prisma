@@ -1809,7 +1809,6 @@ model users {
   workRuleId            String?
   positionId            String?
   departmentId          String?
-  myNumber              String?              // マイナンバー（暗号化保存）
   taxClassification     String?              // 甲/乙区分
   isSecondaryIncome     Boolean              @default(false) // 従たる給与
   displayOrder          Int?                 // 表示順
@@ -1832,6 +1831,7 @@ model users {
   employee_resident_tax employee_resident_tax[] @relation("residentTax")
   shift_assignments   shift_assignments[]
   onboarding_application onboarding_applications[] @relation("onboardingUser")
+  mynumber_records    mynumber_records[]
 
   @@index([email])
   @@index([tenantId])
@@ -3013,9 +3013,41 @@ model employee_dependent_details {
   createdAt         DateTime @default(now())
   updatedAt         DateTime
   user              users    @relation("dependentDetails", fields: [userId], references: [id], onDelete: Cascade)
+  mynumber_records  mynumber_records[]
 
   @@index([tenantId, userId])
   @@index([userId])
+}
+
+// マイナンバー管理（暗号化保存）
+model mynumber_records {
+  id                String    @id
+  tenantId          String
+  userId            String
+  subjectType       String    // "employee" | "dependent"
+  dependentDetailId String?
+  encryptedNumber   String?   // AES-256-GCM 暗号化マイナンバー
+  encryptionIv      String?   // 初期化ベクトル（base64）
+  encryptionTag     String?   // 認証タグ（base64）
+  purpose           String?   // 利用目的
+  status            String    @default("pending") // pending/requested/approved
+  memo              String?
+  numberDocKey      String?   // S3キー: 番号確認書類
+  identityDocKey    String?   // S3キー: 身元確認書類
+  requestedAt       DateTime?
+  requestedBy       String?
+  deletedAt         DateTime?
+  deletedBy         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dependent_detail  employee_dependent_details? @relation(fields: [dependentDetailId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId, subjectType, dependentDetailId], map: "mynumber_records_unique")
+  // NOTE: PostgreSQL treats NULL as distinct in unique constraints
+  // For employee records (dependentDetailId=null), use findFirst+create/update pattern
+  @@index([tenantId])
+  @@index([tenantId, userId])
 }
 
 // 従業員所得税情報

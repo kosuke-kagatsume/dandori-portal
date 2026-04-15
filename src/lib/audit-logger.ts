@@ -26,7 +26,8 @@ type AuditCategory =
   | 'organization'
   | 'settings'
   | 'saas'
-  | 'assets';
+  | 'assets'
+  | 'mynumber';
 
 type AuditSeverity = 'info' | 'warning' | 'error' | 'critical';
 
@@ -80,7 +81,8 @@ export async function recordAuditLog(entry: AuditLogEntry): Promise<void> {
  * （APIエンドポイント内で使用）
  */
 export async function recordAuditLogDirect(
-  prisma: { audit_logs: { create: (args: { data: Record<string, unknown> }) => Promise<unknown> } },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  prisma: { audit_logs: { create: (args: any) => Promise<any> } },
   entry: AuditLogEntry
 ): Promise<void> {
   try {

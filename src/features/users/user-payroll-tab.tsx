@@ -2,15 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import { Banknote, Edit, ShieldAlert, Loader2 } from 'lucide-react';
+import { Banknote } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTenantStore } from '@/lib/store';
 import type { User } from '@/types';
@@ -25,6 +18,7 @@ import { TransferContent } from './payroll/transfer-content';
 import { IncomeTaxSection } from './payroll/income-tax-section';
 import { ResidentTaxSection } from './payroll/resident-tax-section';
 import { DependentDetailsSection } from './payroll/dependent-details-section';
+import { MynumberSection } from './payroll/mynumber-section';
 
 interface UserPayrollTabProps {
   user: User;
@@ -58,8 +52,6 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
 
   // ── 編集状態 ──────────────────────────────────────────
   const [editingBusiness, setEditingBusiness] = useState(false);
-  const [myNumberDialogOpen, setMyNumberDialogOpen] = useState(false);
-  const [myNumberInput, setMyNumberInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const [businessForm, setBusinessForm] = useState({
@@ -175,31 +167,6 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
     }
   };
 
-  // ── マイナンバー保存 ──────────────────────────────────────────
-
-  const saveMyNumber = async () => {
-    if (!/^\d{12}$/.test(myNumberInput)) {
-      toast.error('マイナンバーは12桁の数字で入力してください');
-      return;
-    }
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/users/${user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ myNumber: myNumberInput }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success('マイナンバーを保存しました');
-      setMyNumberDialogOpen(false);
-      setMyNumberInput('');
-    } catch {
-      toast.error('保存に失敗しました');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   // ── ヘルパー ──────────────────────────────────────────
 
   const currentMunicipality = municipalities.find(m => m.id === salarySettings?.municipalityId);
@@ -283,7 +250,7 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
         </Card>
 
         {/* 扶養親族詳細（配偶者・扶養カードは扶養親族詳細に集約済みのため削除） */}
-        <DependentDetailsSection userId={user.id} canEdit={canEdit} />
+        <DependentDetailsSection userId={user.id} canEdit={canEdit} canReadMynumber={isHR} canManageMynumber={canEdit} />
 
         {/* B4b: 所得税 */}
         <IncomeTaxSection
@@ -302,37 +269,12 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
           fallbackMunicipalityName={currentMunicipality ? `${currentMunicipality.prefectureName} ${currentMunicipality.name}` : payroll?.residentTaxCity}
         />
 
-        {/* B5: マイナンバー */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5" />
-                <div>
-                  <CardTitle className="text-base">マイナンバー</CardTitle>
-                  <CardDescription>個人番号（社会保険・労務管理用）</CardDescription>
-                </div>
-              </div>
-              {canEdit && (
-                <Button variant="outline" size="sm" onClick={() => { setMyNumberInput(''); setMyNumberDialogOpen(true); }}>
-                  <Edit className="mr-1 h-4 w-4" />{user.myNumber || payroll?.myNumber ? '変更' : '登録'}
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Alert>
-              <ShieldAlert className="h-4 w-4" />
-              <AlertDescription>マイナンバーは暗号化して保存され、アクセスログが記録されます。</AlertDescription>
-            </Alert>
-            <div className="mt-4">
-              <p className="text-sm font-medium text-muted-foreground">マイナンバー</p>
-              <p className="text-sm mt-1 font-mono">
-                {(user.myNumber || payroll?.myNumber) ? '●●●●●●●●●●●●' : '未登録'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* B5: マイナンバー（暗号化・個別権限・監査ログ対応） */}
+        <MynumberSection
+          userId={user.id}
+          canManage={canEdit}
+          canRead={isHR}
+        />
       </TabsContent>
 
       {/* サブタブ2: 支給・控除 */}
@@ -354,33 +296,6 @@ export function UserPayrollTab({ user, isReadOnly, isHR }: UserPayrollTabProps) 
         <TransferContent userId={user.id} canEdit={canEdit} />
       </TabsContent>
 
-      {/* マイナンバー入力ダイアログ */}
-      <Dialog open={myNumberDialogOpen} onOpenChange={setMyNumberDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>マイナンバーの{user.myNumber ? '変更' : '登録'}</DialogTitle>
-            <DialogDescription>12桁の個人番号を入力してください</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label>マイナンバー *</Label>
-            <Input
-              type="text" maxLength={12}
-              value={myNumberInput}
-              onChange={(e) => setMyNumberInput(e.target.value.replace(/\D/g, ''))}
-              placeholder="123456789012"
-              className="font-mono mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-1">半角数字12桁</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMyNumberDialogOpen(false)}>キャンセル</Button>
-            <Button onClick={saveMyNumber} disabled={isSaving || myNumberInput.length !== 12}>
-              {isSaving ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
-              保存
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Tabs>
   );
 }

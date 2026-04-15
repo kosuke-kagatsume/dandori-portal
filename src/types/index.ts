@@ -26,7 +26,6 @@ export const UserSchema = z.object({
   punchMethod: z.enum(['web', 'ic_card', 'mobile', 'face']).optional(), // 打刻方法
   workRuleId: z.string().optional(), // 就業ルールID
   employmentType: z.string().optional(), // 雇用形態
-  myNumber: z.string().optional(), // マイナンバー
   taxClassification: z.string().optional(), // 甲/乙区分
   isSecondaryIncome: z.boolean().optional(), // 従たる給与
   isSpecialWorker: z.boolean().optional(), // 特定業務従事者
