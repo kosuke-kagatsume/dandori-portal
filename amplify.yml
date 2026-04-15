@@ -43,6 +43,9 @@ frontend:
         - 'echo "S3_BUCKET=${S3_BUCKET}" >> .env.production'
         - 'echo "S3_REGION=${S3_REGION}" >> .env.production'
 
+        # マイナンバー暗号化キー
+        - 'echo "MYNUMBER_ENCRYPTION_KEY=${MYNUMBER_ENCRYPTION_KEY}" >> .env.production'
+
         # アプリURL
         - 'echo "NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}" >> .env.production'
         - 'echo "NEXT_PUBLIC_MAIN_DOMAIN=${NEXT_PUBLIC_MAIN_DOMAIN}" >> .env.production'
