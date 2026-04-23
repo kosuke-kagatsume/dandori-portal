@@ -29,6 +29,8 @@ const MONTH_ORDER = [
 ] as const;
 
 type MonthKey = (typeof MONTH_ORDER)[number]['key'];
+// 未入力（null）と 0円入力（0）を区別するため number | null で保持
+type MonthValue = number | null;
 
 // 左列: 6月〜11月, 右列: 12月〜5月
 const LEFT_MONTHS = MONTH_ORDER.slice(0, 6);
@@ -41,9 +43,9 @@ interface Props {
   onSaved: () => void;
 }
 
-const emptyForm = (): Record<MonthKey, number> => ({
-  month6: 0, month7: 0, month8: 0, month9: 0, month10: 0, month11: 0,
-  month12: 0, month1: 0, month2: 0, month3: 0, month4: 0, month5: 0,
+const emptyForm = (): Record<MonthKey, MonthValue> => ({
+  month6: null, month7: null, month8: null, month9: null, month10: null, month11: null,
+  month12: null, month1: null, month2: null, month3: null, month4: null, month5: null,
 });
 
 export function ResidentTaxMonthlySection({ userId, initialData, canEdit, onSaved }: Props) {
@@ -52,7 +54,9 @@ export function ResidentTaxMonthlySection({ userId, initialData, canEdit, onSave
   const [fiscalYear, setFiscalYear] = useState(initialData?.fiscalYear || currentYear);
   const [editing, setEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [form, setForm] = useState<Record<MonthKey, number>>(emptyForm());
+  const [form, setForm] = useState<Record<MonthKey, MonthValue>>(emptyForm());
+  // コピー操作後は以降の「コピー」ボタンを非表示にするためのフラグ
+  const [copyPerformed, setCopyPerformed] = useState(false);
 
   const fetchData = useCallback(async (year: number) => {
     try {
@@ -72,31 +76,46 @@ export function ResidentTaxMonthlySection({ userId, initialData, canEdit, onSave
     const y = parseInt(year);
     setFiscalYear(y);
     setEditing(false);
+    setCopyPerformed(false);
   };
 
   const startEdit = () => {
     const base = emptyForm();
     if (data) {
       for (const { key } of MONTH_ORDER) {
-        base[key] = data[key] || 0;
+        // DBは Int @default(0) なので未登録と 0 を区別できないが、
+        // 編集中は既存値（0 含む）をそのまま保持する
+        base[key] = data[key];
       }
     }
     setForm(base);
+    setCopyPerformed(false);
     setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setCopyPerformed(false);
   };
 
   const save = async () => {
     setIsSaving(true);
     try {
       const method = data ? 'PATCH' : 'POST';
+      // null は 0 として保存（未入力は0円扱い）
+      const payload: Record<string, number> = {};
+      for (const { key } of MONTH_ORDER) {
+        payload[key] = form[key] ?? 0;
+      }
       const res = await fetch(`/api/users/${userId}/resident-tax-monthly`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fiscalYear, ...form }),
+        body: JSON.stringify({ fiscalYear, ...payload }),
       });
       if (!res.ok) throw new Error();
       toast.success('住民税月額を保存しました');
       setEditing(false);
+      setCopyPerformed(false);
       await fetchData(fiscalYear);
       onSaved();
     } catch {
@@ -108,6 +127,7 @@ export function ResidentTaxMonthlySection({ userId, initialData, canEdit, onSave
 
   const copyToSubsequent = (fromIndex: number) => {
     const value = form[MONTH_ORDER[fromIndex].key];
+    if (value === null) return;
     setForm(prev => {
       const next = { ...prev };
       for (let i = fromIndex + 1; i < MONTH_ORDER.length; i++) {
@@ -115,10 +135,11 @@ export function ResidentTaxMonthlySection({ userId, initialData, canEdit, onSave
       }
       return next;
     });
+    setCopyPerformed(true);
   };
 
   const yearTotal = editing
-    ? MONTH_ORDER.reduce((sum, { key }) => sum + (form[key] || 0), 0)
+    ? MONTH_ORDER.reduce((sum, { key }) => sum + (form[key] ?? 0), 0)
     : (data ? MONTH_ORDER.reduce((sum, { key }) => sum + (data[key] || 0), 0) : 0);
 
   const renderMonthRow = (
@@ -126,6 +147,10 @@ export function ResidentTaxMonthlySection({ userId, initialData, canEdit, onSave
     index: number,
   ) => {
     if (editing) {
+      const currentValue = form[month.key];
+      // コピー操作後は以降のコピーボタンを全て非表示。0 でも未入力でなければ表示する
+      const showCopyButton =
+        !copyPerformed && index > 0 && currentValue !== null;
       return (
         <div key={month.key} className="flex items-center gap-2">
           <span className="text-sm w-16 shrink-0">{month.label}</span>
@@ -134,10 +159,16 @@ export function ResidentTaxMonthlySection({ userId, initialData, canEdit, onSave
             min="0"
             max="999999"
             className="h-9 w-32 text-sm text-right"
-            value={form[month.key] || ''}
-            onChange={(e) => setForm(f => ({ ...f, [month.key]: parseInt(e.target.value) || 0 }))}
+            value={currentValue ?? ''}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setForm(f => ({
+                ...f,
+                [month.key]: raw === '' ? null : (parseInt(raw) || 0),
+              }));
+            }}
           />
-          {index > 0 && form[month.key] > 0 && (
+          {showCopyButton && (
             <Button
               type="button"
               variant="ghost"
@@ -189,7 +220,7 @@ export function ResidentTaxMonthlySection({ userId, initialData, canEdit, onSave
               <SectionEditButtons
                 isEditing={editing} isSaving={isSaving}
                 onEdit={startEdit} onSave={save}
-                onCancel={() => setEditing(false)}
+                onCancel={cancelEdit}
               />
             )}
           </div>

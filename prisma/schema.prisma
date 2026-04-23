@@ -3002,7 +3002,7 @@ model employee_dependent_details {
   id                String   @id
   tenantId          String
   userId            String
-  dependentType     String   // spouse:配偶者, general:一般, specific:特定, elderly:老人, under16:16歳未満
+  dependentType     String   // spouse:配偶者, general:一般, specific:特定, elderly:老人, under16:16歳未満, excluded:対象外（履歴保持）
   name              String   // 氏名
   nameKana          String?  // フリガナ
   birthDate         DateTime? // 生年月日
@@ -3010,6 +3010,7 @@ model employee_dependent_details {
   isLivingTogether  Boolean  @default(true) // 同居
   annualIncome      Int?     // 年間所得
   disabilityGrade   String   @default("none") // none/general/special/fellow_living_special
+  healthInsuranceType String @default("enrolled") // enrolled:加入, excluded:対象外
   createdAt         DateTime @default(now())
   updatedAt         DateTime
   user              users    @relation("dependentDetails", fields: [userId], references: [id], onDelete: Cascade)
@@ -3099,7 +3100,9 @@ model employee_bank_accounts {
   id              String   @id
   tenantId        String
   userId          String
+  bankCode        String?  // 銀行コード（全銀協4桁）。既存レコードはnull許容
   bankName        String   // 銀行名
+  branchCode      String?  // 支店コード（全銀協3桁）
   branchName      String   // 支店名
   accountType     String   @default("ordinary") // ordinary:普通, current:当座
   accountNumber   String   // 口座番号
@@ -3113,6 +3116,7 @@ model employee_bank_accounts {
 
   @@index([tenantId, userId])
   @@index([userId])
+  @@index([bankCode, branchCode])
 }
 
 // 従業員住民税月額

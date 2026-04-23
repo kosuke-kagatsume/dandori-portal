@@ -192,6 +192,7 @@ const createUserStore = () => {
 
           set({
             currentUser: user,
+            tenantId: apiUser.tenantId || '',
             accessToken: accessToken,
             refreshToken: apiRefreshToken,
             isLoading: false,
@@ -362,6 +363,7 @@ const createUserStore = () => {
 
           set({
             currentUser: user,
+            tenantId: apiUser.tenantId || '',
             isLoading: false,
           });
         } catch (error) {
@@ -398,12 +400,13 @@ const createUserStore = () => {
 
         try {
           const state = get();
-          if (!state.tenantId) {
+          const tenantId = state.tenantId || state.currentUser?.tenantId;
+          if (!tenantId) {
             throw new Error('テナントIDが設定されていません');
           }
 
-          const users = await apiFetchUsers(state.tenantId);
-          set({ users, isLoading: false });
+          const users = await apiFetchUsers(tenantId);
+          set({ users, tenantId, isLoading: false });
         } catch (error) {
           const errorMessage = error instanceof Error
             ? error.message
@@ -427,11 +430,12 @@ const createUserStore = () => {
 
         try {
           const state = get();
-          if (!state.tenantId) {
+          const tenantId = state.tenantId || state.currentUser?.tenantId;
+          if (!tenantId) {
             throw new Error('テナントIDが設定されていません');
           }
 
-          const createdUser = await apiCreateUser(user, state.tenantId);
+          const createdUser = await apiCreateUser(user, tenantId);
           set((state: UserState) => ({
             users: [...state.users, createdUser],
             isLoading: false,

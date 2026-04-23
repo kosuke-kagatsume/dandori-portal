@@ -60,6 +60,7 @@ export async function POST(
         isLivingTogether: body.isLivingTogether ?? true,
         annualIncome: body.annualIncome != null ? parseInt(String(body.annualIncome)) : null,
         disabilityGrade: body.disabilityGrade || 'none',
+        healthInsuranceType: body.healthInsuranceType || 'enrolled',
         updatedAt: new Date(),
       },
     });
@@ -104,6 +105,7 @@ export async function PUT(
         ...(body.isLivingTogether !== undefined && { isLivingTogether: body.isLivingTogether }),
         ...(body.annualIncome !== undefined && { annualIncome: body.annualIncome != null ? parseInt(String(body.annualIncome)) : null }),
         ...(body.disabilityGrade !== undefined && { disabilityGrade: body.disabilityGrade }),
+        ...(body.healthInsuranceType !== undefined && { healthInsuranceType: body.healthInsuranceType }),
         updatedAt: new Date(),
       },
     });

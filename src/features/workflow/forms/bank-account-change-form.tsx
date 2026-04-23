@@ -7,10 +7,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { FormComponentProps } from '@/lib/workflow/schemas';
+import { BankCombobox } from '@/components/bank/bank-combobox';
+import { BranchCombobox } from '@/components/bank/branch-combobox';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function BankAccountChangeForm({ form, onFlowUpdate }: FormComponentProps) {
   const [consent, setConsent] = useState(false);
+
+  const bankCode = form.watch('bankCode') as string | undefined;
+  const bankName = form.watch('bankName') as string | undefined;
+  const branchCode = form.watch('branchCode') as string | undefined;
+  const branchName = form.watch('branchName') as string | undefined;
+
+  const handleBankChange = (v: { code: string; name: string } | null) => {
+    form.setValue('bankCode', v?.code ?? '', { shouldValidate: true, shouldDirty: true });
+    form.setValue('bankName', v?.name ?? '', { shouldValidate: true, shouldDirty: true });
+    form.setValue('branchCode', '', { shouldValidate: true, shouldDirty: true });
+    form.setValue('branchName', '', { shouldValidate: true, shouldDirty: true });
+  };
+
+  const handleBranchChange = (v: { code: string; name: string } | null) => {
+    form.setValue('branchCode', v?.code ?? '', { shouldValidate: true, shouldDirty: true });
+    form.setValue('branchName', v?.name ?? '', { shouldValidate: true, shouldDirty: true });
+  };
 
   return (
     <Card>
@@ -31,7 +50,7 @@ export function BankAccountChangeForm({ form, onFlowUpdate }: FormComponentProps
             <br />
             ・普通預金口座のみ登録可能です（当座預金は登録できません）
             <br />
-            ・銀行コード・支店コードは4桁・3桁の数字です
+            ・銀行名・支店名は検索して選択してください（銀行コード・支店コードは自動入力されます）
             <br />
             ・口座名義は必ず全角カナで入力してください
           </p>
@@ -41,55 +60,34 @@ export function BankAccountChangeForm({ form, onFlowUpdate }: FormComponentProps
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="bankName">
-              銀行名
+              銀行
               <span className="text-red-500 ml-1">*</span>
             </Label>
-            <Input
+            <BankCombobox
               id="bankName"
-              placeholder="例：三菱UFJ銀行"
-              {...form.register('bankName')}
+              value={bankCode && bankName ? { code: bankCode, name: bankName } : null}
+              onChange={handleBankChange}
+              placeholder="銀行名・カナ・コードで検索"
             />
+            <p className="text-xs text-muted-foreground">
+              {bankCode ? `銀行コード: ${bankCode}` : '銀行名・カナ・4桁コードで検索できます'}
+            </p>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="bankCode">
-              銀行コード
-              <span className="text-red-500 ml-1">*</span>
-            </Label>
-            <Input
-              id="bankCode"
-              placeholder="0005"
-              maxLength={4}
-              {...form.register('bankCode')}
-            />
-            <p className="text-xs text-muted-foreground">4桁の数字</p>
-          </div>
-        </div>
-
-        {/* 支店情報 */}
-        <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="branchName">
-              支店名
+              支店
               <span className="text-red-500 ml-1">*</span>
             </Label>
-            <Input
+            <BranchCombobox
               id="branchName"
-              placeholder="例：新宿支店"
-              {...form.register('branchName')}
+              bankCode={bankCode || null}
+              value={branchCode && branchName ? { code: branchCode, name: branchName } : null}
+              onChange={handleBranchChange}
+              placeholder="支店名・カナ・コードで検索"
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="branchCode">
-              支店コード
-              <span className="text-red-500 ml-1">*</span>
-            </Label>
-            <Input
-              id="branchCode"
-              placeholder="123"
-              maxLength={3}
-              {...form.register('branchCode')}
-            />
-            <p className="text-xs text-muted-foreground">3桁の数字</p>
+            <p className="text-xs text-muted-foreground">
+              {branchCode ? `支店コード: ${branchCode}` : '先に銀行を選択してください'}
+            </p>
           </div>
         </div>
 

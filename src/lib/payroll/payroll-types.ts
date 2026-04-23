@@ -53,7 +53,9 @@ export interface EmployeeDependent {
 
 export interface BankAccount {
   id: string;
+  bankCode: string | null;
   bankName: string;
+  branchCode: string | null;
   branchName: string;
   accountType: string;
   accountNumber: string;

@@ -34,7 +34,16 @@ export async function PATCH(
     const account = await prisma.employee_bank_accounts.update({
       where: { id: accountId },
       data: {
-        ...body,
+        ...(body.bankCode !== undefined && { bankCode: body.bankCode ?? null }),
+        ...(body.bankName !== undefined && { bankName: body.bankName }),
+        ...(body.branchCode !== undefined && { branchCode: body.branchCode ?? null }),
+        ...(body.branchName !== undefined && { branchName: body.branchName }),
+        ...(body.accountType !== undefined && { accountType: body.accountType }),
+        ...(body.accountNumber !== undefined && { accountNumber: body.accountNumber }),
+        ...(body.accountHolder !== undefined && { accountHolder: body.accountHolder }),
+        ...(body.isPrimary !== undefined && { isPrimary: body.isPrimary }),
+        ...(body.transferAmount !== undefined && { transferAmount: body.transferAmount }),
+        ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
         updatedAt: new Date(),
       },
     });

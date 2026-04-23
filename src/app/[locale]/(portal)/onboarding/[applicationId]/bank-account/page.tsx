@@ -8,6 +8,8 @@ import {
 } from '@/features/onboarding/forms/FormFields';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useBankAccountForm, type BankAccountFormInput } from '@/features/onboarding/hooks/useBankAccountForm';
+import { BankCombobox } from '@/components/bank/bank-combobox';
+import { BranchCombobox } from '@/components/bank/branch-combobox';
 
 /**
  * Bank Account Form Page
@@ -25,7 +27,25 @@ export default function BankAccountFormPage() {
   const locale = params?.locale as string;
   const applicationId = params?.applicationId as string;
 
-  const { register, handleSubmit, errors, updateForm, submitForm } = useBankAccountForm();
+  const { register, handleSubmit, errors, watch, setValue, updateForm, submitForm } = useBankAccountForm();
+
+  const bankCode = watch('bankCode');
+  const bankName = watch('bankName');
+  const branchCode = watch('branchCode');
+  const branchName = watch('branchName');
+
+  const handleBankChange = (v: { code: string; name: string } | null) => {
+    setValue('bankCode', v?.code ?? '', { shouldValidate: true, shouldDirty: true });
+    setValue('bankName', v?.name ?? '', { shouldValidate: true, shouldDirty: true });
+    // 銀行変更時は支店をリセット
+    setValue('branchCode', '', { shouldValidate: true, shouldDirty: true });
+    setValue('branchName', '', { shouldValidate: true, shouldDirty: true });
+  };
+
+  const handleBranchChange = (v: { code: string; name: string } | null) => {
+    setValue('branchCode', v?.code ?? '', { shouldValidate: true, shouldDirty: true });
+    setValue('branchName', v?.name ?? '', { shouldValidate: true, shouldDirty: true });
+  };
 
   const onSubmit = async (data: BankAccountFormInput) => {
     try {
@@ -130,7 +150,7 @@ export default function BankAccountFormPage() {
                 <br />
                 ・普通預金口座のみ登録可能です（当座預金は登録できません）
                 <br />
-                ・銀行コード・支店コードは4桁・3桁の数字です
+                ・銀行名・支店名は検索して選択してください（銀行コード・支店コードは自動入力されます）
                 <br />
                 ・口座名義は必ず全角カナで入力してください
               </p>
@@ -139,69 +159,41 @@ export default function BankAccountFormPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  銀行名
+                  銀行
                   <span className="text-red-500 ml-1">*</span>
                 </label>
-                <input
-                  type="text"
-                  {...register('bankName')}
-                  placeholder="例: 三菱UFJ銀行"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                <BankCombobox
+                  value={bankCode && bankName ? { code: bankCode, name: bankName } : null}
+                  onChange={handleBankChange}
+                  placeholder="銀行名・カナ・コードで検索"
                 />
-                {errors.bankName && (
-                  <p className="mt-1 text-xs text-red-600">{String(errors.bankName.message || '')}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {bankCode ? `銀行コード: ${bankCode}` : '銀行名・カナ・4桁コードで検索できます'}
+                </p>
+                {(errors.bankName || errors.bankCode) && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {String(errors.bankName?.message || errors.bankCode?.message || '')}
+                  </p>
                 )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  銀行コード
+                  支店
                   <span className="text-red-500 ml-1">*</span>
                 </label>
-                <input
-                  type="text"
-                  {...register('bankCode')}
-                  placeholder="0005"
-                  maxLength={4}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                <BranchCombobox
+                  bankCode={bankCode || null}
+                  value={branchCode && branchName ? { code: branchCode, name: branchName } : null}
+                  onChange={handleBranchChange}
+                  placeholder="支店名・カナ・コードで検索"
                 />
-                <p className="mt-1 text-xs text-gray-500">4桁の数字</p>
-                {errors.bankCode && (
-                  <p className="mt-1 text-xs text-red-600">{String(errors.bankCode.message || '')}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  支店名
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <input
-                  type="text"
-                  {...register('branchName')}
-                  placeholder="例: 新宿支店"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                {errors.branchName && (
-                  <p className="mt-1 text-xs text-red-600">{String(errors.branchName.message || '')}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  支店コード
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <input
-                  type="text"
-                  {...register('branchCode')}
-                  placeholder="123"
-                  maxLength={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <p className="mt-1 text-xs text-gray-500">3桁の数字</p>
-                {errors.branchCode && (
-                  <p className="mt-1 text-xs text-red-600">{String(errors.branchCode.message || '')}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {branchCode ? `支店コード: ${branchCode}` : '先に銀行を選択してください'}
+                </p>
+                {(errors.branchName || errors.branchCode) && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {String(errors.branchName?.message || errors.branchCode?.message || '')}
+                  </p>
                 )}
               </div>
             </div>

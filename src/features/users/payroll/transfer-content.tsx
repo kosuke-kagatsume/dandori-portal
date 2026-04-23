@@ -22,6 +22,8 @@ import {
 import { CreditCard, Edit, Plus, Trash2, Info, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { type BankAccount, accountTypeLabels } from '@/lib/payroll/payroll-types';
+import { BankCombobox, type BankValue } from '@/components/bank/bank-combobox';
+import { BranchCombobox, type BranchValue } from '@/components/bank/branch-combobox';
 
 interface Props {
   userId: string;
@@ -34,8 +36,20 @@ export function TransferContent({ userId, canEdit }: Props) {
   const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
   const [deleteBankId, setDeleteBankId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [bankForm, setBankForm] = useState({
-    bankName: '', branchName: '', accountType: 'ordinary',
+  const [bankForm, setBankForm] = useState<{
+    bankCode: string;
+    bankName: string;
+    branchCode: string;
+    branchName: string;
+    accountType: string;
+    accountNumber: string;
+    accountHolder: string;
+    isPrimary: boolean;
+    transferAmount: string;
+  }>({
+    bankCode: '', bankName: '',
+    branchCode: '', branchName: '',
+    accountType: 'ordinary',
     accountNumber: '', accountHolder: '', isPrimary: false, transferAmount: '',
   });
 
@@ -53,14 +67,24 @@ export function TransferContent({ userId, canEdit }: Props) {
 
   const openAddBank = () => {
     setEditingBank(null);
-    setBankForm({ bankName: '', branchName: '', accountType: 'ordinary', accountNumber: '', accountHolder: '', isPrimary: bankAccounts.length === 0, transferAmount: '' });
+    setBankForm({
+      bankCode: '', bankName: '',
+      branchCode: '', branchName: '',
+      accountType: 'ordinary',
+      accountNumber: '', accountHolder: '',
+      isPrimary: bankAccounts.length === 0,
+      transferAmount: '',
+    });
     setBankDialogOpen(true);
   };
 
   const openEditBank = (account: BankAccount) => {
     setEditingBank(account);
     setBankForm({
-      bankName: account.bankName, branchName: account.branchName,
+      bankCode: account.bankCode || '',
+      bankName: account.bankName,
+      branchCode: account.branchCode || '',
+      branchName: account.branchName,
       accountType: account.accountType, accountNumber: account.accountNumber,
       accountHolder: account.accountHolder, isPrimary: account.isPrimary,
       transferAmount: account.transferAmount != null ? String(account.transferAmount) : '',
@@ -68,9 +92,35 @@ export function TransferContent({ userId, canEdit }: Props) {
     setBankDialogOpen(true);
   };
 
+  const bankValue: BankValue | null = bankForm.bankCode
+    ? { code: bankForm.bankCode, name: bankForm.bankName }
+    : null;
+  const branchValue: BranchValue | null = bankForm.branchCode
+    ? { code: bankForm.branchCode, name: bankForm.branchName }
+    : null;
+
+  const handleBankChange = (v: BankValue | null) => {
+    setBankForm(f => ({
+      ...f,
+      bankCode: v?.code || '',
+      bankName: v?.name || '',
+      // 銀行が変わったら支店はリセット
+      branchCode: '',
+      branchName: '',
+    }));
+  };
+
+  const handleBranchChange = (v: BranchValue | null) => {
+    setBankForm(f => ({
+      ...f,
+      branchCode: v?.code || '',
+      branchName: v?.name || '',
+    }));
+  };
+
   const saveBank = async () => {
-    if (!bankForm.bankName || !bankForm.branchName || !bankForm.accountNumber || !bankForm.accountHolder) {
-      toast.error('必須項目を入力してください');
+    if (!bankForm.bankCode || !bankForm.branchCode || !bankForm.accountNumber || !bankForm.accountHolder) {
+      toast.error('銀行・支店・口座番号・名義は必須です');
       return;
     }
     setIsSaving(true);
@@ -193,12 +243,26 @@ export function TransferContent({ userId, canEdit }: Props) {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label>銀行名 *</Label>
-                <Input value={bankForm.bankName} onChange={e => setBankForm(f => ({ ...f, bankName: e.target.value }))} />
+                <Label>銀行 *</Label>
+                <BankCombobox value={bankValue} onChange={handleBankChange} />
+                {editingBank && !editingBank.bankCode && !bankForm.bankCode && (
+                  <p className="text-xs text-amber-600">
+                    現在登録: {editingBank.bankName}（コード未登録）
+                  </p>
+                )}
               </div>
               <div className="space-y-1">
-                <Label>支店名 *</Label>
-                <Input value={bankForm.branchName} onChange={e => setBankForm(f => ({ ...f, branchName: e.target.value }))} />
+                <Label>支店 *</Label>
+                <BranchCombobox
+                  bankCode={bankForm.bankCode || null}
+                  value={branchValue}
+                  onChange={handleBranchChange}
+                />
+                {editingBank && !editingBank.branchCode && !bankForm.branchCode && (
+                  <p className="text-xs text-amber-600">
+                    現在登録: {editingBank.branchName}（コード未登録）
+                  </p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">

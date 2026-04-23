@@ -21,8 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Users, Plus, MoreHorizontal, Pencil, Trash2, ShieldCheck } from 'lucide-react';
+import { Users, Plus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DependentDetail {
@@ -35,17 +34,15 @@ interface DependentDetail {
   isLivingTogether: boolean;
   annualIncome: number | null;
   disabilityGrade: string;
-}
-
-interface MynumberMeta {
-  hasNumber: boolean;
-  status: string;
+  healthInsuranceType: string;
 }
 
 interface DependentDetailsSectionProps {
   userId: string;
   canEdit: boolean;
+  /** @deprecated 扶養親族詳細画面ではマイナンバーを扱わない（別セクション管理） */
   canReadMynumber?: boolean;
+  /** @deprecated 同上 */
   canManageMynumber?: boolean;
 }
 
@@ -55,6 +52,7 @@ const dependentTypeLabels: Record<string, string> = {
   specific: '特定扶養(19-22歳)',
   elderly: '老人扶養(70歳以上)',
   under16: '16歳未満',
+  excluded: '対象外',
 };
 
 const disabilityGradeLabels: Record<string, string> = {
@@ -62,6 +60,11 @@ const disabilityGradeLabels: Record<string, string> = {
   general: '一般障害者',
   special: '特別障害者',
   fellow_living_special: '同居特別障害者',
+};
+
+const healthInsuranceTypeLabels: Record<string, string> = {
+  enrolled: '加入',
+  excluded: '対象外',
 };
 
 const emptyForm = () => ({
@@ -73,25 +76,16 @@ const emptyForm = () => ({
   isLivingTogether: true,
   annualIncome: '',
   disabilityGrade: 'none',
+  healthInsuranceType: 'enrolled',
 });
 
-const statusLabels: Record<string, string> = {
-  pending: '未提供',
-  requested: '依頼中',
-  approved: '提供済み',
-};
-
-export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canManageMynumber: canManageMn }: DependentDetailsSectionProps) {
+export function DependentDetailsSection({ userId, canEdit }: DependentDetailsSectionProps) {
   const [records, setRecords] = useState<DependentDetail[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState(emptyForm());
-  const [mynumberMap, setMynumberMap] = useState<Record<string, MynumberMeta>>({});
-  const [revealedNumbers, setRevealedNumbers] = useState<Record<string, string>>({});
-  const [mnDialogDepId, setMnDialogDepId] = useState<string | null>(null);
-  const [mnInput, setMnInput] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -100,24 +94,9 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
         const json = await res.json();
         const deps: DependentDetail[] = json.data || [];
         setRecords(deps);
-        if (canReadMynumber && deps.length > 0) {
-          const mnMap: Record<string, MynumberMeta> = {};
-          await Promise.all(deps.map(async (dep) => {
-            try {
-              const mnRes = await fetch(`/api/users/${userId}/dependent-details/${dep.id}/mynumber`);
-              if (mnRes.ok) {
-                const mnJson = await mnRes.json();
-                if (mnJson.data) {
-                  mnMap[dep.id] = { hasNumber: mnJson.data.hasNumber, status: mnJson.data.status };
-                }
-              }
-            } catch { /* ignore */ }
-          }));
-          setMynumberMap(mnMap);
-        }
       }
     } catch { /* */ }
-  }, [userId, canReadMynumber]);
+  }, [userId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -138,13 +117,14 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
       isLivingTogether: record.isLivingTogether,
       annualIncome: record.annualIncome != null ? String(record.annualIncome) : '',
       disabilityGrade: record.disabilityGrade,
+      healthInsuranceType: record.healthInsuranceType || 'enrolled',
     });
     setDialogOpen(true);
   };
 
   const save = async () => {
     if (!form.name || !form.dependentType) {
-      toast.error('氏名と扶養区分は必須です');
+      toast.error('氏名と税扶養区分は必須です');
       return;
     }
     setIsSaving(true);
@@ -184,51 +164,6 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
       await fetchData();
     } catch {
       toast.error('扶養親族の削除に失敗しました');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleRevealToggle = async (depId: string, checked: boolean) => {
-    if (checked) {
-      try {
-        const res = await fetch(`/api/users/${userId}/dependent-details/${depId}/mynumber/reveal`, { method: 'POST' });
-        if (res.ok) {
-          const json = await res.json();
-          setRevealedNumbers(prev => ({ ...prev, [depId]: json.data.myNumber }));
-        }
-      } catch {
-        toast.error('マイナンバーの復号に失敗しました');
-      }
-    } else {
-      setRevealedNumbers(prev => {
-        const next = { ...prev };
-        delete next[depId];
-        return next;
-      });
-    }
-  };
-
-  const saveMynumber = async () => {
-    if (!mnDialogDepId || !mnInput) return;
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/users/${userId}/dependent-details/${mnDialogDepId}/mynumber`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ myNumber: mnInput }),
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        toast.error(json.error || 'マイナンバー登録に失敗しました');
-        return;
-      }
-      toast.success('マイナンバーを登録しました');
-      setMnDialogDepId(null);
-      setMnInput('');
-      await fetchData();
-    } catch {
-      toast.error('マイナンバー登録に失敗しました');
     } finally {
       setIsSaving(false);
     }
@@ -280,14 +215,13 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>区分</TableHead>
+                  <TableHead>税区分</TableHead>
                   <TableHead>氏名</TableHead>
                   <TableHead>続柄</TableHead>
                   <TableHead>生年月日</TableHead>
                   <TableHead>同居</TableHead>
-                  <TableHead>障害区分</TableHead>
-                  {canReadMynumber && <TableHead>マイナンバー</TableHead>}
-                  {canReadMynumber && <TableHead>提供状況</TableHead>}
+                  <TableHead>障害</TableHead>
+                  <TableHead>健保区分</TableHead>
                   {canEdit && <TableHead className="w-[50px]" />}
                 </TableRow>
               </TableHeader>
@@ -308,31 +242,7 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
                     </TableCell>
                     <TableCell>{record.isLivingTogether ? '同居' : '別居'}</TableCell>
                     <TableCell>{disabilityGradeLabels[record.disabilityGrade] || '-'}</TableCell>
-                    {canReadMynumber && (
-                      <TableCell>
-                        {mynumberMap[record.id]?.hasNumber ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-mono">
-                              {revealedNumbers[record.id] || '************'}
-                            </span>
-                            <Checkbox
-                              checked={!!revealedNumbers[record.id]}
-                              onCheckedChange={(checked) => handleRevealToggle(record.id, !!checked)}
-                            />
-                            <span className="text-[10px] text-muted-foreground">表示</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">未登録</span>
-                        )}
-                      </TableCell>
-                    )}
-                    {canReadMynumber && (
-                      <TableCell>
-                        <Badge variant={mynumberMap[record.id]?.status === 'approved' ? 'default' : 'secondary'} className="text-xs">
-                          {statusLabels[mynumberMap[record.id]?.status || ''] || '未依頼'}
-                        </Badge>
-                      </TableCell>
-                    )}
+                    <TableCell>{healthInsuranceTypeLabels[record.healthInsuranceType] || '-'}</TableCell>
                     {canEdit && (
                       <TableCell>
                         <DropdownMenu>
@@ -346,12 +256,6 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
                               <Pencil className="mr-2 h-4 w-4" />
                               編集
                             </DropdownMenuItem>
-                            {canManageMn && (
-                              <DropdownMenuItem onClick={() => { setMnDialogDepId(record.id); setMnInput(''); }}>
-                                <ShieldCheck className="mr-2 h-4 w-4" />
-                                マイナンバー登録
-                              </DropdownMenuItem>
-                            )}
                             <DropdownMenuItem className="text-destructive" onClick={() => setDeleteId(record.id)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               削除
@@ -380,7 +284,7 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label className="text-xs">扶養区分 *</Label>
+                <Label className="text-xs">税扶養区分 *</Label>
                 <Select value={form.dependentType} onValueChange={(v) => setForm(f => ({ ...f, dependentType: v }))}>
                   <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -427,10 +331,21 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2 pt-5">
-                <Switch checked={form.isLivingTogether} onCheckedChange={(v) => setForm(f => ({ ...f, isLivingTogether: v }))} />
-                <Label className="text-xs">同居</Label>
+              <div className="space-y-1">
+                <Label className="text-xs">健保扶養区分</Label>
+                <Select value={form.healthInsuranceType} onValueChange={(v) => setForm(f => ({ ...f, healthInsuranceType: v }))}>
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(healthInsuranceTypeLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={form.isLivingTogether} onCheckedChange={(v) => setForm(f => ({ ...f, isLivingTogether: v }))} />
+              <Label className="text-xs">同居</Label>
             </div>
           </div>
           <DialogFooter>
@@ -458,33 +373,6 @@ export function DependentDetailsSection({ userId, canEdit, canReadMynumber, canM
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* マイナンバー登録ダイアログ */}
-      <Dialog open={!!mnDialogDepId} onOpenChange={(open) => { if (!open) { setMnDialogDepId(null); setMnInput(''); } }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>扶養家族マイナンバー登録</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 py-2">
-            <Label className="text-xs">マイナンバー（12桁）</Label>
-            <Input
-              className="h-8 font-mono"
-              value={mnInput}
-              onChange={(e) => setMnInput(e.target.value.replace(/\D/g, '').slice(0, 12))}
-              placeholder="123456789012"
-              maxLength={12}
-            />
-            {mnInput.length > 0 && mnInput.length !== 12 && (
-              <p className="text-xs text-destructive">12桁の数字を入力してください</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setMnDialogDepId(null); setMnInput(''); }}>キャンセル</Button>
-            <Button onClick={saveMynumber} disabled={isSaving || mnInput.length !== 12}>
-              {isSaving ? '登録中...' : '登録'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
