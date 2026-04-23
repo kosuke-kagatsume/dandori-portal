@@ -36,6 +36,7 @@ export function useBankAccountForm() {
     handleSubmit,
     formState: { errors, isDirty },
     watch,
+    setValue,
     reset,
   } = form;
 
@@ -67,6 +68,7 @@ export function useBankAccountForm() {
     errors,
     formState: form.formState,
     watch,
+    setValue,
     // Expose store methods for use in page-level onSubmit
     updateForm: updateBankAccountForm,
     submitForm: submitBankAccountForm,
