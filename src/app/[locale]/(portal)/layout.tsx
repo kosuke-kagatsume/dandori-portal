@@ -12,6 +12,7 @@ import { Header } from '@/features/navigation/header';
 import { Toaster } from '@/components/ui/sonner';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGlobalShortcuts } from '@/hooks/use-keyboard-shortcuts';
@@ -93,6 +94,7 @@ export default function PortalLayout({
   }, [theme]);
 
   return (
+    <TooltipProvider>
     <div className={cn('min-h-screen bg-background flex', getDensityClass())}>
       {/* スキップリンク - アクセシビリティ向上 */}
       <SkipLink />
@@ -140,5 +142,6 @@ export default function PortalLayout({
       {/* Global Toaster */}
       <Toaster position="top-right" />
     </div>
+    </TooltipProvider>
   );
 }
