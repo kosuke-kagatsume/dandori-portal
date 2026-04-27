@@ -12,6 +12,10 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { VirtualDataTable } from '@/components/ui/common/virtual-data-table';
 import { useUserStore } from '@/lib/store/user-store';
 import { toast } from 'sonner';
@@ -41,6 +45,8 @@ export default function UsersPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importErrorDialogOpen, setImportErrorDialogOpen] = useState(false);
   const [importErrors, setImportErrors] = useState<ImportError[]>([]);
+  const [resetTargetUser, setResetTargetUser] = useState<User | undefined>();
+  const [resetSending, setResetSending] = useState(false);
 
   const router = useRouter();
   const { users, setUsers, retireUser } = useUserStore();
@@ -206,10 +212,33 @@ export default function UsersPage() {
     reader.readAsText(file, 'UTF-8');
   };
 
+  const handleSendPasswordReset = useCallback(async () => {
+    if (!resetTargetUser) return;
+    setResetSending(true);
+    try {
+      const res = await fetch('/api/admin/send-password-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: resetTargetUser.id, locale: 'ja' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'メール送信に失敗しました');
+      }
+      toast.success(data.message || 'パスワード再設定メールを送信しました');
+      setResetTargetUser(undefined);
+    } catch (error) {
+      toast.error((error as Error).message || 'メール送信に失敗しました');
+    } finally {
+      setResetSending(false);
+    }
+  }, [resetTargetUser]);
+
   const columns = useMemo(() => createUserColumns({
     onView: (user) => router.push(`/ja/users/${user.id}`),
     onEdit: (user) => { setEditingUser(user); setEditDialogOpen(true); },
     onRetire: (user) => { setRetiringUser(user); setRetireDialogOpen(true); },
+    onSendPasswordReset: isReadOnly ? undefined : (user) => setResetTargetUser(user),
     isReadOnly,
   }), [router, isReadOnly]);
 
@@ -304,6 +333,26 @@ export default function UsersPage() {
       {/* Retire / Edit Dialogs */}
       <RetireUserDialog open={retireDialogOpen} onOpenChange={setRetireDialogOpen} user={retiringUser} onConfirm={handleRetireUser} />
       <UserFormDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} user={editingUser} onSubmit={handleEditUser} />
+
+      {/* パスワード再設定メール送信確認 */}
+      <AlertDialog open={!!resetTargetUser} onOpenChange={(open) => !open && setResetTargetUser(undefined)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>パスワード再設定メールを送信</AlertDialogTitle>
+            <AlertDialogDescription>
+              {resetTargetUser?.name}（{resetTargetUser?.email}）宛に、パスワード再設定用のリンクを送信します。
+              <br />
+              リンクの有効期限は1時間です。よろしいですか？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resetSending}>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleSendPasswordReset(); }} disabled={resetSending}>
+              {resetSending ? '送信中...' : '送信する'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* CSV Import Instructions Dialog */}
       <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>

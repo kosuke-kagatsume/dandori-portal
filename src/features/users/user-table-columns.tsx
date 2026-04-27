@@ -10,7 +10,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Mail, Phone, Edit, Eye, UserX } from 'lucide-react';
+import { MoreHorizontal, Mail, Phone, Edit, Eye, UserX, KeyRound } from 'lucide-react';
 
 export function getStatusBadge(status: string) {
   const variants = {
@@ -40,10 +40,11 @@ interface ColumnCallbacks {
   onView: (user: User) => void;
   onEdit: (user: User) => void;
   onRetire: (user: User) => void;
+  onSendPasswordReset?: (user: User) => void;
   isReadOnly: boolean;
 }
 
-export function createUserColumns({ onView, onEdit, onRetire, isReadOnly }: ColumnCallbacks): ColumnDef<User>[] {
+export function createUserColumns({ onView, onEdit, onRetire, onSendPasswordReset, isReadOnly }: ColumnCallbacks): ColumnDef<User>[] {
   return [
     {
       accessorKey: 'avatar',
@@ -166,6 +167,15 @@ export function createUserColumns({ onView, onEdit, onRetire, isReadOnly }: Colu
                     <Edit className="mr-2 h-4 w-4" />
                     編集
                   </DropdownMenuItem>
+                  {onSendPasswordReset && (
+                    <DropdownMenuItem
+                      onClick={() => onSendPasswordReset(user)}
+                      disabled={user.status === 'retired' || user.status === 'inactive'}
+                    >
+                      <KeyRound className="mr-2 h-4 w-4" />
+                      パスワード再設定メール送信
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => onRetire(user)}
