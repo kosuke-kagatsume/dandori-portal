@@ -72,8 +72,8 @@ export function ScheduleDetailDialog({ open, onOpenChange, schedule, onSuccess }
       toast.success('予定を更新しました');
       setIsEditing(false);
       onSuccess?.();
-    } catch {
-      toast.error('予定の更新に失敗しました');
+    } catch (error) {
+      toast.error((error as Error).message || '予定の更新に失敗しました');
     } finally {
       setIsSaving(false);
     }

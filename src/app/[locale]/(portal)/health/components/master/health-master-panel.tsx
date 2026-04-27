@@ -69,7 +69,7 @@ export function HealthMasterPanel() {
       toast.success('医療機関を削除しました');
     } catch (error) {
       console.error('削除エラー:', error);
-      toast.error('削除に失敗しました');
+      toast.error((error as Error).message || '削除に失敗しました');
     }
     setDeleteTarget(null);
   };

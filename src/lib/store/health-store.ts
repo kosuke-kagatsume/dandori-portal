@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getCurrentFiscalYear } from '@/lib/utils';
+import { throwIfNotOk } from '@/lib/api/client-fetch';
 import type {
   HealthCheckupSchedule,
   HealthCheckupScheduleInput,
@@ -106,7 +107,7 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
       const res = await fetch(
         `/api/health/schedules?tenantId=${tenantId}&fiscalYear=${year}${userParam}`
       );
-      if (!res.ok) throw new Error('健診予定の取得に失敗しました');
+      await throwIfNotOk(res, '健診予定の取得に失敗しました');
       const json = await res.json();
       const data = Array.isArray(json) ? json : (json.data || []);
       const schedules = data.map(mapSchedule);
@@ -129,6 +130,7 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
       });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -149,10 +151,11 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('健診予定の登録に失敗しました');
+      await throwIfNotOk(res, '健診予定の登録に失敗しました');
       await fetchSchedules(filters.fiscalYear);
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -171,10 +174,11 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('健診予定の更新に失敗しました');
+      await throwIfNotOk(res, '健診予定の更新に失敗しました');
       await fetchSchedules(filters.fiscalYear);
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -186,10 +190,11 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
       const res = await fetch(`/api/health/schedules/${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('健診予定の削除に失敗しました');
+      await throwIfNotOk(res, '健診予定の削除に失敗しました');
       await fetchSchedules(filters.fiscalYear);
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -203,10 +208,11 @@ export const useHealthStore = create<HealthScheduleState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
-      if (!res.ok) throw new Error('ステータスの更新に失敗しました');
+      await throwIfNotOk(res, 'ステータスの更新に失敗しました');
       await fetchSchedules(filters.fiscalYear);
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 

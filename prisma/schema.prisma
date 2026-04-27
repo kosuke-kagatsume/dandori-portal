@@ -1804,6 +1804,8 @@ model users {
   invitedAt             DateTime?
   inviteToken           String?
   inviteTokenExpiry     DateTime?
+  passwordResetToken         String?
+  passwordResetTokenExpiry   DateTime?
   paidLeaveStartDate    DateTime?            @db.Date
   punchMethod           String?
   workRuleId            String?
