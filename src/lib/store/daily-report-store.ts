@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { throwIfNotOk } from '@/lib/api/client-fetch';
 import type { TemplateField, SubmissionRule, ApproverType } from './daily-report-template-store';
 import { useOrganizationStore } from './organization-store';
 import { useDailyReportTemplateStore } from './daily-report-template-store';
@@ -97,12 +98,13 @@ export const useDailyReportStore = create<DailyReportState>()((set, get) => ({
       if (params?.endDate) searchParams.set('endDate', params.endDate);
 
       const res = await fetch(`/api/daily-reports?${searchParams.toString()}`);
-      if (!res.ok) throw new Error('日報の取得に失敗しました');
+      await throwIfNotOk(res, '日報の取得に失敗しました');
       const json = await res.json();
       const data = json.data?.items || json.data || [];
       set({ reports: Array.isArray(data) ? data : [], isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -267,12 +269,13 @@ export const useDailyReportStore = create<DailyReportState>()((set, get) => ({
         targetApproverId: approverId,
       });
       const res = await fetch(`/api/daily-reports?${searchParams.toString()}`);
-      if (!res.ok) throw new Error('承認待ち日報の取得に失敗しました');
+      await throwIfNotOk(res, '承認待ち日報の取得に失敗しました');
       const json = await res.json();
       const data = json.data?.items || json.data || [];
       set({ pendingApprovals: Array.isArray(data) ? data : [] });
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     }
   },
 

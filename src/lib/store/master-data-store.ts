@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { throwIfNotOk } from '@/lib/api/client-fetch';
 
 /**
  * マスタデータストア
@@ -119,12 +120,13 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await fetch(`/api/master-data/departments?tenantId=${tenantId}`);
-      if (!res.ok) throw new Error('部署の取得に失敗しました');
+      await throwIfNotOk(res, '部署の取得に失敗しました');
       const json = await res.json();
       const data = Array.isArray(json) ? json : (json.data || []);
       set({ departments: data.map(mapDepartment), isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -146,10 +148,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
           isActive: department.isActive,
         }),
       });
-      if (!res.ok) throw new Error('部署の追加に失敗しました');
+      await throwIfNotOk(res, '部署の追加に失敗しました');
       await fetchDepartments();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -170,10 +173,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
           ...(data.isActive !== undefined && { isActive: data.isActive }),
         }),
       });
-      if (!res.ok) throw new Error('部署の更新に失敗しました');
+      await throwIfNotOk(res, '部署の更新に失敗しました');
       await fetchDepartments();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -185,10 +189,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
       const res = await fetch(`/api/master-data/departments?id=${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('部署の削除に失敗しました');
+      await throwIfNotOk(res, '部署の削除に失敗しました');
       await fetchDepartments();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -204,12 +209,13 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await fetch(`/api/master-data/positions?tenantId=${tenantId}`);
-      if (!res.ok) throw new Error('役職の取得に失敗しました');
+      await throwIfNotOk(res, '役職の取得に失敗しました');
       const json = await res.json();
       const data = Array.isArray(json) ? json : (json.data || []);
       set({ positions: data.map(mapPosition), isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -230,10 +236,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
           isActive: position.isActive,
         }),
       });
-      if (!res.ok) throw new Error('役職の追加に失敗しました');
+      await throwIfNotOk(res, '役職の追加に失敗しました');
       await fetchPositions();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -253,10 +260,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
           ...(data.isActive !== undefined && { isActive: data.isActive }),
         }),
       });
-      if (!res.ok) throw new Error('役職の更新に失敗しました');
+      await throwIfNotOk(res, '役職の更新に失敗しました');
       await fetchPositions();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -268,10 +276,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
       const res = await fetch(`/api/master-data/positions?id=${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('役職の削除に失敗しました');
+      await throwIfNotOk(res, '役職の削除に失敗しました');
       await fetchPositions();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -287,12 +296,13 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await fetch(`/api/master-data/employment-types?tenantId=${tenantId}`);
-      if (!res.ok) throw new Error('雇用形態の取得に失敗しました');
+      await throwIfNotOk(res, '雇用形態の取得に失敗しました');
       const json = await res.json();
       const data = Array.isArray(json) ? json : (json.data || []);
       set({ employmentTypes: data.map(mapEmploymentType), isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -312,10 +322,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
           isActive: type.isActive,
         }),
       });
-      if (!res.ok) throw new Error('雇用形態の追加に失敗しました');
+      await throwIfNotOk(res, '雇用形態の追加に失敗しました');
       await fetchEmploymentTypes();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -334,10 +345,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
           ...(data.isActive !== undefined && { isActive: data.isActive }),
         }),
       });
-      if (!res.ok) throw new Error('雇用形態の更新に失敗しました');
+      await throwIfNotOk(res, '雇用形態の更新に失敗しました');
       await fetchEmploymentTypes();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -349,10 +361,11 @@ export const useMasterDataStore = create<MasterDataState>()((set, get) => ({
       const res = await fetch(`/api/master-data/employment-types?id=${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('雇用形態の削除に失敗しました');
+      await throwIfNotOk(res, '雇用形態の削除に失敗しました');
       await fetchEmploymentTypes();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 

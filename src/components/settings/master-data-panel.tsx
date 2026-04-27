@@ -124,70 +124,82 @@ export function MasterDataPanel() {
   };
 
   // 保存処理
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name.trim()) {
       toast.error('名称を入力してください');
       return;
     }
 
-    if (editingItem) {
-      // 更新
-      if (editingType === 'department') {
-        updateDepartment(editingItem.id, {
-          code: formData.code || undefined,
-          name: formData.name,
-          parentId: formData.parentId || null,
-          order: formData.order,
-        });
-      } else if (editingType === 'position') {
-        updatePosition(editingItem.id, { name: formData.name, level: formData.level, order: formData.order });
+    try {
+      if (editingItem) {
+        // 更新
+        if (editingType === 'department') {
+          await updateDepartment(editingItem.id, {
+            code: formData.code || undefined,
+            name: formData.name,
+            parentId: formData.parentId || null,
+            order: formData.order,
+          });
+        } else if (editingType === 'position') {
+          await updatePosition(editingItem.id, { name: formData.name, level: formData.level, order: formData.order });
+        } else {
+          await updateEmploymentType(editingItem.id, { name: formData.name, order: formData.order });
+        }
+        toast.success('更新しました');
       } else {
-        updateEmploymentType(editingItem.id, { name: formData.name, order: formData.order });
+        // 新規追加
+        if (editingType === 'department') {
+          await addDepartment({
+            code: formData.code || undefined,
+            name: formData.name,
+            parentId: formData.parentId || null,
+            order: formData.order,
+            isActive: true,
+          });
+        } else if (editingType === 'position') {
+          await addPosition({ name: formData.name, level: formData.level, order: formData.order, isActive: true });
+        } else {
+          await addEmploymentType({ name: formData.name, order: formData.order, isActive: true });
+        }
+        toast.success('追加しました');
       }
-      toast.success('更新しました');
-    } else {
-      // 新規追加
-      if (editingType === 'department') {
-        addDepartment({
-          code: formData.code || undefined,
-          name: formData.name,
-          parentId: formData.parentId || null,
-          order: formData.order,
-          isActive: true,
-        });
-      } else if (editingType === 'position') {
-        addPosition({ name: formData.name, level: formData.level, order: formData.order, isActive: true });
-      } else {
-        addEmploymentType({ name: formData.name, order: formData.order, isActive: true });
-      }
-      toast.success('追加しました');
-    }
 
-    setEditDialogOpen(false);
+      setEditDialogOpen(false);
+    } catch (error) {
+      toast.error((error as Error).message || '保存に失敗しました');
+    }
   };
 
   // 削除処理
-  const handleDelete = (type: 'department' | 'position' | 'employmentType', id: string) => {
-    if (type === 'department') {
-      deleteDepartment(id);
-    } else if (type === 'position') {
-      deletePosition(id);
-    } else {
-      deleteEmploymentType(id);
+  const handleDelete = async (type: 'department' | 'position' | 'employmentType', id: string) => {
+    try {
+      if (type === 'department') {
+        await deleteDepartment(id);
+      } else if (type === 'position') {
+        await deletePosition(id);
+      } else {
+        await deleteEmploymentType(id);
+      }
+      toast.success('削除しました');
+    } catch (error) {
+      toast.error((error as Error).message || '削除に失敗しました');
     }
-    toast.success('削除しました');
   };
 
   // 有効/無効切り替え
-  const handleToggleActive = (type: 'department' | 'position' | 'employmentType', id: string, isActive: boolean) => {
-    if (type === 'department') {
-      updateDepartment(id, { isActive });
-    } else if (type === 'position') {
-      updatePosition(id, { isActive });
-    } else {
-      updateEmploymentType(id, { isActive });
+  const handleToggleActive = async (type: 'department' | 'position' | 'employmentType', id: string, isActive: boolean) => {
+    try {
+      if (type === 'department') {
+        await updateDepartment(id, { isActive });
+      } else if (type === 'position') {
+        await updatePosition(id, { isActive });
+      } else {
+        await updateEmploymentType(id, { isActive });
+      }
+      toast.success(isActive ? '有効にしました' : '無効にしました');
+    } catch (error) {
+      toast.error((error as Error).message || '更新に失敗しました');
     }
-    toast.success(isActive ? '有効にしました' : '無効にしました');
   };
 
   const getTypeLabel = () => {

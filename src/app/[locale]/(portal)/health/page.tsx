@@ -105,6 +105,7 @@ export default function HealthPage() {
       await fetchSchedules(undefined, selfOnly ? rbacUserId : undefined);
     } catch (error) {
       console.error('健康管理データの取得に失敗しました:', error);
+      toast.error((error as Error).message || '健康管理データの取得に失敗しました');
     } finally {
       setIsLoading(false);
     }

@@ -112,8 +112,8 @@ export function DailyReportTemplateMasterPanel() {
         toast.success('テンプレートを作成しました');
       }
       setShowFormDialog(false);
-    } catch {
-      // エラーはストアで処理済み
+    } catch (error) {
+      toast.error((error as Error).message || (editingTemplate ? '更新に失敗しました' : '作成に失敗しました'));
     }
   };
 
@@ -123,8 +123,8 @@ export function DailyReportTemplateMasterPanel() {
     try {
       await deleteTemplate(deleteTarget.id);
       toast.success('テンプレートを削除しました');
-    } catch {
-      toast.error('削除に失敗しました');
+    } catch (error) {
+      toast.error((error as Error).message || '削除に失敗しました');
     }
     setDeleteTarget(null);
   };

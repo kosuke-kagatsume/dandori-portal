@@ -28,6 +28,7 @@ import {
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Search, Download, ArrowUpDown, Plus, MoreHorizontal, FileText, XCircle, ClipboardEdit } from 'lucide-react';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import type { HealthCheckupSchedule, ScheduleStatus } from '@/types/health';
@@ -208,8 +209,12 @@ export function ScheduleFullList({
 
   const handleCancelSchedule = async (id: string) => {
     if (onUpdateScheduleStatus) {
-      await onUpdateScheduleStatus(id, 'cancelled');
-      fetchEnriched();
+      try {
+        await onUpdateScheduleStatus(id, 'cancelled');
+        fetchEnriched();
+      } catch (error) {
+        toast.error((error as Error).message || 'キャンセルに失敗しました');
+      }
     }
   };
 

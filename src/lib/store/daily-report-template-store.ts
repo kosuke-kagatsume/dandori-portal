@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { throwIfNotOk } from '@/lib/api/client-fetch';
 
 // === 型定義 ===
 
@@ -71,12 +72,13 @@ export const useDailyReportTemplateStore = create<DailyReportTemplateState>()((s
     set({ isLoading: true, error: null });
     try {
       const res = await fetch(`/api/daily-report-templates?tenantId=${tenantId}`);
-      if (!res.ok) throw new Error('テンプレートの取得に失敗しました');
+      await throwIfNotOk(res, 'テンプレートの取得に失敗しました');
       const json = await res.json();
       const data = json.data?.items || json.data || [];
       set({ templates: Array.isArray(data) ? data : [], isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 

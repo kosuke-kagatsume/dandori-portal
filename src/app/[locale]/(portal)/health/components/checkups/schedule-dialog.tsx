@@ -223,7 +223,7 @@ export function ScheduleDialog({ open, onOpenChange, onSuccess, prefilledUser }:
       onSuccess?.();
     } catch (error) {
       console.error('健診予定の登録に失敗しました:', error);
-      toast.error('健診予定の登録に失敗しました');
+      toast.error((error as Error).message || '健診予定の登録に失敗しました');
     } finally {
       setIsSubmitting(false);
     }
