@@ -32,9 +32,14 @@ export function InstitutionOptionsTab({ institutionId }: OptionsTabProps) {
 
   const loadOptions = useCallback(async () => {
     setIsLoading(true);
-    const data = await fetchOptions(institutionId);
-    setOptions(data);
-    setIsLoading(false);
+    try {
+      const data = await fetchOptions(institutionId);
+      setOptions(data);
+    } catch (error) {
+      toast.error((error as Error).message || 'オプション検査の取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
   }, [institutionId, fetchOptions]);
 
   useEffect(() => {
@@ -46,33 +51,49 @@ export function InstitutionOptionsTab({ institutionId }: OptionsTabProps) {
       toast.error('名前と料金は必須です');
       return;
     }
-    await addOption(institutionId, {
-      name: newForm.name,
-      code: newForm.code || undefined,
-      price: parseInt(newForm.price),
-      description: newForm.description || undefined,
-      companyPaid: newForm.companyPaid,
-    });
-    toast.success('オプション検査を追加しました');
-    setNewForm({ name: '', code: '', price: '', description: '', companyPaid: false });
-    setAddingNew(false);
-    await loadOptions();
+    try {
+      await addOption(institutionId, {
+        name: newForm.name,
+        code: newForm.code || undefined,
+        price: parseInt(newForm.price),
+        description: newForm.description || undefined,
+        companyPaid: newForm.companyPaid,
+      });
+      toast.success('オプション検査を追加しました');
+      setNewForm({ name: '', code: '', price: '', description: '', companyPaid: false });
+      setAddingNew(false);
+      await loadOptions();
+    } catch (error) {
+      toast.error((error as Error).message || 'オプション検査の追加に失敗しました');
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteOption(id);
-    toast.success('削除しました');
-    await loadOptions();
+    try {
+      await deleteOption(id);
+      toast.success('削除しました');
+      await loadOptions();
+    } catch (error) {
+      toast.error((error as Error).message || '削除に失敗しました');
+    }
   };
 
   const handleToggleActive = async (item: InstitutionOption) => {
-    await updateOption(item.id, { isActive: !item.isActive });
-    await loadOptions();
+    try {
+      await updateOption(item.id, { isActive: !item.isActive });
+      await loadOptions();
+    } catch (error) {
+      toast.error((error as Error).message || '更新に失敗しました');
+    }
   };
 
   const handleToggleCompanyPaid = async (item: InstitutionOption) => {
-    await updateOption(item.id, { companyPaid: !item.companyPaid });
-    await loadOptions();
+    try {
+      await updateOption(item.id, { companyPaid: !item.companyPaid });
+      await loadOptions();
+    } catch (error) {
+      toast.error((error as Error).message || '更新に失敗しました');
+    }
   };
 
   if (isLoading) {

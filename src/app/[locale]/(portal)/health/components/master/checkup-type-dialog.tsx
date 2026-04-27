@@ -83,7 +83,7 @@ export function CheckupTypeDialog({
       onSuccess?.();
     } catch (error) {
       console.error('エラー:', error);
-      toast.error(editItem ? '更新に失敗しました' : '追加に失敗しました');
+      toast.error((error as Error).message || (editItem ? '更新に失敗しました' : '追加に失敗しました'));
     } finally {
       setIsSubmitting(false);
     }

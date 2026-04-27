@@ -50,9 +50,14 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
 
   const loadPrices = useCallback(async () => {
     setIsLoading(true);
-    const data = await fetchExamPrices(institutionId);
-    setPrices(data);
-    setIsLoading(false);
+    try {
+      const data = await fetchExamPrices(institutionId);
+      setPrices(data);
+    } catch (error) {
+      toast.error((error as Error).message || '検査項目料金の取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
   }, [institutionId, fetchExamPrices]);
 
   useEffect(() => {
@@ -85,22 +90,34 @@ export function InstitutionExamPricesTab({ institutionId }: ExamPricesTabProps) 
     } else {
       payload.checkupTypeName = newForm.checkupTypeName.trim();
     }
-    await addExamPrice(institutionId, payload as { checkupTypeId?: string; checkupTypeName?: string; price: number; notes?: string });
-    toast.success('検査項目料金を追加しました');
-    setNewForm({ checkupTypeId: '', checkupTypeName: '', price: '', notes: '' });
-    setAddingNew(false);
-    await loadPrices();
+    try {
+      await addExamPrice(institutionId, payload as { checkupTypeId?: string; checkupTypeName?: string; price: number; notes?: string });
+      toast.success('検査項目料金を追加しました');
+      setNewForm({ checkupTypeId: '', checkupTypeName: '', price: '', notes: '' });
+      setAddingNew(false);
+      await loadPrices();
+    } catch (error) {
+      toast.error((error as Error).message || '検査項目料金の追加に失敗しました');
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteExamPrice(id);
-    toast.success('削除しました');
-    await loadPrices();
+    try {
+      await deleteExamPrice(id);
+      toast.success('削除しました');
+      await loadPrices();
+    } catch (error) {
+      toast.error((error as Error).message || '削除に失敗しました');
+    }
   };
 
   const handleToggleActive = async (item: InstitutionExamPrice) => {
-    await updateExamPrice(item.id, { isActive: !item.isActive });
-    await loadPrices();
+    try {
+      await updateExamPrice(item.id, { isActive: !item.isActive });
+      await loadPrices();
+    } catch (error) {
+      toast.error((error as Error).message || '更新に失敗しました');
+    }
   };
 
   // 既に設定済みの検査種別IDを取得

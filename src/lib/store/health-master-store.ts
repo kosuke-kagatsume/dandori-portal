@@ -9,6 +9,7 @@ import type {
   InstitutionOption,
   InstitutionOptionInput,
 } from '@/types/health';
+import { throwIfNotOk, unwrapData } from '@/lib/api/client-fetch';
 
 /**
  * 健康管理マスタストア
@@ -94,12 +95,13 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await fetch(`/api/health/master/checkup-types?tenantId=${tenantId}`);
-      if (!res.ok) throw new Error('健診種別の取得に失敗しました');
+      await throwIfNotOk(res, '健診種別の取得に失敗しました');
       const json = await res.json();
       const data = Array.isArray(json) ? json : (json.data || []);
       set({ checkupTypes: data.map(mapCheckupType), isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -114,10 +116,11 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId, ...data }),
       });
-      if (!res.ok) throw new Error('健診種別の追加に失敗しました');
+      await throwIfNotOk(res, '健診種別の追加に失敗しました');
       await fetchCheckupTypes();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -131,10 +134,11 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...data }),
       });
-      if (!res.ok) throw new Error('健診種別の更新に失敗しました');
+      await throwIfNotOk(res, '健診種別の更新に失敗しました');
       await fetchCheckupTypes();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -146,10 +150,11 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
       const res = await fetch(`/api/health/master/checkup-types?id=${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('健診種別の削除に失敗しました');
+      await throwIfNotOk(res, '健診種別の削除に失敗しました');
       await fetchCheckupTypes();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -162,12 +167,13 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const res = await fetch(`/api/health/master/institutions?tenantId=${tenantId}`);
-      if (!res.ok) throw new Error('医療機関の取得に失敗しました');
+      await throwIfNotOk(res, '医療機関の取得に失敗しました');
       const json = await res.json();
       const data = Array.isArray(json) ? json : (json.data || []);
       set({ medicalInstitutions: data.map(mapMedicalInstitution), isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -182,13 +188,13 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId, ...data }),
       });
-      if (!res.ok) throw new Error('医療機関の追加に失敗しました');
-      const created = await res.json();
+      await throwIfNotOk(res, '医療機関の追加に失敗しました');
+      const created = await unwrapData<HealthMedicalInstitution>(res);
       await fetchMedicalInstitutions();
-      return created as HealthMedicalInstitution;
+      return created;
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
-      return undefined;
+      throw error;
     }
   },
 
@@ -202,10 +208,11 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...data }),
       });
-      if (!res.ok) throw new Error('医療機関の更新に失敗しました');
+      await throwIfNotOk(res, '医療機関の更新に失敗しました');
       await fetchMedicalInstitutions();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -217,10 +224,11 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
       const res = await fetch(`/api/health/master/institutions?id=${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('医療機関の削除に失敗しました');
+      await throwIfNotOk(res, '医療機関の削除に失敗しました');
       await fetchMedicalInstitutions();
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
+      throw error;
     }
   },
 
@@ -229,12 +237,12 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
   fetchExamPrices: async (institutionId) => {
     try {
       const res = await fetch(`/api/health/master/institutions/${institutionId}/exam-prices`);
-      if (!res.ok) throw new Error('検査項目料金の取得に失敗しました');
+      await throwIfNotOk(res, '検査項目料金の取得に失敗しました');
       const json = await res.json();
       return Array.isArray(json) ? json : (json.data || []);
     } catch (error) {
       set({ error: (error as Error).message });
-      return [];
+      throw error;
     }
   },
 
@@ -247,9 +255,10 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId, institutionId, ...data }),
       });
-      if (!res.ok) throw new Error('検査項目料金の追加に失敗しました');
+      await throwIfNotOk(res, '検査項目料金の追加に失敗しました');
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     }
   },
 
@@ -260,9 +269,10 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...data }),
       });
-      if (!res.ok) throw new Error('検査項目料金の更新に失敗しました');
+      await throwIfNotOk(res, '検査項目料金の更新に失敗しました');
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     }
   },
 
@@ -271,9 +281,10 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
       const res = await fetch(`/api/health/master/institutions/_/exam-prices?id=${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('検査項目料金の削除に失敗しました');
+      await throwIfNotOk(res, '検査項目料金の削除に失敗しました');
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     }
   },
 
@@ -282,12 +293,12 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
   fetchOptions: async (institutionId) => {
     try {
       const res = await fetch(`/api/health/master/institutions/${institutionId}/options`);
-      if (!res.ok) throw new Error('オプション検査の取得に失敗しました');
+      await throwIfNotOk(res, 'オプション検査の取得に失敗しました');
       const json = await res.json();
       return Array.isArray(json) ? json : (json.data || []);
     } catch (error) {
       set({ error: (error as Error).message });
-      return [];
+      throw error;
     }
   },
 
@@ -300,9 +311,10 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenantId, institutionId, ...data }),
       });
-      if (!res.ok) throw new Error('オプション検査の追加に失敗しました');
+      await throwIfNotOk(res, 'オプション検査の追加に失敗しました');
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     }
   },
 
@@ -313,9 +325,10 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, ...data }),
       });
-      if (!res.ok) throw new Error('オプション検査の更新に失敗しました');
+      await throwIfNotOk(res, 'オプション検査の更新に失敗しました');
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     }
   },
 
@@ -324,9 +337,10 @@ export const useHealthMasterStore = create<HealthMasterState>()((set, get) => ({
       const res = await fetch(`/api/health/master/institutions/_/options?id=${id}`, {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('オプション検査の削除に失敗しました');
+      await throwIfNotOk(res, 'オプション検査の削除に失敗しました');
     } catch (error) {
       set({ error: (error as Error).message });
+      throw error;
     }
   },
 

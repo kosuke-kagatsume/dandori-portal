@@ -103,17 +103,18 @@ export function InstitutionDialog({
         onSuccess?.();
       } else {
         const created = await addMedicalInstitution(formData);
-        toast.success('医療機関を追加しました。検査項目・オプションを登録できます');
-        // 新規追加後、3タブモードに切り替え
-        if (created?.id) {
-          setCreatedInstitutionId(created.id);
-          setActiveTab('exam-prices');
+        if (!created?.id) {
+          toast.error('医療機関の追加に失敗しました');
+          return;
         }
+        toast.success('医療機関を追加しました。検査項目・オプションを登録できます');
+        setCreatedInstitutionId(created.id);
+        setActiveTab('exam-prices');
         onSuccess?.();
       }
     } catch (error) {
       console.error('エラー:', error);
-      toast.error(editItem ? '更新に失敗しました' : '追加に失敗しました');
+      toast.error((error as Error).message || (editItem ? '更新に失敗しました' : '追加に失敗しました'));
     } finally {
       setIsSubmitting(false);
     }
@@ -139,18 +140,20 @@ export function InstitutionDialog({
             setIsSubmitting(true);
             try {
               const created = await addMedicalInstitution(formData);
-              if (created?.id) {
-                setCreatedInstitutionId(created.id);
-                toast.success('基本情報を保存しました');
-                onSuccess?.();
+              if (!created?.id) {
+                toast.error('基本情報の保存に失敗しました');
+                return;
               }
-            } catch {
-              toast.error('基本情報の保存に失敗しました');
-              setIsSubmitting(false);
-              return;
+              setCreatedInstitutionId(created.id);
+              toast.success('基本情報を保存しました');
+              onSuccess?.();
+              setActiveTab(tab);
+            } catch (error) {
+              toast.error((error as Error).message || '基本情報の保存に失敗しました');
             } finally {
               setIsSubmitting(false);
             }
+            return;
           }
           setActiveTab(tab);
         }} className="w-full">
