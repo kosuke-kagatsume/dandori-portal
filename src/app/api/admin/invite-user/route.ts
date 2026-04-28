@@ -123,7 +123,8 @@ export async function POST(request: NextRequest) {
     });
 
     // 招待メール送信
-    const loginUrl = `https://dandori-portal.com/ja/auth/login`;
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com').replace(/\/$/, '');
+    const loginUrl = `${baseUrl}/ja/auth/login`;
     const emailContent = getUserInviteEmail({
       tenantName,
       userName: name,
