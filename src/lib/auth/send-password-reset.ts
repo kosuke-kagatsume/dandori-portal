@@ -65,9 +65,11 @@ export async function sendPasswordResetEmail(
   });
 
   const subdomain = user.tenants?.subdomain;
-  const baseUrl = subdomain
+  const appBaseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com').replace(/\/$/, '');
+  const isMainProductionDomain = appBaseUrl === 'https://dandori-portal.com';
+  const baseUrl = isMainProductionDomain && subdomain
     ? `https://${subdomain}.dandori-portal.com`
-    : process.env.NEXT_PUBLIC_APP_URL || 'https://dandori-portal.com';
+    : appBaseUrl;
   const resetUrl = buildPasswordResetUrl(baseUrl, locale, rawToken);
 
   const emailContent = getPasswordResetEmail({
