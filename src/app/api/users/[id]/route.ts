@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolvePositionAndDepartment, resolveIdsFromNames, ValidationError } from '@/lib/api/user-helpers';
+import { withAuth } from '@/lib/auth/api-auth';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // GET /api/users/[id] - 個別ユーザー取得
 export async function GET(
@@ -222,27 +226,43 @@ export async function PATCH(
 }
 
 // DELETE /api/users/[id] - ユーザー削除（物理削除）
+// Phase 0 ホットフィックス: 認可なし削除を遮断（admin/hr のみ・自テナント・自己削除禁止）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const { auth, errorResponse } = await withAuth(request, ['admin', 'hr']);
+  if (errorResponse) {
+    return errorResponse;
+  }
+
   try {
-    // 存在確認
     const existingUser = await prisma.users.findUnique({
       where: { id: params.id },
+      select: { id: true, tenantId: true },
     });
 
     if (!existingUser) {
       return NextResponse.json(
-        {
-          success: false,
-          error: 'User not found',
-        },
+        { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
 
-    // ユーザー削除
+    if (existingUser.tenantId !== auth.user?.tenantId) {
+      return NextResponse.json(
+        { success: false, error: '権限がありません' },
+        { status: 403 }
+      );
+    }
+
+    if (auth.user?.userId === params.id) {
+      return NextResponse.json(
+        { success: false, error: '自分自身を削除することはできません' },
+        { status: 400 }
+      );
+    }
+
     await prisma.users.delete({
       where: { id: params.id },
     });
