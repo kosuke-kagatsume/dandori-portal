@@ -3,34 +3,34 @@
  * GET: メタデータ取得（番号はマスク）
  * POST: 登録・更新（暗号化保存）
  * DELETE: ソフトデリート + ログ
+ *
+ * 認可: requireMynumberAccess ヘルパで以下を一括チェック
+ * - 認証
+ * - ターゲットの自テナント所属（テナント越境ブロック）
+ * - mynumber 個別権限（read / manage）
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth/api-auth';
-import { getTenantIdFromRequest, errorResponse } from '@/lib/api/api-helpers';
-import { canReadMynumber, canManageMynumber } from '@/lib/api/mynumber-permission';
+import { errorResponse } from '@/lib/api/api-helpers';
 import { encryptMyNumber, validateMyNumber } from '@/lib/crypto/mynumber-encryption';
 import { recordAuditLogDirect } from '@/lib/audit-logger';
+import { requireMynumberAccess } from '@/lib/auth/user-access';
 
-// GET: マイナンバーメタデータ取得
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// GET: マイナンバーメタデータ取得（read 権限）
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: targetUserId } = await params;
+  const access = await requireMynumberAccess(request, targetUserId, 'read');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
-
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: targetUserId } = await params;
-
-    const hasPermission = await canReadMynumber(tenantId, auth.user.userId);
-    if (!hasPermission) {
-      return NextResponse.json({ success: false, error: 'マイナンバー閲覧権限がありません' }, { status: 403 });
-    }
+    const tenantId = access.targetUser.tenantId;
 
     const record = await prisma.mynumber_records.findFirst({
       where: {
@@ -74,24 +74,17 @@ export async function GET(
   }
 }
 
-// POST: マイナンバー登録・更新
+// POST: マイナンバー登録・更新（manage 権限）
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: targetUserId } = await params;
+  const access = await requireMynumberAccess(request, targetUserId, 'manage');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
-
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: targetUserId } = await params;
-
-    const hasPermission = await canManageMynumber(tenantId, auth.user.userId);
-    if (!hasPermission) {
-      return NextResponse.json({ success: false, error: 'マイナンバー管理権限がありません' }, { status: 403 });
-    }
+    const tenantId = access.targetUser.tenantId;
 
     const body = await request.json();
     const { myNumber, purpose, memo, status } = body;
@@ -151,9 +144,9 @@ export async function POST(
     // 監査ログ
     await recordAuditLogDirect(prisma, {
       tenantId,
-      userId: auth.user.userId,
-      userName: auth.user.email,
-      userRole: auth.user.role,
+      userId: access.user.userId,
+      userName: access.user.email,
+      userRole: access.user.role,
       action: isUpdate ? 'update' : 'create',
       category: 'mynumber',
       targetType: 'mynumber',
@@ -168,24 +161,17 @@ export async function POST(
   }
 }
 
-// DELETE: ソフトデリート
+// DELETE: ソフトデリート（manage 権限）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: targetUserId } = await params;
+  const access = await requireMynumberAccess(request, targetUserId, 'manage');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
-
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: targetUserId } = await params;
-
-    const hasPermission = await canManageMynumber(tenantId, auth.user.userId);
-    if (!hasPermission) {
-      return NextResponse.json({ success: false, error: 'マイナンバー管理権限がありません' }, { status: 403 });
-    }
+    const tenantId = access.targetUser.tenantId;
 
     // ターゲットユーザー名を取得（ログ用）
     const targetUser = await prisma.users.findUnique({
@@ -205,7 +191,7 @@ export async function DELETE(
       where: { id: record.id },
       data: {
         deletedAt: new Date(),
-        deletedBy: auth.user.userId,
+        deletedBy: access.user.userId,
         encryptedNumber: null,
         encryptionIv: null,
         encryptionTag: null,
@@ -215,9 +201,9 @@ export async function DELETE(
     // 監査ログ
     await recordAuditLogDirect(prisma, {
       tenantId,
-      userId: auth.user.userId,
-      userName: auth.user.email,
-      userRole: auth.user.role,
+      userId: access.user.userId,
+      userName: access.user.email,
+      userRole: access.user.role,
       action: 'delete',
       category: 'mynumber',
       targetType: 'mynumber',

@@ -4,9 +4,12 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantIdFromRequest,
   validateRequiredFields,
 } from '@/lib/api/api-helpers';
+import { requireUserAccess } from '@/lib/auth/user-access';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/users/[id]/dependent-details - 扶養親族詳細一覧
@@ -15,9 +18,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
 
     const records = await prisma.employee_dependent_details.findMany({
       where: { tenantId, userId },
@@ -37,10 +43,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
     const body = await request.json();
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
 
     const validation = validateRequiredFields(body, ['dependentType', 'name']);
     if (!validation.valid) {
@@ -78,10 +87,13 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
     const body = await request.json();
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
 
     if (!body.recordId) {
       return errorResponse('recordIdが必要です', 400);
@@ -123,10 +135,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
     const { searchParams } = new URL(request.url);
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
     const recordId = searchParams.get('recordId');
 
     if (!recordId) {

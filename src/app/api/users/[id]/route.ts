@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { resolvePositionAndDepartment, resolveIdsFromNames, ValidationError } from '@/lib/api/user-helpers';
 import { withAuth } from '@/lib/auth/api-auth';
+import { requireUserAccess, sanitizeSelfPatchBody } from '@/lib/auth/user-access';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// GET /api/users/[id] - 個別ユーザー取得
+// GET /api/users/[id] - 個別ユーザー取得（本人 or admin/hr / 自テナントのみ）
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const access = await requireUserAccess(request, params.id, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
     const user = await prisma.users.findUnique({
       where: { id: params.id },
@@ -61,12 +65,19 @@ export async function GET(
 }
 
 // PATCH /api/users/[id] - ユーザー更新
+// 本人: ホワイトリストフィールドのみ更新可（role/tenantId/employmentStatus等は変更不可）
+// admin/hr: 全フィールド更新可
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const access = await requireUserAccess(request, params.id, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
+    // 本人モード時は安全フィールドのみに絞り込み（権限昇格・テナント移動防止）
+    const body = access.isAdminOrHR ? rawBody : sanitizeSelfPatchBody(rawBody);
 
     // 存在確認
     const existingUser = await prisma.users.findUnique({

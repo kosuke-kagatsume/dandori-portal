@@ -1,18 +1,25 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { successResponse, handleApiError, getTenantIdFromRequest } from '@/lib/api/api-helpers';
+import { successResponse, handleApiError } from '@/lib/api/api-helpers';
+import { requireUserAccess } from '@/lib/auth/user-access';
 import crypto from 'crypto';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
- * GET /api/users/[id]/salary-settings - 有効な給与設定を取得
+ * GET /api/users/[id]/salary-settings - 有効な給与設定を取得（admin/hr限定）
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
 
     const setting = await prisma.employee_salary_settings.findFirst({
       where: { tenantId, userId, isActive: true },
@@ -26,15 +33,18 @@ export async function GET(
 }
 
 /**
- * PATCH /api/users/[id]/salary-settings - 給与設定の更新（なければ新規作成）
+ * PATCH /api/users/[id]/salary-settings - 給与設定の更新（admin/hr限定 / なければ新規作成）
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
     const body = await request.json();
 
     // 既存の有効な給与設定を検索

@@ -1,33 +1,31 @@
 /**
  * マイナンバー復号 API
  * POST: 暗号化されたマイナンバーを復号して返却（監査ログ記録）
+ *
+ * 認可: requireMynumberAccess(read) で
+ *       認証 + 自テナント + mynumber:read:company を要求
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth/api-auth';
-import { getTenantIdFromRequest, errorResponse } from '@/lib/api/api-helpers';
-import { canReadMynumber } from '@/lib/api/mynumber-permission';
+import { errorResponse } from '@/lib/api/api-helpers';
 import { decryptMyNumber } from '@/lib/crypto/mynumber-encryption';
 import { recordAuditLogDirect } from '@/lib/audit-logger';
+import { requireMynumberAccess } from '@/lib/auth/user-access';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: targetUserId } = await params;
+  const access = await requireMynumberAccess(request, targetUserId, 'read');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
-
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: targetUserId } = await params;
-
-    const hasPermission = await canReadMynumber(tenantId, auth.user.userId);
-    if (!hasPermission) {
-      return NextResponse.json({ success: false, error: 'マイナンバー閲覧権限がありません' }, { status: 403 });
-    }
+    const tenantId = access.targetUser.tenantId;
 
     const record = await prisma.mynumber_records.findFirst({
       where: {
@@ -54,9 +52,9 @@ export async function POST(
     // 監査ログ: マイナンバー表示
     await recordAuditLogDirect(prisma, {
       tenantId,
-      userId: auth.user.userId,
-      userName: auth.user.email,
-      userRole: auth.user.role,
+      userId: access.user.userId,
+      userName: access.user.email,
+      userRole: access.user.role,
       action: 'access',
       category: 'mynumber',
       targetType: 'mynumber',

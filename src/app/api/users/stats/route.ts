@@ -1,24 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { withAuth } from '@/lib/auth/api-auth';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
- * ユーザー統計API
+ * ユーザー統計API（admin/hr 限定 / 自テナントのみ）
  * GET /api/users/stats
- *
- * クエリパラメータ:
- * - tenantId: テナントID（必須）
  */
 export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const tenantId = searchParams.get('tenantId');
+  const { auth, errorResponse } = await withAuth(request, ['admin', 'hr']);
+  if (errorResponse) return errorResponse;
+  if (!auth.user?.tenantId) {
+    return NextResponse.json(
+      { success: false, error: 'テナント情報がありません' },
+      { status: 400 },
+    );
+  }
+  const tenantId = auth.user.tenantId;
 
-    if (!tenantId) {
-      return NextResponse.json(
-        { success: false, error: 'tenantId は必須です' },
-        { status: 400 }
-      );
-    }
+  try {
 
     const now = new Date();
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);

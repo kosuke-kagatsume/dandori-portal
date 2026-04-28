@@ -1,18 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { successResponse, handleApiError, getTenantIdFromRequest } from '@/lib/api/api-helpers';
+import { successResponse, handleApiError } from '@/lib/api/api-helpers';
+import { requireUserAccess } from '@/lib/auth/user-access';
 import crypto from 'crypto';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
- * GET /api/users/[id]/bank-accounts - 振込口座一覧を取得
+ * GET /api/users/[id]/bank-accounts - 振込口座一覧を取得（本人 or admin/hr）
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
 
     const accounts = await prisma.employee_bank_accounts.findMany({
       where: { tenantId, userId },
@@ -26,15 +33,18 @@ export async function GET(
 }
 
 /**
- * POST /api/users/[id]/bank-accounts - 振込口座を新規作成
+ * POST /api/users/[id]/bank-accounts - 振込口座を新規作成（本人 or admin/hr）
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
     const body = await request.json();
 
     // メイン口座として追加する場合、既存のメイン口座を解除

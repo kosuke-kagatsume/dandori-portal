@@ -3,19 +3,25 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantIdFromRequest,
 } from '@/lib/api/api-helpers';
+import { requireUserAccess } from '@/lib/auth/user-access';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/users/[id]/income-tax - 所得税情報取得
+ * GET /api/users/[id]/income-tax - 所得税情報取得（admin/hr限定）
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
 
     const record = await prisma.employee_income_tax_info.findUnique({
       where: { tenantId_userId: { tenantId, userId } },
@@ -28,16 +34,19 @@ export async function GET(
 }
 
 /**
- * PUT /api/users/[id]/income-tax - 所得税情報の作成/更新
+ * PUT /api/users/[id]/income-tax - 所得税情報の作成/更新（admin/hr限定）
  */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
     const body = await request.json();
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
 
     const record = await prisma.employee_income_tax_info.upsert({
       where: { tenantId_userId: { tenantId, userId } },

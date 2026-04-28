@@ -1,17 +1,24 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { successResponse, errorResponse, handleApiError, getTenantIdFromRequest } from '@/lib/api/api-helpers';
+import { successResponse, errorResponse, handleApiError } from '@/lib/api/api-helpers';
+import { requireUserAccess } from '@/lib/auth/user-access';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
- * PATCH /api/users/[id]/bank-accounts/[accountId] - 振込口座を更新
+ * PATCH /api/users/[id]/bank-accounts/[accountId] - 振込口座を更新（本人 or admin/hr）
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; accountId: string }> }
 ) {
+  const { id: userId, accountId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId, accountId } = await params;
+    const tenantId = access.targetUser.tenantId;
     const body = await request.json();
 
     // 存在確認
@@ -61,9 +68,12 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; accountId: string }> }
 ) {
+  const { id: userId, accountId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId, accountId } = await params;
+    const tenantId = access.targetUser.tenantId;
 
     // 存在確認
     const existing = await prisma.employee_bank_accounts.findFirst({

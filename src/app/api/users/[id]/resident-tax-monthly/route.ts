@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { successResponse, handleApiError, getTenantIdFromRequest } from '@/lib/api/api-helpers';
+import { successResponse, handleApiError } from '@/lib/api/api-helpers';
+import { requireUserAccess } from '@/lib/auth/user-access';
 import crypto from 'crypto';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/users/[id]/resident-tax-monthly - 住民税月額を取得
@@ -11,9 +15,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
     const { searchParams } = new URL(request.url);
     const fiscalYearParam = searchParams.get('fiscalYear');
 
@@ -42,9 +49,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
     const body = await request.json();
 
     const record = await prisma.employee_resident_tax_monthly.create({
@@ -82,9 +92,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
     const body = await request.json();
     const fiscalYear = body.fiscalYear;
 

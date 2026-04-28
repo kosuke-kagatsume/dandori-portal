@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { successResponse, handleApiError, getTenantIdFromRequest } from '@/lib/api/api-helpers';
+import { successResponse, handleApiError } from '@/lib/api/api-helpers';
+import { requireUserAccess } from '@/lib/auth/user-access';
 import crypto from 'crypto';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/users/[id]/dependents - 扶養情報を取得
@@ -10,9 +14,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
 
     const dependent = await prisma.employee_dependents.findUnique({
       where: {
@@ -33,9 +40,12 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
     const body = await request.json();
 
     const dependent = await prisma.employee_dependents.create({
@@ -66,9 +76,12 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'self_or_hr');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: userId } = await params;
+    const tenantId = access.targetUser.tenantId;
     const body = await request.json();
 
     const dependent = await prisma.employee_dependents.update({

@@ -4,20 +4,26 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getTenantIdFromRequest,
   validateRequiredFields,
 } from '@/lib/api/api-helpers';
+import { requireUserAccess } from '@/lib/auth/user-access';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/users/[id]/leave-of-absence - 休職履歴一覧
+ * GET /api/users/[id]/leave-of-absence - 休職履歴一覧（admin/hr限定）
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
 
     const records = await prisma.leave_of_absence_history.findMany({
       where: { tenantId, userId },
@@ -31,16 +37,19 @@ export async function GET(
 }
 
 /**
- * POST /api/users/[id]/leave-of-absence - 休職履歴追加
+ * POST /api/users/[id]/leave-of-absence - 休職履歴追加（admin/hr限定）
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
     const body = await request.json();
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
 
     const validation = validateRequiredFields(body, ['startDate', 'leaveType']);
     if (!validation.valid) {
@@ -68,16 +77,19 @@ export async function POST(
 }
 
 /**
- * PUT /api/users/[id]/leave-of-absence - 休職履歴更新
+ * PUT /api/users/[id]/leave-of-absence - 休職履歴更新（admin/hr限定）
  */
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
     const body = await request.json();
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
 
     const { recordId, startDate, endDate, leaveType, payCalcMethod, notes } = body;
     if (!recordId) {
@@ -110,16 +122,19 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/users/[id]/leave-of-absence - 休職履歴削除
+ * DELETE /api/users/[id]/leave-of-absence - 休職履歴削除（admin/hr限定）
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: userId } = await params;
+  const access = await requireUserAccess(request, userId, 'hr_only');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const { id: userId } = await params;
     const { searchParams } = new URL(request.url);
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = access.targetUser.tenantId;
     const recordId = searchParams.get('recordId');
 
     if (!recordId) {

@@ -1,32 +1,29 @@
 /**
  * マイナンバー提供依頼 API
  * POST: ステータスを requested に更新
+ *
+ * 認可: requireMynumberAccess(manage)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth/api-auth';
-import { getTenantIdFromRequest, errorResponse } from '@/lib/api/api-helpers';
-import { canManageMynumber } from '@/lib/api/mynumber-permission';
+import { errorResponse } from '@/lib/api/api-helpers';
 import { recordAuditLogDirect } from '@/lib/audit-logger';
+import { requireMynumberAccess } from '@/lib/auth/user-access';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: targetUserId } = await params;
+  const access = await requireMynumberAccess(request, targetUserId, 'manage');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
-
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: targetUserId } = await params;
-
-    const hasPermission = await canManageMynumber(tenantId, auth.user.userId);
-    if (!hasPermission) {
-      return NextResponse.json({ success: false, error: 'マイナンバー管理権限がありません' }, { status: 403 });
-    }
+    const tenantId = access.targetUser.tenantId;
 
     const body = await request.json();
     const { dependentDetailId } = body;
@@ -48,7 +45,7 @@ export async function POST(
         data: {
           status: 'requested',
           requestedAt: new Date(),
-          requestedBy: auth.user.userId,
+          requestedBy: access.user.userId,
         },
       });
     } else {
@@ -61,7 +58,7 @@ export async function POST(
           ...(dependentDetailId ? { dependentDetailId } : {}),
           status: 'requested',
           requestedAt: new Date(),
-          requestedBy: auth.user.userId,
+          requestedBy: access.user.userId,
         },
       });
     }
@@ -69,9 +66,9 @@ export async function POST(
     const targetUser = await prisma.users.findUnique({ where: { id: targetUserId }, select: { name: true } });
     await recordAuditLogDirect(prisma, {
       tenantId,
-      userId: auth.user.userId,
-      userName: auth.user.email,
-      userRole: auth.user.role,
+      userId: access.user.userId,
+      userName: access.user.email,
+      userRole: access.user.role,
       action: 'update',
       category: 'mynumber',
       targetType: 'mynumber',

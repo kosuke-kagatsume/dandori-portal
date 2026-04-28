@@ -7,11 +7,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyAuth } from '@/lib/auth/api-auth';
-import { getTenantIdFromRequest, errorResponse } from '@/lib/api/api-helpers';
-import { canReadMynumber, canManageMynumber } from '@/lib/api/mynumber-permission';
+import { errorResponse } from '@/lib/api/api-helpers';
 import { uploadToS3, deleteFromS3, getPresignedUrl } from '@/lib/storage/s3-client';
 import { recordAuditLogDirect } from '@/lib/audit-logger';
+import { requireMynumberAccess } from '@/lib/auth/user-access';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 type DocType = 'number' | 'identity';
 
@@ -27,30 +29,23 @@ function getDocLabel(docType: DocType): string {
   return docType === 'number' ? '番号確認書類' : '身元確認書類';
 }
 
-// GET: presigned URL取得
+// GET: presigned URL取得（read 権限）
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const auth = await verifyAuth(request);
-    if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
+  const { id: targetUserId } = await params;
+  const access = await requireMynumberAccess(request, targetUserId, 'read');
+  if (access.errorResponse) return access.errorResponse;
 
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: targetUserId } = await params;
+  try {
+    const tenantId = access.targetUser.tenantId;
     const { searchParams } = new URL(request.url);
     const docType = searchParams.get('docType') as DocType;
     const dependentDetailId = searchParams.get('dependentDetailId');
 
     if (!docType || !['number', 'identity'].includes(docType)) {
       return NextResponse.json({ success: false, error: 'docType (number|identity) は必須です' }, { status: 400 });
-    }
-
-    const hasPermission = await canReadMynumber(tenantId, auth.user.userId);
-    if (!hasPermission) {
-      return NextResponse.json({ success: false, error: 'マイナンバー閲覧権限がありません' }, { status: 403 });
     }
 
     const record = await prisma.mynumber_records.findFirst({
@@ -75,9 +70,9 @@ export async function GET(
     const targetUser = await prisma.users.findUnique({ where: { id: targetUserId }, select: { name: true } });
     await recordAuditLogDirect(prisma, {
       tenantId,
-      userId: auth.user.userId,
-      userName: auth.user.email,
-      userRole: auth.user.role,
+      userId: access.user.userId,
+      userName: access.user.email,
+      userRole: access.user.role,
       action: 'access',
       category: 'mynumber',
       targetType: 'mynumber_document',
@@ -93,24 +88,17 @@ export async function GET(
   }
 }
 
-// POST: 書類アップロード
+// POST: 書類アップロード（manage 権限）
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id: targetUserId } = await params;
+  const access = await requireMynumberAccess(request, targetUserId, 'manage');
+  if (access.errorResponse) return access.errorResponse;
+
   try {
-    const auth = await verifyAuth(request);
-    if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
-
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: targetUserId } = await params;
-
-    const hasPermission = await canManageMynumber(tenantId, auth.user.userId);
-    if (!hasPermission) {
-      return NextResponse.json({ success: false, error: 'マイナンバー管理権限がありません' }, { status: 403 });
-    }
+    const tenantId = access.targetUser.tenantId;
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
@@ -169,9 +157,9 @@ export async function POST(
     const targetUser = await prisma.users.findUnique({ where: { id: targetUserId }, select: { name: true } });
     await recordAuditLogDirect(prisma, {
       tenantId,
-      userId: auth.user.userId,
-      userName: auth.user.email,
-      userRole: auth.user.role,
+      userId: access.user.userId,
+      userName: access.user.email,
+      userRole: access.user.role,
       action: 'create',
       category: 'mynumber',
       targetType: 'mynumber_document',
@@ -187,30 +175,23 @@ export async function POST(
   }
 }
 
-// DELETE: 書類削除
+// DELETE: 書類削除（manage 権限）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const auth = await verifyAuth(request);
-    if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 });
-    }
+  const { id: targetUserId } = await params;
+  const access = await requireMynumberAccess(request, targetUserId, 'manage');
+  if (access.errorResponse) return access.errorResponse;
 
-    const tenantId = await getTenantIdFromRequest(request);
-    const { id: targetUserId } = await params;
+  try {
+    const tenantId = access.targetUser.tenantId;
     const { searchParams } = new URL(request.url);
     const docType = searchParams.get('docType') as DocType;
     const dependentDetailId = searchParams.get('dependentDetailId');
 
     if (!docType || !['number', 'identity'].includes(docType)) {
       return NextResponse.json({ success: false, error: 'docType (number|identity) は必須です' }, { status: 400 });
-    }
-
-    const hasPermission = await canManageMynumber(tenantId, auth.user.userId);
-    if (!hasPermission) {
-      return NextResponse.json({ success: false, error: 'マイナンバー管理権限がありません' }, { status: 403 });
     }
 
     const subjectType = dependentDetailId ? 'dependent' : 'employee';
@@ -237,9 +218,9 @@ export async function DELETE(
     const targetUser = await prisma.users.findUnique({ where: { id: targetUserId }, select: { name: true } });
     await recordAuditLogDirect(prisma, {
       tenantId,
-      userId: auth.user.userId,
-      userName: auth.user.email,
-      userRole: auth.user.role,
+      userId: access.user.userId,
+      userName: access.user.email,
+      userRole: access.user.role,
       action: 'delete',
       category: 'mynumber',
       targetType: 'mynumber_document',

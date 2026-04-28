@@ -3,16 +3,25 @@ import { prisma } from '@/lib/prisma';
 import {
   successResponse,
   handleApiError,
-  getTenantIdFromRequest,
   getPaginationParams,
 } from '@/lib/api/api-helpers';
 import { resolvePositionAndDepartment, resolveIdsFromNames, ValidationError } from '@/lib/api/user-helpers';
+import { withAuth } from '@/lib/auth/api-auth';
 
-// GET /api/users - ユーザー一覧取得
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// GET /api/users - ユーザー一覧取得（admin/hr限定 + 自テナント絞り込み）
 export async function GET(request: NextRequest) {
+  const { auth, errorResponse } = await withAuth(request, ['admin', 'hr']);
+  if (errorResponse) return errorResponse;
+  if (!auth.user?.tenantId) {
+    return NextResponse.json({ success: false, error: 'テナント情報がありません' }, { status: 400 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
-    const tenantId = await getTenantIdFromRequest(request);
+    const tenantId = auth.user.tenantId;
     const status = searchParams.get('status');
     const { page, limit, skip } = getPaginationParams(searchParams);
 
@@ -84,10 +93,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/users - ユーザー作成
+// POST /api/users - ユーザー作成（admin/hr限定 + tenantId は JWT 値を強制使用）
 export async function POST(request: NextRequest) {
+  const { auth, errorResponse } = await withAuth(request, ['admin', 'hr']);
+  if (errorResponse) return errorResponse;
+  if (!auth.user?.tenantId) {
+    return NextResponse.json({ success: false, error: 'テナント情報がありません' }, { status: 400 });
+  }
+
   try {
     const body = await request.json();
+    // body.tenantId は信用しない。JWT のテナントを強制使用（テナント越境作成防止）
+    const tenantId = auth.user.tenantId;
 
     const {
       email,
@@ -95,7 +112,6 @@ export async function POST(request: NextRequest) {
       phone,
       hireDate,
       unitId,
-      tenantId,
       roles = ['employee'],
       status = 'active',
       position,
@@ -106,12 +122,12 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // バリデーション
-    if (!email || !name || !tenantId) {
+    if (!email || !name) {
       return NextResponse.json(
         {
           success: false,
           error: 'Missing required fields',
-          required: ['email', 'name', 'tenantId'],
+          required: ['email', 'name'],
         },
         { status: 400 }
       );
